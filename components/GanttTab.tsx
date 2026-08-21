@@ -119,11 +119,9 @@ export function GanttTab({
                         background: c.solid,
                         top: 14,
                       }}
-                      className="absolute h-7 rounded-md text-white text-xs font-medium px-2 flex items-center overflow-hidden shadow-sm hover:brightness-110 transition"
+                      className="absolute h-7 rounded-md shadow-sm hover:brightness-110 transition"
                       title={t.task}
-                    >
-                      <span className="truncate">{t.task}</span>
-                    </button>
+                    />
                   </div>
                 </div>
               );
