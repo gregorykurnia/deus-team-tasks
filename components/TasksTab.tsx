@@ -37,10 +37,11 @@ export function TasksTab({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-              <th className="px-4 py-3 w-[32%]">Task</th>
-              <th className="px-4 py-3 w-[16%]">Responsible</th>
-              <th className="px-4 py-3 w-[22%]">Informed</th>
-              <th className="px-4 py-3 w-[30%]">Key Points</th>
+              <th className="px-4 py-3 w-[28%]">Task</th>
+              <th className="px-4 py-3 w-[14%]">Date</th>
+              <th className="px-4 py-3 w-[14%]">Responsible</th>
+              <th className="px-4 py-3 w-[20%]">Informed</th>
+              <th className="px-4 py-3 w-[24%]">Key Points</th>
             </tr>
           </thead>
           <tbody>
@@ -50,12 +51,8 @@ export function TasksTab({
                 onClick={() => setEditing(t)}
                 className="border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top"
               >
-                <td className="px-4 py-3 text-gray-800 font-medium">
-                  {t.task}
-                  <div className="mt-1 text-xs font-normal text-gray-400">
-                    {fmtRange(t.startDate, t.endDate)}
-                  </div>
-                </td>
+                <td className="px-4 py-3 text-gray-800 font-medium">{t.task}</td>
+                <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {t.responsible.map((r) => (
@@ -76,7 +73,7 @@ export function TasksTab({
             ))}
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
                   No tasks yet. Add your first one.
                 </td>
               </tr>
