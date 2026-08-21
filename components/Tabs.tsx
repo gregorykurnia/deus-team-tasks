@@ -5,6 +5,7 @@ const TABS = [
   { id: "gantt", label: "Gantt / Deadline" },
   { id: "daily", label: "Daily View" },
   { id: "assignee", label: "Assignee View" },
+  { id: "flow", label: "Flow" },
 ] as const;
 
 export type TabId = (typeof TABS)[number]["id"];
