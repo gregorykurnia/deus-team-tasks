@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Task, NewTask } from "@/lib/types";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
@@ -20,6 +20,13 @@ export function TasksTab({
 }) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [creating, setCreating] = useState(false);
+  const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
+
+  const sortedTasks = useMemo(() => {
+    if (!dateSort) return tasks;
+    const sorted = [...tasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    return dateSort === "asc" ? sorted : sorted.reverse();
+  }, [tasks, dateSort]);
 
   return (
     <div>
@@ -38,14 +45,24 @@ export function TasksTab({
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
               <th className="px-4 py-3 w-[28%]">Task</th>
-              <th className="px-4 py-3 w-[14%]">Date</th>
+              <th className="px-4 py-3 w-[14%]">
+                <button
+                  onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))}
+                  className="flex items-center gap-1 hover:text-gray-700"
+                >
+                  Date
+                  <span className="text-gray-400">
+                    {dateSort === "asc" ? "▲" : dateSort === "desc" ? "▼" : "↕"}
+                  </span>
+                </button>
+              </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
               <th className="px-4 py-3 w-[20%]">Informed</th>
               <th className="px-4 py-3 w-[24%]">Key Points</th>
             </tr>
           </thead>
           <tbody>
-            {tasks.map((t) => (
+            {sortedTasks.map((t) => (
               <tr
                 key={t.id}
                 onClick={() => setEditing(t)}
