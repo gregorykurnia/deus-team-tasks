@@ -120,19 +120,28 @@ const FLOWS: Flow[] = [
       },
       {
         id: "step-3",
-        title: "Step 3 — Ko Will Plans & Executes the Fix",
-        description:
-          "Ko Will assesses the technical actions needed, implements the fix or change in the system, and ensures all parties are aligned before proceeding.",
+        title: "Step 3 — Assess the Technical Actions",
+        description: "Evaluation of the bug or minor request and determines the appropriate technical solution.",
         roles: [
           { label: "Responsible", names: ["Ko Will"] },
-          { label: "Informed", names: ["Bu Sovie", "Greg"] },
           { label: "Consulted", names: ["Fir"] },
         ],
       },
       {
         id: "step-4",
-        title: "Step 4 — Greg Updates Lida on the Plan",
-        description: "Greg communicates the proposed plan of action to Lida, keeping her informed on what will be done and the expected timeline.",
+        title: "Step 4 — Alignment Before Execution",
+        description:
+          "Tech walks management and data through the proposed solution to ensure everyone is on the same page before any changes are made.",
+        roles: [
+          { label: "Responsible", names: ["Ko Will"] },
+          { label: "Informed", names: ["Greg", "Bu Sovie"] },
+        ],
+      },
+      {
+        id: "step-5",
+        title: "Step 5 — Updates DKB on the Plan",
+        description:
+          "Account Handler communicates the proposed plan of action to Lida, keeping her informed on what will be done and the expected timeline.",
         roles: [
           { label: "Responsible", names: ["Greg"] },
           { label: "Informed", names: ["Lida"] },
@@ -140,9 +149,19 @@ const FLOWS: Flow[] = [
         ],
       },
       {
-        id: "step-5",
-        title: "Step 5 — Greg Confirms Completion to Lida",
-        description: "Once the fix or request is completed, Greg informs Lida that it's been resolved.",
+        id: "step-6",
+        title: "Step 6 — Execution of the Fix or Requests",
+        description: "Once aligned, the fix or change in the system is implemented. Account handler is informed.",
+        roles: [
+          { label: "Responsible", names: ["Ko Will"] },
+          { label: "Informed", names: ["Greg"] },
+          { label: "Consulted", names: ["Fir", "Bu Sovie"] },
+        ],
+      },
+      {
+        id: "step-7",
+        title: "Step 7 — Confirms Completion to DKB",
+        description: "Once the fix or request is completed, Account Handler informs Lida that it's been resolved.",
         roles: [
           { label: "Responsible", names: ["Greg"] },
           { label: "Informed", names: ["Lida"] },
