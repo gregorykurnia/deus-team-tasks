@@ -59,7 +59,7 @@ export function GanttTab({
           <div style={{ width: 260 + days * DAY_WIDTH, minWidth: "100%" }}>
             {/* Header */}
             <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200">
-              <div className="w-[260px] shrink-0 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 border-r border-gray-200">
+              <div className="sticky left-0 z-20 w-[260px] shrink-0 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 border-r border-gray-200 bg-white">
                 Task
               </div>
               <div className="relative flex">
@@ -95,8 +95,8 @@ export function GanttTab({
               const span = diffDays(toDate(t.startDate), toDate(t.endDate)) + 1;
               const c = colorFor(t.responsible[0] ?? "?");
               return (
-                <div key={t.id} className="flex border-b border-gray-100 last:border-0 hover:bg-gray-50/60">
-                  <div className="w-[260px] shrink-0 px-4 py-3 border-r border-gray-200">
+                <div key={t.id} className="flex border-b border-gray-100 last:border-0 group">
+                  <div className="sticky left-0 z-10 w-[260px] shrink-0 px-4 py-3 border-r border-gray-200 bg-white group-hover:bg-gray-50/60">
                     <div className="text-sm text-gray-800 font-medium line-clamp-2">{t.task}</div>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {t.responsible.map((r) => (
@@ -104,7 +104,7 @@ export function GanttTab({
                       ))}
                     </div>
                   </div>
-                  <div className="relative" style={{ width: days * DAY_WIDTH, height: 56 }}>
+                  <div className="relative group-hover:bg-gray-50/60" style={{ width: days * DAY_WIDTH, height: 56 }}>
                     {todayOffset >= 0 && todayOffset < days && (
                       <div
                         className="absolute top-0 bottom-0 w-px bg-red-300"
