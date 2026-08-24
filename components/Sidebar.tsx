@@ -23,9 +23,10 @@ const NAV: NavItem[] = [
     ],
   },
   { id: "flow", label: "Flow", icon: "⇄" },
+  { id: "clients", label: "Clients", icon: "◈" },
 ];
 
-export type TabId = "tasks" | "gantt" | "daily" | "assignee" | "flow";
+export type TabId = "tasks" | "gantt" | "daily" | "assignee" | "flow" | "clients";
 
 function groupOf(id: TabId): GroupItem | undefined {
   return NAV.find((i) => isGroup(i) && i.children.some((c) => c.id === id)) as GroupItem | undefined;

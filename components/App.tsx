@@ -9,6 +9,7 @@ import { GanttTab } from "./GanttTab";
 import { DailyTab } from "./DailyTab";
 import { AssigneeTab } from "./AssigneeTab";
 import { FlowTab } from "./FlowTab";
+import { ClientsTab } from "./ClientsTab";
 
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
@@ -79,6 +80,7 @@ export default function App() {
                 <AssigneeTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
               )}
               {tab === "flow" && <FlowTab />}
+              {tab === "clients" && <ClientsTab />}
             </>
           )}
         </main>
