@@ -139,7 +139,10 @@ function Section({
 
 function fmtRange(start: string, end: string) {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const s = new Date(start + "T00:00:00").toLocaleDateString("en-US", opts);
-  const e = new Date(end + "T00:00:00").toLocaleDateString("en-US", opts);
-  return start === end ? s : `${s} – ${e}`;
+  const fmt = (d: string) => (d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", opts) : "");
+  const s = fmt(start);
+  const e = fmt(end);
+  if (!s && !e) return "—";
+  if (!s || !e || start === end) return s || e;
+  return `${s} – ${e}`;
 }
