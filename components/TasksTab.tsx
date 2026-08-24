@@ -2,8 +2,30 @@
 
 import { useMemo, useState } from "react";
 import { Task, NewTask } from "@/lib/types";
+import { useClientPipeline } from "@/lib/useClientPipeline";
+import { loadFieldOptions } from "@/lib/clientLocalConfig";
+import { PipelineEntry, TableKey } from "@/lib/clientTypes";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
+import { ClientEntryModal } from "./clients/ClientEntryModal";
+
+type SubTab = "general" | "prospects" | "clients";
+
+const SUBTABS: { id: SubTab; label: string; icon: string }[] = [
+  { id: "general", label: "General", icon: "🗂" },
+  { id: "prospects", label: "Prospects", icon: "📈" },
+  { id: "clients", label: "Clients", icon: "🤝" },
+];
+
+function isDoneEntry(r: PipelineEntry) {
+  return r.status === "Client / Partner Done Deal";
+}
+
+function entryTableKey(r: PipelineEntry): TableKey {
+  if (r._raw) return "raw";
+  if (r._hold) return "hold";
+  return "main";
+}
 
 export function TasksTab({
   tasks,
@@ -21,12 +43,35 @@ export function TasksTab({
   const [editing, setEditing] = useState<Task | null>(null);
   const [creating, setCreating] = useState(false);
   const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
+  const [subTab, setSubTab] = useState<SubTab>("general");
+  const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
+
+  const { entries, saveEntry } = useClientPipeline();
+  const fieldOptions = useMemo(() => loadFieldOptions(), []);
+  const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
+
+  const generalTasks = useMemo(
+    () => tasks.filter((t) => t.linkedClientId == null || !entryById.has(t.linkedClientId)),
+    [tasks, entryById]
+  );
+  const prospectTasks = useMemo(
+    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && !isDoneEntry(entryById.get(t.linkedClientId)!)),
+    [tasks, entryById]
+  );
+  const clientTasks = useMemo(
+    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && isDoneEntry(entryById.get(t.linkedClientId)!)),
+    [tasks, entryById]
+  );
+
+  const activeTasks = subTab === "general" ? generalTasks : subTab === "prospects" ? prospectTasks : clientTasks;
 
   const sortedTasks = useMemo(() => {
-    if (!dateSort) return tasks;
-    const sorted = [...tasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    if (!dateSort) return activeTasks;
+    const sorted = [...activeTasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
     return dateSort === "asc" ? sorted : sorted.reverse();
-  }, [tasks, dateSort]);
+  }, [activeTasks, dateSort]);
+
+  const isLinkedView = subTab !== "general";
 
   return (
     <div>
@@ -40,74 +85,114 @@ export function TasksTab({
         </button>
       </div>
 
+      <div className="flex border-b border-gray-200 mb-4">
+        {SUBTABS.map((t) => {
+          const count = t.id === "general" ? generalTasks.length : t.id === "prospects" ? prospectTasks.length : clientTasks.length;
+          const active = subTab === t.id;
+          return (
+            <div
+              key={t.id}
+              onClick={() => setSubTab(t.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium cursor-pointer border-b-2 -mb-px whitespace-nowrap ${
+                active ? "text-accent border-accent" : "text-gray-400 border-transparent hover:text-gray-600"
+              }`}
+            >
+              <span className="text-xs">{t.icon}</span>
+              {t.label}
+              <span className={`text-[11px] font-semibold rounded-full px-1.5 ${active ? "bg-accent/10 text-accent" : "bg-gray-100 text-gray-400"}`}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-              <th className="px-4 py-3 w-[28%]">Task</th>
+              {isLinkedView && <th className="px-4 py-3 w-[18%]">Company</th>}
+              <th className={`px-4 py-3 ${isLinkedView ? "w-[26%]" : "w-[28%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
               <th className="px-4 py-3 w-[14%]">
                 <button
                   onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))}
                   className="flex items-center gap-1 hover:text-gray-700"
                 >
-                  Date
+                  {isLinkedView ? "Target Date" : "Date"}
                   <span className="text-gray-400">
                     {dateSort === "asc" ? "▲" : dateSort === "desc" ? "▼" : "↕"}
                   </span>
                 </button>
               </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
-              <th className="px-4 py-3 w-[20%]">Informed</th>
-              <th className="px-4 py-3 w-[20%]">Key Points</th>
+              {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
+              {!isLinkedView && <th className="px-4 py-3 w-[20%]">Key Points</th>}
               <th className="px-4 py-3 w-[4%] text-center">Done</th>
             </tr>
           </thead>
           <tbody>
-            {sortedTasks.map((t) => (
-              <tr
-                key={t.id}
-                onClick={() => setEditing(t)}
-                className={`border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top ${
-                  t.completed ? "opacity-50" : ""
-                }`}
-              >
-                <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
-                  {t.task}
-                </td>
-                <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {t.responsible.map((r) => (
-                      <Chip key={r} name={r} />
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {t.informed.length === 0 && <span className="text-gray-300">—</span>}
-                    {t.informed.map((p, i) => (
-                      <Chip key={i} name={p.name} note={p.note} variant="outline" />
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
-                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={!!t.completed}
-                    onChange={() => {
-                      const { id, ...rest } = t;
-                      onUpdate(id, { ...rest, completed: !t.completed });
-                    }}
-                    className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
-                  />
-                </td>
-              </tr>
-            ))}
-            {tasks.length === 0 && (
+            {sortedTasks.map((t) => {
+              const linkedEntry = t.linkedClientId != null ? entryById.get(t.linkedClientId) : undefined;
+              return (
+                <tr
+                  key={t.id}
+                  onClick={() => setEditing(t)}
+                  className={`border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top ${
+                    t.completed ? "opacity-50" : ""
+                  }`}
+                >
+                  {isLinkedView && (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {linkedEntry ? (
+                        <button
+                          onClick={() => setOpenClientRow(linkedEntry)}
+                          className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20"
+                        >
+                          🏢 {linkedEntry.company}
+                        </button>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                  )}
+                  <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
+                    {t.task}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {t.responsible.map((r) => (
+                        <Chip key={r} name={r} />
+                      ))}
+                    </div>
+                  </td>
+                  {!isLinkedView && (
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {t.informed.length === 0 && <span className="text-gray-300">—</span>}
+                        {t.informed.map((p, i) => (
+                          <Chip key={i} name={p.name} note={p.note} variant="outline" />
+                        ))}
+                      </div>
+                    </td>
+                  )}
+                  {!isLinkedView && <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>}
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={!!t.completed}
+                      onChange={() => {
+                        const { id, ...rest } = t;
+                        onUpdate(id, { ...rest, completed: !t.completed });
+                      }}
+                      className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            {sortedTasks.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                  No tasks yet. Add your first one.
+                <td colSpan={isLinkedView ? 5 : 6} className="px-4 py-10 text-center text-gray-400">
+                  {subTab === "general" ? "No tasks yet. Add your first one." : `No ${subTab} follow-ups yet.`}
                 </td>
               </tr>
             )}
@@ -119,6 +204,12 @@ export function TasksTab({
         <TaskModal
           initial={editing}
           allNames={allNames}
+          linkedClientLabel={editing.linkedClientId != null ? entryById.get(editing.linkedClientId)?.company : undefined}
+          onOpenClient={
+            editing.linkedClientId != null && entryById.has(editing.linkedClientId)
+              ? () => setOpenClientRow(entryById.get(editing.linkedClientId!)!)
+              : undefined
+          }
           onClose={() => setEditing(null)}
           onSave={(t) => {
             onUpdate(editing.id, t);
@@ -138,6 +229,20 @@ export function TasksTab({
             onAdd(t);
             setCreating(false);
           }}
+        />
+      )}
+
+      {openClientRow && (
+        <ClientEntryModal
+          kind={entryTableKey(openClientRow)}
+          editing={openClientRow}
+          prefill={null}
+          fieldOptions={fieldOptions}
+          onSave={async (patch) => {
+            await saveEntry({ ...openClientRow, ...patch } as PipelineEntry);
+            setOpenClientRow(null);
+          }}
+          onClose={() => setOpenClientRow(null)}
         />
       )}
     </div>

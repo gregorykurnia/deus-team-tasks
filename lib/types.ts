@@ -13,6 +13,7 @@ export interface Task {
   endDate: string; // yyyy-mm-dd
   order: number;
   completed?: boolean;
+  linkedClientId?: number; // links to a PipelineEntry.id in the client pipeline
 }
 
 export type NewTask = Omit<Task, "id">;

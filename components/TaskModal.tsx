@@ -6,28 +6,35 @@ import { PeopleInput } from "./PeopleInput";
 
 export function TaskModal({
   initial,
+  prefill,
   allNames,
+  linkedClientLabel,
+  onOpenClient,
   onSave,
   onDelete,
   onClose,
 }: {
   initial?: Task;
+  prefill?: Partial<NewTask>;
   allNames: string[];
+  linkedClientLabel?: string;
+  onOpenClient?: () => void;
   onSave: (task: NewTask) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
-  const [task, setTask] = useState(initial?.task ?? "");
+  const [task, setTask] = useState(initial?.task ?? prefill?.task ?? "");
   const [responsible, setResponsible] = useState<{ name: string; note?: string }[]>(
-    (initial?.responsible ?? []).map((n) => ({ name: n }))
+    (initial?.responsible ?? prefill?.responsible ?? []).map((n) => ({ name: n }))
   );
   const [informed, setInformed] = useState<{ name: string; note?: string }[]>(
-    initial?.informed ?? []
+    initial?.informed ?? prefill?.informed ?? []
   );
-  const [keyPoints, setKeyPoints] = useState(initial?.keyPoints ?? "");
-  const [startDate, setStartDate] = useState(initial?.startDate ?? "");
-  const [endDate, setEndDate] = useState(initial?.endDate ?? "");
+  const [keyPoints, setKeyPoints] = useState(initial?.keyPoints ?? prefill?.keyPoints ?? "");
+  const [startDate, setStartDate] = useState(initial?.startDate ?? prefill?.startDate ?? "");
+  const [endDate, setEndDate] = useState(initial?.endDate ?? prefill?.endDate ?? "");
   const [completed, setCompleted] = useState(initial?.completed ?? false);
+  const linkedClientId = initial?.linkedClientId ?? prefill?.linkedClientId;
 
   function handleSave() {
     if (!task.trim() || !startDate || !endDate || responsible.length === 0) return;
@@ -40,6 +47,7 @@ export function TaskModal({
       endDate,
       order: initial?.order ?? Date.now(),
       completed,
+      linkedClientId,
     });
   }
 
@@ -49,7 +57,7 @@ export function TaskModal({
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold text-gray-900">
             {initial ? "Edit Task" : "New Task"}
           </h2>
@@ -65,6 +73,15 @@ export function TaskModal({
             </label>
           )}
         </div>
+
+        {linkedClientId != null && (
+          <button
+            onClick={onOpenClient}
+            className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20"
+          >
+            🏢 {linkedClientLabel ?? "Linked client"}
+          </button>
+        )}
 
         <div className="space-y-4">
           <div>

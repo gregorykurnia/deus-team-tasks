@@ -43,6 +43,7 @@ export function ClientTable({
   onMove,
   onEdit,
   onDelete,
+  onFollowUp,
 }: {
   tableKey: TableKey;
   columns: ColumnDef[];
@@ -60,6 +61,7 @@ export function ClientTable({
   onMove: (row: PipelineEntry, el: HTMLElement) => void;
   onEdit: (row: PipelineEntry) => void;
   onDelete: (row: PipelineEntry) => void;
+  onFollowUp: (row: PipelineEntry) => void;
 }) {
   function startResize(e: React.MouseEvent, colKey: string) {
     startColumnResize(e, colKey, onResize);
@@ -315,6 +317,9 @@ export function ClientTable({
                 {columns.map((col) => (col.custom ? customCell(col, r) : builtinCell(col, r)))}
                 <td className="px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => onFollowUp(r)} title="Follow up (create task)" className="w-[30px] h-[30px] flex items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700">
+                      📋
+                    </button>
                     <button onClick={(e) => onMove(r, e.currentTarget)} title="Move to..." className="w-[30px] h-[30px] flex items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700">
                       ⇄
                     </button>
