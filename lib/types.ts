@@ -16,6 +16,44 @@ export interface Task {
 
 export type NewTask = Omit<Task, "id">;
 
+export interface FlowRole {
+  label: string;
+  names: string[];
+}
+
+export interface FlowStep {
+  id: string;
+  title: string;
+  description: string;
+  roles: FlowRole[];
+}
+
+export interface FlowBranch {
+  id: string;
+  label: string;
+  tone: "bad" | "good";
+  title: string;
+  description: string;
+  roles: FlowRole[];
+  loopTo?: string;
+}
+
+export interface FlowDecision {
+  label: string;
+  branches: FlowBranch[];
+}
+
+export interface Flow {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  steps: FlowStep[];
+  decision?: FlowDecision | null;
+}
+
+export type NewFlow = Omit<Flow, "id">;
+
 export const KNOWN_NAMES = [
   "Greg",
   "David",
