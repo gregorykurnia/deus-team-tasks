@@ -48,7 +48,7 @@ type DropdownPopupState = { field: string; row: PipelineEntry; anchorRect: DOMRe
 type MovePopupState = { row: PipelineEntry; anchorRect: DOMRect };
 type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Partial<PipelineEntry> | null };
 
-export function ClientsTab() {
+export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
   const { tasks, addTask } = useTasks();
   const [toast, setToast] = useState<string | null>(null);
@@ -86,7 +86,11 @@ export function ClientsTab() {
     }
   }
 
-  const [tab, setTab] = useState<PipelineTab>("prospect");
+  const [tab, setTab] = useState<PipelineTab>(initialTab ?? "prospect");
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterProduct, setFilterProduct] = useState("");

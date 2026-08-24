@@ -80,7 +80,8 @@ export default function App() {
                 <AssigneeTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
               )}
               {tab === "flow" && <FlowTab />}
-              {tab === "clients" && <ClientsTab />}
+              {tab === "prospects" && <ClientsTab initialTab="prospect" />}
+              {tab === "clients" && <ClientsTab initialTab="done" />}
             </>
           )}
         </main>
