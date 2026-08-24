@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Task, NewTask } from "@/lib/types";
+import { Task, NewTask, TASK_TYPES } from "@/lib/types";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { loadFieldOptions } from "@/lib/clientLocalConfig";
 import { PipelineEntry, TableKey } from "@/lib/clientTypes";
@@ -157,14 +157,22 @@ export function TasksTab({
                   <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
                     {t.task}
                   </td>
-                  <td className="px-4 py-3">
-                    {t.taskType ? (
-                      <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
-                        {t.taskType}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={t.taskType ?? ""}
+                      onChange={(e) => {
+                        const { id, ...rest } = t;
+                        onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
+                      }}
+                      className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-1 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
+                    >
+                      <option value="">—</option>
+                      {TASK_TYPES.map((tt) => (
+                        <option key={tt} value={tt}>
+                          {tt}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
                   <td className="px-4 py-3">
