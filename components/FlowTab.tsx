@@ -65,14 +65,41 @@ function RoleEditor({ roles, onChange }: { roles: FlowRole[]; onChange: (r: Flow
   function removeRole(i: number) {
     onChange(roles.filter((_, idx) => idx !== i));
   }
+  function moveRole(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= roles.length) return;
+    const next = [...roles];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
   return (
     <div className="mt-3 space-y-1.5">
       {roles.map((r, i) => (
         <div key={i} className="flex items-start gap-2 group/role">
+          <div className="flex flex-col shrink-0 pt-0.5 opacity-0 group-hover/role:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={() => moveRole(i, -1)}
+              disabled={i === 0}
+              className="text-gray-300 hover:text-accent disabled:opacity-0 leading-none text-[9px] h-3"
+              aria-label="Move role up"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              onClick={() => moveRole(i, 1)}
+              disabled={i === roles.length - 1}
+              className="text-gray-300 hover:text-accent disabled:opacity-0 leading-none text-[9px] h-3"
+              aria-label="Move role down"
+            >
+              ▼
+            </button>
+          </div>
           <input
             value={r.label}
             onChange={(e) => updateRole(i, { label: e.target.value })}
-            className={`${textFieldClass} w-20 shrink-0 pt-1 text-[11px] uppercase tracking-wide text-gray-400 font-medium`}
+            className={`${textFieldClass} w-28 shrink-0 pt-1 text-[11px] uppercase tracking-wide text-gray-400 font-medium`}
           />
           <div className="flex-1 pt-0.5">
             <RoleNamesInput names={r.names} onChange={(names) => updateRole(i, { names })} />
