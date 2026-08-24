@@ -126,6 +126,7 @@ export function TasksTab({
               {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
               {!isLinkedView && <th className="px-4 py-3 w-[20%]">Key Points</th>}
               <th className="px-4 py-3 w-[4%] text-center">Done</th>
+              <th className="px-4 py-3 w-[4%]" />
             </tr>
           </thead>
           <tbody>
@@ -186,12 +187,23 @@ export function TasksTab({
                       className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
                     />
                   </td>
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete "${t.task}"?`)) onDelete(t.id);
+                      }}
+                      title="Delete"
+                      className="w-[26px] h-[26px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
+                    >
+                      🗑
+                    </button>
+                  </td>
                 </tr>
               );
             })}
             {sortedTasks.length === 0 && (
               <tr>
-                <td colSpan={isLinkedView ? 5 : 6} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={isLinkedView ? 6 : 7} className="px-4 py-10 text-center text-gray-400">
                   {subTab === "general" ? "No tasks yet. Add your first one." : `No ${subTab} follow-ups yet.`}
                 </td>
               </tr>
