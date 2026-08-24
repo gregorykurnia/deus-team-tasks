@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Task, NewTask, TASK_TYPES } from "@/lib/types";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { loadFieldOptions } from "@/lib/clientLocalConfig";
-import { loadTaskGroups, saveTaskGroups } from "@/lib/taskGroups";
+import { useTaskGroups } from "@/lib/useTaskGroups";
 import { PipelineEntry } from "@/lib/clientTypes";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
@@ -29,8 +29,8 @@ export function TasksTab({
   const [creating, setCreating] = useState(false);
   const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
   const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
-  const [groups, setGroups] = useState<string[]>(() => loadTaskGroups());
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const { groups, addGroup } = useTaskGroups();
 
   const { entries, saveEntry } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
@@ -66,9 +66,7 @@ export function TasksTab({
   function addTaskGroup() {
     const name = prompt("Name this task group:")?.trim();
     if (!name || groups.includes(name)) return;
-    const next = [...groups, name];
-    setGroups(next);
-    saveTaskGroups(next);
+    addGroup(name);
   }
 
   function toggleGroup(id: string) {
