@@ -55,7 +55,7 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
 
   return (
     <aside
-      className={`shrink-0 border-r border-gray-200 bg-white flex flex-col transition-[width] duration-150 ${
+      className={`sticky top-0 h-screen shrink-0 border-r border-gray-200 bg-white flex flex-col transition-[width] duration-150 ${
         collapsed ? "w-14" : "w-56"
       }`}
     >
