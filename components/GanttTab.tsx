@@ -20,6 +20,15 @@ function addDays(d: Date, n: number) {
   return r;
 }
 
+function effectiveRange(t: Task): { s: Date; e: Date } | null {
+  const sValid = t.startDate && !isNaN(toDate(t.startDate).getTime());
+  const eValid = t.endDate && !isNaN(toDate(t.endDate).getTime());
+  if (sValid && eValid) return { s: toDate(t.startDate), e: toDate(t.endDate) };
+  if (eValid) return { s: toDate(t.endDate), e: toDate(t.endDate) };
+  if (sValid) return { s: toDate(t.startDate), e: toDate(t.startDate) };
+  return null;
+}
+
 export function GanttTab({
   tasks,
   allNames,
@@ -34,15 +43,13 @@ export function GanttTab({
   const [editing, setEditing] = useState<Task | null>(null);
 
   const { start, days } = useMemo(() => {
-    const dated = tasks.filter(
-      (t) => t.startDate && t.endDate && !isNaN(toDate(t.startDate).getTime()) && !isNaN(toDate(t.endDate).getTime())
-    );
-    if (dated.length === 0) {
+    const ranges = tasks.map(effectiveRange).filter((r): r is { s: Date; e: Date } => r !== null);
+    if (ranges.length === 0) {
       const today = new Date();
       return { start: addDays(today, -2), days: 30 };
     }
-    const starts = dated.map((t) => toDate(t.startDate).getTime());
-    const ends = dated.map((t) => toDate(t.endDate).getTime());
+    const starts = ranges.map((r) => r.s.getTime());
+    const ends = ranges.map((r) => r.e.getTime());
     const minStart = addDays(new Date(Math.min(...starts)), -2);
     const maxEnd = addDays(new Date(Math.max(...ends)), 3);
     return { start: minStart, days: Math.max(diffDays(minStart, maxEnd), 7) };
@@ -94,10 +101,9 @@ export function GanttTab({
 
             {/* Rows */}
             {tasks.map((t) => {
-              const hasDates =
-                t.startDate && t.endDate && !isNaN(toDate(t.startDate).getTime()) && !isNaN(toDate(t.endDate).getTime());
-              const offset = hasDates ? diffDays(start, toDate(t.startDate)) : 0;
-              const span = hasDates ? diffDays(toDate(t.startDate), toDate(t.endDate)) + 1 : 0;
+              const range = effectiveRange(t);
+              const offset = range ? diffDays(start, range.s) : 0;
+              const span = range ? diffDays(range.s, range.e) + 1 : 0;
               const c = colorFor(t.responsible[0] ?? "?");
               return (
                 <div
@@ -121,7 +127,7 @@ export function GanttTab({
                         style={{ left: todayOffset * DAY_WIDTH + DAY_WIDTH / 2 }}
                       />
                     )}
-                    {hasDates ? (
+                    {range ? (
                       <button
                         onClick={() => setEditing(t)}
                         style={{
