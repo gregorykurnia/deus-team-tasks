@@ -34,12 +34,15 @@ export function GanttTab({
   const [editing, setEditing] = useState<Task | null>(null);
 
   const { start, days } = useMemo(() => {
-    if (tasks.length === 0) {
+    const dated = tasks.filter(
+      (t) => t.startDate && t.endDate && !isNaN(toDate(t.startDate).getTime()) && !isNaN(toDate(t.endDate).getTime())
+    );
+    if (dated.length === 0) {
       const today = new Date();
       return { start: addDays(today, -2), days: 30 };
     }
-    const starts = tasks.map((t) => toDate(t.startDate).getTime());
-    const ends = tasks.map((t) => toDate(t.endDate).getTime());
+    const starts = dated.map((t) => toDate(t.startDate).getTime());
+    const ends = dated.map((t) => toDate(t.endDate).getTime());
     const minStart = addDays(new Date(Math.min(...starts)), -2);
     const maxEnd = addDays(new Date(Math.max(...ends)), 3);
     return { start: minStart, days: Math.max(diffDays(minStart, maxEnd), 7) };
@@ -91,8 +94,10 @@ export function GanttTab({
 
             {/* Rows */}
             {tasks.map((t) => {
-              const offset = diffDays(start, toDate(t.startDate));
-              const span = diffDays(toDate(t.startDate), toDate(t.endDate)) + 1;
+              const hasDates =
+                t.startDate && t.endDate && !isNaN(toDate(t.startDate).getTime()) && !isNaN(toDate(t.endDate).getTime());
+              const offset = hasDates ? diffDays(start, toDate(t.startDate)) : 0;
+              const span = hasDates ? diffDays(toDate(t.startDate), toDate(t.endDate)) + 1 : 0;
               const c = colorFor(t.responsible[0] ?? "?");
               return (
                 <div
@@ -116,17 +121,28 @@ export function GanttTab({
                         style={{ left: todayOffset * DAY_WIDTH + DAY_WIDTH / 2 }}
                       />
                     )}
-                    <button
-                      onClick={() => setEditing(t)}
-                      style={{
-                        left: offset * DAY_WIDTH + 3,
-                        width: Math.max(span * DAY_WIDTH - 6, 10),
-                        background: c.solid,
-                        top: 14,
-                      }}
-                      className="absolute h-7 rounded-md shadow-sm hover:brightness-110 transition"
-                      title={t.task}
-                    />
+                    {hasDates ? (
+                      <button
+                        onClick={() => setEditing(t)}
+                        style={{
+                          left: offset * DAY_WIDTH + 3,
+                          width: Math.max(span * DAY_WIDTH - 6, 10),
+                          background: c.solid,
+                          top: 14,
+                        }}
+                        className="absolute h-7 rounded-md shadow-sm hover:brightness-110 transition"
+                        title={t.task}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => setEditing(t)}
+                        style={{ left: 3, top: 14 }}
+                        className="absolute h-7 px-2 rounded-md border border-dashed border-gray-300 text-[11px] text-gray-400 flex items-center hover:bg-gray-50"
+                        title={t.task}
+                      >
+                        No dates
+                      </button>
+                    )}
                   </div>
                 </div>
               );
