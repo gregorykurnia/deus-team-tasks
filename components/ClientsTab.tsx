@@ -49,19 +49,32 @@ type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Part
 export function ClientsTab() {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
   const { addTask } = useTasks();
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function handleFollowUp(row: PipelineEntry) {
     const today = new Date().toISOString().slice(0, 10);
-    await addTask({
-      task: `Follow up: ${row.company}`,
-      responsible: [],
-      informed: [],
-      keyPoints: "",
-      startDate: today,
-      endDate: today,
-      order: Date.now(),
-      linkedClientId: row.id,
-    });
+    try {
+      await addTask({
+        task: `Follow up: ${row.company}`,
+        responsible: [],
+        informed: [],
+        keyPoints: "",
+        startDate: today,
+        endDate: today,
+        order: Date.now(),
+        linkedClientId: row.id,
+      });
+      setToast(`Follow-up task created for ${row.company} — see it under Tasks.`);
+    } catch (err) {
+      console.error(err);
+      alert("Couldn't create the follow-up task. Please try again.");
+    }
   }
 
   const [tab, setTab] = useState<PipelineTab>("prospect");
@@ -508,6 +521,12 @@ export function ClientsTab() {
           }}
           onClose={() => setColMgrOpen(false)}
         />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-[300] bg-gray-900 text-white text-[13px] rounded-lg px-4 py-2.5 shadow-lg">
+          {toast}
+        </div>
       )}
     </div>
   );
