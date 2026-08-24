@@ -58,7 +58,8 @@ export function TasksTab({
               </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
               <th className="px-4 py-3 w-[20%]">Informed</th>
-              <th className="px-4 py-3 w-[24%]">Key Points</th>
+              <th className="px-4 py-3 w-[20%]">Key Points</th>
+              <th className="px-4 py-3 w-[4%] text-center">Done</th>
             </tr>
           </thead>
           <tbody>
@@ -90,11 +91,22 @@ export function TasksTab({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
+                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={!!t.completed}
+                    onChange={() => {
+                      const { id, ...rest } = t;
+                      onUpdate(id, { ...rest, completed: !t.completed });
+                    }}
+                    className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
+                  />
+                </td>
               </tr>
             ))}
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
                   No tasks yet. Add your first one.
                 </td>
               </tr>
