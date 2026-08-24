@@ -125,7 +125,7 @@ export function TasksTab({
               </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
               {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
-              {!isLinkedView && <th className="px-4 py-3 w-[20%]">Key Points</th>}
+              <th className="px-4 py-3 w-[20%]">Description</th>
               <th className="px-4 py-3 w-[8%] text-center">Done</th>
             </tr>
           </thead>
@@ -192,7 +192,7 @@ export function TasksTab({
                       </div>
                     </td>
                   )}
-                  {!isLinkedView && <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>}
+                  <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-2.5">
                       <input
