@@ -271,7 +271,7 @@ export function ClientTable({
 
   return (
     <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg overflow-x-auto shadow-sm">
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr>
             {columns.map((col) => {
