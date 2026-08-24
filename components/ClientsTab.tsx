@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { useTasks } from "@/lib/useTasks";
-import { KNOWN_NAMES } from "@/lib/types";
 import { loadColConfig, loadFieldOptions, saveColConfig, saveFieldOptions } from "@/lib/clientLocalConfig";
 import { BUILTIN_COLS, ColumnDef, ColumnType, FIELD_TITLES, PipelineEntry, PipelineTab, PRIO_ORDER, TableKey } from "@/lib/clientTypes";
 import { daysSince } from "@/lib/clientHelpers";
@@ -14,7 +13,6 @@ import { ClientDatePopup } from "./clients/ClientDatePopup";
 import { ClientDropdownPopup } from "./clients/ClientDropdownPopup";
 import { ClientMovePopup } from "./clients/ClientMovePopup";
 import { ClientColumnManager } from "./clients/ClientColumnManager";
-import { TaskModal } from "./TaskModal";
 
 const TABS: { id: PipelineTab; label: string; icon: string }[] = [
   { id: "prospect", label: "Prospects & Active", icon: "📈" },
@@ -51,7 +49,20 @@ type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Part
 export function ClientsTab() {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
   const { addTask } = useTasks();
-  const [followUpRow, setFollowUpRow] = useState<PipelineEntry | null>(null);
+
+  async function handleFollowUp(row: PipelineEntry) {
+    const today = new Date().toISOString().slice(0, 10);
+    await addTask({
+      task: `Follow up: ${row.company}`,
+      responsible: [],
+      informed: [],
+      keyPoints: "",
+      startDate: today,
+      endDate: today,
+      order: Date.now(),
+      linkedClientId: row.id,
+    });
+  }
 
   const [tab, setTab] = useState<PipelineTab>("prospect");
   const [search, setSearch] = useState("");
@@ -405,7 +416,7 @@ export function ClientsTab() {
         onMove={openMovePopup}
         onEdit={openEditModal}
         onDelete={handleDelete}
-        onFollowUp={setFollowUpRow}
+        onFollowUp={handleFollowUp}
       />
 
       {modal && (
@@ -477,24 +488,6 @@ export function ClientsTab() {
       )}
 
       {movePopup && <ClientMovePopup from={rowTableKey(movePopup.row)} anchorRect={movePopup.anchorRect} onMove={handleMove} onClose={() => setMovePopup(null)} />}
-
-      {followUpRow && (
-        <TaskModal
-          allNames={KNOWN_NAMES}
-          prefill={{
-            task: `Follow up: ${followUpRow.company}`,
-            startDate: new Date().toISOString().slice(0, 10),
-            endDate: new Date().toISOString().slice(0, 10),
-            linkedClientId: followUpRow.id,
-          }}
-          linkedClientLabel={followUpRow.company}
-          onSave={async (t) => {
-            await addTask(t);
-            setFollowUpRow(null);
-          }}
-          onClose={() => setFollowUpRow(null)}
-        />
-      )}
 
       {colMgrOpen && (
         <ClientColumnManager
