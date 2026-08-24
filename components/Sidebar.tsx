@@ -17,8 +17,8 @@ const NAV: NavItem[] = [
     icon: "✓",
     children: [
       { id: "operational", label: "Operational", icon: "🗂" },
-      { id: "prospects", label: "Prospects", icon: "📈" },
-      { id: "clients", label: "Clients & Partners", icon: "🤝" },
+      { id: "task-prospects", label: "Prospects", icon: "📈" },
+      { id: "task-clients", label: "Clients", icon: "🤝" },
     ],
   },
   {
@@ -32,9 +32,27 @@ const NAV: NavItem[] = [
     ],
   },
   { id: "flow", label: "Flow", icon: "⇄" },
+  {
+    id: "clients-group",
+    label: "Clients",
+    icon: "◈",
+    children: [
+      { id: "prospects", label: "Prospects", icon: "📈" },
+      { id: "clients", label: "Clients & Partners", icon: "🤝" },
+    ],
+  },
 ];
 
-export type TabId = "operational" | "gantt" | "daily" | "assignee" | "flow" | "prospects" | "clients";
+export type TabId =
+  | "operational"
+  | "task-prospects"
+  | "task-clients"
+  | "gantt"
+  | "daily"
+  | "assignee"
+  | "flow"
+  | "prospects"
+  | "clients";
 
 function groupOf(id: TabId): GroupItem | undefined {
   return NAV.find((i) => isGroup(i) && i.children.some((c) => c.id === id)) as GroupItem | undefined;

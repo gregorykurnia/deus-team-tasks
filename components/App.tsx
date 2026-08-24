@@ -61,8 +61,9 @@ export default function App() {
             <div className="text-gray-400 text-sm py-20 text-center">Loading tasks…</div>
           ) : (
             <>
-              {tab === "operational" && (
+              {(tab === "operational" || tab === "task-prospects" || tab === "task-clients") && (
                 <TasksTab
+                  subTab={tab === "operational" ? "general" : tab === "task-prospects" ? "prospects" : "clients"}
                   tasks={visibleTasks}
                   allNames={allNames}
                   onAdd={addTask}
