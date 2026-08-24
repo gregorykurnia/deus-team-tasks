@@ -102,7 +102,10 @@ export function TasksTab({
   function addTaskGroup() {
     const name = prompt("Name this task group:")?.trim();
     if (!name || groups.includes(name)) return;
-    addGroup(name);
+    addGroup(name).catch((err) => {
+      console.error("Failed to add task group:", err);
+      alert("Couldn't create the task group. Please try again.");
+    });
   }
 
   function toggleGroup(id: string) {
