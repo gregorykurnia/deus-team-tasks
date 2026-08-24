@@ -28,7 +28,9 @@ export function DailyTab({
 }) {
   const defaultDate = useMemo(() => {
     const today = fmtISO(new Date());
-    const active = tasks.find((t) => (!t.startDate || t.startDate <= today) && (!t.endDate || today <= t.endDate));
+    const active = tasks.find((t) =>
+      t.startDate ? t.startDate <= today && (!t.endDate || today <= t.endDate) : t.endDate === today
+    );
     if (active) return today;
     const upcoming = [...tasks]
       .filter((t) => t.startDate)
@@ -41,7 +43,7 @@ export function DailyTab({
   const [editing, setEditing] = useState<Task | null>(null);
 
   const dayTasks = tasks
-    .filter((t) => (!t.startDate || t.startDate <= selected) && (!t.endDate || selected <= t.endDate))
+    .filter((t) => (t.startDate ? t.startDate <= selected && (!t.endDate || selected <= t.endDate) : t.endDate === selected))
     .sort((a, b) => a.responsible[0]?.localeCompare(b.responsible[0] ?? "") ?? 0);
 
   const selDate = toDate(selected);
