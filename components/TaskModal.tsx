@@ -8,6 +8,7 @@ export function TaskModal({
   initial,
   prefill,
   allNames,
+  groups,
   linkedClientLabel,
   onOpenClient,
   onSave,
@@ -17,6 +18,7 @@ export function TaskModal({
   initial?: Task;
   prefill?: Partial<NewTask>;
   allNames: string[];
+  groups?: string[];
   linkedClientLabel?: string;
   onOpenClient?: () => void;
   onSave: (task: NewTask) => void;
@@ -37,6 +39,7 @@ export function TaskModal({
   const [startDate, setStartDate] = useState(initial?.startDate ?? prefill?.startDate ?? "");
   const [endDate, setEndDate] = useState(initial?.endDate ?? prefill?.endDate ?? "");
   const [completed, setCompleted] = useState(initial?.completed ?? false);
+  const [taskGroup, setTaskGroup] = useState(initial?.taskGroup ?? prefill?.taskGroup ?? "");
   const linkedClientId = initial?.linkedClientId ?? prefill?.linkedClientId;
 
   function handleSave() {
@@ -55,6 +58,7 @@ export function TaskModal({
       order: initial?.order ?? Date.now(),
       completed,
       linkedClientId,
+      taskGroup: taskGroup || undefined,
     });
   }
 
@@ -144,6 +148,24 @@ export function TaskModal({
               />
             </div>
           </div>
+
+          {groups && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Task group</label>
+              <select
+                value={taskGroup}
+                onChange={(e) => setTaskGroup(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                <option value="">— Ungrouped</option>
+                {groups.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">

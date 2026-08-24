@@ -1,31 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Task, NewTask, TASK_TYPES } from "@/lib/types";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { loadFieldOptions } from "@/lib/clientLocalConfig";
-import { PipelineEntry, TableKey } from "@/lib/clientTypes";
+import { loadTaskGroups, saveTaskGroups } from "@/lib/taskGroups";
+import { PipelineEntry } from "@/lib/clientTypes";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
 
-type SubTab = "general" | "prospects" | "clients";
-
-const SUBTABS: { id: SubTab; label: string; icon: string }[] = [
-  { id: "general", label: "General", icon: "🗂" },
-  { id: "prospects", label: "Prospects", icon: "📈" },
-  { id: "clients", label: "Clients", icon: "🤝" },
-];
-
-function isDoneEntry(r: PipelineEntry) {
-  return r.status === "Client / Partner Done Deal";
-}
-
-function entryTableKey(r: PipelineEntry): TableKey {
-  if (r._raw) return "raw";
-  if (r._hold) return "hold";
-  return "main";
-}
+const UNGROUPED = "__ungrouped__";
 
 export function TasksTab({
   tasks,
@@ -43,185 +28,198 @@ export function TasksTab({
   const [editing, setEditing] = useState<Task | null>(null);
   const [creating, setCreating] = useState(false);
   const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
-  const [subTab, setSubTab] = useState<SubTab>("general");
   const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
+  const [groups, setGroups] = useState<string[]>(() => loadTaskGroups());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const { entries, saveEntry } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
   const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
 
-  const generalTasks = useMemo(
+  const operationalTasks = useMemo(
     () => tasks.filter((t) => t.linkedClientId == null || !entryById.has(t.linkedClientId)),
     [tasks, entryById]
   );
-  const prospectTasks = useMemo(
-    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && !isDoneEntry(entryById.get(t.linkedClientId)!)),
-    [tasks, entryById]
-  );
-  const clientTasks = useMemo(
-    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && isDoneEntry(entryById.get(t.linkedClientId)!)),
-    [tasks, entryById]
-  );
-
-  const activeTasks = subTab === "general" ? generalTasks : subTab === "prospects" ? prospectTasks : clientTasks;
 
   const sortedTasks = useMemo(() => {
-    if (!dateSort) return activeTasks;
-    const sorted = [...activeTasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    if (!dateSort) return operationalTasks;
+    const sorted = [...operationalTasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
     return dateSort === "asc" ? sorted : sorted.reverse();
-  }, [activeTasks, dateSort]);
+  }, [operationalTasks, dateSort]);
 
-  const isLinkedView = subTab !== "general";
+  const allGroups = useMemo(() => {
+    const used = new Set(operationalTasks.map((t) => t.taskGroup).filter(Boolean) as string[]);
+    return Array.from(new Set([...groups, ...used]));
+  }, [groups, operationalTasks]);
+
+  const sections = useMemo(() => {
+    const byGroup = new Map<string, Task[]>();
+    allGroups.forEach((g) => byGroup.set(g, []));
+    byGroup.set(UNGROUPED, []);
+    sortedTasks.forEach((t) => {
+      const key = t.taskGroup && byGroup.has(t.taskGroup) ? t.taskGroup : UNGROUPED;
+      byGroup.get(key)!.push(t);
+    });
+    return [...allGroups.map((g) => ({ id: g, label: g, tasks: byGroup.get(g)! })), { id: UNGROUPED, label: "Ungrouped", tasks: byGroup.get(UNGROUPED)! }];
+  }, [allGroups, sortedTasks]);
+
+  function addTaskGroup() {
+    const name = prompt("Name this task group:")?.trim();
+    if (!name || groups.includes(name)) return;
+    const next = [...groups, name];
+    setGroups(next);
+    saveTaskGroups(next);
+  }
+
+  function toggleGroup(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-gray-900">Tasks</h1>
-        <button
-          onClick={() => setCreating(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-indigo-700 rounded-lg shadow-sm"
-        >
-          + Add task
-        </button>
-      </div>
-
-      <div className="flex border-b border-gray-200 mb-4">
-        {SUBTABS.map((t) => {
-          const count = t.id === "general" ? generalTasks.length : t.id === "prospects" ? prospectTasks.length : clientTasks.length;
-          const active = subTab === t.id;
-          return (
-            <div
-              key={t.id}
-              onClick={() => setSubTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium cursor-pointer border-b-2 -mb-px whitespace-nowrap ${
-                active ? "text-accent border-accent" : "text-gray-400 border-transparent hover:text-gray-600"
-              }`}
-            >
-              <span className="text-xs">{t.icon}</span>
-              {t.label}
-              <span className={`text-[11px] font-semibold rounded-full px-1.5 ${active ? "bg-accent/10 text-accent" : "bg-gray-100 text-gray-400"}`}>{count}</span>
-            </div>
-          );
-        })}
+        <h1 className="text-xl font-semibold text-gray-900">Operational Tasks</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={addTaskGroup}
+            className="px-4 py-2 text-sm font-medium text-accent bg-accent/10 hover:bg-accent/20 rounded-lg"
+          >
+            + Add Task Group
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-indigo-700 rounded-lg shadow-sm"
+          >
+            + Add task
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {isLinkedView && <th className="px-4 py-3 w-[18%]">Company</th>}
-              <th className={`px-4 py-3 ${isLinkedView ? "w-[20%]" : "w-[22%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
+              <th className="px-4 py-3 w-[22%]">Task</th>
               <th className="px-4 py-3 w-[12%]">Type</th>
               <th className="px-4 py-3 w-[14%]">
                 <button
                   onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))}
                   className="flex items-center gap-1 hover:text-gray-700"
                 >
-                  {isLinkedView ? "Target Date" : "Date"}
+                  Date
                   <span className="text-gray-400">
                     {dateSort === "asc" ? "▲" : dateSort === "desc" ? "▼" : "↕"}
                   </span>
                 </button>
               </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
-              {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
+              <th className="px-4 py-3 w-[20%]">Informed</th>
               <th className="px-4 py-3 w-[20%]">Description</th>
               <th className="px-4 py-3 w-[8%] text-center">Done</th>
             </tr>
           </thead>
           <tbody>
-            {sortedTasks.map((t) => {
-              const linkedEntry = t.linkedClientId != null ? entryById.get(t.linkedClientId) : undefined;
+            {sections.map((section) => {
+              if (section.tasks.length === 0 && section.id === UNGROUPED && sections.length > 1) return null;
+              const collapsed = collapsedGroups.has(section.id);
               return (
-                <tr
-                  key={t.id}
-                  onClick={() => setEditing(t)}
-                  className={`border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top ${
-                    t.completed ? "opacity-50" : ""
-                  }`}
-                >
-                  {isLinkedView && (
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {linkedEntry ? (
-                        <button
-                          onClick={() => setOpenClientRow(linkedEntry)}
-                          className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20"
-                        >
-                          🏢 {linkedEntry.company}
-                        </button>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                  )}
-                  <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
-                    {t.task}
-                  </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={t.taskType ?? ""}
-                      onChange={(e) => {
-                        const { id, ...rest } = t;
-                        onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
-                      }}
-                      className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-1 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
-                    >
-                      <option value="">—</option>
-                      {TASK_TYPES.map((tt) => (
-                        <option key={tt} value={tt}>
-                          {tt}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {t.responsible.map((r) => (
-                        <Chip key={r} name={r} />
-                      ))}
-                    </div>
-                  </td>
-                  {!isLinkedView && (
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {t.informed.length === 0 && <span className="text-gray-300">—</span>}
-                        {t.informed.map((p, i) => (
-                          <Chip key={i} name={p.name} note={p.note} variant="outline" />
-                        ))}
-                      </div>
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={!!t.completed}
-                        onChange={() => {
-                          const { id, ...rest } = t;
-                          onUpdate(id, { ...rest, completed: !t.completed });
-                        }}
-                        className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
-                      />
+                <Fragment key={section.id}>
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
+                    <td colSpan={7} className="px-4 py-2">
                       <button
-                        onClick={() => {
-                          if (confirm(`Delete "${t.task}"?`)) onDelete(t.id);
-                        }}
-                        title="Delete"
-                        className="w-[22px] h-[22px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => toggleGroup(section.id)}
+                        className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700"
                       >
-                        🗑
+                        <span className={`text-[10px] transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
+                        {section.label}
+                        <span className="text-[11px] font-semibold rounded-full px-1.5 bg-gray-200 text-gray-500">
+                          {section.tasks.length}
+                        </span>
                       </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  {!collapsed &&
+                    section.tasks.map((t) => (
+                      <tr
+                        key={t.id}
+                        onClick={() => setEditing(t)}
+                        className={`border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top ${
+                          t.completed ? "opacity-50" : ""
+                        }`}
+                      >
+                        <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
+                          {t.task}
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={t.taskType ?? ""}
+                            onChange={(e) => {
+                              const { id, ...rest } = t;
+                              onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
+                            }}
+                            className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-1 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
+                          >
+                            <option value="">—</option>
+                            {TASK_TYPES.map((tt) => (
+                              <option key={tt} value={tt}>
+                                {tt}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {t.responsible.map((r) => (
+                              <Chip key={r} name={r} />
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {t.informed.length === 0 && <span className="text-gray-300">—</span>}
+                            {t.informed.map((p, i) => (
+                              <Chip key={i} name={p.name} note={p.note} variant="outline" />
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={!!t.completed}
+                              onChange={() => {
+                                const { id, ...rest } = t;
+                                onUpdate(id, { ...rest, completed: !t.completed });
+                              }}
+                              className="rounded border-gray-300 text-accent focus:ring-accent/30 cursor-pointer"
+                            />
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete "${t.task}"?`)) onDelete(t.id);
+                              }}
+                              title="Delete"
+                              className="w-[22px] h-[22px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </Fragment>
               );
             })}
             {sortedTasks.length === 0 && (
               <tr>
-                <td colSpan={isLinkedView ? 6 : 7} className="px-4 py-10 text-center text-gray-400">
-                  {subTab === "general" ? "No tasks yet. Add your first one." : `No ${subTab} follow-ups yet.`}
+                <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                  No tasks yet. Add your first one.
                 </td>
               </tr>
             )}
@@ -233,6 +231,7 @@ export function TasksTab({
         <TaskModal
           initial={editing}
           allNames={allNames}
+          groups={allGroups}
           linkedClientLabel={editing.linkedClientId != null ? entryById.get(editing.linkedClientId)?.company : undefined}
           onOpenClient={
             editing.linkedClientId != null && entryById.has(editing.linkedClientId)
@@ -253,6 +252,7 @@ export function TasksTab({
       {creating && (
         <TaskModal
           allNames={allNames}
+          groups={allGroups}
           onClose={() => setCreating(false)}
           onSave={(t) => {
             onAdd(t);
@@ -276,6 +276,12 @@ export function TasksTab({
       )}
     </div>
   );
+}
+
+function entryTableKey(r: PipelineEntry): "main" | "raw" | "hold" {
+  if (r._raw) return "raw";
+  if (r._hold) return "hold";
+  return "main";
 }
 
 function fmtRange(start: string, end: string) {

@@ -25,6 +25,7 @@ export interface Task {
   order: number;
   completed?: boolean;
   linkedClientId?: number; // links to a PipelineEntry.id in the client pipeline
+  taskGroup?: string; // name of the Task Group this task is organized under (Operational view)
 }
 
 export type NewTask = Omit<Task, "id">;

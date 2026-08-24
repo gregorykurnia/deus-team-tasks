@@ -13,7 +13,7 @@ import { ClientsTab } from "./ClientsTab";
 
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
-  const [tab, setTab] = useState<TabId>("tasks");
+  const [tab, setTab] = useState<TabId>("operational");
   const [showCompleted, setShowCompleted] = useState(false);
 
   const completedCount = useMemo(() => tasks.filter((t) => t.completed).length, [tasks]);
@@ -61,7 +61,7 @@ export default function App() {
             <div className="text-gray-400 text-sm py-20 text-center">Loading tasks…</div>
           ) : (
             <>
-              {tab === "tasks" && (
+              {tab === "operational" && (
                 <TasksTab
                   tasks={visibleTasks}
                   allNames={allNames}
