@@ -110,7 +110,8 @@ export function TasksTab({
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
               {isLinkedView && <th className="px-4 py-3 w-[18%]">Company</th>}
-              <th className={`px-4 py-3 ${isLinkedView ? "w-[26%]" : "w-[28%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
+              <th className={`px-4 py-3 ${isLinkedView ? "w-[20%]" : "w-[22%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
+              <th className="px-4 py-3 w-[12%]">Type</th>
               <th className="px-4 py-3 w-[14%]">
                 <button
                   onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))}
@@ -155,6 +156,15 @@ export function TasksTab({
                   )}
                   <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
                     {t.task}
+                  </td>
+                  <td className="px-4 py-3">
+                    {t.taskType ? (
+                      <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
+                        {t.taskType}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
                   <td className="px-4 py-3">
@@ -202,7 +212,7 @@ export function TasksTab({
             })}
             {sortedTasks.length === 0 && (
               <tr>
-                <td colSpan={isLinkedView ? 5 : 6} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={isLinkedView ? 6 : 7} className="px-4 py-10 text-center text-gray-400">
                   {subTab === "general" ? "No tasks yet. Add your first one." : `No ${subTab} follow-ups yet.`}
                 </td>
               </tr>

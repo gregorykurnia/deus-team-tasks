@@ -3,9 +3,20 @@ export interface InformedPerson {
   note?: string; // e.g. "recipient", "backup", "observer"
 }
 
+export const TASK_TYPES = [
+  "Our Action",
+  "Follow Up",
+  "Send Proposal/Quote",
+  "Contract/Paperwork",
+  "Finalize Scheduling",
+] as const;
+
+export type TaskType = (typeof TASK_TYPES)[number];
+
 export interface Task {
   id: string;
   task: string;
+  taskType?: TaskType;
   responsible: string[];
   informed: InformedPerson[];
   keyPoints: string;

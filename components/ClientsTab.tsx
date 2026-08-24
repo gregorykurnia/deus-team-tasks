@@ -537,6 +537,7 @@ export function ClientsTab() {
           allNames={allNames}
           prefill={{
             task: `Follow up: ${followUpRow.company}`,
+            taskType: "Follow Up",
             startDate: new Date().toISOString().slice(0, 10),
             endDate: new Date().toISOString().slice(0, 10),
             linkedClientId: followUpRow.id,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { NewTask, Task } from "@/lib/types";
+import { NewTask, Task, TASK_TYPES, TaskType } from "@/lib/types";
 import { PeopleInput } from "./PeopleInput";
 
 export function TaskModal({
@@ -24,6 +24,9 @@ export function TaskModal({
   onClose: () => void;
 }) {
   const [task, setTask] = useState(initial?.task ?? prefill?.task ?? "");
+  const [taskType, setTaskType] = useState<TaskType | "">(
+    initial?.taskType ?? prefill?.taskType ?? ""
+  );
   const [responsible, setResponsible] = useState<{ name: string; note?: string }[]>(
     (initial?.responsible ?? prefill?.responsible ?? []).map((n) => ({ name: n }))
   );
@@ -43,6 +46,7 @@ export function TaskModal({
     }
     onSave({
       task: task.trim(),
+      taskType: taskType || undefined,
       responsible: responsible.map((r) => r.name),
       informed,
       keyPoints: keyPoints.trim(),
@@ -98,6 +102,22 @@ export function TaskModal({
               className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
               placeholder="Describe the task…"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Task type</label>
+            <select
+              value={taskType}
+              onChange={(e) => setTaskType(e.target.value as TaskType | "")}
+              className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+            >
+              <option value="">—</option>
+              {TASK_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
