@@ -95,9 +95,14 @@ export function GanttTab({
               const span = diffDays(toDate(t.startDate), toDate(t.endDate)) + 1;
               const c = colorFor(t.responsible[0] ?? "?");
               return (
-                <div key={t.id} className="flex border-b border-gray-100 last:border-0 group">
+                <div
+                  key={t.id}
+                  className={`flex border-b border-gray-100 last:border-0 group ${t.completed ? "opacity-50" : ""}`}
+                >
                   <div className="sticky left-0 z-10 w-[260px] shrink-0 px-4 py-3 border-r border-gray-200 bg-white group-hover:bg-gray-50/60">
-                    <div className="text-sm text-gray-800 font-medium line-clamp-2">{t.task}</div>
+                    <div className={`text-sm text-gray-800 font-medium line-clamp-2 ${t.completed ? "line-through" : ""}`}>
+                      {t.task}
+                    </div>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {t.responsible.map((r) => (
                         <Chip key={r} name={r} />

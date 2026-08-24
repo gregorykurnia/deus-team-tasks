@@ -27,6 +27,7 @@ export function TaskModal({
   const [keyPoints, setKeyPoints] = useState(initial?.keyPoints ?? "");
   const [startDate, setStartDate] = useState(initial?.startDate ?? "");
   const [endDate, setEndDate] = useState(initial?.endDate ?? "");
+  const [completed, setCompleted] = useState(initial?.completed ?? false);
 
   function handleSave() {
     if (!task.trim() || !startDate || !endDate || responsible.length === 0) return;
@@ -38,6 +39,7 @@ export function TaskModal({
       startDate,
       endDate,
       order: initial?.order ?? Date.now(),
+      completed,
     });
   }
 
@@ -47,9 +49,22 @@ export function TaskModal({
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {initial ? "Edit Task" : "New Task"}
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {initial ? "Edit Task" : "New Task"}
+          </h2>
+          {initial && (
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={completed}
+                onChange={(e) => setCompleted(e.target.checked)}
+                className="rounded border-gray-300 text-accent focus:ring-accent/30"
+              />
+              Completed
+            </label>
+          )}
+        </div>
 
         <div className="space-y-4">
           <div>

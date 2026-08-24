@@ -13,6 +13,13 @@ import { FlowTab } from "./FlowTab";
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
   const [tab, setTab] = useState<TabId>("tasks");
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const completedCount = useMemo(() => tasks.filter((t) => t.completed).length, [tasks]);
+  const visibleTasks = useMemo(
+    () => (showCompleted ? tasks : tasks.filter((t) => !t.completed)),
+    [tasks, showCompleted]
+  );
 
   const allNames = useMemo(() => {
     const set = new Set<string>(KNOWN_NAMES);
@@ -34,6 +41,19 @@ export default function App() {
             </div>
             <h1 className="text-base font-semibold text-gray-900">DEUS Team Tasks</h1>
             <span className="text-xs text-gray-400 ml-1">Handover & rollout plan</span>
+            {completedCount > 0 && (
+              <button
+                onClick={() => setShowCompleted((v) => !v)}
+                className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  showCompleted
+                    ? "bg-accent/10 border-accent/30 text-accent"
+                    : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                {showCompleted ? "Hide" : "Show"} completed
+                <span className="text-gray-400">({completedCount})</span>
+              </button>
+            )}
           </div>
           <Tabs active={tab} onChange={setTab} />
         </div>
@@ -46,7 +66,7 @@ export default function App() {
           <>
             {tab === "tasks" && (
               <TasksTab
-                tasks={tasks}
+                tasks={visibleTasks}
                 allNames={allNames}
                 onAdd={addTask}
                 onUpdate={(id, t) => updateTask(id, t)}
@@ -54,13 +74,13 @@ export default function App() {
               />
             )}
             {tab === "gantt" && (
-              <GanttTab tasks={tasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
+              <GanttTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
             )}
             {tab === "daily" && (
-              <DailyTab tasks={tasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
+              <DailyTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
             )}
             {tab === "assignee" && (
-              <AssigneeTab tasks={tasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
+              <AssigneeTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
             )}
             {tab === "flow" && <FlowTab />}
           </>

@@ -12,6 +12,7 @@ export interface Task {
   startDate: string; // yyyy-mm-dd
   endDate: string; // yyyy-mm-dd
   order: number;
+  completed?: boolean;
 }
 
 export type NewTask = Omit<Task, "id">;

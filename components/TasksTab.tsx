@@ -66,9 +66,13 @@ export function TasksTab({
               <tr
                 key={t.id}
                 onClick={() => setEditing(t)}
-                className="border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top"
+                className={`border-b border-gray-100 last:border-0 hover:bg-indigo-50/40 cursor-pointer transition-colors align-top ${
+                  t.completed ? "opacity-50" : ""
+                }`}
               >
-                <td className="px-4 py-3 text-gray-800 font-medium">{t.task}</td>
+                <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
+                  {t.task}
+                </td>
                 <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">

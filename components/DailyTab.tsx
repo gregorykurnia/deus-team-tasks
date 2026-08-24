@@ -93,10 +93,14 @@ export function DailyTab({
           <div
             key={t.id}
             onClick={() => setEditing(t)}
-            className="px-5 py-4 flex items-start gap-4 hover:bg-indigo-50/40 cursor-pointer transition-colors"
+            className={`px-5 py-4 flex items-start gap-4 hover:bg-indigo-50/40 cursor-pointer transition-colors ${
+              t.completed ? "opacity-50" : ""
+            }`}
           >
             <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-400 font-medium">
-              {t.startDate === t.endDate
+              {t.completed
+                ? "Done"
+                : t.startDate === t.endDate
                 ? "Single day"
                 : t.startDate === selected
                 ? "Starts"
@@ -105,7 +109,7 @@ export function DailyTab({
                 : "Ongoing"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-800">{t.task}</div>
+              <div className={`text-sm font-medium text-gray-800 ${t.completed ? "line-through" : ""}`}>{t.task}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {t.responsible.map((r) => (
                   <Chip key={r} name={r} />

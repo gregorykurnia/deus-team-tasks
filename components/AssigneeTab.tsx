@@ -116,9 +116,11 @@ function Section({
           <div
             key={t.id}
             onClick={() => onClick(t)}
-            className="px-5 py-3 hover:bg-indigo-50/40 cursor-pointer transition-colors"
+            className={`px-5 py-3 hover:bg-indigo-50/40 cursor-pointer transition-colors ${
+              t.completed ? "opacity-50" : ""
+            }`}
           >
-            <div className="text-sm font-medium text-gray-800">{t.task}</div>
+            <div className={`text-sm font-medium text-gray-800 ${t.completed ? "line-through" : ""}`}>{t.task}</div>
             <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
               <span>{fmtRange(t.startDate, t.endDate)}</span>
               {note?.(t) && <span className="text-gray-500">· {note(t)}</span>}
