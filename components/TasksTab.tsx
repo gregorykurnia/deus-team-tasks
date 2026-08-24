@@ -11,6 +11,7 @@ import { TaskModal } from "./TaskModal";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
 
 const UNGROUPED = "__ungrouped__";
+const UNGROUPED_LABEL = "Pre-Incentive Technical";
 
 type SubTab = "general" | "prospects" | "clients";
 
@@ -44,6 +45,7 @@ export function TasksTab({
   const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
   const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const { groups, addGroup } = useTaskGroups();
 
   const { entries, saveEntry } = useClientPipeline();
@@ -87,8 +89,13 @@ export function TasksTab({
       const key = t.taskGroup && byGroup.has(t.taskGroup) ? t.taskGroup : UNGROUPED;
       byGroup.get(key)!.push(t);
     });
-    return [...allGroups.map((g) => ({ id: g, label: g, tasks: byGroup.get(g)! })), { id: UNGROUPED, label: "Ungrouped", tasks: byGroup.get(UNGROUPED)! }];
+    return [...allGroups.map((g) => ({ id: g, label: g, tasks: byGroup.get(g)! })), { id: UNGROUPED, label: UNGROUPED_LABEL, tasks: byGroup.get(UNGROUPED)! }];
   }, [allGroups, sortedTasks, subTab]);
+
+  const displayedSections = useMemo(
+    () => (activeGroupId ? sections.filter((s) => s.id === activeGroupId) : sections),
+    [sections, activeGroupId]
+  );
 
   const showGroupHeaders = subTab === "general";
 
@@ -132,6 +139,41 @@ export function TasksTab({
         </div>
       </div>
 
+      {showGroupHeaders && sections.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <button
+            onClick={() => setActiveGroupId(null)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              activeGroupId === null
+                ? "bg-accent text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            All
+          </button>
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveGroupId(section.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                activeGroupId === section.id
+                  ? "bg-accent text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {section.label}
+              <span
+                className={`ml-1.5 text-[10px] font-semibold rounded-full px-1.5 ${
+                  activeGroupId === section.id ? "bg-white/20" : "bg-gray-200 text-gray-500"
+                }`}
+              >
+                {section.tasks.length}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
@@ -157,7 +199,7 @@ export function TasksTab({
             </tr>
           </thead>
           <tbody>
-            {sections.map((section) => {
+            {displayedSections.map((section) => {
               if (showGroupHeaders && section.tasks.length === 0 && section.id === UNGROUPED && sections.length > 1) return null;
               const collapsed = showGroupHeaders && collapsedGroups.has(section.id);
               return (
