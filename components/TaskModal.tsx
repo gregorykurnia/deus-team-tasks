@@ -41,14 +41,6 @@ export function TaskModal({
       alert("Task description is required.");
       return;
     }
-    if (!startDate || !endDate) {
-      alert("Start date and end date are required.");
-      return;
-    }
-    if (responsible.length === 0) {
-      alert("Add at least one responsible person.");
-      return;
-    }
     onSave({
       task: task.trim(),
       responsible: responsible.map((r) => r.name),
@@ -111,7 +103,7 @@ export function TaskModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
-                Start date <span className="text-accent">*</span>
+                Start date
               </label>
               <input
                 type="date"
@@ -122,7 +114,7 @@ export function TaskModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
-                End date <span className="text-accent">*</span>
+                End date
               </label>
               <input
                 type="date"
@@ -135,7 +127,7 @@ export function TaskModal({
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Responsible <span className="text-accent">*</span> <span className="text-gray-400 font-normal">(owns the task)</span>
+              Responsible <span className="text-gray-400 font-normal">(owns the task)</span>
             </label>
             <PeopleInput values={responsible} onChange={setResponsible} suggestions={allNames} placeholder="Add name…" />
           </div>
