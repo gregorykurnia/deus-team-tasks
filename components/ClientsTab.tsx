@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { useTasks } from "@/lib/useTasks";
+import { KNOWN_NAMES } from "@/lib/types";
 import { loadColConfig, loadFieldOptions, saveColConfig, saveFieldOptions } from "@/lib/clientLocalConfig";
 import { BUILTIN_COLS, ColumnDef, ColumnType, FIELD_TITLES, PipelineEntry, PipelineTab, PRIO_ORDER, TableKey } from "@/lib/clientTypes";
 import { daysSince } from "@/lib/clientHelpers";
 import { ClientTable } from "./clients/ClientTable";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
+import { TaskModal } from "./TaskModal";
 import { ClientTextPopup } from "./clients/ClientTextPopup";
 import { ClientDatePopup } from "./clients/ClientDatePopup";
 import { ClientDropdownPopup } from "./clients/ClientDropdownPopup";
@@ -48,8 +50,9 @@ type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Part
 
 export function ClientsTab() {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
-  const { addTask } = useTasks();
+  const { tasks, addTask } = useTasks();
   const [toast, setToast] = useState<string | null>(null);
+  const [followUpRow, setFollowUpRow] = useState<PipelineEntry | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -57,20 +60,26 @@ export function ClientsTab() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  async function handleFollowUp(row: PipelineEntry) {
-    const today = new Date().toISOString().slice(0, 10);
+  const allNames = useMemo(() => {
+    const set = new Set<string>(KNOWN_NAMES);
+    tasks.forEach((t) => {
+      t.responsible.forEach((r) => set.add(r));
+      t.informed.forEach((p) => set.add(p.name));
+    });
+    set.delete("Full Team");
+    return Array.from(set).sort();
+  }, [tasks]);
+
+  function handleFollowUp(row: PipelineEntry) {
+    setFollowUpRow(row);
+  }
+
+  async function handleSaveFollowUpTask(task: Parameters<typeof addTask>[0]) {
+    if (!followUpRow) return;
     try {
-      await addTask({
-        task: `Follow up: ${row.company}`,
-        responsible: [],
-        informed: [],
-        keyPoints: "",
-        startDate: today,
-        endDate: today,
-        order: Date.now(),
-        linkedClientId: row.id,
-      });
-      setToast(`Follow-up task created for ${row.company} — see it under Tasks.`);
+      await addTask(task);
+      setToast(`Follow-up task created for ${followUpRow.company} — see it under Tasks.`);
+      setFollowUpRow(null);
     } catch (err) {
       console.error(err);
       alert("Couldn't create the follow-up task. Please try again.");
@@ -520,6 +529,20 @@ export function ClientsTab() {
             if (type === "dropdown") setFieldOptions((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
           }}
           onClose={() => setColMgrOpen(false)}
+        />
+      )}
+
+      {followUpRow && (
+        <TaskModal
+          allNames={allNames}
+          prefill={{
+            task: `Follow up: ${followUpRow.company}`,
+            startDate: new Date().toISOString().slice(0, 10),
+            endDate: new Date().toISOString().slice(0, 10),
+            linkedClientId: followUpRow.id,
+          }}
+          onSave={handleSaveFollowUpTask}
+          onClose={() => setFollowUpRow(null)}
         />
       )}
 
