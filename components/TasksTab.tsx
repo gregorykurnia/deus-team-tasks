@@ -139,7 +139,7 @@ export function TasksTab({
         </div>
       </div>
 
-      {showGroupHeaders && sections.length > 1 && (
+      {showGroupHeaders && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
             onClick={() => setActiveGroupId(null)}
