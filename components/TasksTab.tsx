@@ -710,20 +710,16 @@ function lastActionBadge(d?: string) {
   const n = daysSince(d);
   if (n === null) return null;
   const colorClass = n <= 5 ? "text-emerald-600" : n <= 13 ? "text-amber-600" : "text-red-600";
-  const label = n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`;
-  return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
+  return <span className={`ml-1 font-medium ${colorClass}`}>({n}D)</span>;
 }
 
 function targetDateBadge(d?: string) {
   const n = daysSince(d);
   if (n === null) return null;
   if (n > 0) {
-    const colorClass = "text-red-600";
-    const label = n === 1 ? "1 day overdue" : `${n} days overdue`;
-    return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
+    return <span className="ml-1 font-medium text-red-600">(-{n}D)</span>;
   }
   const daysUntil = -n;
   const colorClass = daysUntil <= 3 ? "text-amber-600" : "text-gray-400";
-  const label = daysUntil === 0 ? "due today" : daysUntil === 1 ? "in 1 day" : `in ${daysUntil} days`;
-  return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
+  return <span className={`ml-1 font-medium ${colorClass}`}>({daysUntil}D)</span>;
 }
