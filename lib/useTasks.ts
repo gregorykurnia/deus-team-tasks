@@ -18,6 +18,12 @@ import { SEED_TASKS } from "./seedData";
 
 const COLLECTION = "tasks";
 
+function stripUndefined<T extends object>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as T;
+}
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,11 +50,11 @@ export function useTasks() {
   }, [seeded]);
 
   async function addTask(task: NewTask) {
-    await addDoc(collection(db, COLLECTION), task);
+    await addDoc(collection(db, COLLECTION), stripUndefined(task));
   }
 
   async function updateTask(id: string, patch: Partial<NewTask>) {
-    await updateDoc(doc(db, COLLECTION, id), patch);
+    await updateDoc(doc(db, COLLECTION, id), stripUndefined(patch));
   }
 
   async function deleteTask(id: string) {
