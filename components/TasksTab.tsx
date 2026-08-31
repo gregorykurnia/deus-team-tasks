@@ -648,6 +648,12 @@ export function TasksTab({
           onClose={() => setEditing(null)}
           onSave={(t) => {
             onUpdate(editing.id, t);
+            if (t.linkedClientId != null) {
+              const linkedEntry = entryById.get(t.linkedClientId);
+              if (linkedEntry && (linkedEntry.date !== t.lastActionDate || linkedEntry.target !== t.endDate)) {
+                saveEntry({ ...linkedEntry, date: t.lastActionDate ?? linkedEntry.date, target: t.endDate || linkedEntry.target });
+              }
+            }
             setEditing(null);
           }}
           onDelete={() => {

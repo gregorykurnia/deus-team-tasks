@@ -542,8 +542,9 @@ export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
           prefill={{
             task: `Follow up: ${followUpRow.company}`,
             taskType: "Follow Up",
-            startDate: new Date().toISOString().slice(0, 10),
-            endDate: new Date().toISOString().slice(0, 10),
+            startDate: followUpRow.target || new Date().toISOString().slice(0, 10),
+            endDate: followUpRow.target || new Date().toISOString().slice(0, 10),
+            lastActionDate: followUpRow.date || undefined,
             linkedClientId: followUpRow.id,
           }}
           onSave={handleSaveFollowUpTask}
