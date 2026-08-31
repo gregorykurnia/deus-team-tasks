@@ -31,6 +31,7 @@ const NAV: NavItem[] = [
       { id: "assignee", label: "Assignee View", icon: "▤" },
     ],
   },
+  { id: "calendar", label: "Calendar", icon: "📅" },
   { id: "flow", label: "Flow", icon: "⇄" },
   { id: "clients", label: "Clients", icon: "◈" },
 ];
@@ -42,6 +43,7 @@ export type TabId =
   | "gantt"
   | "daily"
   | "assignee"
+  | "calendar"
   | "flow"
   | "clients";
 

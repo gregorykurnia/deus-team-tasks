@@ -8,6 +8,7 @@ import { TasksTab } from "./TasksTab";
 import { GanttTab } from "./GanttTab";
 import { DailyTab } from "./DailyTab";
 import { AssigneeTab } from "./AssigneeTab";
+import { CalendarTab } from "./CalendarTab";
 import { FlowTab } from "./FlowTab";
 import { ClientsTab } from "./ClientsTab";
 
@@ -79,6 +80,9 @@ export default function App() {
               )}
               {tab === "assignee" && (
                 <AssigneeTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
+              )}
+              {tab === "calendar" && (
+                <CalendarTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
               )}
               {tab === "flow" && <FlowTab />}
               {tab === "clients" && <ClientsTab />}
