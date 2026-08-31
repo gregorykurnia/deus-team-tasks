@@ -55,7 +55,7 @@ export function CalendarTab({
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editing, setEditing] = useState<Task | null>(null);
-  const [showTasks, setShowTasks] = useState(true);
+  const [showTasks, setShowTasks] = useState(false);
   const [showGCal, setShowGCal] = useState(true);
 
   const { events: gcalEvents, error: gcalError, loading: gcalLoading } = useGCalEvents(cursor);
