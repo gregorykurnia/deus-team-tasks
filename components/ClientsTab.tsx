@@ -50,7 +50,7 @@ type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Part
 
 export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
-  const { tasks, addTask } = useTasks();
+  const { tasks, addTask, updateTask } = useTasks();
   const [toast, setToast] = useState<string | null>(null);
   const [followUpRow, setFollowUpRow] = useState<PipelineEntry | null>(null);
 
@@ -231,6 +231,19 @@ export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
 
   async function persist(entry: PipelineEntry) {
     await saveEntry(entry);
+    const linkedTasks = tasks.filter((t) => t.linkedClientId === entry.id);
+    await Promise.all(
+      linkedTasks
+        .filter((t) => t.lastActionDate !== entry.date || t.endDate !== (entry.target ?? t.endDate))
+        .map((t) => {
+          const { id, ...rest } = t;
+          return updateTask(id, {
+            ...rest,
+            lastActionDate: entry.date,
+            ...(entry.target ? { startDate: entry.target, endDate: entry.target } : {}),
+          });
+        })
+    );
   }
 
   function openTextPopup(field: string, row: PipelineEntry, el: HTMLElement, multiline = false, isNumber = false) {
