@@ -177,10 +177,10 @@ export function CalendarTab({
           <button
             onClick={() => setShowGCal((v) => !v)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              showGCal ? "bg-gray-100 border-gray-300 text-gray-700" : "bg-white border-gray-200 text-gray-400"
+              showGCal ? "bg-teal-50 border-teal-200 text-teal-700" : "bg-white border-gray-200 text-gray-400"
             }`}
           >
-            <span className="w-2 h-2 rounded-full border border-gray-400" />
+            <span className="w-2 h-2 rounded-full bg-teal-500" />
             Google Calendar
             {gcalLoading && <span className="text-gray-300">…</span>}
           </button>
@@ -203,7 +203,12 @@ export function CalendarTab({
               const dayEvents = showGCal ? gcalByDate.get(key) ?? [] : [];
               const items = [
                 ...dayTasks.map((t) => ({ kind: "task" as const, id: t.id, title: t.task, done: !!t.completed })),
-                ...dayEvents.map((e) => ({ kind: "gcal" as const, id: e.id, title: e.title, done: false })),
+                ...dayEvents.map((e) => ({
+                  kind: "gcal" as const,
+                  id: e.id,
+                  title: e.startTime ? `${e.startTime} ${e.title}` : e.title,
+                  done: false,
+                })),
               ];
               const isToday = key === today;
               const isSelected = key === selectedDay;
@@ -231,7 +236,7 @@ export function CalendarTab({
                             ? it.done
                               ? "bg-gray-100 text-gray-400 line-through"
                               : "bg-accent/10 text-accent"
-                            : "bg-white text-gray-600 border border-gray-300"
+                            : "bg-teal-50 text-teal-700 border border-teal-200"
                         }`}
                       >
                         {it.title}
@@ -298,10 +303,10 @@ export function CalendarTab({
                     href={e.htmlLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="block rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 transition-colors"
+                    className="block rounded-lg border border-teal-200 bg-teal-50/50 p-2.5 hover:bg-teal-50 transition-colors"
                   >
-                    <div className="text-xs font-medium text-gray-700">{e.title}</div>
-                    {e.startTime && <div className="mt-1 text-[11px] text-gray-400">{e.startTime}</div>}
+                    <div className="text-xs font-medium text-teal-800">{e.title}</div>
+                    {e.startTime && <div className="mt-1 text-[11px] text-teal-600">{e.startTime}</div>}
                   </a>
                 ))}
               </div>
