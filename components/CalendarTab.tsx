@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Task } from "@/lib/types";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
+import { GCalEvent } from "@/app/api/calendar/route";
 
 function fmtISO(d: Date) {
   const y = d.getFullYear();
@@ -13,6 +14,28 @@ function fmtISO(d: Date) {
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function useGCalEvents(cursor: { year: number; month: number }) {
+  const [events, setEvents] = useState<GCalEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timeMin = new Date(cursor.year, cursor.month, 1 - 7).toISOString();
+    const timeMax = new Date(cursor.year, cursor.month + 1, 7).toISOString();
+    setLoading(true);
+    fetch(`/api/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setEvents(data.events ?? []);
+        setError(data.error ?? null);
+      })
+      .catch(() => setError("Failed to fetch Google Calendar events"))
+      .finally(() => setLoading(false));
+  }, [cursor.year, cursor.month]);
+
+  return { events, error, loading };
+}
 
 export function CalendarTab({
   tasks,
@@ -32,6 +55,10 @@ export function CalendarTab({
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [showTasks, setShowTasks] = useState(true);
+  const [showGCal, setShowGCal] = useState(true);
+
+  const { events: gcalEvents, error: gcalError, loading: gcalLoading } = useGCalEvents(cursor);
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>();
@@ -53,6 +80,24 @@ export function CalendarTab({
     }
     return map;
   }, [tasks]);
+
+  const gcalByDate = useMemo(() => {
+    const map = new Map<string, GCalEvent[]>();
+    for (const e of gcalEvents) {
+      const d = new Date(e.start + "T00:00:00");
+      const last = new Date(e.end + "T00:00:00");
+      let guard = 0;
+      while (d <= last && guard < 400) {
+        const key = fmtISO(d);
+        const arr = map.get(key) ?? [];
+        arr.push(e);
+        map.set(key, arr);
+        d.setDate(d.getDate() + 1);
+        guard++;
+      }
+    }
+    return map;
+  }, [gcalEvents]);
 
   const grid = useMemo(() => {
     const first = new Date(cursor.year, cursor.month, 1);
@@ -84,20 +129,21 @@ export function CalendarTab({
   });
 
   const selectedTasks = selectedDay ? tasksByDate.get(selectedDay) ?? [] : [];
+  const selectedEvents = selectedDay ? gcalByDate.get(selectedDay) ?? [] : [];
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-1">
         <h1 className="text-xl font-semibold text-gray-900">Calendar</h1>
-        <span className="text-xs text-gray-400 rounded-full border border-gray-200 px-2 py-0.5">
-          Google Calendar sync coming soon
-        </span>
+        {gcalError && (
+          <span className="text-xs text-amber-600 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5">
+            {gcalError}
+          </span>
+        )}
       </div>
-      <p className="text-sm text-gray-400 mb-4">
-        Showing task dates for now — will link 1:1 with Google Calendar events.
-      </p>
+      <p className="text-sm text-gray-400 mb-4">Tasks and your Google Calendar, side by side.</p>
 
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
         <button
           onClick={() => shiftMonth(-1)}
           className="w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center text-gray-500"
@@ -117,6 +163,28 @@ export function CalendarTab({
         >
           Today
         </button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowTasks((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              showTasks ? "bg-accent/10 border-accent/30 text-accent" : "bg-white border-gray-200 text-gray-400"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            Tasks
+          </button>
+          <button
+            onClick={() => setShowGCal((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              showGCal ? "bg-gray-100 border-gray-300 text-gray-700" : "bg-white border-gray-200 text-gray-400"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full border border-gray-400" />
+            Google Calendar
+            {gcalLoading && <span className="text-gray-300">…</span>}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-5">
@@ -131,7 +199,12 @@ export function CalendarTab({
           <div className="grid grid-cols-7">
             {grid.map(({ date, inMonth }) => {
               const key = fmtISO(date);
-              const dayTasks = tasksByDate.get(key) ?? [];
+              const dayTasks = showTasks ? tasksByDate.get(key) ?? [] : [];
+              const dayEvents = showGCal ? gcalByDate.get(key) ?? [] : [];
+              const items = [
+                ...dayTasks.map((t) => ({ kind: "task" as const, id: t.id, title: t.task, done: !!t.completed })),
+                ...dayEvents.map((e) => ({ kind: "gcal" as const, id: e.id, title: e.title, done: false })),
+              ];
               const isToday = key === today;
               const isSelected = key === selectedDay;
               return (
@@ -150,19 +223,21 @@ export function CalendarTab({
                     {date.getDate()}
                   </div>
                   <div className="space-y-0.5">
-                    {dayTasks.slice(0, 3).map((t) => (
+                    {items.slice(0, 3).map((it) => (
                       <div
-                        key={t.id}
+                        key={`${it.kind}-${it.id}`}
                         className={`text-[10px] leading-tight truncate rounded px-1 py-0.5 ${
-                          t.completed ? "bg-gray-100 text-gray-400 line-through" : "bg-accent/10 text-accent"
+                          it.kind === "task"
+                            ? it.done
+                              ? "bg-gray-100 text-gray-400 line-through"
+                              : "bg-accent/10 text-accent"
+                            : "bg-white text-gray-600 border border-gray-300"
                         }`}
                       >
-                        {t.task}
+                        {it.title}
                       </div>
                     ))}
-                    {dayTasks.length > 3 && (
-                      <div className="text-[10px] text-gray-400 px-1">+{dayTasks.length - 3} more</div>
-                    )}
+                    {items.length > 3 && <div className="text-[10px] text-gray-400 px-1">+{items.length - 3} more</div>}
                   </div>
                 </button>
               );
@@ -180,29 +255,58 @@ export function CalendarTab({
                 })
               : "Select a day"}
           </div>
-          {selectedDay && selectedTasks.length === 0 && (
+
+          {selectedDay && selectedTasks.length === 0 && selectedEvents.length === 0 && (
             <div className="text-xs text-gray-400">Nothing scheduled.</div>
           )}
-          <div className="space-y-2">
-            {selectedTasks.map((t) => (
-              <div
-                key={t.id}
-                onClick={() => setEditing(t)}
-                className={`rounded-lg border border-gray-100 p-2.5 cursor-pointer hover:bg-indigo-50/40 transition-colors ${
-                  t.completed ? "opacity-50" : ""
-                }`}
-              >
-                <div className={`text-xs font-medium text-gray-800 ${t.completed ? "line-through" : ""}`}>
-                  {t.task}
-                </div>
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {t.responsible.map((r) => (
-                    <Chip key={r} name={r} />
-                  ))}
-                </div>
+
+          {selectedTasks.length > 0 && (
+            <div className="mb-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Tasks</div>
+              <div className="space-y-2">
+                {selectedTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    onClick={() => setEditing(t)}
+                    className={`rounded-lg border border-gray-100 p-2.5 cursor-pointer hover:bg-indigo-50/40 transition-colors ${
+                      t.completed ? "opacity-50" : ""
+                    }`}
+                  >
+                    <div className={`text-xs font-medium text-gray-800 ${t.completed ? "line-through" : ""}`}>
+                      {t.task}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {t.responsible.map((r) => (
+                        <Chip key={r} name={r} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {selectedEvents.length > 0 && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                Google Calendar
+              </div>
+              <div className="space-y-2">
+                {selectedEvents.map((e) => (
+                  <a
+                    key={e.id}
+                    href={e.htmlLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block rounded-lg border border-gray-200 p-2.5 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="text-xs font-medium text-gray-700">{e.title}</div>
+                    {e.startTime && <div className="mt-1 text-[11px] text-gray-400">{e.startTime}</div>}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
