@@ -42,7 +42,11 @@ export function TasksTab({
 }) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [creating, setCreating] = useState(false);
-  const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
+  type SortKey = "date" | "lastAction" | "daysSince";
+  const [sortState, setSortState] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
+  function toggleSort(key: SortKey) {
+    setSortState((prev) => (prev && prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  }
   const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -72,10 +76,17 @@ export function TasksTab({
   const isLinkedView = subTab !== "general";
 
   const sortedTasks = useMemo(() => {
-    if (!dateSort) return activeTasks;
-    const sorted = [...activeTasks].sort((a, b) => a.startDate.localeCompare(b.startDate));
-    return dateSort === "asc" ? sorted : sorted.reverse();
-  }, [activeTasks, dateSort]);
+    if (!sortState) return activeTasks;
+    const { key, dir } = sortState;
+    const sorted = [...activeTasks].sort((a, b) => {
+      if (key === "date") return a.startDate.localeCompare(b.startDate);
+      if (key === "lastAction") return (a.lastActionDate ?? "").localeCompare(b.lastActionDate ?? "");
+      const da = daysSince(a.lastActionDate) ?? -Infinity;
+      const db = daysSince(b.lastActionDate) ?? -Infinity;
+      return da - db;
+    });
+    return dir === "asc" ? sorted : sorted.reverse();
+  }, [activeTasks, sortState]);
 
   const allGroups = useMemo(() => {
     if (subTab !== "general") return [];
@@ -204,20 +215,44 @@ export function TasksTab({
               <th className="px-4 py-3 w-[12%]">Type</th>
               <th className="px-4 py-3 w-[14%]">
                 <button
-                  onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))}
+                  onClick={() => toggleSort("date")}
                   className="flex items-center gap-1 hover:text-gray-700"
                 >
                   {isLinkedView ? "Target Date" : "Date"}
                   <span className="text-gray-400">
-                    {dateSort === "asc" ? "▲" : dateSort === "desc" ? "▼" : "↕"}
+                    {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
                   </span>
                 </button>
               </th>
               <th className="px-4 py-3 w-[14%]">Responsible</th>
               {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
               <th className="px-4 py-3 w-[20%]">Description</th>
-              {isLinkedView && <th className="px-4 py-3 w-[12%]">Last Action Date</th>}
-              {isLinkedView && <th className="px-4 py-3 w-[10%]">Days Since Last Action</th>}
+              {isLinkedView && (
+                <th className="px-4 py-3 w-[12%]">
+                  <button
+                    onClick={() => toggleSort("lastAction")}
+                    className="flex items-center gap-1 hover:text-gray-700"
+                  >
+                    Last Action Date
+                    <span className="text-gray-400">
+                      {sortState?.key === "lastAction" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
+                </th>
+              )}
+              {isLinkedView && (
+                <th className="px-4 py-3 w-[10%]">
+                  <button
+                    onClick={() => toggleSort("daysSince")}
+                    className="flex items-center gap-1 hover:text-gray-700"
+                  >
+                    Days Since Last Action
+                    <span className="text-gray-400">
+                      {sortState?.key === "daysSince" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
+                </th>
+              )}
               <th className="px-4 py-3 w-[8%] text-center">Done</th>
             </tr>
           </thead>
