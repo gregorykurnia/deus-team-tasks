@@ -21,7 +21,6 @@ const LINKED_COLS = [
   "type",
   "date",
   "lastAction",
-  "daysSince",
   "responsible",
   "keyPoints",
   "done",
@@ -31,11 +30,10 @@ const DEFAULT_LINKED_COL_WIDTHS: Record<(typeof LINKED_COLS)[number], number> = 
   company: 160,
   description: 190,
   type: 170,
-  date: 170,
+  date: 210,
   responsible: 170,
   keyPoints: 260,
-  lastAction: 150,
-  daysSince: 140,
+  lastAction: 190,
   done: 90,
 };
 
@@ -421,14 +419,6 @@ export function TasksTab({
                     </span>
                   </button>
                 </ResizableTh>
-                <ResizableTh id="daysSince" onResizeStart={startResize}>
-                  <button onClick={() => toggleSort("daysSince")} className="flex items-center gap-1 hover:text-gray-700">
-                    Days Since Last Action
-                    <span className="text-gray-400">
-                      {sortState?.key === "daysSince" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </ResizableTh>
                 <ResizableTh id="responsible" onResizeStart={startResize}>
                   Responsible
                 </ResizableTh>
@@ -530,13 +520,14 @@ export function TasksTab({
                               ))}
                             </select>
                           </td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
-                          {isLinkedView && (
-                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtDate(t.lastActionDate)}</td>
-                          )}
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                            {fmtRange(t.startDate, t.endDate)}
+                            {targetDateBadge(t.endDate)}
+                          </td>
                           {isLinkedView && (
                             <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                              {daysSince(t.lastActionDate) ?? <span className="text-gray-300">—</span>}
+                              {fmtDate(t.lastActionDate)}
+                              {lastActionBadge(t.lastActionDate)}
                             </td>
                           )}
                           <td className="px-4 py-3">
@@ -713,4 +704,26 @@ function daysSince(d?: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.round((today.getTime() - start) / 86400000);
+}
+
+function lastActionBadge(d?: string) {
+  const n = daysSince(d);
+  if (n === null) return null;
+  const colorClass = n <= 5 ? "text-emerald-600" : n <= 13 ? "text-amber-600" : "text-red-600";
+  const label = n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`;
+  return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
+}
+
+function targetDateBadge(d?: string) {
+  const n = daysSince(d);
+  if (n === null) return null;
+  if (n > 0) {
+    const colorClass = "text-red-600";
+    const label = n === 1 ? "1 day overdue" : `${n} days overdue`;
+    return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
+  }
+  const daysUntil = -n;
+  const colorClass = daysUntil <= 3 ? "text-amber-600" : "text-gray-400";
+  const label = daysUntil === 0 ? "due today" : daysUntil === 1 ? "in 1 day" : `in ${daysUntil} days`;
+  return <span className={`ml-1 font-medium ${colorClass}`}>({label})</span>;
 }
