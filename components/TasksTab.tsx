@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Task, NewTask, TASK_TYPES } from "@/lib/types";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { loadFieldOptions } from "@/lib/clientLocalConfig";
@@ -15,6 +15,43 @@ const UNGROUPED_LABEL = "Pre-Incentive Technical";
 
 type SubTab = "general" | "prospects" | "clients";
 
+const LINKED_COLS = [
+  "company",
+  "description",
+  "type",
+  "date",
+  "responsible",
+  "keyPoints",
+  "lastAction",
+  "daysSince",
+  "done",
+] as const;
+
+const DEFAULT_LINKED_COL_WIDTHS: Record<(typeof LINKED_COLS)[number], number> = {
+  company: 160,
+  description: 190,
+  type: 170,
+  date: 170,
+  responsible: 170,
+  keyPoints: 260,
+  lastAction: 150,
+  daysSince: 140,
+  done: 90,
+};
+
+const LINKED_COL_WIDTHS_STORAGE_KEY = "linkedTaskTableColWidths";
+const MIN_COL_WIDTH = 60;
+
+function loadColWidths(): Record<string, number> {
+  if (typeof window === "undefined") return DEFAULT_LINKED_COL_WIDTHS;
+  try {
+    const raw = window.localStorage.getItem(LINKED_COL_WIDTHS_STORAGE_KEY);
+    return raw ? { ...DEFAULT_LINKED_COL_WIDTHS, ...JSON.parse(raw) } : { ...DEFAULT_LINKED_COL_WIDTHS };
+  } catch {
+    return { ...DEFAULT_LINKED_COL_WIDTHS };
+  }
+}
+
 function isDoneEntry(r: PipelineEntry) {
   return r.status === "Client / Partner Done Deal";
 }
@@ -23,6 +60,33 @@ function entryTableKey(r: PipelineEntry): "main" | "raw" | "hold" {
   if (r._raw) return "raw";
   if (r._hold) return "hold";
   return "main";
+}
+
+function ResizableTh({
+  id,
+  children,
+  className,
+  last,
+  onResizeStart,
+}: {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+  last?: boolean;
+  onResizeStart: (id: string, e: React.MouseEvent) => void;
+}) {
+  return (
+    <th className={`relative px-4 py-3 overflow-hidden ${className ?? ""}`}>
+      <div className="truncate">{children}</div>
+      {!last && (
+        <div
+          onMouseDown={(e) => onResizeStart(id, e)}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-0 z-10 h-full w-2 -mr-1 cursor-col-resize select-none touch-none hover:bg-accent/40 active:bg-accent/60"
+        />
+      )}
+    </th>
+  );
 }
 
 export function TasksTab({
@@ -47,6 +111,40 @@ export function TasksTab({
   function toggleSort(key: SortKey) {
     setSortState((prev) => (prev && prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   }
+  const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
+  const resizingRef = useRef<{ id: string; startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const r = resizingRef.current;
+      if (!r) return;
+      const next = Math.max(MIN_COL_WIDTH, r.startWidth + (e.clientX - r.startX));
+      setColWidths((prev) => ({ ...prev, [r.id]: next }));
+    }
+    function onUp() {
+      if (!resizingRef.current) return;
+      resizingRef.current = null;
+      setColWidths((prev) => {
+        try {
+          window.localStorage.setItem(LINKED_COL_WIDTHS_STORAGE_KEY, JSON.stringify(prev));
+        } catch {}
+        return prev;
+      });
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  function startResize(id: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = { id, startX: e.clientX, startWidth: colWidths[id] ?? DEFAULT_LINKED_COL_WIDTHS[id as keyof typeof DEFAULT_LINKED_COL_WIDTHS] ?? 150 };
+  }
+
   const [openClientRow, setOpenClientRow] = useState<PipelineEntry | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -147,7 +245,7 @@ export function TasksTab({
   }
 
   const title = subTab === "general" ? "Operational Tasks" : subTab === "prospects" ? "Prospect Tasks" : "Client Tasks";
-  const colCount = isLinkedView ? 8 : 7;
+  const colCount = isLinkedView ? LINKED_COLS.length : 7;
 
   return (
     <div>
@@ -208,53 +306,80 @@ export function TasksTab({
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className={`w-full table-fixed text-sm ${isLinkedView ? "min-w-[1320px]" : "min-w-[900px]"}`}>
+          {isLinkedView && (
+            <colgroup>
+              {LINKED_COLS.map((id) => (
+                <col key={id} style={{ width: colWidths[id] ?? DEFAULT_LINKED_COL_WIDTHS[id] }} />
+              ))}
+            </colgroup>
+          )}
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {isLinkedView && <th className="px-4 py-3 w-[12%]">Company</th>}
-              <th className={`px-4 py-3 ${isLinkedView ? "w-[14%]" : "w-[22%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
-              <th className="px-4 py-3 w-[14%]">Type</th>
-              <th className="px-4 py-3 w-[14%]">
-                <button
-                  onClick={() => toggleSort("date")}
-                  className="flex items-center gap-1 hover:text-gray-700"
-                >
-                  {isLinkedView ? "Target Date" : "Date"}
-                  <span className="text-gray-400">
-                    {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                  </span>
-                </button>
-              </th>
-              <th className="px-4 py-3 w-[14%]">Responsible</th>
-              {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
-              <th className="px-4 py-3 w-[20%]">Description</th>
-              {isLinkedView && (
-                <th className="px-4 py-3 w-[12%]">
-                  <button
-                    onClick={() => toggleSort("lastAction")}
-                    className="flex items-center gap-1 hover:text-gray-700"
-                  >
+            {isLinkedView ? (
+              <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <ResizableTh id="company" onResizeStart={startResize}>
+                  Company
+                </ResizableTh>
+                <ResizableTh id="description" onResizeStart={startResize}>
+                  Description
+                </ResizableTh>
+                <ResizableTh id="type" onResizeStart={startResize}>
+                  Type
+                </ResizableTh>
+                <ResizableTh id="date" onResizeStart={startResize}>
+                  <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
+                    Target Date
+                    <span className="text-gray-400">
+                      {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
+                </ResizableTh>
+                <ResizableTh id="responsible" onResizeStart={startResize}>
+                  Responsible
+                </ResizableTh>
+                <ResizableTh id="keyPoints" onResizeStart={startResize}>
+                  Description
+                </ResizableTh>
+                <ResizableTh id="lastAction" onResizeStart={startResize}>
+                  <button onClick={() => toggleSort("lastAction")} className="flex items-center gap-1 hover:text-gray-700">
                     Last Action Date
                     <span className="text-gray-400">
                       {sortState?.key === "lastAction" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
                     </span>
                   </button>
-                </th>
-              )}
-              {isLinkedView && (
-                <th className="px-4 py-3 w-[10%]">
-                  <button
-                    onClick={() => toggleSort("daysSince")}
-                    className="flex items-center gap-1 hover:text-gray-700"
-                  >
+                </ResizableTh>
+                <ResizableTh id="daysSince" onResizeStart={startResize}>
+                  <button onClick={() => toggleSort("daysSince")} className="flex items-center gap-1 hover:text-gray-700">
                     Days Since Last Action
                     <span className="text-gray-400">
                       {sortState?.key === "daysSince" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
                     </span>
                   </button>
+                </ResizableTh>
+                <ResizableTh id="done" onResizeStart={startResize} className="text-center" last>
+                  Done
+                </ResizableTh>
+              </tr>
+            ) : (
+              <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 w-[22%]">Task</th>
+                <th className="px-4 py-3 w-[14%]">Type</th>
+                <th className="px-4 py-3 w-[14%]">
+                  <button
+                    onClick={() => toggleSort("date")}
+                    className="flex items-center gap-1 hover:text-gray-700"
+                  >
+                    Date
+                    <span className="text-gray-400">
+                      {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
                 </th>
-              )}
-              <th className="px-4 py-3 w-[8%] text-center">Done</th>
-            </tr>
+                <th className="px-4 py-3 w-[14%]">Responsible</th>
+                <th className="px-4 py-3 w-[20%]">Informed</th>
+                <th className="px-4 py-3 w-[20%]">Description</th>
+                <th className="px-4 py-3 w-[8%] text-center">Done</th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {displayedSections.map((section) => {
