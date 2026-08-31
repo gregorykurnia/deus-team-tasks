@@ -32,15 +32,7 @@ const NAV: NavItem[] = [
     ],
   },
   { id: "flow", label: "Flow", icon: "⇄" },
-  {
-    id: "clients-group",
-    label: "Clients",
-    icon: "◈",
-    children: [
-      { id: "prospects", label: "Prospects", icon: "📈" },
-      { id: "clients", label: "Clients & Partners", icon: "🤝" },
-    ],
-  },
+  { id: "clients", label: "Clients", icon: "◈" },
 ];
 
 export type TabId =
@@ -51,7 +43,6 @@ export type TabId =
   | "daily"
   | "assignee"
   | "flow"
-  | "prospects"
   | "clients";
 
 function groupOf(id: TabId): GroupItem | undefined {
