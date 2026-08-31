@@ -207,12 +207,12 @@ export function TasksTab({
       )}
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
+        <table className={`w-full table-fixed text-sm ${isLinkedView ? "min-w-[1320px]" : "min-w-[900px]"}`}>
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {isLinkedView && <th className="px-4 py-3 w-[18%]">Company</th>}
-              <th className={`px-4 py-3 ${isLinkedView ? "w-[20%]" : "w-[22%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
-              <th className="px-4 py-3 w-[12%]">Type</th>
+              {isLinkedView && <th className="px-4 py-3 w-[12%]">Company</th>}
+              <th className={`px-4 py-3 ${isLinkedView ? "w-[14%]" : "w-[22%]"}`}>{isLinkedView ? "Description" : "Task"}</th>
+              <th className="px-4 py-3 w-[14%]">Type</th>
               <th className="px-4 py-3 w-[14%]">
                 <button
                   onClick={() => toggleSort("date")}
@@ -294,7 +294,7 @@ export function TasksTab({
                               {linkedEntry ? (
                                 <button
                                   onClick={() => setOpenClientRow(linkedEntry)}
-                                  className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20"
+                                  className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20 max-w-full"
                                 >
                                   🏢 {linkedEntry.company}
                                 </button>
@@ -313,7 +313,7 @@ export function TasksTab({
                                 const { id, ...rest } = t;
                                 onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
                               }}
-                              className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-1 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
+                              className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-4 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
                             >
                               <option value="">—</option>
                               {TASK_TYPES.map((tt) => (
