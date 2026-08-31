@@ -20,10 +20,10 @@ const LINKED_COLS = [
   "description",
   "type",
   "date",
-  "responsible",
-  "keyPoints",
   "lastAction",
   "daysSince",
+  "responsible",
+  "keyPoints",
   "done",
 ] as const;
 
@@ -413,12 +413,6 @@ export function TasksTab({
                     </span>
                   </button>
                 </ResizableTh>
-                <ResizableTh id="responsible" onResizeStart={startResize}>
-                  Responsible
-                </ResizableTh>
-                <ResizableTh id="keyPoints" onResizeStart={startResize}>
-                  Description
-                </ResizableTh>
                 <ResizableTh id="lastAction" onResizeStart={startResize}>
                   <button onClick={() => toggleSort("lastAction")} className="flex items-center gap-1 hover:text-gray-700">
                     Last Action Date
@@ -434,6 +428,12 @@ export function TasksTab({
                       {sortState?.key === "daysSince" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
                     </span>
                   </button>
+                </ResizableTh>
+                <ResizableTh id="responsible" onResizeStart={startResize}>
+                  Responsible
+                </ResizableTh>
+                <ResizableTh id="keyPoints" onResizeStart={startResize}>
+                  Description
                 </ResizableTh>
                 <ResizableTh id="done" onResizeStart={startResize} className="text-center" last>
                   Done
@@ -531,6 +531,14 @@ export function TasksTab({
                             </select>
                           </td>
                           <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtRange(t.startDate, t.endDate)}</td>
+                          {isLinkedView && (
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtDate(t.lastActionDate)}</td>
+                          )}
+                          {isLinkedView && (
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                              {daysSince(t.lastActionDate) ?? <span className="text-gray-300">—</span>}
+                            </td>
+                          )}
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1">
                               {t.responsible.map((r) => (
@@ -549,14 +557,6 @@ export function TasksTab({
                             </td>
                           )}
                           <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
-                          {isLinkedView && (
-                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtDate(t.lastActionDate)}</td>
-                          )}
-                          {isLinkedView && (
-                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                              {daysSince(t.lastActionDate) ?? <span className="text-gray-300">—</span>}
-                            </td>
-                          )}
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2.5">
                               <input
