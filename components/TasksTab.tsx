@@ -106,11 +106,13 @@ export function TasksTab({
 }) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [creating, setCreating] = useState(false);
-  type SortKey = "date" | "lastAction" | "daysSince";
+  type SortKey = "date" | "lastAction" | "daysSince" | "company" | "description" | "type";
   const [sortState, setSortState] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
   function toggleSort(key: SortKey) {
     setSortState((prev) => (prev && prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
   }
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [minDaysSince, setMinDaysSince] = useState<string>("");
   const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
   const resizingRef = useRef<{ id: string; startX: number; startWidth: number } | null>(null);
 
@@ -173,18 +175,39 @@ export function TasksTab({
   const activeTasks = subTab === "general" ? generalTasks : subTab === "prospects" ? prospectTasks : clientTasks;
   const isLinkedView = subTab !== "general";
 
+  const filteredTasks = useMemo(() => {
+    if (!isLinkedView) return activeTasks;
+    return activeTasks.filter((t) => {
+      if (typeFilter && t.taskType !== typeFilter) return false;
+      if (minDaysSince !== "") {
+        const ds = daysSince(t.lastActionDate);
+        if (ds === null || ds < Number(minDaysSince)) return false;
+      }
+      return true;
+    });
+  }, [activeTasks, isLinkedView, typeFilter, minDaysSince]);
+
   const sortedTasks = useMemo(() => {
-    if (!sortState) return activeTasks;
+    if (!sortState) return filteredTasks;
     const { key, dir } = sortState;
-    const sorted = [...activeTasks].sort((a, b) => {
+    const sorted = [...filteredTasks].sort((a, b) => {
       if (key === "date") return a.startDate.localeCompare(b.startDate);
       if (key === "lastAction") return (a.lastActionDate ?? "").localeCompare(b.lastActionDate ?? "");
-      const da = daysSince(a.lastActionDate) ?? -Infinity;
-      const db = daysSince(b.lastActionDate) ?? -Infinity;
-      return da - db;
+      if (key === "daysSince") {
+        const da = daysSince(a.lastActionDate) ?? -Infinity;
+        const db = daysSince(b.lastActionDate) ?? -Infinity;
+        return da - db;
+      }
+      if (key === "company") {
+        const ca = a.linkedClientId != null ? entryById.get(a.linkedClientId)?.company ?? "" : "";
+        const cb = b.linkedClientId != null ? entryById.get(b.linkedClientId)?.company ?? "" : "";
+        return ca.localeCompare(cb);
+      }
+      if (key === "type") return (a.taskType ?? "").localeCompare(b.taskType ?? "");
+      return a.task.localeCompare(b.task);
     });
     return dir === "asc" ? sorted : sorted.reverse();
-  }, [activeTasks, sortState]);
+  }, [filteredTasks, sortState, entryById]);
 
   const allGroups = useMemo(() => {
     if (subTab !== "general") return [];
@@ -304,6 +327,48 @@ export function TasksTab({
         </div>
       )}
 
+      {isLinkedView && (
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
+            Type
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+            >
+              <option value="">All</option>
+              {TASK_TYPES.map((tt) => (
+                <option key={tt} value={tt}>
+                  {tt}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
+            Days since last action ≥
+            <input
+              type="number"
+              min={0}
+              value={minDaysSince}
+              onChange={(e) => setMinDaysSince(e.target.value)}
+              placeholder="0"
+              className="w-16 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+            />
+          </label>
+          {(typeFilter || minDaysSince !== "") && (
+            <button
+              onClick={() => {
+                setTypeFilter("");
+                setMinDaysSince("");
+              }}
+              className="text-xs font-medium text-accent hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className={`w-full table-fixed text-sm ${isLinkedView ? "min-w-[1320px]" : "min-w-[900px]"}`}>
           {isLinkedView && (
@@ -317,13 +382,28 @@ export function TasksTab({
             {isLinkedView ? (
               <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <ResizableTh id="company" onResizeStart={startResize}>
-                  Company
+                  <button onClick={() => toggleSort("company")} className="flex items-center gap-1 hover:text-gray-700">
+                    Company
+                    <span className="text-gray-400">
+                      {sortState?.key === "company" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
                 </ResizableTh>
                 <ResizableTh id="description" onResizeStart={startResize}>
-                  Description
+                  <button onClick={() => toggleSort("description")} className="flex items-center gap-1 hover:text-gray-700">
+                    Description
+                    <span className="text-gray-400">
+                      {sortState?.key === "description" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
                 </ResizableTh>
                 <ResizableTh id="type" onResizeStart={startResize}>
-                  Type
+                  <button onClick={() => toggleSort("type")} className="flex items-center gap-1 hover:text-gray-700">
+                    Type
+                    <span className="text-gray-400">
+                      {sortState?.key === "type" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
                 </ResizableTh>
                 <ResizableTh id="date" onResizeStart={startResize}>
                   <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
