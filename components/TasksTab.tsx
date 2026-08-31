@@ -136,7 +136,7 @@ export function TasksTab({
   }
 
   const title = subTab === "general" ? "Operational Tasks" : subTab === "prospects" ? "Prospect Tasks" : "Client Tasks";
-  const colCount = isLinkedView ? 6 : 7;
+  const colCount = isLinkedView ? 8 : 7;
 
   return (
     <div>
@@ -216,6 +216,8 @@ export function TasksTab({
               <th className="px-4 py-3 w-[14%]">Responsible</th>
               {!isLinkedView && <th className="px-4 py-3 w-[20%]">Informed</th>}
               <th className="px-4 py-3 w-[20%]">Description</th>
+              {isLinkedView && <th className="px-4 py-3 w-[12%]">Last Action Date</th>}
+              {isLinkedView && <th className="px-4 py-3 w-[10%]">Days Since Last Action</th>}
               <th className="px-4 py-3 w-[8%] text-center">Done</th>
             </tr>
           </thead>
@@ -305,6 +307,14 @@ export function TasksTab({
                             </td>
                           )}
                           <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
+                          {isLinkedView && (
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{fmtDate(t.lastActionDate)}</td>
+                          )}
+                          {isLinkedView && (
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                              {daysSince(t.lastActionDate) ?? <span className="text-gray-300">—</span>}
+                            </td>
+                          )}
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2.5">
                               <input
@@ -441,4 +451,18 @@ function fmtRange(start: string, end: string) {
   if (!s && !e) return "—";
   if (!s || !e || start === end) return s || e;
   return `${s} – ${e}`;
+}
+
+function fmtDate(d?: string) {
+  if (!d) return "—";
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+  return new Date(d + "T00:00:00").toLocaleDateString("en-US", opts);
+}
+
+function daysSince(d?: string) {
+  if (!d) return null;
+  const start = new Date(d + "T00:00:00").getTime();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - start) / 86400000);
 }

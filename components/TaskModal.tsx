@@ -40,6 +40,9 @@ export function TaskModal({
   const [endDate, setEndDate] = useState(initial?.endDate ?? prefill?.endDate ?? "");
   const [completed, setCompleted] = useState(initial?.completed ?? false);
   const [taskGroup, setTaskGroup] = useState(initial?.taskGroup ?? prefill?.taskGroup ?? "");
+  const [lastActionDate, setLastActionDate] = useState(
+    initial?.lastActionDate ?? prefill?.lastActionDate ?? ""
+  );
   const linkedClientId = initial?.linkedClientId ?? prefill?.linkedClientId;
 
   function handleSave() {
@@ -59,6 +62,7 @@ export function TaskModal({
       completed,
       linkedClientId,
       taskGroup: taskGroup || undefined,
+      lastActionDate: lastActionDate || undefined,
     });
   }
 
@@ -147,6 +151,18 @@ export function TaskModal({
                 className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Last action date
+            </label>
+            <input
+              type="date"
+              value={lastActionDate}
+              onChange={(e) => setLastActionDate(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+            />
           </div>
 
           {groups && (

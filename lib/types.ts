@@ -9,6 +9,7 @@ export const TASK_TYPES = [
   "Send Proposal/Quote",
   "Contract/Paperwork",
   "Finalize Scheduling",
+  "Trial Pending",
 ] as const;
 
 export type TaskType = (typeof TASK_TYPES)[number];
@@ -26,6 +27,7 @@ export interface Task {
   completed?: boolean;
   linkedClientId?: number; // links to a PipelineEntry.id in the client pipeline
   taskGroup?: string; // name of the Task Group this task is organized under (Operational view)
+  lastActionDate?: string; // yyyy-mm-dd
 }
 
 export type NewTask = Omit<Task, "id">;
