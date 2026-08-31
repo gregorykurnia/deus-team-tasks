@@ -294,9 +294,11 @@ export function TasksTab({
                               {linkedEntry ? (
                                 <button
                                   onClick={() => setOpenClientRow(linkedEntry)}
-                                  className="inline-flex items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20 max-w-full"
+                                  title={linkedEntry.company}
+                                  className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium hover:bg-accent/20"
                                 >
-                                  🏢 {linkedEntry.company}
+                                  <span className="shrink-0">🏢</span>
+                                  <span className="truncate">{linkedEntry.company}</span>
                                 </button>
                               ) : (
                                 <span className="text-gray-300">—</span>
