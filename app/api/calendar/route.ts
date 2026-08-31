@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
             : new Date(e.start?.dateTime ?? "").toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: e.start?.timeZone ?? "Asia/Jakarta",
               }),
           htmlLink: e.htmlLink ?? undefined,
         };
