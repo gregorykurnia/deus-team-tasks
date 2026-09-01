@@ -63,8 +63,8 @@ const LINKED_COL_DEFS: Record<(typeof LINKED_COLS)[number], { label: string; man
 
 const COL_VISIBILITY_STORAGE_KEY = "taskTableColumnVisibility";
 
-function loadHiddenCols(): Record<SubTab, string[]> {
-  const empty: Record<SubTab, string[]> = { general: [], prospects: [], clients: [] };
+function loadHiddenCols(): Record<string, string[]> {
+  const empty: Record<string, string[]> = {};
   if (typeof window === "undefined") return empty;
   try {
     const raw = window.localStorage.getItem(COL_VISIBILITY_STORAGE_KEY);
@@ -147,7 +147,7 @@ export function TasksTab({
   const [minDaysSince, setMinDaysSince] = useState<string>("");
   const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
   const resizingRef = useRef<{ id: string; startX: number; startWidth: number } | null>(null);
-  const [hiddenCols, setHiddenCols] = useState<Record<SubTab, string[]>>(loadHiddenCols);
+  const [hiddenCols, setHiddenCols] = useState<Record<string, string[]>>(loadHiddenCols);
   const [colPickerOpen, setColPickerOpen] = useState(false);
   const colPickerRef = useRef<HTMLDivElement | null>(null);
 
@@ -337,7 +337,8 @@ export function TasksTab({
   const currentColsDef = isLinkedView
     ? LINKED_COLS.map((id) => ({ id, ...LINKED_COL_DEFS[id] }))
     : GENERAL_COLS;
-  const hiddenSet = useMemo(() => new Set(hiddenCols[subTab]), [hiddenCols, subTab]);
+  const colVisibilityKey = subTab === "general" ? `general:${activeGroupId ?? "__all__"}` : subTab;
+  const hiddenSet = useMemo(() => new Set(hiddenCols[colVisibilityKey]), [hiddenCols, colVisibilityKey]);
   const isColVisible = (id: string) => {
     const def = currentColsDef.find((c) => c.id === id);
     return def?.mandatory || !hiddenSet.has(id);
@@ -345,10 +346,10 @@ export function TasksTab({
   function toggleCol(id: string, mandatory?: boolean) {
     if (mandatory) return;
     setHiddenCols((prev) => {
-      const cur = new Set(prev[subTab]);
+      const cur = new Set(prev[colVisibilityKey]);
       if (cur.has(id)) cur.delete(id);
       else cur.add(id);
-      const next = { ...prev, [subTab]: Array.from(cur) };
+      const next = { ...prev, [colVisibilityKey]: Array.from(cur) };
       try {
         window.localStorage.setItem(COL_VISIBILITY_STORAGE_KEY, JSON.stringify(next));
       } catch {}
