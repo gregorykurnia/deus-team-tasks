@@ -225,9 +225,13 @@ export function TasksTab({
     return [...allGroups.map((g) => ({ id: g, label: g, tasks: byGroup.get(g)! })), { id: UNGROUPED, label: UNGROUPED_LABEL, tasks: byGroup.get(UNGROUPED)! }];
   }, [allGroups, sortedTasks, subTab]);
 
+  useEffect(() => {
+    setActiveGroupId(null);
+  }, [subTab]);
+
   const displayedSections = useMemo(
-    () => (activeGroupId ? sections.filter((s) => s.id === activeGroupId) : sections),
-    [sections, activeGroupId]
+    () => (subTab === "general" && activeGroupId ? sections.filter((s) => s.id === activeGroupId) : sections),
+    [sections, activeGroupId, subTab]
   );
 
   const showGroupHeaders = subTab === "general";
