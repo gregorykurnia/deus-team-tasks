@@ -38,9 +38,12 @@ export default function App() {
       <Sidebar active={tab} onChange={setTab} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="border-b border-gray-200 bg-white/80 backdrop-blur sticky top-0 z-20">
-          <div className="px-6 h-14 flex items-center gap-2">
-            <span className="text-xs text-gray-400">Handover & rollout plan</span>
+        <header
+          className="border-b border-gray-200 bg-white/80 backdrop-blur sticky top-0 z-20"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+          <div className="pl-14 pr-4 md:px-6 h-14 flex items-center gap-2">
+            <span className="text-xs text-gray-400 hidden sm:inline">Handover & rollout plan</span>
             {completedCount > 0 && (
               <button
                 onClick={() => setShowCompleted((v) => !v)}
@@ -57,7 +60,10 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 w-full px-6 py-6">
+        <main
+          className="flex-1 w-full px-3 py-4 md:px-6 md:py-6 overflow-x-hidden"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
           {loading ? (
             <div className="text-gray-400 text-sm py-20 text-center">Loading tasks…</div>
           ) : (

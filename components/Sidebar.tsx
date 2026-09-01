@@ -53,6 +53,7 @@ function groupOf(id: TabId): GroupItem | undefined {
 
 export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const g = groupOf(active);
     return new Set(g ? [g.id] : []);
@@ -71,21 +72,49 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
     onChange(id);
     const g = groupOf(id);
     if (g) setOpenGroups((prev) => new Set(prev).add(g.id));
+    setMobileOpen(false);
   };
 
   return (
-    <aside
-      className={`sticky top-0 h-screen shrink-0 border-r border-gray-200 bg-white flex flex-col transition-[width] duration-150 ${
-        collapsed ? "w-14" : "w-56"
-      }`}
-    >
-      <div className="flex items-center gap-2 px-3 h-14 border-b border-gray-200">
+    <>
+      <button
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open menu"
+        className="md:hidden fixed top-3 left-3 z-40 w-9 h-9 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600"
+        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+      >
+        <span className="text-base leading-none">☰</span>
+      </button>
+
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/30"
+        />
+      )}
+
+      <aside
+        className={`fixed md:sticky top-0 left-0 h-screen shrink-0 border-r border-gray-200 bg-white flex flex-col transition-transform md:transition-[width] duration-150 z-50 w-64 md:w-56 ${
+          collapsed ? "md:w-14" : "md:w-56"
+        } ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+      >
+      <div
+        className="flex items-center gap-2 px-3 h-14 border-b border-gray-200"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="w-8 h-8 shrink-0 rounded-lg bg-accent text-white flex items-center justify-center font-semibold text-sm">
           D
         </div>
         {!collapsed && (
           <span className="text-sm font-semibold text-gray-900 truncate">DEUS Team Tasks</span>
         )}
+        <button
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+          className="md:hidden ml-auto w-7 h-7 flex items-center justify-center text-gray-400"
+        >
+          ✕
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
@@ -153,7 +182,10 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
         })}
       </nav>
 
-      <div className="border-t border-gray-200 p-2">
+      <div
+        className="hidden md:block border-t border-gray-200 p-2"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <button
           onClick={() => setCollapsed((v) => !v)}
           className="w-full flex items-center justify-center gap-2 px-2.5 py-2 rounded-lg text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
@@ -162,5 +194,6 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
         </button>
       </div>
     </aside>
+    </>
   );
 }
