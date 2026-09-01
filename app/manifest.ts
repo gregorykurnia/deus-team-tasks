@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "DEUS Team Tasks",
-    short_name: "DEUS Tasks",
+    name: "DEUS Platform",
+    short_name: "DEUS Platform",
     description: "DEUS handover plan — tasks, timeline, and assignee tracking",
     start_url: "/",
     display: "standalone",

@@ -106,7 +106,7 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
           D
         </div>
         {!collapsed && (
-          <span className="text-sm font-semibold text-gray-900 truncate">DEUS Team Tasks</span>
+          <span className="text-sm font-semibold text-gray-900 truncate">DEUS Platform</span>
         )}
         <button
           onClick={() => setMobileOpen(false)}

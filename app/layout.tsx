@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DEUS Team Tasks",
+  title: "DEUS Platform",
   description: "DEUS handover plan — tasks, timeline, and assignee tracking",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DEUS Tasks",
+    title: "DEUS Platform",
   },
   icons: {
     icon: [
