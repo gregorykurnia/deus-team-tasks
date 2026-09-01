@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, addDoc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
 
 const COLLECTION = "taskGroups";
@@ -11,14 +11,19 @@ interface TaskGroupDoc {
   order: number;
 }
 
+export interface TaskGroup {
+  id: string;
+  name: string;
+}
+
 export function useTaskGroups() {
-  const [groups, setGroups] = useState<string[]>([]);
+  const [groupDocs, setGroupDocs] = useState<TaskGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, COLLECTION), orderBy("order", "asc"));
     const unsub = onSnapshot(q, (snap) => {
-      setGroups(snap.docs.map((d) => (d.data() as TaskGroupDoc).name));
+      setGroupDocs(snap.docs.map((d) => ({ id: d.id, name: (d.data() as TaskGroupDoc).name })));
       setLoading(false);
     });
     return () => unsub();
@@ -28,5 +33,13 @@ export function useTaskGroups() {
     await addDoc(collection(db, COLLECTION), { name, order: Date.now() } as TaskGroupDoc);
   }
 
-  return { groups, loading, addGroup };
+  async function deleteGroup(name: string) {
+    const match = groupDocs.find((g) => g.name === name);
+    if (!match) return;
+    await deleteDoc(doc(db, COLLECTION, match.id));
+  }
+
+  const groups = groupDocs.map((g) => g.name);
+
+  return { groups, groupDocs, loading, addGroup, deleteGroup };
 }

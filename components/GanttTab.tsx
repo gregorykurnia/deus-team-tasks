@@ -3,10 +3,13 @@
 import { useMemo, useState } from "react";
 import { Task } from "@/lib/types";
 import { colorFor } from "@/lib/colors";
+import { useTaskGroups } from "@/lib/useTaskGroups";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 
 const DAY_WIDTH = 36;
+const UNGROUPED = "__ungrouped__";
+const UNGROUPED_LABEL = "Ungrouped";
 
 function toDate(s: string) {
   return new Date(s + "T00:00:00");
@@ -41,9 +44,22 @@ export function GanttTab({
   onDelete: (id: string) => void;
 }) {
   const [editing, setEditing] = useState<Task | null>(null);
+  const { groups } = useTaskGroups();
+  const [groupFilter, setGroupFilter] = useState<string>("");
+
+  const usedGroups = useMemo(() => {
+    const used = new Set(tasks.map((t) => t.taskGroup).filter(Boolean) as string[]);
+    return Array.from(new Set([...groups, ...used]));
+  }, [groups, tasks]);
+
+  const filteredTasks = useMemo(() => {
+    if (!groupFilter) return tasks;
+    if (groupFilter === UNGROUPED) return tasks.filter((t) => !t.taskGroup || !usedGroups.includes(t.taskGroup));
+    return tasks.filter((t) => t.taskGroup === groupFilter);
+  }, [tasks, groupFilter, usedGroups]);
 
   const { start, days } = useMemo(() => {
-    const ranges = tasks.map(effectiveRange).filter((r): r is { s: Date; e: Date } => r !== null);
+    const ranges = filteredTasks.map(effectiveRange).filter((r): r is { s: Date; e: Date } => r !== null);
     if (ranges.length === 0) {
       const today = new Date();
       return { start: addDays(today, -2), days: 30 };
@@ -53,7 +69,7 @@ export function GanttTab({
     const minStart = addDays(new Date(Math.min(...starts)), -2);
     const maxEnd = addDays(new Date(Math.max(...ends)), 3);
     return { start: minStart, days: Math.max(diffDays(minStart, maxEnd), 7) };
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -63,7 +79,25 @@ export function GanttTab({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-4">Gantt / Deadline</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-semibold text-gray-900">Gantt / Deadline</h1>
+        <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
+          Task group
+          <select
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+          >
+            <option value="">All</option>
+            {usedGroups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+            <option value={UNGROUPED}>{UNGROUPED_LABEL}</option>
+          </select>
+        </label>
+      </div>
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <div style={{ width: 260 + days * DAY_WIDTH, minWidth: "100%" }}>
@@ -100,7 +134,7 @@ export function GanttTab({
             </div>
 
             {/* Rows */}
-            {tasks.map((t) => {
+            {filteredTasks.map((t) => {
               const range = effectiveRange(t);
               const offset = range ? diffDays(start, range.s) : 0;
               const span = range ? diffDays(range.s, range.e) + 1 : 0;
@@ -153,7 +187,7 @@ export function GanttTab({
                 </div>
               );
             })}
-            {tasks.length === 0 && (
+            {filteredTasks.length === 0 && (
               <div className="px-4 py-10 text-center text-gray-400">No tasks to display.</div>
             )}
           </div>

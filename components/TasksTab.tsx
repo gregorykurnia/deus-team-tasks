@@ -151,7 +151,7 @@ export function TasksTab({
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupError, setGroupError] = useState<string | null>(null);
-  const { groups, addGroup } = useTaskGroups();
+  const { groups, addGroup, deleteGroup } = useTaskGroups();
 
   const { entries, saveEntry } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
@@ -254,6 +254,21 @@ export function TasksTab({
         console.error("Failed to add task group:", err);
         setGroupError("Couldn't create the task group. Please try again.");
       });
+  }
+
+  function removeGroup(name: string) {
+    const affected = generalTasks.filter((t) => t.taskGroup === name);
+    const msg =
+      affected.length > 0
+        ? `Delete group "${name}"? ${affected.length} task(s) in it will move to ${UNGROUPED_LABEL}.`
+        : `Delete group "${name}"?`;
+    if (!confirm(msg)) return;
+    deleteGroup(name).catch((err) => console.error("Failed to delete task group:", err));
+    affected.forEach((t) => {
+      const { id, ...rest } = t;
+      onUpdate(id, { ...rest, taskGroup: undefined });
+    });
+    if (activeGroupId === name) setActiveGroupId(null);
   }
 
   function toggleGroup(id: string) {
@@ -460,16 +475,27 @@ export function TasksTab({
                   {showGroupHeaders && (
                     <tr className="border-b border-gray-100 bg-gray-50/60">
                       <td colSpan={colCount} className="px-4 py-2">
-                        <button
-                          onClick={() => toggleGroup(section.id)}
-                          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700"
-                        >
-                          <span className={`text-[10px] transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
-                          {section.label}
-                          <span className="text-[11px] font-semibold rounded-full px-1.5 bg-gray-200 text-gray-500">
-                            {section.tasks.length}
-                          </span>
-                        </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => toggleGroup(section.id)}
+                            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700"
+                          >
+                            <span className={`text-[10px] transition-transform ${collapsed ? "" : "rotate-90"}`}>▸</span>
+                            {section.label}
+                            <span className="text-[11px] font-semibold rounded-full px-1.5 bg-gray-200 text-gray-500">
+                              {section.tasks.length}
+                            </span>
+                          </button>
+                          {section.id !== UNGROUPED && (
+                            <button
+                              onClick={() => removeGroup(section.id)}
+                              title="Delete group"
+                              className="w-[20px] h-[20px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
+                            >
+                              🗑
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}
