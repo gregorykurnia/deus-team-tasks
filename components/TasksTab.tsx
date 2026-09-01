@@ -151,7 +151,7 @@ export function TasksTab({
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupError, setGroupError] = useState<string | null>(null);
-  const { groups, addGroup, deleteGroup } = useTaskGroups();
+  const { groups, addGroup, deleteGroup, starredGroups, toggleStarGroup } = useTaskGroups();
 
   const { entries, saveEntry } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
@@ -327,6 +327,7 @@ export function TasksTab({
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
+              {starredGroups.has(section.id) && <span className="mr-1">⭐</span>}
               {section.label}
               <span
                 className={`ml-1.5 text-[10px] font-semibold rounded-full px-1.5 ${
@@ -487,13 +488,24 @@ export function TasksTab({
                             </span>
                           </button>
                           {section.id !== UNGROUPED && (
-                            <button
-                              onClick={() => removeGroup(section.id)}
-                              title="Delete group"
-                              className="w-[20px] h-[20px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
-                            >
-                              🗑
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => toggleStarGroup(section.id)}
+                                title={starredGroups.has(section.id) ? "Unstar group" : "Star group"}
+                                className={`w-[20px] h-[20px] inline-flex items-center justify-center rounded-md hover:bg-amber-50 ${
+                                  starredGroups.has(section.id) ? "text-amber-500" : "text-gray-300 hover:text-amber-500"
+                                }`}
+                              >
+                                {starredGroups.has(section.id) ? "★" : "☆"}
+                              </button>
+                              <button
+                                onClick={() => removeGroup(section.id)}
+                                title="Delete group"
+                                className="w-[20px] h-[20px] inline-flex items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-700"
+                              >
+                                🗑
+                              </button>
+                            </div>
                           )}
                         </div>
                       </td>
