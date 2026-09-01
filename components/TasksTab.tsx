@@ -40,6 +40,40 @@ const DEFAULT_LINKED_COL_WIDTHS: Record<(typeof LINKED_COLS)[number], number> = 
 const LINKED_COL_WIDTHS_STORAGE_KEY = "linkedTaskTableColWidths";
 const MIN_COL_WIDTH = 60;
 
+const GENERAL_COLS: { id: string; label: string; mandatory?: boolean }[] = [
+  { id: "task", label: "Task", mandatory: true },
+  { id: "type", label: "Type" },
+  { id: "date", label: "Date" },
+  { id: "responsible", label: "Responsible" },
+  { id: "informed", label: "Informed" },
+  { id: "keyPoints", label: "Description" },
+  { id: "done", label: "Done", mandatory: true },
+];
+
+const LINKED_COL_DEFS: Record<(typeof LINKED_COLS)[number], { label: string; mandatory?: boolean }> = {
+  company: { label: "Company", mandatory: true },
+  description: { label: "Description", mandatory: true },
+  type: { label: "Type" },
+  date: { label: "Target Date" },
+  lastAction: { label: "Last Action Date" },
+  responsible: { label: "Responsible" },
+  keyPoints: { label: "Description" },
+  done: { label: "Done", mandatory: true },
+};
+
+const COL_VISIBILITY_STORAGE_KEY = "taskTableColumnVisibility";
+
+function loadHiddenCols(): Record<SubTab, string[]> {
+  const empty: Record<SubTab, string[]> = { general: [], prospects: [], clients: [] };
+  if (typeof window === "undefined") return empty;
+  try {
+    const raw = window.localStorage.getItem(COL_VISIBILITY_STORAGE_KEY);
+    return raw ? { ...empty, ...JSON.parse(raw) } : empty;
+  } catch {
+    return empty;
+  }
+}
+
 function loadColWidths(): Record<string, number> {
   if (typeof window === "undefined") return DEFAULT_LINKED_COL_WIDTHS;
   try {
@@ -113,6 +147,20 @@ export function TasksTab({
   const [minDaysSince, setMinDaysSince] = useState<string>("");
   const [colWidths, setColWidths] = useState<Record<string, number>>(loadColWidths);
   const resizingRef = useRef<{ id: string; startX: number; startWidth: number } | null>(null);
+  const [hiddenCols, setHiddenCols] = useState<Record<SubTab, string[]>>(loadHiddenCols);
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const colPickerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!colPickerOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (colPickerRef.current && !colPickerRef.current.contains(e.target as Node)) {
+        setColPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [colPickerOpen]);
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
@@ -285,7 +333,29 @@ export function TasksTab({
   }
 
   const title = subTab === "general" ? "Operational Tasks" : subTab === "prospects" ? "Prospect Tasks" : "Client Tasks";
-  const colCount = isLinkedView ? LINKED_COLS.length : 7;
+
+  const currentColsDef = isLinkedView
+    ? LINKED_COLS.map((id) => ({ id, ...LINKED_COL_DEFS[id] }))
+    : GENERAL_COLS;
+  const hiddenSet = useMemo(() => new Set(hiddenCols[subTab]), [hiddenCols, subTab]);
+  const isColVisible = (id: string) => {
+    const def = currentColsDef.find((c) => c.id === id);
+    return def?.mandatory || !hiddenSet.has(id);
+  };
+  function toggleCol(id: string, mandatory?: boolean) {
+    if (mandatory) return;
+    setHiddenCols((prev) => {
+      const cur = new Set(prev[subTab]);
+      if (cur.has(id)) cur.delete(id);
+      else cur.add(id);
+      const next = { ...prev, [subTab]: Array.from(cur) };
+      try {
+        window.localStorage.setItem(COL_VISIBILITY_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
+  const colCount = currentColsDef.filter((c) => isColVisible(c.id)).length;
 
   return (
     <div>
@@ -300,6 +370,35 @@ export function TasksTab({
               + Add Task Group
             </button>
           )}
+          <div className="relative" ref={colPickerRef}>
+            <button
+              onClick={() => setColPickerOpen((v) => !v)}
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            >
+              Columns
+            </button>
+            {colPickerOpen && (
+              <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+                {currentColsDef.map((c) => (
+                  <label
+                    key={c.id}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${
+                      c.mandatory ? "text-gray-400" : "text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isColVisible(c.id)}
+                      disabled={c.mandatory}
+                      onChange={() => toggleCol(c.id, c.mandatory)}
+                      className="rounded border-gray-300 text-accent focus:ring-accent/30 disabled:opacity-50"
+                    />
+                    {c.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setCreating(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-indigo-700 rounded-lg shadow-sm"
@@ -391,7 +490,7 @@ export function TasksTab({
         <table className={`w-full table-fixed text-sm ${isLinkedView ? "min-w-[1320px]" : "min-w-[900px]"}`}>
           {isLinkedView && (
             <colgroup>
-              {LINKED_COLS.map((id) => (
+              {LINKED_COLS.filter((id) => isColVisible(id)).map((id) => (
                 <col key={id} style={{ width: colWidths[id] ?? DEFAULT_LINKED_COL_WIDTHS[id] }} />
               ))}
             </colgroup>
@@ -415,36 +514,46 @@ export function TasksTab({
                     </span>
                   </button>
                 </ResizableTh>
-                <ResizableTh id="type" onResizeStart={startResize}>
-                  <button onClick={() => toggleSort("type")} className="flex items-center gap-1 hover:text-gray-700">
-                    Type
-                    <span className="text-gray-400">
-                      {sortState?.key === "type" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </ResizableTh>
-                <ResizableTh id="date" onResizeStart={startResize}>
-                  <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
-                    Target Date
-                    <span className="text-gray-400">
-                      {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </ResizableTh>
-                <ResizableTh id="lastAction" onResizeStart={startResize}>
-                  <button onClick={() => toggleSort("lastAction")} className="flex items-center gap-1 hover:text-gray-700">
-                    Last Action Date
-                    <span className="text-gray-400">
-                      {sortState?.key === "lastAction" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </ResizableTh>
-                <ResizableTh id="responsible" onResizeStart={startResize}>
-                  Responsible
-                </ResizableTh>
-                <ResizableTh id="keyPoints" onResizeStart={startResize}>
-                  Description
-                </ResizableTh>
+                {isColVisible("type") && (
+                  <ResizableTh id="type" onResizeStart={startResize}>
+                    <button onClick={() => toggleSort("type")} className="flex items-center gap-1 hover:text-gray-700">
+                      Type
+                      <span className="text-gray-400">
+                        {sortState?.key === "type" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                      </span>
+                    </button>
+                  </ResizableTh>
+                )}
+                {isColVisible("date") && (
+                  <ResizableTh id="date" onResizeStart={startResize}>
+                    <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
+                      Target Date
+                      <span className="text-gray-400">
+                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                      </span>
+                    </button>
+                  </ResizableTh>
+                )}
+                {isColVisible("lastAction") && (
+                  <ResizableTh id="lastAction" onResizeStart={startResize}>
+                    <button onClick={() => toggleSort("lastAction")} className="flex items-center gap-1 hover:text-gray-700">
+                      Last Action Date
+                      <span className="text-gray-400">
+                        {sortState?.key === "lastAction" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                      </span>
+                    </button>
+                  </ResizableTh>
+                )}
+                {isColVisible("responsible") && (
+                  <ResizableTh id="responsible" onResizeStart={startResize}>
+                    Responsible
+                  </ResizableTh>
+                )}
+                {isColVisible("keyPoints") && (
+                  <ResizableTh id="keyPoints" onResizeStart={startResize}>
+                    Description
+                  </ResizableTh>
+                )}
                 <ResizableTh id="done" onResizeStart={startResize} className="text-center" last>
                   Done
                 </ResizableTh>
@@ -452,21 +561,23 @@ export function TasksTab({
             ) : (
               <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-3 w-[22%]">Task</th>
-                <th className="px-4 py-3 w-[14%]">Type</th>
-                <th className="px-4 py-3 w-[14%]">
-                  <button
-                    onClick={() => toggleSort("date")}
-                    className="flex items-center gap-1 hover:text-gray-700"
-                  >
-                    Date
-                    <span className="text-gray-400">
-                      {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
-                    </span>
-                  </button>
-                </th>
-                <th className="px-4 py-3 w-[14%]">Responsible</th>
-                <th className="px-4 py-3 w-[20%]">Informed</th>
-                <th className="px-4 py-3 w-[20%]">Description</th>
+                {isColVisible("type") && <th className="px-4 py-3 w-[14%]">Type</th>}
+                {isColVisible("date") && (
+                  <th className="px-4 py-3 w-[14%]">
+                    <button
+                      onClick={() => toggleSort("date")}
+                      className="flex items-center gap-1 hover:text-gray-700"
+                    >
+                      Date
+                      <span className="text-gray-400">
+                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                      </span>
+                    </button>
+                  </th>
+                )}
+                {isColVisible("responsible") && <th className="px-4 py-3 w-[14%]">Responsible</th>}
+                {isColVisible("informed") && <th className="px-4 py-3 w-[20%]">Informed</th>}
+                {isColVisible("keyPoints") && <th className="px-4 py-3 w-[20%]">Description</th>}
                 <th className="px-4 py-3 w-[8%] text-center">Done</th>
               </tr>
             )}
@@ -545,41 +656,47 @@ export function TasksTab({
                           <td className={`px-4 py-3 text-gray-800 font-medium ${t.completed ? "line-through" : ""}`}>
                             {t.task}
                           </td>
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <select
-                              value={t.taskType ?? ""}
-                              onChange={(e) => {
-                                const { id, ...rest } = t;
-                                onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
-                              }}
-                              className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-4 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
-                            >
-                              <option value="">—</option>
-                              {TASK_TYPES.map((tt) => (
-                                <option key={tt} value={tt}>
-                                  {tt}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                            {fmtRange(t.startDate, t.endDate)}
-                            {targetDateBadge(t.endDate)}
-                          </td>
-                          {isLinkedView && (
+                          {isColVisible("type") && (
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={t.taskType ?? ""}
+                                onChange={(e) => {
+                                  const { id, ...rest } = t;
+                                  onUpdate(id, { ...rest, taskType: (e.target.value || undefined) as Task["taskType"] });
+                                }}
+                                className="w-full rounded-md border border-transparent bg-transparent py-0.5 pl-0 pr-4 text-xs font-medium text-gray-600 outline-none hover:border-gray-200 focus:border-gray-300 focus:ring-1 focus:ring-accent/30 cursor-pointer"
+                              >
+                                <option value="">—</option>
+                                {TASK_TYPES.map((tt) => (
+                                  <option key={tt} value={tt}>
+                                    {tt}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
+                          {isColVisible("date") && (
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                              {fmtRange(t.startDate, t.endDate)}
+                              {targetDateBadge(t.endDate)}
+                            </td>
+                          )}
+                          {isLinkedView && isColVisible("lastAction") && (
                             <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                               {fmtDate(t.lastActionDate)}
                               {lastActionBadge(t.lastActionDate)}
                             </td>
                           )}
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {t.responsible.map((r) => (
-                                <Chip key={r} name={r} />
-                              ))}
-                            </div>
-                          </td>
-                          {!isLinkedView && (
+                          {isColVisible("responsible") && (
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {t.responsible.map((r) => (
+                                  <Chip key={r} name={r} />
+                                ))}
+                              </div>
+                            </td>
+                          )}
+                          {!isLinkedView && isColVisible("informed") && (
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1">
                                 {t.informed.length === 0 && <span className="text-gray-300">—</span>}
@@ -589,7 +706,9 @@ export function TasksTab({
                               </div>
                             </td>
                           )}
-                          <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
+                          {isColVisible("keyPoints") && (
+                            <td className="px-4 py-3 text-gray-600">{t.keyPoints || <span className="text-gray-300">—</span>}</td>
+                          )}
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2.5">
                               <input
