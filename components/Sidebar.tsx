@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 type LeafItem = { id: string; label: string; icon: string };
@@ -102,9 +103,13 @@ export function Sidebar({ active, onChange }: { active: TabId; onChange: (id: Ta
         className="flex items-center gap-2 px-3 h-14 border-b border-gray-200"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="w-8 h-8 shrink-0 rounded-lg bg-accent text-white flex items-center justify-center font-semibold text-sm">
-          D
-        </div>
+        <Image
+          src="/icon-512x512.png"
+          alt="DEUS logo"
+          width={32}
+          height={32}
+          className="w-8 h-8 shrink-0 rounded-lg object-cover"
+        />
         {!collapsed && (
           <span className="text-sm font-semibold text-gray-900 truncate">DEUS Platform</span>
         )}
