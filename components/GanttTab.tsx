@@ -4,12 +4,22 @@ import { useMemo, useState } from "react";
 import { Task } from "@/lib/types";
 import { colorFor } from "@/lib/colors";
 import { useTaskGroups } from "@/lib/useTaskGroups";
+import { useClientPipeline } from "@/lib/useClientPipeline";
+import { PipelineEntry } from "@/lib/clientTypes";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 
 const DAY_WIDTH = 36;
 const UNGROUPED = "__ungrouped__";
 const UNGROUPED_LABEL = "Ungrouped";
+const PROSPECTS = "__prospects__";
+const PROSPECTS_LABEL = "Prospect Tasks";
+const CLIENTS = "__clients__";
+const CLIENTS_LABEL = "Client Tasks";
+
+function isDoneEntry(r: PipelineEntry) {
+  return r.status === "Client / Partner Done Deal";
+}
 
 function toDate(s: string) {
   return new Date(s + "T00:00:00");
@@ -45,18 +55,32 @@ export function GanttTab({
 }) {
   const [editing, setEditing] = useState<Task | null>(null);
   const { groups } = useTaskGroups();
+  const { entries } = useClientPipeline();
+  const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
   const [groupFilter, setGroupFilter] = useState<string>("");
 
   const usedGroups = useMemo(() => {
-    const used = new Set(tasks.map((t) => t.taskGroup).filter(Boolean) as string[]);
+    const used = new Set(
+      tasks.filter((t) => t.linkedClientId == null).map((t) => t.taskGroup).filter(Boolean) as string[]
+    );
     return Array.from(new Set([...groups, ...used]));
   }, [groups, tasks]);
 
+  function isProspectTask(t: Task) {
+    return t.linkedClientId != null && entryById.has(t.linkedClientId) && !isDoneEntry(entryById.get(t.linkedClientId)!);
+  }
+  function isClientTask(t: Task) {
+    return t.linkedClientId != null && entryById.has(t.linkedClientId) && isDoneEntry(entryById.get(t.linkedClientId)!);
+  }
+
   const filteredTasks = useMemo(() => {
     if (!groupFilter) return tasks;
-    if (groupFilter === UNGROUPED) return tasks.filter((t) => !t.taskGroup || !usedGroups.includes(t.taskGroup));
-    return tasks.filter((t) => t.taskGroup === groupFilter);
-  }, [tasks, groupFilter, usedGroups]);
+    if (groupFilter === PROSPECTS) return tasks.filter(isProspectTask);
+    if (groupFilter === CLIENTS) return tasks.filter(isClientTask);
+    if (groupFilter === UNGROUPED)
+      return tasks.filter((t) => t.linkedClientId == null && (!t.taskGroup || !usedGroups.includes(t.taskGroup)));
+    return tasks.filter((t) => t.linkedClientId == null && t.taskGroup === groupFilter);
+  }, [tasks, groupFilter, usedGroups, entryById]);
 
   const { start, days } = useMemo(() => {
     const ranges = filteredTasks.map(effectiveRange).filter((r): r is { s: Date; e: Date } => r !== null);
@@ -95,6 +119,8 @@ export function GanttTab({
               </option>
             ))}
             <option value={UNGROUPED}>{UNGROUPED_LABEL}</option>
+            <option value={PROSPECTS}>{PROSPECTS_LABEL}</option>
+            <option value={CLIENTS}>{CLIENTS_LABEL}</option>
           </select>
         </label>
       </div>
