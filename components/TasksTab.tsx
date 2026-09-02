@@ -11,7 +11,7 @@ import { TaskModal } from "./TaskModal";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
 
 const UNGROUPED = "__ungrouped__";
-const UNGROUPED_LABEL = "Pre-Incentive Technical";
+const UNGROUPED_LABEL = "Ungrouped";
 
 type SubTab = "general" | "prospects" | "clients";
 
