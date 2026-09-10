@@ -10,7 +10,7 @@ import { useProspectJournal } from "@/lib/useProspectJournal";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { PipelineEntry } from "@/lib/clientTypes";
 
-const STATUS_OPTIONS = ["", "Discovery", "Qualified", "Proposal", "Negotiation", "Won", "On hold", "Lost"];
+const STATUS_OPTIONS = ["", "Very High", "High", "Medium", "Moderately Low", "Low"];
 
 function JournalRow({
   entry,
