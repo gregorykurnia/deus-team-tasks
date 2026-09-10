@@ -9,6 +9,7 @@ import {
 import { useProspectJournal } from "@/lib/useProspectJournal";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { PipelineEntry } from "@/lib/clientTypes";
+import { downloadCsv } from "@/lib/exportCsv";
 
 const STATUS_OPTIONS = ["", "Very High", "High", "Medium", "Moderately Low", "Low"];
 
@@ -176,6 +177,17 @@ export function ProspectJournalTab({
     if (window.confirm("Delete this prospect journal row?")) await deleteEntry(id);
   }
 
+  function exportCsv() {
+    downloadCsv(
+      `prospect-journal-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Prospect", ...PROSPECT_JOURNAL_FIELDS.map((field) => field.label)],
+      visibleEntries.map((entry) => [
+        entry.prospectName,
+        ...PROSPECT_JOURNAL_FIELDS.map((field) => entry[field.key]),
+      ])
+    );
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -198,6 +210,9 @@ export function ProspectJournalTab({
               className="h-10 w-48 rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm outline-none transition focus:border-accent/40 focus:ring-2 focus:ring-accent/10 sm:w-56"
             />
           </label>
+          <button onClick={exportCsv} className="h-10 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
+            ↓ Export to CSV
+          </button>
           <button onClick={addRow} className="h-10 whitespace-nowrap rounded-lg bg-accent px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
             + Add prospect
           </button>

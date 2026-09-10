@@ -17,6 +17,7 @@ import { ClientMovePopup } from "./clients/ClientMovePopup";
 import { ClientColumnManager } from "./clients/ClientColumnManager";
 import { useProspectJournal } from "@/lib/useProspectJournal";
 import { createEmptyProspectJournalEntry } from "@/lib/prospectJournalTypes";
+import { downloadCsv } from "@/lib/exportCsv";
 
 const TABS: { id: PipelineTab; label: string; icon: string }[] = [
   { id: "prospect", label: "Prospects & Active", icon: "📈" },
@@ -245,6 +246,18 @@ export function ClientsTab({
   const tk = tableKeyForTab(tab);
   const visibleCols = colConfig[tk].filter((c) => c.visible);
 
+  function exportCsv() {
+    const filename = `client-pipeline-${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCsv(
+      filename,
+      visibleCols.map((column) => column.label),
+      visibleRows.map((row) => visibleCols.map((column) => {
+        if (column.key === "since") return row.date ? daysSince(row.date) : "";
+        return row[column.key] ?? "";
+      }))
+    );
+  }
+
   function handleSort(key: string) {
     if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1) as 1 | -1);
     else {
@@ -377,9 +390,14 @@ export function ClientsTab({
           <div className="text-[22px] font-semibold text-gray-900 tracking-tight">Client Pipeline</div>
           <div className="text-[13px] text-gray-400 mt-0.5">Track prospects, follow-ups, and deals across all products</div>
         </div>
-        <button onClick={openAddModal} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-accent text-white hover:opacity-90">
-          + {ADD_LABELS[tab]}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportCsv} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md text-[13px] font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50">
+            ↓ Export to CSV
+          </button>
+          <button onClick={openAddModal} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-accent text-white hover:opacity-90">
+            + {ADD_LABELS[tab]}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5">
