@@ -15,6 +15,7 @@ export type ProspectJournalField = (typeof PROSPECT_JOURNAL_FIELDS)[number]["key
 
 export type ProspectJournalEntry = {
   id: string;
+  pipelineEntryId?: number;
   prospectName: string;
   updatedAt: number;
 } & Record<ProspectJournalField, string>;

@@ -15,6 +15,8 @@ import { ClientDatePopup } from "./clients/ClientDatePopup";
 import { ClientDropdownPopup } from "./clients/ClientDropdownPopup";
 import { ClientMovePopup } from "./clients/ClientMovePopup";
 import { ClientColumnManager } from "./clients/ClientColumnManager";
+import { useProspectJournal } from "@/lib/useProspectJournal";
+import { createEmptyProspectJournalEntry } from "@/lib/prospectJournalTypes";
 
 const TABS: { id: PipelineTab; label: string; icon: string }[] = [
   { id: "prospect", label: "Prospects & Active", icon: "📈" },
@@ -48,8 +50,19 @@ type DropdownPopupState = { field: string; row: PipelineEntry; anchorRect: DOMRe
 type MovePopupState = { row: PipelineEntry; anchorRect: DOMRect };
 type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Partial<PipelineEntry> | null };
 
-export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
+export function ClientsTab({
+  initialTab,
+  initialEntryId,
+  onEntryOpened,
+  onOpenJournal,
+}: {
+  initialTab?: PipelineTab;
+  initialEntryId?: number | null;
+  onEntryOpened?: () => void;
+  onOpenJournal?: (pipelineEntryId: number) => void;
+} = {}) {
   const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
+  const { entries: journalEntries, saveEntry: saveJournalEntry } = useProspectJournal();
   const { tasks, addTask, updateTask } = useTasks();
   const [toast, setToast] = useState<string | null>(null);
   const [followUpRow, setFollowUpRow] = useState<PipelineEntry | null>(null);
@@ -87,10 +100,6 @@ export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
   }
 
   const [tab, setTab] = useState<PipelineTab>(initialTab ?? "prospect");
-
-  useEffect(() => {
-    if (initialTab) setTab(initialTab);
-  }, [initialTab]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterProduct, setFilterProduct] = useState("");
@@ -128,6 +137,28 @@ export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (initialEntryId == null || entries.length === 0) return;
+    const entry = entries.find((row) => row.id === initialEntryId);
+    const frame = window.requestAnimationFrame(() => {
+      if (entry) {
+        setTab(entry._raw ? "rawlist" : entry._hold ? "holdreject" : entry.status === "Client / Partner Done Deal" ? "done" : "prospect");
+        setModal({ kind: rowTableKey(entry), editing: entry, prefill: null });
+      }
+      onEntryOpened?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [entries, initialEntryId, onEntryOpened]);
+
+  async function handleJournal(row: PipelineEntry) {
+    const existing = journalEntries.find((entry) => entry.pipelineEntryId === row.id);
+    if (!existing) {
+      const journalEntry = createEmptyProspectJournalEntry(`pipeline-${row.id}`);
+      await saveJournalEntry({ ...journalEntry, pipelineEntryId: row.id, prospectName: row.company });
+    }
+    onOpenJournal?.(row.id);
+  }
 
   const isDone = (r: PipelineEntry) => r.status === "Client / Partner Done Deal";
   const isRaw = (r: PipelineEntry) => r._raw === true;
@@ -456,6 +487,8 @@ export function ClientsTab({ initialTab }: { initialTab?: PipelineTab } = {}) {
         onEdit={openEditModal}
         onDelete={handleDelete}
         onFollowUp={handleFollowUp}
+        onJournal={handleJournal}
+        journalEntryIds={new Set(journalEntries.flatMap((entry) => entry.pipelineEntryId == null ? [] : [entry.pipelineEntryId]))}
       />
 
       {modal && (

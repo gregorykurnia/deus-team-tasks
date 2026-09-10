@@ -7,6 +7,8 @@ import {
   ProspectJournalEntry,
 } from "@/lib/prospectJournalTypes";
 import { useProspectJournal } from "@/lib/useProspectJournal";
+import { useClientPipeline } from "@/lib/useClientPipeline";
+import { PipelineEntry } from "@/lib/clientTypes";
 
 const STATUS_OPTIONS = ["", "Discovery", "Qualified", "Proposal", "Negotiation", "Won", "On hold", "Lost"];
 
@@ -14,15 +16,17 @@ function JournalRow({
   entry,
   onSave,
   onDelete,
+  onOpenClient,
+  pipelineEntries,
 }: {
   entry: ProspectJournalEntry;
   onSave: (entry: ProspectJournalEntry) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onOpenClient: (pipelineEntryId: number) => void;
+  pipelineEntries: PipelineEntry[];
 }) {
   const [draft, setDraft] = useState(entry);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => setDraft(entry), [entry]);
 
   function update(key: keyof ProspectJournalEntry, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -39,7 +43,10 @@ function JournalRow({
   }
 
   return (
-    <tr className="group align-top bg-white hover:bg-indigo-50/20 transition-colors">
+    <tr
+      data-pipeline-entry-id={entry.pipelineEntryId}
+      className="group align-top bg-white hover:bg-indigo-50/20 transition-colors"
+    >
       <td className="sticky left-0 z-10 w-52 min-w-52 border-b border-r border-gray-200 bg-white group-hover:bg-[#fafaff] p-3">
         <div className="flex items-start gap-2">
           <textarea
@@ -63,6 +70,39 @@ function JournalRow({
         <span className={`ml-2 text-[10px] text-gray-400 transition-opacity ${saving ? "opacity-100" : "opacity-0"}`}>
           Saving…
         </span>
+        {entry.pipelineEntryId != null && (
+          <button
+            onClick={() => onOpenClient(entry.pipelineEntryId!)}
+            className="ml-2 mt-2 inline-flex items-center gap-1 rounded-md border border-accent/20 bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent transition hover:bg-accent/10"
+          >
+            Client details ↗
+          </button>
+        )}
+        {entry.pipelineEntryId == null && (
+          <select
+            value=""
+            aria-label={`Link ${draft.prospectName || "prospect"} to client pipeline`}
+            onChange={(event) => {
+              const pipelineEntryId = Number(event.target.value);
+              const pipelineEntry = pipelineEntries.find((item) => item.id === pipelineEntryId);
+              if (!pipelineEntry) return;
+              const next = {
+                ...draft,
+                pipelineEntryId,
+                prospectName: draft.prospectName || pipelineEntry.company,
+                updatedAt: Date.now(),
+              };
+              setDraft(next);
+              void onSave(next);
+            }}
+            className="ml-2 mt-2 block max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-gray-500 outline-none hover:border-accent/30 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+          >
+            <option value="">Link to pipeline…</option>
+            {pipelineEntries.map((pipelineEntry) => (
+              <option key={pipelineEntry.id} value={pipelineEntry.id}>{pipelineEntry.company}</option>
+            ))}
+          </select>
+        )}
       </td>
       {PROSPECT_JOURNAL_FIELDS.map((field) => (
         <td key={field.key} className="min-w-72 border-b border-r border-gray-200 p-3">
@@ -98,9 +138,28 @@ function JournalRow({
   );
 }
 
-export function ProspectJournalTab() {
+export function ProspectJournalTab({
+  focusPipelineEntryId,
+  onEntryFocused,
+  onOpenClient,
+}: {
+  focusPipelineEntryId?: number | null;
+  onEntryFocused?: () => void;
+  onOpenClient: (pipelineEntryId: number) => void;
+}) {
   const { entries, loading, saveEntry, deleteEntry } = useProspectJournal();
+  const { entries: pipelineEntries } = useClientPipeline();
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (focusPipelineEntryId == null || loading) return;
+    const frame = window.requestAnimationFrame(() => {
+      setSearch("");
+      document.querySelector(`[data-pipeline-entry-id="${focusPipelineEntryId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center", inline: "start" });
+      onEntryFocused?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusPipelineEntryId, loading, onEntryFocused]);
 
   const visibleEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -169,7 +228,16 @@ export function ProspectJournalTab() {
               </tr>
             </thead>
             <tbody>
-              {visibleEntries.map((entry) => <JournalRow key={entry.id} entry={entry} onSave={saveEntry} onDelete={removeRow} />)}
+              {visibleEntries.map((entry) => (
+                <JournalRow
+                  key={`${entry.id}-${entry.updatedAt}`}
+                  entry={entry}
+                  onSave={saveEntry}
+                  onDelete={removeRow}
+                  onOpenClient={onOpenClient}
+                  pipelineEntries={pipelineEntries}
+                />
+              ))}
             </tbody>
           </table>
           {!loading && visibleEntries.length === 0 && (

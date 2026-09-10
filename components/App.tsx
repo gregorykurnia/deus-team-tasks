@@ -16,6 +16,8 @@ import { ProspectJournalTab } from "./ProspectJournalTab";
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
   const [tab, setTab] = useState<TabId>("operational");
+  const [journalPipelineId, setJournalPipelineId] = useState<number | null>(null);
+  const [clientDetailsId, setClientDetailsId] = useState<number | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
 
   const completedCount = useMemo(() => tasks.filter((t) => t.completed).length, [tasks]);
@@ -92,8 +94,26 @@ export default function App() {
                 <CalendarTab tasks={visibleTasks} allNames={allNames} onUpdate={(id, t) => updateTask(id, t)} onDelete={deleteTask} />
               )}
               {tab === "flow" && <FlowTab />}
-              {tab === "clients" && <ClientsTab />}
-              {tab === "prospect-journal" && <ProspectJournalTab />}
+              {tab === "clients" && (
+                <ClientsTab
+                  initialEntryId={clientDetailsId}
+                  onEntryOpened={() => setClientDetailsId(null)}
+                  onOpenJournal={(pipelineEntryId) => {
+                    setJournalPipelineId(pipelineEntryId);
+                    setTab("prospect-journal");
+                  }}
+                />
+              )}
+              {tab === "prospect-journal" && (
+                <ProspectJournalTab
+                  focusPipelineEntryId={journalPipelineId}
+                  onEntryFocused={() => setJournalPipelineId(null)}
+                  onOpenClient={(pipelineEntryId) => {
+                    setClientDetailsId(pipelineEntryId);
+                    setTab("clients");
+                  }}
+                />
+              )}
             </>
           )}
         </main>

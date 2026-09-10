@@ -44,6 +44,8 @@ export function ClientTable({
   onEdit,
   onDelete,
   onFollowUp,
+  onJournal,
+  journalEntryIds,
 }: {
   tableKey: TableKey;
   columns: ColumnDef[];
@@ -62,6 +64,8 @@ export function ClientTable({
   onEdit: (row: PipelineEntry) => void;
   onDelete: (row: PipelineEntry) => void;
   onFollowUp: (row: PipelineEntry) => void;
+  onJournal: (row: PipelineEntry) => void;
+  journalEntryIds: Set<number>;
 }) {
   function startResize(e: React.MouseEvent, colKey: string) {
     startColumnResize(e, colKey, onResize);
@@ -317,6 +321,18 @@ export function ClientTable({
                 {columns.map((col) => (col.custom ? customCell(col, r) : builtinCell(col, r)))}
                 <td className="px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => onJournal(r)}
+                      title={journalEntryIds.has(r.id) ? "Open prospect journal" : "Add to prospect journal"}
+                      aria-label={`${journalEntryIds.has(r.id) ? "Open" : "Add"} ${r.company} ${journalEntryIds.has(r.id) ? "in" : "to"} prospect journal`}
+                      className={`h-[30px] whitespace-nowrap rounded-md border px-2 text-[11px] font-medium transition-colors ${
+                        journalEntryIds.has(r.id)
+                          ? "border-accent/20 bg-accent/5 text-accent hover:bg-accent/10"
+                          : "border-gray-200 text-gray-500 hover:border-accent/30 hover:bg-accent/5 hover:text-accent"
+                      }`}
+                    >
+                      {journalEntryIds.has(r.id) ? "Journal ↗" : "+ Journal"}
+                    </button>
                     <button onClick={() => onFollowUp(r)} title="Follow up (create task)" className="w-[30px] h-[30px] flex items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700">
                       📋
                     </button>
