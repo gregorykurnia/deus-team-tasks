@@ -555,7 +555,7 @@ export function TasksTab({
                     <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
                       Target Date
                       <span className="text-gray-400">
-                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : subTab === "prospects" ? "▲" : "↕"}
+                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : subTab === "prospects" ? "▼" : "↕"}
                       </span>
                     </button>
                   </ResizableTh>
@@ -890,16 +890,8 @@ function fmtRange(start: string, end: string) {
 }
 
 function compareProspectTargetDates(a: Task, b: Task) {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const aUpcoming = Boolean(a.endDate) && a.endDate >= today;
-  const bUpcoming = Boolean(b.endDate) && b.endDate >= today;
-
-  if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
-  if (aUpcoming && bUpcoming) return a.endDate.localeCompare(b.endDate);
   if (!a.endDate || !b.endDate) return !a.endDate && !b.endDate ? 0 : !a.endDate ? 1 : -1;
-
-  // Overdue tasks follow upcoming ones, ordered from most recently overdue to oldest.
+  // Most recent target dates appear first; tasks without a target date remain at the bottom.
   return b.endDate.localeCompare(a.endDate);
 }
 
