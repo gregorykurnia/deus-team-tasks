@@ -16,9 +16,11 @@ const UNGROUPED_LABEL = "Ungrouped";
 type SubTab = "general" | "prospects" | "clients";
 
 const LINKED_COLS = [
+  "priority",
   "company",
   "description",
   "type",
+  "touchPoint",
   "date",
   "lastAction",
   "responsible",
@@ -26,10 +28,14 @@ const LINKED_COLS = [
   "done",
 ] as const;
 
+const PROSPECT_ONLY_COLS = new Set<(typeof LINKED_COLS)[number]>(["priority", "touchPoint"]);
+
 const DEFAULT_LINKED_COL_WIDTHS: Record<(typeof LINKED_COLS)[number], number> = {
+  priority: 110,
   company: 160,
   description: 190,
   type: 170,
+  touchPoint: 160,
   date: 210,
   responsible: 170,
   keyPoints: 260,
@@ -51,9 +57,11 @@ const GENERAL_COLS: { id: string; label: string; mandatory?: boolean }[] = [
 ];
 
 const LINKED_COL_DEFS: Record<(typeof LINKED_COLS)[number], { label: string; mandatory?: boolean }> = {
+  priority: { label: "Priority", mandatory: true },
   company: { label: "Company", mandatory: true },
   description: { label: "Description", mandatory: true },
   type: { label: "Type" },
+  touchPoint: { label: "Touch Point" },
   date: { label: "Target Date" },
   lastAction: { label: "Last Action Date" },
   responsible: { label: "Responsible" },
@@ -334,8 +342,12 @@ export function TasksTab({
 
   const title = subTab === "general" ? "Operational Tasks" : subTab === "prospects" ? "Prospect Tasks" : "Client Tasks";
 
+  const activeLinkedCols = LINKED_COLS.filter(
+    (id) => subTab === "prospects" || !PROSPECT_ONLY_COLS.has(id)
+  );
+
   const currentColsDef = isLinkedView
-    ? LINKED_COLS.map((id) => ({ id, ...LINKED_COL_DEFS[id] }))
+    ? activeLinkedCols.map((id) => ({ id, ...LINKED_COL_DEFS[id] }))
     : GENERAL_COLS;
   const colVisibilityKey = subTab === "general" ? `general:${activeGroupId ?? "__all__"}` : subTab;
   const hiddenSet = useMemo(() => new Set(hiddenCols[colVisibilityKey]), [hiddenCols, colVisibilityKey]);
@@ -491,7 +503,7 @@ export function TasksTab({
         <table className={`w-full table-fixed text-sm ${isLinkedView ? "min-w-[1320px]" : "min-w-[900px]"}`}>
           {isLinkedView && (
             <colgroup>
-              {LINKED_COLS.filter((id) => isColVisible(id)).map((id) => (
+              {activeLinkedCols.filter((id) => isColVisible(id)).map((id) => (
                 <col key={id} style={{ width: colWidths[id] ?? DEFAULT_LINKED_COL_WIDTHS[id] }} />
               ))}
             </colgroup>
@@ -499,6 +511,11 @@ export function TasksTab({
           <thead>
             {isLinkedView ? (
               <tr className="border-b border-gray-200 bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {subTab === "prospects" && (
+                  <ResizableTh id="priority" onResizeStart={startResize}>
+                    Priority
+                  </ResizableTh>
+                )}
                 <ResizableTh id="company" onResizeStart={startResize}>
                   <button onClick={() => toggleSort("company")} className="flex items-center gap-1 hover:text-gray-700">
                     Company
@@ -523,6 +540,11 @@ export function TasksTab({
                         {sortState?.key === "type" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
                       </span>
                     </button>
+                  </ResizableTh>
+                )}
+                {subTab === "prospects" && isColVisible("touchPoint") && (
+                  <ResizableTh id="touchPoint" onResizeStart={startResize}>
+                    Touch Point
                   </ResizableTh>
                 )}
                 {isColVisible("date") && (
@@ -638,6 +660,11 @@ export function TasksTab({
                             t.completed ? "opacity-50" : ""
                           }`}
                         >
+                          {subTab === "prospects" && (
+                            <td className="px-4 py-3">
+                              <PriorityFlag priority={t.priority} />
+                            </td>
+                          )}
                           {isLinkedView && (
                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                               {linkedEntry ? (
@@ -674,6 +701,11 @@ export function TasksTab({
                                   </option>
                                 ))}
                               </select>
+                            </td>
+                          )}
+                          {subTab === "prospects" && isColVisible("touchPoint") && (
+                            <td className="px-4 py-3 text-gray-600">
+                              {t.touchPoint || <span className="text-gray-300">—</span>}
                             </td>
                           )}
                           {isColVisible("date") && (
@@ -852,6 +884,22 @@ function fmtRange(start: string, end: string) {
   if (!s && !e) return "—";
   if (!s || !e || start === end) return s || e;
   return `${s} – ${e}`;
+}
+
+function PriorityFlag({ priority }: { priority?: Task["priority"] }) {
+  if (!priority) return <span className="text-gray-300">—</span>;
+  const color =
+    priority === "High"
+      ? "text-red-500"
+      : priority === "Medium"
+        ? "text-amber-500"
+        : "text-gray-400";
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${color}`}>
+      <span aria-hidden="true">⚑</span>
+      {priority}
+    </span>
+  );
 }
 
 function fmtDate(d?: string) {

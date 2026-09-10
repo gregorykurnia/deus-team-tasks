@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { NewTask, Task, TASK_TYPES, TaskType } from "@/lib/types";
+import {
+  NewTask,
+  Task,
+  TASK_PRIORITIES,
+  TASK_TYPES,
+  TaskPriority,
+  TaskType,
+} from "@/lib/types";
 import { PeopleInput } from "./PeopleInput";
 
 export function TaskModal({
@@ -29,6 +36,12 @@ export function TaskModal({
   const [taskType, setTaskType] = useState<TaskType | "">(
     initial?.taskType ?? prefill?.taskType ?? ""
   );
+  const [priority, setPriority] = useState<TaskPriority | "">(
+    initial?.priority ?? prefill?.priority ?? ""
+  );
+  const [touchPoint, setTouchPoint] = useState(
+    initial?.touchPoint ?? prefill?.touchPoint ?? ""
+  );
   const [responsible, setResponsible] = useState<{ name: string; note?: string }[]>(
     (initial?.responsible ?? prefill?.responsible ?? []).map((n) => ({ name: n }))
   );
@@ -53,6 +66,8 @@ export function TaskModal({
     onSave({
       task: task.trim(),
       taskType: taskType || undefined,
+      priority: priority || undefined,
+      touchPoint: touchPoint.trim(),
       responsible: responsible.map((r) => r.name),
       informed,
       keyPoints: keyPoints.trim(),
@@ -112,20 +127,44 @@ export function TaskModal({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Priority</label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority | "")}
+                className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                <option value="">—</option>
+                {TASK_PRIORITIES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Task type</label>
+              <select
+                value={taskType}
+                onChange={(e) => setTaskType(e.target.value as TaskType | "")}
+                className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                <option value="">—</option>
+                {TASK_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Task type</label>
-            <select
-              value={taskType}
-              onChange={(e) => setTaskType(e.target.value as TaskType | "")}
+            <label className="block text-xs font-medium text-gray-500 mb-1">Touch Point</label>
+            <input
+              type="text"
+              value={touchPoint}
+              onChange={(e) => setTouchPoint(e.target.value)}
               className="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
-            >
-              <option value="">—</option>
-              {TASK_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g. Call, email, meeting…"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -14,10 +14,16 @@ export const TASK_TYPES = [
 
 export type TaskType = (typeof TASK_TYPES)[number];
 
+export const TASK_PRIORITIES = ["High", "Medium", "Low"] as const;
+
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
 export interface Task {
   id: string;
   task: string;
   taskType?: TaskType;
+  priority?: TaskPriority;
+  touchPoint?: string;
   responsible: string[];
   informed: InformedPerson[];
   keyPoints: string;
