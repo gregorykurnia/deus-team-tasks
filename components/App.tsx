@@ -11,6 +11,7 @@ import { AssigneeTab } from "./AssigneeTab";
 import { CalendarTab } from "./CalendarTab";
 import { FlowTab } from "./FlowTab";
 import { ClientsTab } from "./ClientsTab";
+import { ProspectJournalTab } from "./ProspectJournalTab";
 
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
@@ -92,6 +93,7 @@ export default function App() {
               )}
               {tab === "flow" && <FlowTab />}
               {tab === "clients" && <ClientsTab />}
+              {tab === "prospect-journal" && <ProspectJournalTab />}
             </>
           )}
         </main>

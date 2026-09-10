@@ -1,0 +1,188 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  createEmptyProspectJournalEntry,
+  PROSPECT_JOURNAL_FIELDS,
+  ProspectJournalEntry,
+} from "@/lib/prospectJournalTypes";
+import { useProspectJournal } from "@/lib/useProspectJournal";
+
+const STATUS_OPTIONS = ["", "Discovery", "Qualified", "Proposal", "Negotiation", "Won", "On hold", "Lost"];
+
+function JournalRow({
+  entry,
+  onSave,
+  onDelete,
+}: {
+  entry: ProspectJournalEntry;
+  onSave: (entry: ProspectJournalEntry) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(entry);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setDraft(entry), [entry]);
+
+  function update(key: keyof ProspectJournalEntry, value: string) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function persist() {
+    if (JSON.stringify(draft) === JSON.stringify(entry)) return;
+    setSaving(true);
+    try {
+      await onSave({ ...draft, updatedAt: Date.now() });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <tr className="group align-top bg-white hover:bg-indigo-50/20 transition-colors">
+      <td className="sticky left-0 z-10 w-52 min-w-52 border-b border-r border-gray-200 bg-white group-hover:bg-[#fafaff] p-3">
+        <div className="flex items-start gap-2">
+          <textarea
+            value={draft.prospectName}
+            onChange={(event) => update("prospectName", event.target.value)}
+            onBlur={persist}
+            rows={3}
+            aria-label="Prospect name"
+            placeholder="Prospect name"
+            className="min-h-24 w-full resize-none rounded-lg border border-transparent bg-transparent px-2.5 py-2 text-sm font-semibold text-gray-900 outline-none placeholder:font-normal placeholder:text-gray-400 hover:border-gray-200 focus:border-accent/40 focus:bg-white focus:ring-2 focus:ring-accent/10"
+          />
+          <button
+            onClick={() => onDelete(entry.id)}
+            aria-label={`Delete ${draft.prospectName || "prospect"}`}
+            title="Delete row"
+            className="mt-1 shrink-0 rounded-md px-1.5 py-1 text-gray-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+          >
+            ×
+          </button>
+        </div>
+        <span className={`ml-2 text-[10px] text-gray-400 transition-opacity ${saving ? "opacity-100" : "opacity-0"}`}>
+          Saving…
+        </span>
+      </td>
+      {PROSPECT_JOURNAL_FIELDS.map((field) => (
+        <td key={field.key} className="min-w-72 border-b border-r border-gray-200 p-3">
+          {field.key === "opportunityStatus" ? (
+            <select
+              value={draft[field.key]}
+              onChange={(event) => {
+                const next = { ...draft, [field.key]: event.target.value };
+                setDraft(next);
+                void onSave({ ...next, updatedAt: Date.now() });
+              }}
+              aria-label={`${field.label} for ${draft.prospectName || "prospect"}`}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+            >
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>{status || "Select status…"}</option>
+              ))}
+            </select>
+          ) : (
+            <textarea
+              value={draft[field.key]}
+              onChange={(event) => update(field.key, event.target.value)}
+              onBlur={persist}
+              rows={4}
+              aria-label={`${field.label} for ${draft.prospectName || "prospect"}`}
+              placeholder={`Add ${field.label.toLowerCase()}…`}
+              className="min-h-28 w-full resize-y rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-5 text-gray-700 outline-none placeholder:text-gray-300 hover:border-gray-200 hover:bg-white focus:border-accent/40 focus:bg-white focus:ring-2 focus:ring-accent/10"
+            />
+          )}
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+export function ProspectJournalTab() {
+  const { entries, loading, saveEntry, deleteEntry } = useProspectJournal();
+  const [search, setSearch] = useState("");
+
+  const visibleEntries = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return entries;
+    return entries.filter((entry) => Object.values(entry).join(" ").toLowerCase().includes(query));
+  }, [entries, search]);
+
+  async function addRow() {
+    const entry = createEmptyProspectJournalEntry(crypto.randomUUID());
+    await saveEntry(entry);
+  }
+
+  async function removeRow(id: string) {
+    if (window.confirm("Delete this prospect journal row?")) await deleteEntry(id);
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-xs font-medium text-accent">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">✦</span>
+            Clients workspace
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-950">Prospect Journal</h1>
+          <p className="mt-1 text-sm text-gray-500">Capture the context behind every opportunity, from need to next step.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="relative">
+            <span className="sr-only">Search journal</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">⌕</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search prospects…"
+              className="h-10 w-48 rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm outline-none transition focus:border-accent/40 focus:ring-2 focus:ring-accent/10 sm:w-56"
+            />
+          </label>
+          <button onClick={addRow} className="h-10 whitespace-nowrap rounded-lg bg-accent px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
+            + Add prospect
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs text-gray-400">
+        <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 font-medium text-gray-600">{entries.length} prospects</span>
+        <span>Changes save automatically when you leave a cell</span>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-max min-w-full border-separate border-spacing-0 text-left">
+            <thead>
+              <tr>
+                <th className="sticky left-0 top-0 z-30 w-52 min-w-52 border-b border-r border-gray-200 bg-gray-50/95 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
+                  Prospect
+                </th>
+                {PROSPECT_JOURNAL_FIELDS.map((field, index) => (
+                  <th key={field.key} className="sticky top-0 z-20 min-w-72 border-b border-r border-gray-200 bg-gray-50/95 px-5 py-3 backdrop-blur">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded bg-indigo-100 text-[10px] font-semibold text-indigo-600">{index + 1}</span>
+                      <span className="text-xs font-semibold leading-5 text-gray-600">{field.label}</span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleEntries.map((entry) => <JournalRow key={entry.id} entry={entry} onSave={saveEntry} onDelete={removeRow} />)}
+            </tbody>
+          </table>
+          {!loading && visibleEntries.length === 0 && (
+            <div className="sticky left-0 flex min-h-64 w-[calc(100vw-3rem)] max-w-3xl flex-col items-center justify-center px-6 text-center md:w-[calc(100vw-17rem)]">
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-xl text-accent">✦</span>
+              <p className="text-sm font-semibold text-gray-800">{search ? "No matching prospects" : "Your journal is ready"}</p>
+              <p className="mt-1 max-w-sm text-sm text-gray-400">{search ? "Try another search term." : "Add your first prospect and capture the full opportunity story in one place."}</p>
+              {!search && <button onClick={addRow} className="mt-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/10">+ Add first prospect</button>}
+            </div>
+          )}
+          {loading && <div className="sticky left-0 w-[calc(100vw-3rem)] py-24 text-center text-sm text-gray-400 md:w-[calc(100vw-17rem)]">Loading journal…</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
