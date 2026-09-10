@@ -242,10 +242,13 @@ export function TasksTab({
   }, [activeTasks, isLinkedView, typeFilter, minDaysSince]);
 
   const sortedTasks = useMemo(() => {
-    if (!sortState) return filteredTasks;
+    if (!sortState && subTab !== "prospects") return filteredTasks;
+    if (!sortState) {
+      return [...filteredTasks].sort(compareProspectTargetDates);
+    }
     const { key, dir } = sortState;
     const sorted = [...filteredTasks].sort((a, b) => {
-      if (key === "date") return a.startDate.localeCompare(b.startDate);
+      if (key === "date") return a.endDate.localeCompare(b.endDate);
       if (key === "lastAction") return (a.lastActionDate ?? "").localeCompare(b.lastActionDate ?? "");
       if (key === "daysSince") {
         const da = daysSince(a.lastActionDate) ?? -Infinity;
@@ -261,7 +264,7 @@ export function TasksTab({
       return a.task.localeCompare(b.task);
     });
     return dir === "asc" ? sorted : sorted.reverse();
-  }, [filteredTasks, sortState, entryById]);
+  }, [filteredTasks, sortState, entryById, subTab]);
 
   const allGroups = useMemo(() => {
     if (subTab !== "general") return [];
@@ -552,7 +555,7 @@ export function TasksTab({
                     <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-gray-700">
                       Target Date
                       <span className="text-gray-400">
-                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : "↕"}
+                        {sortState?.key === "date" ? (sortState.dir === "asc" ? "▲" : "▼") : subTab === "prospects" ? "▲" : "↕"}
                       </span>
                     </button>
                   </ResizableTh>
@@ -884,6 +887,20 @@ function fmtRange(start: string, end: string) {
   if (!s && !e) return "—";
   if (!s || !e || start === end) return s || e;
   return `${s} – ${e}`;
+}
+
+function compareProspectTargetDates(a: Task, b: Task) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const aUpcoming = Boolean(a.endDate) && a.endDate >= today;
+  const bUpcoming = Boolean(b.endDate) && b.endDate >= today;
+
+  if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+  if (aUpcoming && bUpcoming) return a.endDate.localeCompare(b.endDate);
+  if (!a.endDate || !b.endDate) return !a.endDate && !b.endDate ? 0 : !a.endDate ? 1 : -1;
+
+  // Overdue tasks follow upcoming ones, ordered from most recently overdue to oldest.
+  return b.endDate.localeCompare(a.endDate);
 }
 
 function PriorityFlag({ priority }: { priority?: Task["priority"] }) {
