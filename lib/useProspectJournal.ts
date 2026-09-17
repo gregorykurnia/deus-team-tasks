@@ -16,7 +16,13 @@ export function useProspectJournal() {
       collection(clientsDb, COLLECTION),
       (snapshot) => {
         const rows = snapshot.docs
-          .map((item) => item.data() as ProspectJournalEntry)
+          .map((item) => {
+            const entry = item.data() as ProspectJournalEntry;
+            return {
+              ...entry,
+              detailedRemarks: entry.detailedRemarks ?? "",
+            };
+          })
           .sort((a, b) => a.updatedAt - b.updatedAt);
         setEntries(rows);
         setLoading(false);

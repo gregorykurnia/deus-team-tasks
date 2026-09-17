@@ -9,6 +9,7 @@ export const PROSPECT_JOURNAL_FIELDS = [
   { key: "nextStepAndOwnership", label: "Next Step and Ownership" },
   { key: "potentialBlockersAnalysis", label: "Potential Blockers Analysis" },
   { key: "opportunityStatus", label: "Opportunity Status" },
+  { key: "detailedRemarks", label: "Detailed Remarks" },
 ] as const;
 
 export type ProspectJournalField = (typeof PROSPECT_JOURNAL_FIELDS)[number]["key"];
@@ -35,5 +36,6 @@ export function createEmptyProspectJournalEntry(id: string): ProspectJournalEntr
     nextStepAndOwnership: "",
     potentialBlockersAnalysis: "",
     opportunityStatus: "",
+    detailedRemarks: "",
   };
 }
