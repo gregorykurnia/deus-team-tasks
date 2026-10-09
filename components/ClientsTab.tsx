@@ -49,7 +49,7 @@ type TextPopupState = { field: string; row: PipelineEntry; anchorRect: DOMRect; 
 type DatePopupState = { field: string; row: PipelineEntry; anchorRect: DOMRect };
 type DropdownPopupState = { field: string; row: PipelineEntry; anchorRect: DOMRect };
 type MovePopupState = { row: PipelineEntry; anchorRect: DOMRect };
-type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Partial<PipelineEntry> | null };
+type ModalState = { kind: TableKey; editing: PipelineEntry | null; prefill: Partial<PipelineEntry> | null; moveId?: number };
 
 export function ClientsTab({
   initialTab,
@@ -329,7 +329,7 @@ export function ClientsTab({
     if (!movePopup) return;
     const prefill = buildMovePrefill(movePopup.row, target);
     setMovePopup(null);
-    setModal({ kind: target, editing: null, prefill });
+    setModal({ kind: target, editing: null, prefill, moveId: movePopup.row.id });
   }
 
   function openAddModal() {
@@ -341,7 +341,7 @@ export function ClientsTab({
 
   async function handleSaveModal(patch: Partial<PipelineEntry>) {
     if (!modal) return;
-    const id = modal.editing ? modal.editing.id : nextId();
+    const id = modal.editing ? modal.editing.id : modal.moveId ?? nextId();
     const entry: PipelineEntry = { id, ...patch } as PipelineEntry;
     await persist(entry);
     setModal(null);
