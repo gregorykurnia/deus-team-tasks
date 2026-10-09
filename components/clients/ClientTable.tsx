@@ -128,6 +128,12 @@ export function ClientTable({
               {r.product || "—"}
             </td>
           );
+        case "trial":
+          return (
+            <td key={key} className="px-3.5 py-3 border-b border-gray-100 text-gray-600 text-xs max-w-[140px] break-words cursor-pointer hover:bg-gray-50/60" onClick={(e) => onOpenText("trial", r, e.currentTarget)}>
+              {r.trial || "—"}
+            </td>
+          );
         case "priority":
           return (
             <td key={key} className="px-3.5 py-3 border-b border-gray-100">

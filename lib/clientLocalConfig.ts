@@ -39,10 +39,16 @@ export function loadColConfig(): ColConfig {
         cfg[tk] = BUILTIN_COLS[tk].map((bc) => ({ ...bc, visible: true, custom: false }));
         return;
       }
-      BUILTIN_COLS[tk].forEach((bc) => {
+      BUILTIN_COLS[tk].forEach((bc, i) => {
         if (!cfg[tk].find((c) => c.key === bc.key)) {
-          const firstCustom = cfg[tk].findIndex((c) => c.custom);
           const col = { ...bc, visible: true, custom: false };
+          const prevKey = BUILTIN_COLS[tk][i - 1]?.key;
+          const prevIndex = prevKey ? cfg[tk].findIndex((c) => c.key === prevKey) : -1;
+          if (prevIndex >= 0) {
+            cfg[tk].splice(prevIndex + 1, 0, col);
+            return;
+          }
+          const firstCustom = cfg[tk].findIndex((c) => c.custom);
           if (firstCustom >= 0) cfg[tk].splice(firstCustom, 0, col);
           else cfg[tk].push(col);
         }

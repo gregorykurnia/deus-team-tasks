@@ -342,7 +342,11 @@ export function ClientsTab({
   async function handleSaveModal(patch: Partial<PipelineEntry>) {
     if (!modal) return;
     const id = modal.editing ? modal.editing.id : modal.moveId ?? nextId();
-    const entry: PipelineEntry = { id, ...patch } as PipelineEntry;
+    const entry: PipelineEntry = {
+      id,
+      ...patch,
+      ...(modal.editing?.trial !== undefined ? { trial: modal.editing.trial } : {}),
+    } as PipelineEntry;
     await persist(entry);
     setModal(null);
   }
