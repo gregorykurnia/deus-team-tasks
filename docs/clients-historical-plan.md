@@ -17,6 +17,7 @@
 - **Subsidiary row:** name only. No sector of its own (it inherits the head's). Can be moved to another head.
 - **Actions:** add client, add subsidiary to a head, rename, move subsidiary, delete.
 - **Delete rule:** a head can only be deleted once it has no subsidiaries (move or delete them first).
+- **Sorting:** click Client, Sector, Count head or Subs to sort the heads (the pipeline's behavior: first click ascending, next click reverses). Clients start A to Z. A head with no sector always sorts last. Subsidiaries always stay A to Z under their head. On phones the header row is hidden, so the toolbar has a sort dropdown with a direction button instead.
 
 ## Section 2 — Client count
 

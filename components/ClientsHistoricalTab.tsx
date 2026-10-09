@@ -10,6 +10,9 @@ import {
   HistoricalClient,
   sectorLabelMap,
   sectorSummary,
+  SortDir,
+  SortKey,
+  sortGroups,
 } from "@/lib/historicalClientTypes";
 import { colorFor } from "@/lib/colors";
 import { downloadCsv } from "@/lib/exportCsv";
@@ -31,6 +34,37 @@ function SectorChip({ label }: { label: string }) {
     >
       <span className="truncate">{label}</span>
     </span>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  active,
+  dir,
+  onSort,
+  align = "left",
+}: {
+  label: string;
+  sortKey: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  align?: "left" | "right";
+}) {
+  const isActive = active === sortKey;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      title={`Sort by ${label.toLowerCase()}`}
+      className={`flex w-full items-center cursor-pointer select-none text-[11px] font-semibold text-gray-400 uppercase tracking-wide hover:text-gray-600 ${align === "right" ? "justify-end" : ""}`}
+    >
+      {label}
+      <span className={`ml-1 text-[10px] ${isActive ? "text-accent opacity-100" : "opacity-40"}`}>
+        {isActive ? (dir === 1 ? "▲" : "▼") : "⇅"}
+      </span>
+    </button>
   );
 }
 
@@ -63,6 +97,18 @@ export function ClientsHistoricalTab() {
   }, [toast]);
 
   const groups = useMemo(() => buildGroups(clients), [clients]);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>(1);
+  const sortedGroups = useMemo(() => sortGroups(groups, sortKey, sortDir), [groups, sortKey, sortDir]);
+
+  // Same as the pipeline: first click sorts ascending, the next click reverses.
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
+    else {
+      setSortKey(key);
+      setSortDir(1);
+    }
+  }
   const counts = useMemo(() => countSummary(groups), [groups]);
   const labels = useMemo(() => sectorLabelMap(clients), [clients]);
   const sectors = useMemo(() => sectorSummary(groups, labels), [groups, labels]);
@@ -70,14 +116,14 @@ export function ClientsHistoricalTab() {
 
   const query = search.trim().toLowerCase();
   const visibleRows = useMemo(() => {
-    if (!query) return groups.map((group) => ({ group, subs: group.subs }));
+    if (!query) return sortedGroups.map((group) => ({ group, subs: group.subs }));
     const matches = (value: string) => value.toLowerCase().includes(query);
-    return groups.flatMap((group) => {
+    return sortedGroups.flatMap((group) => {
       const headMatch = matches(group.head.name) || matches(group.head.sector ?? "");
       const subs = headMatch ? group.subs : group.subs.filter((sub) => matches(sub.name));
       return headMatch || subs.length > 0 ? [{ group, subs }] : [];
     });
-  }, [groups, query]);
+  }, [sortedGroups, query]);
 
   const headsWithSubs = groups.filter((group) => group.subs.length > 0).map((group) => group.head.id);
   const allOpen = headsWithSubs.length > 0 && headsWithSubs.every((id) => !collapsed.has(id));
@@ -143,7 +189,7 @@ export function ClientsHistoricalTab() {
 
   function exportCsv() {
     const rows: string[][] = [];
-    for (const { head, subs } of groups) {
+    for (const { head, subs } of sortedGroups) {
       rows.push([head.name, "Client", "", head.sector ?? "", head.countHead ? "Yes" : "No"]);
       for (const sub of subs) rows.push([sub.name, "Subsidiary", head.name, head.sector ?? "", "Yes"]);
     }
@@ -192,6 +238,29 @@ export function ClientsHistoricalTab() {
             className="w-full h-9 pl-8 pr-2.5 text-[13px] border border-gray-200 rounded-md outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
           />
         </div>
+        <div className="flex items-center gap-1.5 sm:hidden">
+          <select
+            value={sortKey}
+            onChange={(e) => {
+              setSortKey(e.target.value as SortKey);
+              setSortDir(1);
+            }}
+            aria-label="Sort clients by"
+            className="h-9 text-[13px] border border-gray-200 rounded-md px-2.5 outline-none focus:border-accent bg-white"
+          >
+            <option value="name">Client</option>
+            <option value="sector">Sector</option>
+            <option value="count">Count head</option>
+            <option value="subs">Subs</option>
+          </select>
+          <button
+            onClick={() => setSortDir((d) => (d === 1 ? -1 : 1))}
+            aria-label={sortDir === 1 ? "Sorted ascending. Reverse order" : "Sorted descending. Reverse order"}
+            className="h-9 w-9 rounded-md border border-gray-200 text-[12px] text-gray-600 hover:bg-gray-50"
+          >
+            {sortDir === 1 ? "▲" : "▼"}
+          </button>
+        </div>
         <div className="flex-1" />
         {headsWithSubs.length > 0 && (
           <button onClick={toggleAll} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md text-[13px] font-medium border border-gray-200 text-gray-700 hover:bg-gray-50">
@@ -202,11 +271,19 @@ export function ClientsHistoricalTab() {
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="hidden sm:flex items-center gap-x-3 px-3.5 py-2.5 bg-gray-50 border-b border-gray-200 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-            <div className="flex-1 min-w-0">Client</div>
-            <div className="shrink-0 sm:w-[150px]">Sector</div>
-            <div className="shrink-0 sm:w-[96px]">Count head</div>
-            <div className="shrink-0 sm:w-12 text-right">Subs</div>
+          <div className="hidden sm:flex items-center gap-x-3 px-3.5 py-2.5 bg-gray-50 border-b border-gray-200">
+            <div className="flex-1 min-w-0">
+              <SortHeader label="Client" sortKey="name" active={sortKey} dir={sortDir} onSort={handleSort} />
+            </div>
+            <div className="shrink-0 sm:w-[150px]">
+              <SortHeader label="Sector" sortKey="sector" active={sortKey} dir={sortDir} onSort={handleSort} />
+            </div>
+            <div className="shrink-0 sm:w-[96px]">
+              <SortHeader label="Count head" sortKey="count" active={sortKey} dir={sortDir} onSort={handleSort} />
+            </div>
+            <div className="shrink-0 sm:w-12">
+              <SortHeader label="Subs" sortKey="subs" active={sortKey} dir={sortDir} onSort={handleSort} align="right" />
+            </div>
             <div className="shrink-0 sm:w-[72px]" />
           </div>
 

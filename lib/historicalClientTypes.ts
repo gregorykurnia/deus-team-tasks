@@ -143,3 +143,40 @@ export function sectorSummary(groups: ClientGroup[], labels: Map<string, string>
 
   return { rows, unassigned, total };
 }
+
+export type SortKey = "name" | "sector" | "count" | "subs";
+export type SortDir = 1 | -1;
+
+// Sorts the heads. Subsidiaries are not touched: they keep their A→Z order under their head.
+// Heads with no sector always go last, whichever way the sort runs.
+export function sortGroups(groups: ClientGroup[], key: SortKey, dir: SortDir): ClientGroup[] {
+  const byName = (a: ClientGroup, b: ClientGroup) =>
+    a.head.name.localeCompare(b.head.name, undefined, { sensitivity: "base" });
+
+  const compare = (a: ClientGroup, b: ClientGroup): number => {
+    switch (key) {
+      case "name":
+        return byName(a, b) * dir;
+      case "sector": {
+        const sa = cleanSector(a.head.sector ?? "");
+        const sb = cleanSector(b.head.sector ?? "");
+        if (!sa && !sb) return byName(a, b);
+        if (!sa) return 1;
+        if (!sb) return -1;
+        return (
+          sa.localeCompare(sb, undefined, { sensitivity: "base" }) * dir || byName(a, b)
+        );
+      }
+      case "count": {
+        // Counted heads rank first when ascending.
+        const va = a.head.countHead ? 0 : 1;
+        const vb = b.head.countHead ? 0 : 1;
+        return (va - vb) * dir || byName(a, b);
+      }
+      case "subs":
+        return (a.subs.length - b.subs.length) * dir || byName(a, b);
+    }
+  };
+
+  return [...groups].sort(compare);
+}
