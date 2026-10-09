@@ -50,7 +50,8 @@ const DELETE_BUTTON = "w-[30px] h-[30px] flex items-center justify-center rounde
 export function ClientsHistoricalTab() {
   const { clients, loading, addClient, updateClient, deleteClient } = useHistoricalClients();
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Heads start expanded. This set holds only the heads the user has collapsed.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [popup, setPopup] = useState<Popup | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -79,14 +80,14 @@ export function ClientsHistoricalTab() {
   }, [groups, query]);
 
   const headsWithSubs = groups.filter((group) => group.subs.length > 0).map((group) => group.head.id);
-  const allOpen = headsWithSubs.length > 0 && headsWithSubs.every((id) => expanded.has(id));
+  const allOpen = headsWithSubs.length > 0 && headsWithSubs.every((id) => !collapsed.has(id));
 
   function isOpen(headId: string, visibleSubCount: number) {
-    return query ? visibleSubCount > 0 : expanded.has(headId);
+    return query ? visibleSubCount > 0 : !collapsed.has(headId);
   }
 
   function toggleHead(headId: string) {
-    setExpanded((prev) => {
+    setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(headId)) next.delete(headId);
       else next.add(headId);
@@ -95,7 +96,7 @@ export function ClientsHistoricalTab() {
   }
 
   function toggleAll() {
-    setExpanded(allOpen ? new Set() : new Set(headsWithSubs));
+    setCollapsed(allOpen ? new Set(headsWithSubs) : new Set());
   }
 
   // Runs a Firestore write. Shows a toast and returns false if it fails.
@@ -248,7 +249,7 @@ export function ClientsHistoricalTab() {
                     )}
                     <button
                       onClick={(e) => openPopup(head, "name", e.currentTarget)}
-                      className="min-w-0 -mx-1 break-words rounded px-1 py-0.5 text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+                      className="min-w-0 -mx-1 break-words rounded px-1 py-0.5 text-left text-[13px] font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
                     >
                       {head.name}
                     </button>
@@ -301,7 +302,7 @@ export function ClientsHistoricalTab() {
                       <div className="flex min-w-0 flex-1 basis-0 items-center sm:basis-[200px]">
                         <button
                           onClick={(e) => openPopup(sub, "name", e.currentTarget)}
-                          className="min-w-0 -mx-1 break-words rounded px-1 py-0.5 text-left font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                          className="min-w-0 -mx-1 break-words rounded px-1 py-0.5 text-left text-[13px] font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                         >
                           {sub.name}
                         </button>

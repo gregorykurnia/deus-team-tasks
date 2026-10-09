@@ -12,7 +12,7 @@
 
 - Two levels only: **clients** (heads) and **subsidiaries** under a head.
 - A head can have zero subsidiaries. Not every head has any.
-- Each head expands/collapses to show its subsidiaries, indented.
+- Each head expands/collapses to show its subsidiaries, indented. Heads start expanded.
 - **Head row:** name, **Sector** (typed directly in the cell), **Count head** checkbox, subsidiary count.
 - **Subsidiary row:** name only. No sector of its own (it inherits the head's). Can be moved to another head.
 - **Actions:** add client, add subsidiary to a head, rename, move subsidiary, delete.
@@ -143,7 +143,7 @@ Sector is free text, typed by hand. Entries are matched to existing sectors igno
 - No horizontal scroll on the page itself. Anything wide scrolls inside its own card with `overflow-x-auto`. No `100vw` tricks.
 - Below `md`, the sector chip and Count head control wrap under the client name inside the row instead of squeezing columns; the "Subs" column is hidden below `sm` (the count shows next to the chevron instead).
 - Hover, focus and active states are always present: `transition-colors` on rows and buttons, `focus:ring-2 focus:ring-accent/10` on inputs, minimum 30px tap targets (the pipeline's size).
-- Expanded/collapsed state is local to the page and resets on reload. Search matches head and subsidiary names and auto-expands heads that have a matching subsidiary.
+- Every client starts expanded on each page load, including clients added later. Collapsing a client is local to the page and resets on reload. Search matches head and subsidiary names and auto-expands heads that have a matching subsidiary.
 
 ### Visual QA before calling it done
 
