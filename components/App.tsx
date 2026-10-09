@@ -12,6 +12,7 @@ import { CalendarTab } from "./CalendarTab";
 import { FlowTab } from "./FlowTab";
 import { ClientsTab } from "./ClientsTab";
 import { ProspectJournalTab } from "./ProspectJournalTab";
+import { ClientsHistoricalTab } from "./ClientsHistoricalTab";
 
 export default function App() {
   const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
@@ -104,6 +105,7 @@ export default function App() {
                   }}
                 />
               )}
+              {tab === "clients-historical" && <ClientsHistoricalTab />}
               {tab === "prospect-journal" && (
                 <ProspectJournalTab
                   focusPipelineEntryId={journalPipelineId}

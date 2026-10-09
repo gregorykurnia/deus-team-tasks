@@ -41,6 +41,7 @@ const NAV: NavItem[] = [
     children: [
       { id: "clients", label: "Client Pipeline", icon: "◈" },
       { id: "prospect-journal", label: "Prospect Journal", icon: "✦" },
+      { id: "clients-historical", label: "Clients Historical", icon: "🗄" },
     ],
   },
 ];
@@ -55,7 +56,8 @@ export type TabId =
   | "calendar"
   | "flow"
   | "clients"
-  | "prospect-journal";
+  | "prospect-journal"
+  | "clients-historical";
 
 function groupOf(id: TabId): GroupItem | undefined {
   return NAV.find((i) => isGroup(i) && i.children.some((c) => c.id === id)) as GroupItem | undefined;
