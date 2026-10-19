@@ -46,8 +46,8 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 
 **Discovery (sees the old app)**
 - [x] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
-- [x] Step 1: second leak review; removed details logged in §7 — **Sonnet 5.5 High** · fresh session on `<base>`
-- [ ] Step 1b: banned-word scan clean — **Haiku 5.5 High** · Claude on `<base>`
+- [x] Step 1: second leak review; removed details logged in §7 — **Opus 5.5 Medium** (moved up from Sonnet 5.5 High after the guess-the-layout test failed) · fresh session on `<base>`
+- [x] Step 1b: banned-word scan clean — **Haiku 5.5 High** · Claude on `<base>`
 - [ ] Step 1b: guess-the-layout test passed (§8) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
 
 **Brief (you, without opening the app)**
@@ -227,7 +227,7 @@ The inventory must also list, in neutral language:
 - `redesign/handoff/brief.md`: status line `Status: DRAFT`, then the headings from Step 3, each followed by a one-line prompt and no answers
 - `redesign/handoff/needs.md`: status line `Open needs: none`, then an empty table `ID | Need (job story) | Raised in | Status`
 
-**Second leak review** (fresh session, Sonnet 5.5 High): read only `inventory.md` and rewrite every story that still implies the current layout, order or wording. Log the removed details in `inventory-notes.md` §7, where Agent C can use them later.
+**Second leak review** (fresh session, Opus 5.5 Medium): read only `inventory.md` and rewrite every story that still implies the current layout, order or wording. Log the removed details in `inventory-notes.md` §7, where Agent C can use them later.
 
 ## Step 1b: Sanitisation (you, plus a fresh agent)
 

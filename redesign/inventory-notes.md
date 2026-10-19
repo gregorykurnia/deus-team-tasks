@@ -146,7 +146,59 @@ Kept on purpose: business rules and thresholds (3 days, 14 days, default sort or
 
 ## §8 Guess-the-layout test results
 
-_(Filled in Step 1b.)_
+### Run 1, 2026-10-19: failed
+
+Fresh studio session (Opus 5.5 High), read only `inventory.md`. Its guess matched the real app closely in most areas. Compared with §2 and the components.
+
+| Area | Guess that matched the real app | Story that drove it |
+|---|---|---|
+| Overall | Left sidebar on desktop; areas in inventory order Tasks, then the planning views | Group order (W, D first) |
+| Task groups | Collapsible group sections with counts, starred groups first, an Ungrouped section | W9, W10, W11 |
+| Company tasks | Sortable table with company, description, type, deadline countdown, last action in that column order; type filter and "no action ≥ N days" filter | W13, W14 (sort list in column order) |
+| Done / finished | Done checkbox on every row; "Show completed (n)" toggle | W5, W6 |
+| Column settings | Show/hide columns, resizable widths, saved on the device | W15, C2 ("how much of each is visible") |
+| Planning views | Separate Timeline / Day / People / Calendar screens, one per D story | D1, D4, D6, D7 |
+| Timeline | Bars coloured by responsible person, today line, scope filter with exactly group / ungrouped / prospects / clients, "No dates" row | D1, D2, D3 |
+| One day | Prev/next, date picker, Today; Starts / Ends / Ongoing / Single day labels | D4, D5 (control set survived the §7 rewrite) |
+| One person | Person picker, then Responsible (n) and Informed (n) with notes | D6 |
+| Month | Month grid, Tasks/Events toggle, "+n more", day detail on click, notice when not connected | D7, D8, D10 |
+| Pipeline | Four stat cards in the real order; four groups with counts in the real order; status/product/priority filters in the real order; inline cell editing; row actions follow-up / move / record / delete; per-group field manager with colours | B2, B6, B8, B10, B11, B5, C1–C3 |
+| Qualification | One row per prospect, one column per heading, likelihood rating, long remarks expanding in place, "Saving…", link-to-company on unlinked notes | U7 ("same heading together"), U3, U4, U6 |
+| Past clients | Four stat cards in the real order; sector bars with "no sector"; tree with expand/collapse all, counted toggle, move to parent | R4, R5, R7 (expand one/all survived the §7 rewrite) |
+| Flows | Flow switcher with "+ New flow", in-place editing, numbered steps with role chips, one decision with good/bad outcomes | M2, M3, M4 ("edit where I read it") |
+
+Did not match: bottom tab bar on phones, quick-add field, informed-note input, drag-to-reorder roles, flow loop drawn, row action menu (real: separate icon actions), stacked cards on phones.
+
+**Rewritten (2026-10-19, Opus 5.5 High).** Stories: W5, W6, W9, W10, W14, W15, D1–D8, D11, B2, B6, B8, B9, U3, U7, R4, R7, M4, C2. Job groups reordered (B, U, W, D, R, M, C, E, A) with a note that the order means nothing; `priorities.md` follows the same order and its short labels match. Details removed, for Agent C:
+
+| Story | Removed | Why it leaked |
+|---|---|---|
+| W5 | "from wherever I see it" | Checkbox on every row |
+| W6 | "set them aside again" | Show/hide toggle with a count |
+| W9 | "come before the others" | Starred groups first |
+| W10 | "set the others aside", "how many tasks each holds" | Collapsible sections with counts |
+| W14 | Sort list in column order (company, description, type, deadline, last action) | Table columns |
+| W15, C2 | "how much of each is visible", "on my device" | Resizable widths in local storage |
+| D1 | "spans time from start to deadline", "responsible recognisable", "today easy to locate" | Timeline bars, colour per person, today line |
+| D2 | "plan across time" | Filter on the timeline only |
+| D3 | "still show up, clearly marked as undated" | "No dates" row |
+| D4 | "starts, ends, runs through or single-day" | The four item labels |
+| D5 | "previous or next day, any date, today" | Prev/next/date/Today controls |
+| D6 | "pick a person and see" two lists "how many of each" | Person picker, two counted lists |
+| D7, D8 | "a month", "tasks, external events or both", "more than fits", "any day I choose" | Month grid, source toggle, "+n more", day panel |
+| D11 | "any of these ways of looking at work" | Several separate views |
+| B2 | Group order prospects, done, not contacted, hold | Sub-tab order |
+| B6 | "quick summary", four counts in order | Four stat cards in order |
+| B8, B9 | Filter and sort lists in UI order | Filter and column order |
+| U3 | "look across all prospects" | One table of all prospects |
+| U7 | "compare all prospects' answers to the same heading together" | One column per heading |
+| R4 | Figures in stat-card order | Stat cards in order |
+| R7 | "show or hide … one at a time or all together", sort list in column order | Expand/collapse all tree, columns |
+| M4 | "edit any part where I read it" | In-place editing |
+
+Kept on purpose: W12 (three kinds of work is the core business rule), B5, B10, B11, B13, U4, U5, U6, R3, R5, M2, M3 (genuine needs; the designer may land on similar patterns from the need alone).
+
+Next: run the test again with a new fresh studio session (after `enter`).
 
 ## §9 Decisions made in Step 2
 
