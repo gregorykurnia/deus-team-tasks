@@ -408,7 +408,7 @@ You approve the plan before Step 7.
 
 **Setup**
 - [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
-- [ ] Step 0b: firewall check: every channel *blocked*
+- [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56)
 
 **Discovery (sees the old app)**
 - [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md`
@@ -826,10 +826,10 @@ This is a firewall check for this folder. Rules: do NOT print, quote or summaris
 7. Prompt history: read ~/.claude/history.jsonl with the Read tool, and head -c 1 ~/.claude/history.jsonl >/dev/null 2>&1 && echo reachable || echo blocked in the shell
 8. Old transcripts: ls ~/.claude/projects/ >/dev/null 2>&1 && echo reachable || echo blocked
 9. Playbooks: read ~/.claude/playbooks/blank-slate-redesign.md with the Read tool
-10. Web: use WebFetch on https://<LIVE_DOMAIN> if you have it; and in the shell: curl -s -m 5 -o /dev/null https://<LIVE_DOMAIN> && echo reachable || echo blocked
+10. Network: in the shell, run curl -s -m 5 -o /dev/null -w 'code=%{http_code} ip=%{remote_ip}' https://example.com; echo " exit=$?" (a neutral site: the designer refuses the product's own site). "blocked" if code=000 with a non-zero exit, or a 403 from 127.0.0.1; otherwise "reachable". Also report whether a WebFetch tool exists.
 11. Tools: list every tool you have whose name starts with mcp__, plus any tool named Artifact, ArtifactComments, ArtifactData, DesignSync, SendMessage, ListAgents, RemoteTrigger, or any browser tool. "reachable" for each one present; "blocked" if there are none.
 12. Guard files: echo x >> shoot 2>/dev/null && echo reachable || echo blocked
-13. This session: "reachable" if you can see any conversation from before this message.
+13. This session: "reachable" if you can see any conversation from before this message (your own /model, /effort and other slash commands in this session don't count).
 
 Finish with one line: ALL BLOCKED, or the numbers that were reachable.
 ```
