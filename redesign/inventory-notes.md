@@ -120,7 +120,29 @@ See the plan's project settings (Next.js 16 App Router, React 19, Tailwind 4, tw
 
 ## §7 Details removed during leak reviews
 
-_(Filled by the second leak review.)_
+Second leak review, 2026-10-19 (Sonnet 5.5 High, read only `inventory.md`). Each row is a detail that implied the current layout, order or wording, and was removed from the story. Agent C can use these later.
+
+| Story | Removed from the story | Why it leaked |
+|---|---|---|
+| W2 | Field order (dates, priority, type, touch point, last action, key points) | Same order as the task form |
+| W6 | "bring into sight … put away again" | Show/hide toggle with a count |
+| W10 | "fold groups away" | Collapsible sections |
+| W12 | "split into three kinds" | Three separate sections |
+| W13 | "colour-coded by urgency"; one item per detail | Table columns and the colour treatment |
+| W15 | "how much space each gets" | Resizable column widths |
+| D1 | "laid out", "coloured by responsible person", "today marked" | Timeline bars, colour per person, marker |
+| D5 | "step back or forward, pick any date, jump to today" | The exact control set |
+| D6 | "see separately", "with counts" | Two separate lists with count labels |
+| D7 | "month by month", "today highlighted" | Month grid with highlighted day |
+| D8 | "a few items per day with 'and N more'" | Literal overflow label and day-cell pattern |
+| B1 | Field order (company, contact, last action, status, products, type, priority, source, industry, next actions, target date) | Same order as the company form; regrouped by meaning |
+| B2 | "kept apart", "a count for each group" | One section per group with count badges |
+| U3 | "expand when writing, compact when scanning" | Expandable text area and shortened cell |
+| U7 | "side by side" | Column-per-prospect comparison |
+| R7 | "fold or unfold … one by one or all at once" | Expand/collapse tree |
+| C2 | "set the width of any field" | Resizable column widths |
+
+Kept on purpose: business rules and thresholds (3 days, 14 days, default sort orders), fixed note headings (U1), and the order of the job groups. The group order may still echo the current navigation order; Step 1b's guess-the-layout test will show whether it matters.
 
 ## §8 Guess-the-layout test results
 
