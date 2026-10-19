@@ -45,7 +45,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56) — **Haiku 5.5 High** · fresh studio session
 
 **Discovery (sees the old app)**
-- [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
+- [x] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
 - [ ] Step 1: second leak review; removed details logged in §7 — **Sonnet 5.5 High** · fresh session on `<base>`
 - [ ] Step 1b: banned-word scan clean — **Haiku 5.5 High** · Claude on `<base>`
 - [ ] Step 1b: guess-the-layout test passed (§8) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
