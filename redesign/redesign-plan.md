@@ -48,7 +48,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
 - [x] Step 1: second leak review; removed details logged in §7 — **Opus 5.5 Medium** (moved up from Sonnet 5.5 High after the guess-the-layout test failed) · fresh session on `<base>`
 - [x] Step 1b: banned-word scan clean — **Haiku 5.5 High** · Claude on `<base>`
-- [ ] Step 1b: guess-the-layout test passed (§8) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
+- [x] Step 1b: guess-the-layout test passed (§8; run 3, 2026-10-19) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
 
 **Brief (you, without opening the app)**
 - [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED` — you · helper session **Haiku 5.5 Max**

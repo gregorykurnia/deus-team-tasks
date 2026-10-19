@@ -218,7 +218,23 @@ Three hints remained and were rewritten (2026-10-19, Opus 5.5 High):
 
 Also noticed: the guess inferred the app's history (task tracker first, sales tracking added later) from the studio folder name. That's true but isn't layout, and the folder name comes from the playbook's naming scheme, so nothing to change.
 
-Next: run 3 as a quick confirmation.
+### Run 3, 2026-10-19: passed
+
+New fresh studio session (Opus 5.5 High) after commit `7fbacc5`. The structure differs from the real app in most areas:
+- **Navigation:** a different set and order of areas; no Views group.
+- **Company groups:** different names and order (real: Prospects & Active, Clients & Partners, Raw List, Hold or Reject). Three "x / total" figures instead of four cards. A "⋯" row menu instead of separate icon actions.
+- **Tasks:** a quick-add field (real: a form) and three tabs (real: three sidebar entries). Finished tasks as a counted tab or folded section (real: one global show/hide switch). The run 2 fix held.
+- **One person:** one row per person with counts (real: pick a person, then two lists).
+- **Qualification:** cards plus a detail page per prospect (real: one wide table). This differed in runs 2 and 3.
+- **Flows:** a list on the left (real: flow chips), drag handles (real: up/down arrows), and the loop drawn as an arrow (real: stored, not drawn).
+- **Past clients:** the four figures in the R4 order, which is the real order reversed. No expand/collapse-all, so the run 2 R7 fix held.
+
+What still matches follows from needs or rules kept on purpose: four company groups with counts and their own fields (B2, C1), editing in place (B5), the three kinds of task (W12), urgency colours from the thresholds (W13, States: Urgency), the no-action-days and task-type narrowing (W14), a details picker (W15), a done mark on each task (W5), undated tasks gathered in one place (D3), a day with date controls and Starts/Ends tags (D4, D5), a month grid with a tasks/events switch and "+n more" (D7, D8), four past-client figures, sector bars and a tree of subsidiaries with a counted mark and move (R3–R7), and one decision with good/bad outcomes (M3). The sidebar with a hamburger on phones is a default guess for any app with this many areas.
+
+The session also listed what it thought gave the layout away. None of it needs a rewrite:
+- Fixed headings (U1) and likelihood levels (U2) are data values, kept on purpose.
+- The figures (B6, R4), the day default (D5) and the urgency bands are business rules.
+- "Only one decision" in M3 reads as a limit of the current build. It is one: §4 item 6. Decide it in Step 2, and if more decisions are allowed, update M3.
 
 ## §9 Decisions made in Step 2
 
