@@ -51,7 +51,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Step 1b: guess-the-layout test passed (§8; run 3, 2026-10-19) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
 
 **Brief (you, without opening the app)**
-- [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED` — you · helper session **Haiku 5.5 Max**
+- [x] Step 2: §4–§5 decided; `priorities.md` status `FILLED` — you · helper session **Haiku 5.5 Max**
 - [ ] Step 3: `brief.md` status `FILLED`, including the branding decision — you · helper session **Haiku 5.5 Max**
 
 **Design (studio, never sees the old app)**

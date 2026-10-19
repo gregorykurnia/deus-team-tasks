@@ -8,7 +8,7 @@ What people need to be able to do. Each need is a job story with an ID. The grou
 
 ## Win new business (B)
 
-- **B1** When I meet a potential client, I want to record who they are (company, contact person, whether it's a client, a partner or an individual partner, its industry, how we found it), where we stand (status, the products it's interested in, priority) and what is happening (the date of the last action, the next actions and the target date for the next action), so that the whole team knows where we stand. Only the company name is required.
+- **B1** When I meet a potential client, I want to record who they are (company, contact person, whether it's a client, a partner or an individual partner, its industry, how we found it), where we stand (status, the products it's interested in, priority) and what is happening (the date of the last action, the next actions, the target date for the next action, and any trial under way), so that the whole team knows where we stand. Only the company name is required.
 - **B2** When I go through companies, I want to tell apart companies we haven't contacted yet, prospects we're actively working, companies whose deal is done, and companies that are on hold or rejected, and know how big each group is, so that each kind of work has its own focus.
 - **B3** When a company is not yet contacted, I want to record it with its type, planned outreach date, priority, industry, how we found it and notes, so that I can build a backlog of leads to approach.
 - **B4** When a company says no or not now, I want to record it with its type, the product offered and the reason for rejection or hold, so that we learn from it and can revisit it later.
@@ -89,7 +89,7 @@ What people need to be able to do. Each need is a job story with an ID. The grou
 
 - **C1** When the team tracks something new about companies, I want to add my own fields to each group of companies (short text, long text, number, date, or a choice from options), so that the record keeps pace with our process.
 - **C2** When fields multiply, I want to choose which fields matter for each group of companies, rename them, and remove fields I added (the stored data stays), so that each group shows only what matters.
-- **C3** When the options for a choice change (status, type, priority, or my own choice fields), I want to add options with a colour, rename them (and have every company using the old name follow), remove them, or clear a company's choice, so that the vocabulary evolves without manual clean-up.
+- **C3** When the options for a choice change (status, type, priority, or my own choice fields), I want to add options with a colour, rename them (and have every company using the old name follow), remove them (clearing them from every company that uses them), or clear a company's choice, so that the vocabulary evolves without manual clean-up. The statuses that mean a deal is done or a follow-up is due can't be renamed or removed, because the groups and figures depend on them.
 
 ## Take data elsewhere (E)
 

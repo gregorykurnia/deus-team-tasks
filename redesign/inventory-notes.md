@@ -238,4 +238,41 @@ The session also listed what it thought gave the layout away. None of it needs a
 
 ## §9 Decisions made in Step 2
 
-_(Filled in Step 2.)_
+2026-10-19. The owner gave how often they use each area: task lists, the timeline, the month view with external events, and company groups and status edits daily; qualification notes once or twice a week around sales calls; past clients rarely. They then asked Claude to complete Step 2. The remaining tags were inferred from that answer, and the decisions below are Claude's conservative defaults: keep what works, fix what's broken, and don't change either Firestore data model (§6). The owner can overturn any of them; tell Claude and it updates `priorities.md`, `inventory.md` and this section together.
+
+**Tags inferred, not given directly:**
+- **Daily:** capturing and editing tasks and marking them done (W1–W5, W7, W10), opening tasks from anywhere (D11), company urgency, figures, search and order (B6–B9), date sync (B12), live updates (A1), and moving around quickly (A4).
+- **Weekly:** new companies and group moves (B1, B3–B5), follow-up tasks (B11), task-to-company jumps (B13), finished-task review (W6), task groups (W8), and the one-day and one-person checks (D4–D6). Phone use (A2) is weekly because it wasn't mentioned.
+- **Rare:** flows (M1–M4, never mentioned, but kept rather than dropped), own fields and options (C1–C3), and export (E1). Also the rest of the qualification and past-client stories (U6–U8, R9), deleting companies (B14), marking groups important and managing groups (W9, W11), the unavailable-events notice (D10), and opening offline (A3).
+
+**§4 placeholders:**
+1. **Seed data:** stop re-seeding when a collection is empty. An empty collection stays empty, so deleting everything doesn't bring the samples back. Samples are for local development only.
+2. **Team names:** keep a fixed list of team names as starting suggestions, plus every name used in tasks (W4). A managed people list is out of scope.
+3. **"Full Team":** not a real concept. It goes with the seed data.
+4. **Device-local settings:** custom field definitions and choice options stay per device for this redesign, because making them shared changes the client-tracker data model (§6). It's logged as a follow-up after the merge.
+5. **Trial:** keep it as a normal company detail, editable wherever other details are, including the full record. Added to B1.
+6. **Flows:** keep one decision per flow, with the loop back stored as now (M3 unchanged). Whether the loop is drawn is a design question.
+7. **Month view default:** show tasks and external events together by default (D7). Narrowing to one source is a choice (D8).
+8. **Static subtitle:** drop it.
+9. **Adding from the done-deal group:** a company added while working in a group goes into that group. Fixed in the rebuild; no story change.
+10. **Likelihood rating:** keep it separate from the company status (U2 unchanged).
+11. **Sign-in:** out of scope for the redesign. Roles and permissions are unchanged.
+
+**§5 bugs, all fixed in the rebuild:**
+1. Saving the full company record keeps every stored detail, custom fields included.
+2. Moving a company to another group keeps all its data. The target group only decides which details are shown (B5).
+3. A task added while working on prospect or client work is tied to a company and stays in that kind of work.
+4. Company and task dates sync wherever a linked task is edited. The company's target date maps to the task's end date and never overwrites its start date (B12).
+5. Only the company name is required (B1). The status loses its required mark.
+6. The done-deal and to-follow-up statuses can't be renamed or removed (C3), so the groups and figures can't break.
+7. Removing a choice option asks to confirm, then clears it from every company that uses it (C3).
+8. New company ids are allocated so that two people adding at once can't overwrite each other. Ids stay numeric.
+9. A teammate's save never discards what you're typing, and qualification notes keep a stable order instead of jumping after each save.
+10. Deleting a task group only moves its tasks once the delete has succeeded. No rename; groups are still referenced by name.
+11. Deleting a task always asks to confirm (W7).
+12. All day counts use local dates, so companies and tasks agree.
+13. The one-person check starts on someone who has tasks.
+14. The offline shell serves fresh pages when online and the cached shell only when offline (A3).
+15. The route contract stays (§6), but the notice tells "not set up" apart from "couldn't fetch" (D10).
+
+**Inventory changes:** B1 adds "any trial under way". C3 adds clearing removed options from companies, and protects the two statuses the groups and figures depend on.
