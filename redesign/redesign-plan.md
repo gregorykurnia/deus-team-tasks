@@ -36,6 +36,45 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 
 ---
 
+## Checklist
+
+When a step finishes, Claude ticks its box here in the same commit, never before. Studio steps (4a–5) happen in the studio, so they're ticked from the codebase when you report them done, or at the import at the latest.
+
+**Setup**
+- [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
+- [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56)
+
+**Discovery (sees the old app)**
+- [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md`
+- [ ] Step 1: second leak review; removed details logged in §7
+- [ ] Step 1b: banned-word scan clean
+- [ ] Step 1b: guess-the-layout test passed (§8)
+
+**Brief (you, without opening the app)**
+- [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED`
+- [ ] Step 3: `brief.md` status `FILLED`, including the branding decision
+
+**Design (studio, never sees the old app)**
+- [ ] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md`
+- [ ] Step 4b: all job stories and states prototyped, including stress data
+- [ ] Step 4c: design guide complete
+- [ ] Step 5: coverage audit passed
+- [ ] Step 5b: design guide approved, versioned and imported
+
+**Implementation plan (sees repo and approved design)**
+- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop
+- [ ] Plan approved
+
+**Rebuild (on `redesign`)**
+- [ ] `redesign` branch created and pushed
+- [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed
+- [ ] Phase 2: tokens, base styles, app shell, shared components; review passed
+- [ ] Phase 3: every screen with all its states, phone and desktop; review passed
+- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed
+- [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI
+
+---
+
 ## How to run this in a project
 
 1. In the project, start a session and say: **"Start the blank-slate redesign from `~/.claude/playbooks/blank-slate-redesign.md`."**
@@ -401,43 +440,6 @@ You approve the plan before Step 7.
 | Tests | Old tests encode old flows | Tests preserve behaviour only |
 
 **What this can't remove:** the feature set (on purpose, since the new design has to cover it) and your own taste. Everything else is blocked by at least two layers: the old material isn't there at all (separate repo, no remote, no connectors), *and* a deny rule or sandbox blocks it, *and* Step 0b checks the result. If a model already knows a public app from its training, the brief can avoid naming it, but nothing can make the model forget it.
-
----
-
-## Checklist (tick in the project's copy)
-
-**Setup**
-- [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
-- [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56)
-
-**Discovery (sees the old app)**
-- [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md`
-- [ ] Step 1: second leak review; removed details logged in §7
-- [ ] Step 1b: banned-word scan clean
-- [ ] Step 1b: guess-the-layout test passed (§8)
-
-**Brief (you, without opening the app)**
-- [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED`
-- [ ] Step 3: `brief.md` status `FILLED`, including the branding decision
-
-**Design (studio, never sees the old app)**
-- [ ] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md`
-- [ ] Step 4b: all job stories and states prototyped, including stress data
-- [ ] Step 4c: design guide complete
-- [ ] Step 5: coverage audit passed
-- [ ] Step 5b: design guide approved, versioned and imported
-
-**Implementation plan (sees repo and approved design)**
-- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop
-- [ ] Plan approved
-
-**Rebuild (on `redesign`)**
-- [ ] `redesign` branch created and pushed
-- [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed
-- [ ] Phase 2: tokens, base styles, app shell, shared components; review passed
-- [ ] Phase 3: every screen with all its states, phone and desktop; review passed
-- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed
-- [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI
 
 ---
 
