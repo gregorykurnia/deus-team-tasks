@@ -33,6 +33,8 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 - **Extra folder for the studio's deny rules:** `~/.local/share/kilo`. Kilo's worktree pool holds a full copy of this repo (`git worktree list` shows it at `~/.local/share/kilo/worktree-pool/deus-team-tasks-b5526057f1ea/fixed-knee`). It is denied, not deleted.
 - **Firewall-check placeholders (Appendix E):** `<ABS_PROJECT_PATH>` = `/Users/gregorykurnia/projects/deus-team-tasks`, `<A_FILE_THAT_EXISTS>` = `package.json`, `<LIVE_DOMAIN>` = `deus-team-tasks.vercel.app`.
 
+---
+
 ## How to run this in a project
 
 1. In the project, start a session and say: **"Start the blank-slate redesign from `~/.claude/playbooks/blank-slate-redesign.md`."**
@@ -476,7 +478,7 @@ Show the owner the split: the lanes and what each builds, the layout and why, an
 ## Checklist (tick in the project's copy)
 
 **Setup**
-- [ ] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
+- [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
 - [ ] Step 0b: firewall check: every channel *blocked*
 
 **Discovery (sees the old app)**
