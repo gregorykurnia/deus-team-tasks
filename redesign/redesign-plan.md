@@ -10,7 +10,8 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 
 ## Project settings: deus-team-tasks (filled in Step 0)
 
-- **Folders:** codebase `/Users/gregorykurnia/projects/deus-team-tasks` · studio `../deus-team-tasks-studio` · lanes `../deus-team-tasks-l1` to `-l3` (Step 7). `<project>` = `deus-team-tasks`, `<base>` = `main`.
+- **Folders:** codebase `/Users/gregorykurnia/projects/deus-team-tasks` · studio `../deus-team-tasks-studio`. `<project>` = `deus-team-tasks`, `<base>` = `main`.
+- **Lean rebuild (decided 2026-10-19):** Steps 6–7 are cut down for a project this size: one `redesign` branch, one terminal, four phases, no lanes. Steps 0–5 (the design half) follow the playbook unchanged.
 - **Repo:** `https://github.com/gregorykurnia/deus-team-tasks`. **Live site:** `https://deus-team-tasks.vercel.app` (assumed from the project name, not yet checked; confirm before Step 0b).
 - **Source files for the inventory** (code only. `docs/`, `README.md`, `CLAUDE.md` and `AGENTS.md` describe the current app and are not inventory sources):
   - `app/**`: layout, page, `globals.css`, manifest, `api/calendar/route.ts`
@@ -65,7 +66,7 @@ Never pick **Opus 5.5 Low** or **Sonnet 5.5 Medium**: Haiku 5.5 Max beats both o
 
 **Model check:** at the start of every session, compare the current model and effort with the step's pick. If the current one is lower, say so before starting and suggest switching (`/model`, plus the effort setting). If it's much higher for a mechanical step, suggest the cheaper one.
 
-**Move up after a failed check (every step):** when a step's output fails the check that follows it, redo the fix one row stronger in the global table and update that step's pick in the project's copy. For example, a leak review lets through wording that the scan or the guess-the-layout test catches, or an end-of-phase review rejects the work. Don't run one-off steps twice just to compare models; that costs more than it saves. Calibration trials belong in the rebuild (§7.0), where many similar tasks repeat.
+**Move up after a failed check (every step):** when a step's output fails the check that follows it, redo the fix one row stronger in the global table and update that step's pick in the project's copy. For example, a leak review lets through wording that the scan or the guess-the-layout test catches, or an end-of-phase review rejects the work. Don't run one-off steps twice just to compare models; that costs more than it saves. This project's rebuild skips calibration trials (see Step 6).
 
 ### Picks per step
 
@@ -85,9 +86,7 @@ Never pick **Opus 5.5 Low** or **Sonnet 5.5 Medium**: Haiku 5.5 Max beats both o
 | 5 Coverage audit | fresh studio session | Sonnet 5.5 High |
 | 5b Import | Claude on `<base>` | Haiku 5.5 High |
 | 6 Implementation plan | Agent C | Opus 5.5 High |
-| 6b Terminal split (`redesign/lanes.md`) | fresh session on `<base>` | Opus 5.5 Medium |
-| 7 Opening the lanes, studio deny rules for them | Claude on `<base>` | Haiku 5.5 Max |
-| 7 Rebuild tasks | one session per task, in its lane | set per task in the implementation plan §7.0, copied into `redesign/lanes.md` |
+| 7 Rebuild tasks | one session per task, on `redesign` | set per task in the implementation plan's task table |
 | 7 End-of-phase review | fresh session | Opus 5.5 High |
 
 ---
@@ -301,11 +300,11 @@ Write `redesign/design/coverage.md`, mapping every story ID and state to where t
 ## Design-gap loop (any time after Step 5b)
 
 Step 6 and Step 7 will find things the design doesn't answer. They get **designed in the studio**, never filled in from the old app:
-1. **Record it** in the implementation plan §9.1, with whatever code context Agent C or the implementer needs. This stays on `<base>`.
+1. **Record it** in the implementation plan's open items (§7), with whatever code context Agent C or the implementer needs. This stays on `<base>`.
 2. **Translate it** into a need in `redesign/handoff/needs.md`: a new ID (N1, N2, …), a job story by the Step 1 rules, the step that raised it, and status `open`. Leave out code, old behaviour and old wording.
 3. **Banned-word scan** on `needs.md` (Haiku 5.5 High), then commit.
 4. `redesign/studio.sh enter` → `./start` → *"Design the open needs in needs.md"* (Opus 5.5 High). The designer updates the prototype and guide, bumps the guide version, and logs each answer in `decisions.md`.
-5. **"Import the approved design"** on `<base>`. Mark the need `designed` in `needs.md` and close its row in §9.1. During the rebuild, also bring the import onto `redesign` (`git switch redesign && git pull --ff-only origin redesign && git merge <base> && git push origin redesign && git switch <base>`), so the lanes get it on their next merge.
+5. **"Import the approved design"** on `<base>`. Mark the need `designed` in `needs.md` and close its row in the implementation plan's open items. During the rebuild, also merge `<base>` into `redesign` so the rebuild gets it.
 
 The rebuild task that needs the answer waits until the need is designed. Other tasks continue.
 
@@ -313,131 +312,62 @@ The rebuild task that needs the answer waits until the need is designed. Other t
 
 ## Step 6: Technical implementation plan (Agent C, Opus 5.5 High)
 
-Agent C sees the repo and the approved design. Before any code changes, it writes **`redesign/ui-implementation-plan.md`**. **Keep it lean:** every task session reads its task section and the §7.0 table, so each task section fits on about one screen (what to build, the guide and prototype references, Done when), and table cells stay short. Design detail stays in the design guide; history goes in git and `CHANGELOG.md`, never back into the plan. Agent C maps **design → code**; it doesn't make design decisions, and every gap it finds goes to §9.1 and then through the design-gap loop.
+*Lean version for this project: one branch, one terminal, four phases, no lanes.*
 
-Required sections:
+Agent C sees the repo and the approved design. Before any code changes, it writes **`redesign/ui-implementation-plan.md`**. Keep it short: each task section fits on about one screen (what to build, the design-guide and prototype references, Done when), and table cells stay short. Design detail stays in the design guide; history stays in git. Agent C maps **design → code**. It doesn't make design decisions, and every gap it finds goes to §7 of its plan and then through the design-gap loop.
 
-**1. Inputs & freeze:** the design-guide version, the inventory version, and the commit it starts from.
+Sections:
 
-**2. Technical architecture**
-- The project constraints from Step 0
-- **How the rebuild runs next to the old app** (a parallel entry point, route or flag), so production keeps working until the switch-over
-- File layout at the end
-- A new naming convention that shares nothing with the old names
-- Theming through tokens
-- How fonts and icons load
-- How data logic is separated from rendering
-- How special surfaces are styled (editors, exports, guest views)
+**1. Inputs:** the design-guide version, the inventory version, and the commit it starts from.
 
-**3. Component map:** for each design-guide component: its CSS selector(s), the JS or component that builds it, and its file. Also every variant and state and how code triggers it (class, attribute, `aria-*`), plus responsive and accessibility requirements.
+**2. Architecture**
+- The project constraints from "Project settings".
+- The old app stays live on `main` until the merge, so no parallel entry point or flag is needed: the new UI is built on `redesign` and reviewed on its Vercel preview.
+- Data logic stays in `lib/` hooks and is reused as-is wherever it's already separate from rendering. Anything still mixed into components moves to `lib/` in Phase 1.
+- File layout at the end, and a naming scheme that shares nothing with the old component names.
+- Theming through the design's tokens (Tailwind 4 theme variables), plus how fonts and icons load.
 
-**4. Screen map:** for each screen: the components it uses, the data it reads, the code it replaces, and every state it can be in.
+**3. Screen and component map:** for each screen in the design, the components it uses, the hooks it reads, the old files it replaces, and every state it has. For each component, its variants and states and how code triggers them.
 
-**5. Coverage matrix (design → code):** every **screen × state × device × theme** with a checkbox, and every job story traced to its screen, component and code.
+**4. UI surfaces checklist (code → design):** every place in the old code that shows something to people, each with its new counterpart or a need sent to the studio. Easy to miss here: native `alert()` / `confirm()` / `prompt()`, loading and empty states, failed Firestore writes, the calendar "not configured" message, CSV export, confirmations before deleting, the PWA manifest, theme colour and icons, offline behaviour, and navigation on a phone. Nothing is restyled from the old version.
 
-**6. Reverse coverage (code → design):** search the code for **every place that produces visible UI** and map each one to its new counterpart. Easy to miss:
-- Auth flows (sign-in, reset, invite)
-- Role-gated UI
-- Native `alert()`, `confirm()` and `prompt()`
-- Toasts and inline errors
-- Lightboxes and previews
-- Editor content styles
-- PDF, print and email output
-- Guest or shared-link views
-- 404 and error pages
-- PWA install prompt, manifest theme colour, favicon, app icons
-- Sync and offline indicators
-- Upload progress and failures
+**5. Phases and tasks**
+1. **Safety net (no visual change):** Playwright smoke tests for every flow that writes data (add, edit, complete and delete a task; task groups; flows; client pipeline add, edit and move; journal entries; historical clients), run against the current app. Move any data logic still inside components into `lib/`.
+2. **Foundations:** tokens, base styles, fonts and icons, the app shell and navigation, and the shared components with all their variants and states.
+3. **Screens:** one task per screen or group of jobs, each built with all of its states, on phone and desktop.
+4. **Edge surfaces and launch:** everything left on the §4 checklist; smoke tests rewritten for the new UI and passing; screenshots compared with the prototype; an accessibility check; a real-phone check; old UI files deleted; the old-names check (a grep for the old component and file names) passing.
 
-Anything without a design counterpart goes to §9.1. It is **never** restyled from the old version.
+**Task table (the only place to tick):** `Phase | Task | Model · effort | Done`. The picks come from the model table in `~/.claude/CLAUDE.md`:
+- Anything that writes data, the tests and the shell: **Opus 5.5 High**.
+- Screens and components with the prototype as an exact reference: **Sonnet 5.5 High**.
+- Mechanical work (tokens, icons, copying from the prototype with no logic): **Haiku 5.5 Max**.
+- Never Opus 5.5 Low or Sonnet 5.5 Medium. No calibration trials. If a cheaper model gets a task wrong twice, move that task up one row.
+- Done cells hold the date and commit, plus a short phrase only if something changed from the plan.
 
-**7. Phases:** each phase ships to a preview, keeps tests green, and lists its tasks, files and done criteria:
-1. Separate data from rendering, with **no visual change**. If the project has no tests, first add a small behaviour smoke test.
-2. Tokens, base styles and the app shell
-3. Components (all variants and states)
-4. Screens, one at a time
-5. Every state on every screen
-6. Edge surfaces
-7. **Switch-over with a way back:**
-   - The new UI becomes the default.
-   - The old UI stays reachable at a fallback entry point (for example `/old` or a flag) for a set **launch window** (default 2 weeks). It's frozen, with no changes.
-   - The plan writes down a **one-commit rollback** (which commit or flag puts the old UI back as the default) and tests it once on a preview.
-   - Old rendering code that isn't needed by the fallback is deleted now.
-   - The old-names check runs with only the frozen fallback files excluded.
-8. QA and polish
-9. **After launch:**
-   - About a week in, check errors and logs, collect what people stumbled on, and send anything new through the design-gap loop.
-   - At the end of the launch window, delete the fallback entry point and every remaining old file.
-   - Run the old-names check with **no exclusions**.
+**Checks:** per task, a type check, lint on the changed files and the smoke specs the task touches. The full smoke suite and `npm run build` run at each phase review.
 
-**§7.0 Who builds it: model and effort per task (required).** Agent C reads the **model table in `~/.claude/CLAUDE.md`** and uses only the rows listed there:
-- **A tier list** that maps each kind of work in this project to a row of the global table, using the "Choosing the model" rules above. Risky or data-losing work → best Terminal Bench rank. Visual work with no exact reference → best Presentation rank. Mechanical porting from the prototype → the cheapest reliable Haiku row. Never Opus Low or Sonnet Medium.
-- **A table with one row per task:** `Phase | Task | Model · effort | Why | Done`. The "why" names the risk or the reference that justifies the tier.
-- **Two places to tick, in the same commit:** the §7.0 table ends with a `Done` checkbox column (date, lane and commit, in the same commit as the work), and `redesign/lanes.md` gives each lane a checklist of its own tasks. Nothing else is ticked per task: no Done boxes under the task headings, and the coverage rows (§5, §6, §10) are ticked by the phase review after it checks them. Each extra place to tick costs time in every task and causes merge conflicts between lanes. Done cells stay short: date, lane and commit, plus a phrase only when something changed from the plan (a gap raised, a pick moved). Don't log costs.
-- **Light checks per task, full checks per phase:** while building, a type check, lint on changed files, the related unit tests and only the task's own end-to-end specs; once before delivering, the unit tests, the build and the project's scan scripts (data-layer tests only when the task changed data code). The full end-to-end suite runs at each phase review, not per task. Never rerun a check when nothing it covers has changed. After an end-to-end failure, rerun only the tests that failed (the same spec paths with `--last-failed`), and the full list again only if the fix changed code other tests use (a shared part, a hook, the model).
-- **A calibration trial, before the tasks it decides:** build one middle-tier task twice, with the picked model and the next cheaper row, and check both against the prototype. Keep the cheaper row if its result is just as good. Decide on quality alone; don't log costs. Run it at the start of the phase, and hold every task whose pick depends on it until it's done (building those early on the cheaper model meant redoing them).
-- **An escalation rule:** move a task up one row the first time a cheaper model gets it wrong twice.
-- **End-of-phase review, never skipped:** a fresh Opus 5.5 High session reviews the phase's diff against the plan and the prototype, and runs the full end-to-end suite, before the phase counts as done. In one rebuild every phase review rejected real work (an undo that could lose payments, lost typing), so this is the safety net that lets per-task checks stay light. Fix what the reviewers find first, then run the full suite once on a machine as free as it can be (other lanes idle, nothing else editing or testing in that folder, heavy browser tabs closed). Right after it ends, copy `test-results/.last-run.json` and rerun the failures with `--last-failed --last-failed-file <copy>`, since any other end-to-end run overwrites it. (One review's suite took 1 h 40 min with a fixer working alongside it, and most of its failures were page-load timeouts from a swapping machine.) Before the review commits, it routes every open "should fix" item (its own and any still open from earlier reviews) to exactly one place in `redesign/reviews/triage.md`: a fix task `N.F1`, `N.F2`… added to §7.0 and `redesign/lanes.md` and done before the next phase, a named later task whose section points to it, or dropped with a reason. Anything that loses or corrupts data, or shows a failed write as saved, gets a fix task. (In one rebuild four reviews left 59 items only in their review files; six were fixed by chance and one got worse.)
-- **One task per session**, reading only that task's plan section, the matching design-guide section, and the matching prototype file. This keeps a cheaper model from reading the old code and copying old patterns.
-- If the global table changes mid-rebuild, update §7.0 to match before the next task.
+**End-of-phase review, never skipped (fresh session, Opus 5.5 High):** it reviews the phase's diff against this plan and the prototype, and runs the full smoke suite. Every "should fix" item becomes a fix task in the table, done before the next phase, or is dropped with a written reason. Anything that loses data, or shows a failed write as saved, always gets a fix task.
 
-**8. Testing & QA:**
-- Rewrite the tests to fit the new design while keeping every behaviour.
-- Compare screenshots of the prototype and the build for each screen × state × device × theme.
-- Accessibility check.
-- Real-device check.
+**6. Rollback:** until the merge, production is untouched. After it, the way back is Vercel's instant rollback to the previous production deployment, or reverting the merge commit.
 
-**9. Risks & open questions:** §9.1 needs for the designer (each linked to its `needs.md` ID); §9.2 questions for the owner; §9.3 the rollback: the launch window, the fallback entry point, and the one-commit way back.
+**7. Open items:** design gaps sent to the studio (each with its `needs.md` ID), and questions for the owner.
 
-**10. Definition of done:**
-- Every coverage and reverse-coverage row is ticked, and every `needs.md` row is `designed` and built.
-- An **old-names check** (a script that fails if any old class name, id or old wording remains) passes with no exclusions, after Phase 9.
-- Tests pass, screenshots match the prototype (including stress data), and the accessibility check passes.
+**8. Done when:** every job story and state in the design's `coverage.md` is built, every `needs.md` row is designed and built, the smoke suite passes, screenshots match the prototype, and the old-names check finds nothing.
 
 You approve the plan before Step 7.
 
-## Step 6b: Terminal split, two or three lanes (fresh session on `<base>`, Opus 5.5 Medium)
+## Step 7: Rebuild (on the `redesign` branch)
 
-Once the plan is approved, work out what can be rebuilt at the same time, and write **`redesign/lanes.md`** from Appendix F. It says which terminal (lane) builds which task, in what order, with which model and effort. Read only `redesign/ui-implementation-plan.md` (§3, §4, §7 and the §7.0 table). Lanes deliver to the **`redesign`** branch, never `<base>`.
-
-1. **Map the dependencies.** For every task, note what it **needs** (tokens, the shell, a component, a data function, another screen), the files it **writes**, and whether it changes data or storage.
-2. **Find what can run side by side.** Two tasks can run at the same time when neither needs the other and they don't write the same files. Files every lane edits a little (the §7.0 Done column, the boxes in `redesign/lanes.md`, `CHANGELOG.md`, a shared stylesheet index or component registry) are fine: merges keep both sides. Keep that list short, since each one is a merge conflict waiting to happen.
-3. **Size the lanes to the machine.** Check its memory first (`sysctl -n hw.memsize` on macOS). Every lane runs its own Claude session, dev server, test browser and often emulators: about 2 GB each while testing. **With 8 GB or less, two lanes at most; three need 16 GB or more.** Use fewer still if the plan doesn't have enough independent work, and tell the owner why. (A rebuild that ran four lanes on 8 GB filled 13.6 GB of swap at a load of 28, and one end-to-end run took five hours; every task got slower, not just the tests.)
-   - **Alone, in the main folder on `redesign`:** Phase 1 (data separated from rendering) and Phase 2 (tokens, base styles, the app shell), because everything else builds on them; Phase 7 (switch-over), Phase 8 (QA and polish) and Phase 9 (after launch, on `<base>`).
-   - **In lanes:** Phases 3 to 6 (components, screens, states, edge surfaces). **Split by app area** (for example budget, people, documents): give each lane a group of jobs or screens and the components they need first, so it keeps its context and rarely blocks another lane. Put changes to shared components early in a lane, since later screens use them. Avoid rows where every lane waits on one task. Keep tasks that need each other in the same lane, in order. Balance the lanes by work, counting expensive tasks as bigger.
-   - A phase's end-of-phase review runs once every lane's part of that phase is on `redesign`, in whichever lane `redesign/lanes.md` names.
-4. **Pick the layout** (both are in Appendix F):
-   - **Lane lists**, when the lanes are mostly independent: one table per lane, top to bottom, with a **Needs** column naming any wait for another lane's task or for a design need. Use it when there are only a few waits between lanes (about three or fewer).
-   - **Step grid**, when the lanes depend on each other a lot (the usual case for components and the screens that use them): **one row per step, one column per terminal**, and each cell says what that terminal builds in that step, with its model and effort. A step is a sync point: a lane starts its cell in a step only when every cell of the step before is on `redesign` and merged into the lane. A terminal with nothing to do in a step gets "— wait" or an **any time** task (a stress-data check, a test rewrite, an edge surface), so no terminal sits idle for long.
-5. **Copy each task's model and effort from §7.0; never choose them again here.** Every row or cell shows the task, a short name and the plan's pick (`Opus 5.5 · High`). When a pick changes (calibration, escalation, a new model table), `redesign/lanes.md` changes in the same commit.
-6. **Fill in the lane table:** folder (`../<project>-l1` to `-l3`), branch (`redesign-lane-1` to `-3`), what it builds, and a port per lane if the project's tests start a local server. Make the end-to-end command take a lock (a folder in the shared `.git` directory) so only one lane runs it at a time, and start only the servers the chosen specs need.
-7. **Write `redesign/lanes.sh`** from Appendix G (`chmod +x`). Add to the plan's §7.0 rules: "tick the task's box in `redesign/lanes.md` too, in the same commit".
-
-Show the owner the split: the lanes and what each builds, the layout and why, and each lane's first task with its model. When they approve, commit on `<base>`. The lanes open after Phase 2 (Step 7).
-
-## Step 7: Rebuild (on a `redesign` branch)
-
-- **Branch:** all work collects on `redesign`, never `<base>`, and especially not if pushes to `<base>` deploy to production. Review on preview deploys. Merge only after Phase 8, when you say so. Phase 9 happens on `<base>` after launch.
-- **Where each phase runs** (`redesign/lanes.md`): Phases 1–2 in the main folder on `redesign`; Phases 3–6 in the lanes; Phases 7–8 back in the main folder on `redesign`. The main folder switches back to `<base>` whenever `redesign/studio.sh` is needed (it refuses to run on any other branch).
-- **Opening the lanes (after Phase 2, Haiku 5.5 Max):**
-  1. Push `redesign` to `origin`, then on `<base>` run `redesign/lanes.sh open`. For each lane it creates the branch from `origin/redesign`, adds the worktree next to the main folder (`../<project>-l1` to `-l3`), copies the env files, installs packages if there's a lockfile, and pushes the branch.
-  2. **Close the firewall around them**, because each lane folder is another copy of the old code: add every lane folder to `redesign/studio-template/settings.json` (`Read(/<ABS_PROJECT_PATH>-l1/**)` and `Edit(/<ABS_PROJECT_PATH>-l1/**)` in `deny`, and `<ABS_PROJECT_PATH>-l1` in `sandbox.filesystem.denyRead`, for each lane). Commit on `<base>`, run `redesign/studio.sh enter`, and run the Step 0b check in a fresh `./start` session, with checks 1–4 also pointed at one lane folder. No design session runs until that comes back ALL BLOCKED.
-  3. If the host builds a preview for every branch, turn previews off for `redesign-lane-*` (Vercel: `git.deploymentEnabled`), so only `redesign` gets them.
-  4. Tell the owner how to start the lanes: `redesign/lanes.sh terminals` opens a Terminal window in each lane folder. In each one, run `claude` and say **"Next task from `redesign/lanes.md`"**. Name each lane's first task with its model and effort.
-- **Lanes deliver to `redesign`:** when a lane's task is finished (checks pass, ticked in §7.0 and in `redesign/lanes.md` in the same commit, pushed to the lane branch), run `git fetch origin && git merge origin/redesign`; if the merge brought anything in, a type check and the unit tests are enough unless code conflicted, and then rerun the task's own end-to-end specs too; then `git push origin HEAD:redesign` (only a fast-forward; if it's rejected, another lane delivered first: merge again) and `git push origin <lane branch>`. Never force. **Stay in your lane:** only your own tasks; when you need another lane's work, wait for it on `redesign` and merge it in.
-- **When the lanes are done:** once every lane's work is on `redesign`, `redesign/lanes.sh close <n>` removes each folder (the branches stay). Remove the lane folders from the studio template's deny rules only after their folders are gone.
-- **Model per task:** follow §7.0 and `redesign/lanes.md`, with a model check at the start of each session. In a lane, start every task in a fresh session (`/clear`), so the one-task-per-session rule still holds.
-- **Source of truth:** the frozen design guide is the spec, and the prototype is the reference rendering. Compare against the prototype, never the old app.
-- **Delete, don't modify:** write new markup and styles from the tokens, and use new names. Keep only the plumbing (data, auth, storage, sync).
-- **Tests follow the design:** tests are a checklist of *behaviours*. Rewrite their steps and selectors, and never bend the design to fit an old test.
-- **Design gaps:** stop, add them to §9.1, and run the design-gap loop. Never fill a gap from the old app.
-- **Before each commit:** the light per-task checks from §7.0 (a type check, lint on changed files, the related tests, the task's own end-to-end specs) and the old-names check once it exists. The full suite waits for the phase review. Commits that only change plans or docs skip the checks.
-- **Keep always-loaded files small:** `CLAUDE.md` and `AGENTS.md` load into every session and subagent, in every lane. The project's change log lives in `CHANGELOG.md`, which nothing loads automatically, with one to three lines per entry; details go in the commit body. (A 129 KB change log in `AGENTS.md` added about 32,000 tokens to every session.)
-- **Keep the machine free while lanes run:** one browser, no other AI agents or editor extensions working on the same repo, no dev servers or emulators left running after a check (the end-to-end script stops what it started).
-- **Test by risk:** end-to-end tests cover user flows and anything that writes data; markup and visual variants get fast unit tests or the Phase 8 screenshots. *Worth trying:* run end-to-end tests against a production build (`next build && next start`) instead of the dev server, which compiles each page on its first visit and needs long timeouts.
-- **One home per rule:** each rule lives in one file (the plan, or the project's `CLAUDE.md`) and the others point to it. Copies drift: changing one rule in one project took edits in six files, and an old copy contradicted the new one.
-- **Track progress after every task:** tick the task's **Done** box in the §7.0 table (date, lane and commit) and its box in `redesign/lanes.md`, in the same commit as the work, and nowhere else. The phase review ticks §5, §6 and §10 after checking them, and then the phase in the checklist below.
-- **After merge:** update the project's `CLAUDE.md` so it describes the new UI.
+- **Branch:** create `redesign` from `main` and push it. All rebuild work goes there, never to `main`. Vercel builds a preview for it; review the work there.
+- **One terminal, one task per session:** start each task fresh (`/clear`), check the model against the task table, and read only that task's plan section, its design-guide section and its prototype file. This keeps the old UI from leaking into the new one.
+- **After each task:** run the per-task checks, tick its Done cell in the task table in the same commit, and push to `redesign`.
+- **`main` keeps working:** fixes to the live app can still go to `main`. Merge `main` into `redesign` at the start of each phase. `redesign/studio.sh` only runs on `main`, so switch back to `main` for design imports, then merge them into `redesign`.
+- **Source of truth:** the frozen design guide is the spec and the prototype is the reference rendering. Compare against the prototype, never the old app.
+- **Delete, don't modify:** write new markup and styles from the tokens, with new names. Keep only the plumbing (the `lib/` hooks, Firebase, the calendar route, the service worker).
+- **Tests follow the design:** the smoke tests are a checklist of behaviours. Rewrite their selectors and steps; never bend the design to fit an old test.
+- **Design gaps:** stop, add the gap to §7 of the implementation plan, and run the design-gap loop. The task waits; take the next one that doesn't depend on it. Never fill a gap from the old app.
+- **Keep the machine free:** one dev server and one browser, and nothing left running after a check.
+- **Merge:** after the Phase 4 review, and only when you say so, `redesign` is merged into `main`, which deploys it. Then `CLAUDE.md` is updated to describe the new UI, and its redesign rebuild rules are removed.
 
 ---
 
@@ -465,10 +395,9 @@ Show the owner the split: the lanes and what each builds, the layout and why, an
 | Gaps found later | Implementers fill gaps with what they know | Design-gap loop: gaps become needs and are designed in the studio |
 | Branding | Logo and palette constrain the design | Open by default |
 | The data model | Existing concepts shape the design | The designer may challenge them; you decide |
-| Implementation plan | Agent C sees old code and fills gaps with it | Design → code only; gaps go to §9.1 |
-| Forgotten surfaces | Dialogs, exports and auth keep their old look | Reverse coverage list |
+| Implementation plan | Agent C sees old code and fills gaps with it | Design → code only; gaps go to the plan's open items |
+| Forgotten surfaces | Dialogs, exports and auth keep their old look | UI surfaces checklist (implementation plan §4) |
 | The rebuild | The implementer sees old code | Prototype is the spec; new names; old-names check; one task per session |
-| Lane folders | Each lane worktree is another full copy of the old code on disk, outside the paths the studio denies | Every lane folder is added to the studio's deny rules and sandbox before any design session runs; Step 0b re-run against a lane folder |
 | Tests | Old tests encode old flows | Tests preserve behaviour only |
 
 **What this can't remove:** the feature set (on purpose, since the new design has to cover it) and your own taste. Everything else is blocked by at least two layers: the old material isn't there at all (separate repo, no remote, no connectors), *and* a deny rule or sandbox blocks it, *and* Step 0b checks the result. If a model already knows a public app from its training, the brief can avoid naming it, but nothing can make the model forget it.
@@ -499,22 +428,16 @@ Show the owner the split: the lanes and what each builds, the layout and why, an
 - [ ] Step 5b: design guide approved, versioned and imported
 
 **Implementation plan (sees repo and approved design)**
-- [ ] Step 6: `ui-implementation-plan.md` with component map, screen map and coverage matrix
-- [ ] Reverse coverage complete; gaps sent through the design-gap loop
-- [ ] §7.0 model per task, chosen from the global table; calibration trial planned
+- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop
 - [ ] Plan approved
-- [ ] Step 6b: `redesign/lanes.md` approved (lanes, layout, every task with its §7.0 model and effort); `redesign/lanes.sh` written
 
-**Rebuild**
-- [ ] `redesign` branch created
-- [ ] Phase 1: data separated from rendering, no visual change, tests green
-- [ ] Phase 2: tokens, base styles and app shell
-- [ ] Lanes opened (`redesign/lanes.sh open`); lane folders in the studio's deny rules; firewall re-check ALL BLOCKED; owner has the lane terminals running
-- [ ] Phases 3–6, in the lanes, every task delivered to `redesign`; lane folders closed
-- [ ] Phase 7: new UI is the default; frozen fallback and one-commit rollback in place and tested; old-names check passes (fallback excluded)
-- [ ] Phase 8: tests rewritten and passing; screenshots match; accessibility passes
-- [ ] Merged to `<base>`; `CLAUDE.md` updated to the new UI
-- [ ] Phase 9: after-launch check done; fallback and every old file deleted; old-names check passes with no exclusions; every `needs.md` row designed and built
+**Rebuild (on `redesign`)**
+- [ ] `redesign` branch created and pushed
+- [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed
+- [ ] Phase 2: tokens, base styles, app shell, shared components; review passed
+- [ ] Phase 3: every screen with all its states, phone and desktop; review passed
+- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed
+- [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI
 
 ---
 
@@ -735,7 +658,6 @@ Fill in the placeholders:
 - `<ABS_PROJECT_PATH>`: the codebase folder's absolute path, for example `/Users/me/projects/app`. In the `Read(/…)` and `Edit(/…)` rules this becomes `//Users/…`, which Claude Code reads as an absolute path. In the sandbox list it stays a plain absolute path.
 - `enabledPlugins`: one line for **every** plugin `claude plugin list` shows. Each is `false`, except design-guidance plugins that hold no information about the app, which are `true` (the default is `frontend-design@anthropic-plugin-directory`). A project setting overrides a user-level one, so these lines win inside the studio.
 - Add any other folder that might hold screenshots or notes about the old app to both `Read(…/**)` and `denyRead`, unless the studio itself lives inside it.
-- **Lane folders** (Step 7): when the rebuild lanes open, add each one (`<ABS_PROJECT_PATH>-l1` to `-l3`) to `Read(…/**)`, `Edit(…/**)` and `denyRead` the same way, then re-run the Step 0b check.
 
 ```json
 {
@@ -880,20 +802,7 @@ After each finished piece of work: `git add -A && git commit -m "<what changed>"
 
 ## D. Rules to add to the project's `CLAUDE.md`
 
-```markdown
-## UI redesign (blank-slate, in progress)
-- The plan is `redesign/redesign-plan.md` (from `~/.claude/playbooks/blank-slate-redesign.md`). Design happens in `../<project>-studio`, a separate repo that never sees this codebase. Studio sessions start only with `./start` there.
-- Never read from the studio folder, and never send anything from this codebase into it, except `redesign/handoff/` through `redesign/studio.sh enter`.
-- Before every `enter`, run the banned-word scan on every file in `redesign/handoff/`.
-- Don't save memories that describe the current UI.
-- At the start of each redesign session, check the model against the plan's "Picks per step" (or §7.0 in the implementation plan during the rebuild), using the table in `~/.claude/CLAUDE.md`. If the current model is lower, say so and suggest switching.
-- When the owner says **"Import the approved design"**: run `redesign/studio.sh import`, confirm `redesign/design/` arrived, tick the step it belongs to (5b, or the matching rows in `needs.md` and §9.1), and offer the next step.
-- Rebuild (Step 7): work only on the `redesign` branch or a lane branch (`redesign-lane-1` to `-3`), one task per session, reading only that task's plan section, design-guide section and prototype file. Never copy markup, CSS, names or wording from the old UI.
-- Lanes: `redesign/lanes.md` says which lane (terminal, folder `../<project>-l1` to `-l3`) builds which task, with which model and effort. At the start of a session in a lane, check the branch is that lane's, then `git fetch origin && git merge origin/redesign`. Stay in your lane: only your own tasks, never `<base>` or `redesign` checked out there. Deliver each finished task with `git push origin HEAD:redesign` after merging `origin/redesign` (fast-forward only, never force).
-- After every rebuild task: tick its **Done** box in the implementation plan's §7.0 table (date, lane and commit) and its box in `redesign/lanes.md`, in the same commit as the work, and nowhere else. The phase review ticks §5, §6 and §10 and the phase in `redesign/redesign-plan.md`'s checklist. Add a one-to-three-line entry to `CHANGELOG.md`, never to `CLAUDE.md` or `AGENTS.md`.
-- Checks per task are the light ones in §7.0; the full end-to-end suite runs at phase reviews.
-- Design gaps: add them to §9.1 of the implementation plan, then write them as needs in `redesign/handoff/needs.md` (the design-gap loop). Never fill a gap from the old app.
-```
+The current rules live in the project's `CLAUDE.md`, section "UI redesign (blank-slate, in progress)". Edit them there, not here.
 
 ## E. Firewall check (Step 0b)
 
@@ -927,177 +836,3 @@ Finish with one line: ALL BLOCKED, or the numbers that were reachable.
 The session will ask permission for some commands. Approve them: that's the point of the test. If it asks to allow a **network host**, say no, and count that check as blocked.
 
 Expected result: **ALL BLOCKED** (this exact prompt returned that in the end-to-end test). Anything reachable → fix the template on `<base>`, commit, run `enter` (which refreshes the studio's guard files), and repeat in a new `./start` session.
-
-## F. `redesign/lanes.md` skeleton (Step 6b)
-
-Keep **one** of the two layouts (lane lists or step grid) and delete the other. Every model and effort is copied from the task's row in the implementation plan's §7.0 table.
-
-```markdown
-# Rebuild lanes: who builds what, in which terminal
-
-Two or three terminals rebuild in parallel, one lane each (two on a machine with 8 GB or less). Each lane ticks its own boxes here, in the same commit as the task's §7.0 Done tick. Every lane has its own folder and branch, and works only through its own tasks below. `redesign/ui-implementation-plan.md` holds the full task details. This file says **which lane does which task, in what order, with which model and effort**. Lanes deliver to `redesign`, never `<base>`.
-
-| Lane | Folder (open a terminal here, then run `claude`) | Branch | Builds | Test port |
-|---|---|---|---|---|
-| **L1** | `../<project>-l1` | `redesign-lane-1` | <job group or screens, and their components> | <if any> |
-| **L2** | `../<project>-l2` | `redesign-lane-2` | <job group or screens, and their components> | |
-| **L3** | `../<project>-l3` | `redesign-lane-3` | <job group or screens, and their components> | |
-| **Main** | `<project>` | `redesign` (`<base>` for `studio.sh`) | Phases 1–2, 7–8, design imports | |
-
-**Layout:** <lane lists | step grid>, because <the waits between lanes, in one line>.
-
-## How a lane works through its tasks
-
-1. **Find the next task.** Lane lists: the first unticked row in your lane's list whose **Needs** are on `redesign` (or designed, for a need). Step grid: your cell in the first unfinished step, once every cell of the step before is ticked, on `redesign`, and merged into your lane (`git merge origin/redesign`).
-2. **Fresh session and model check:** start the task in a fresh session (`/clear`). Check the model and effort against the row; if they differ, say so and suggest the switch first (`/model opus`, `/effort high`).
-3. **Do that one task**, reading only its plan section, its design-guide section and its prototype file.
-4. **Run the light checks** before committing (§7.0 of the plan; the full suite waits for the phase review).
-5. **Tick it in the same commit:** the §7.0 Done column (date, lane, commit) and `[x]` here, plus a short `CHANGELOG.md` entry. Not the task heading or §5, §6 and §10: the phase review ticks those.
-6. **Commit and push** to your lane branch, then **deliver it to `redesign`:** `git fetch origin && git merge origin/redesign`, a type check and the unit tests if the merge brought anything in (the task's own end-to-end specs too if code conflicted), `git push origin HEAD:redesign` (fast-forward only; if it's rejected, merge again), then `git push origin <lane branch>`. Never force.
-7. **Stop and report:** what was done, the commit, that it's on `redesign`, and your **next task with its model and effort** (or what it's waiting for). Wait for the owner.
-
-The owner can say "carry on" to run several tasks in one go. Even then, stop when the next task's model or effort is different, at a phase review, when the next step is waiting on another lane, and at a design gap.
-
-**Stay in your lane.** Only do your own tasks. When a task needs another lane's component or screen, wait for it on `redesign` and merge it in; don't build it yourself. A design gap goes to §9.1 and the design-gap loop; the task waits, the lane takes its next task that isn't waiting.
-
-**Model shorthand:** "Opus 5.5 · High" means `/model opus` with `/effort high`. Sonnet is `/model sonnet` and Haiku is `/model haiku`; effort is `low`, `medium`, `high`, `xhigh` or `max`. The picks come from §7.0: if the two ever disagree, §7.0 wins and this file is fixed.
-
----
-
-## Main folder, before the lanes open: Phases 1–2
-
-| Done | Task | Model | Effort |
-|---|---|---|---|
-| [ ] | 1.1 <task> | <Model> | <Effort> |
-
-<!-- LAYOUT A: lane lists. Use when the lanes are mostly independent. -->
-
-## L1: <what it builds>
-
-| Done | Task | Model | Effort | Needs |
-|---|---|---|---|---|
-| [ ] | 3.1 <component> | Opus 5.5 | High | Nothing |
-| [ ] | 4.1 <screen> | Haiku 5.5 | Max | 3.1 |
-| [ ] | 4.2 <screen> | Sonnet 5.5 | High | 3.4 from L2 on `redesign` |
-
-## L2: <what it builds>
-(same table)
-
-## L3: <what it builds>
-(same table)
-
-<!-- LAYOUT B: step grid. Use when the lanes depend on each other a lot. -->
-
-## Steps
-
-Each row is a step; each cell is what that terminal builds in it. A lane starts its cell in a step only when every cell of the step before is ticked and on `redesign`, and it has run `git merge origin/redesign`. "— wait" means nothing to do in that step: take an **any time** task instead.
-
-| Step | L1 · `redesign-lane-1` | L2 · `redesign-lane-2` | L3 · `redesign-lane-3` | Why this order |
-|---|---|---|---|---|
-| 1 | [ ] 3.1 <component> · Opus 5.5 High | [ ] 3.2 <component> · Sonnet 5.5 High | [ ] 3.3 <component> · Haiku 5.5 Max | None of these needs another |
-| 2 | [ ] 4.1 <screen> · Haiku 5.5 Max | [ ] 4.2 <screen> · Sonnet 5.5 High | — wait | 4.1 uses 3.1 and 3.3; 4.2 uses 3.2 |
-| 3 | [ ] 5.1 <states of 4.1> · Sonnet 5.5 High | [ ] 5.2 <states of 4.2> · Sonnet 5.5 High | [ ] 4.3 <screen> · Sonnet 5.5 High | 4.3 uses 4.2's pattern |
-| 4 | [ ] Phase 3–5 review · Opus 5.5 High | — wait | — wait | Every lane's part is on `redesign` |
-
-### Any time (a lane with "— wait" may take one)
-
-| Done | Task | Model | Effort | Lane | Needs |
-|---|---|---|---|---|---|
-| [ ] | <edge surface, test rewrite, stress-data check> | Haiku 5.5 | Max | L3 | Nothing |
-
-<!-- END OF LAYOUTS -->
-
-## Main folder, after the lanes: Phases 7–8
-
-Starts once every lane's work is on `redesign`.
-
-| Done | Task | Model | Effort | Needs |
-|---|---|---|---|---|
-| [ ] | 7.1 <switch-over> | Opus 5.5 | High | Every lane delivered |
-```
-
-## G. `redesign/lanes.sh` (Step 6b, run in Step 7)
-
-Makes, lists and closes the rebuild lanes. Run it from the main folder only. Every lane folder it makes holds the old code, so the studio's deny rules must cover it (Step 7) before any design session runs. Tested end to end (2026-10-14, macOS): opening three lanes from `origin/redesign` while the main folder is on `<base>`, a lane delivering to `redesign`, running it again, refusing to run inside a lane, refusing to close a lane with undelivered or uncommitted work, and reopening a closed lane from its branch. `ENV_FILES` lists the env files to copy; change it if the project uses others.
-
-```bash
-#!/usr/bin/env bash
-# Lane worktrees: each lane is its own folder, branch and terminal, next to the main folder.
-#   redesign/lanes.sh open        create any missing lane (branch from origin/<integration>, worktree, env files, install, push)
-#   redesign/lanes.sh terminals   open a Terminal window in each lane folder (macOS); then type: claude
-#   redesign/lanes.sh status      each lane's folder, branch and commits not yet on <integration>
-#   redesign/lanes.sh close <n>   remove lane n's folder once all its work is on <integration> (the branch stays)
-set -euo pipefail
-
-INTEGRATION="redesign"       # the branch lanes deliver to
-PREFIX="redesign-lane-"      # lane branches: redesign-lane-1 to -3
-COUNT="${LANE_COUNT:-3}"
-ENV_FILES=(.env.local .env.test)
-
-ROOT="$(git rev-parse --show-toplevel)"
-cd "$ROOT"
-if [ "$(cd "$(git rev-parse --git-common-dir)" && pwd -P)" != "$(cd "$(git rev-parse --absolute-git-dir)" && pwd -P)" ]; then
-  echo "✋ Run this from the main folder, not from inside a lane." >&2; exit 1
-fi
-NAME="$(basename "$ROOT")"
-PARENT="$(dirname "$ROOT")"
-lane_dir() { echo "$PARENT/$NAME-l$1"; }
-
-case "${1:-}" in
-  open)
-    git remote get-url origin >/dev/null 2>&1 || { echo "✋ Lanes deliver through origin. Add a remote first." >&2; exit 1; }
-    git fetch -q origin
-    git rev-parse -q --verify "origin/$INTEGRATION" >/dev/null || { echo "✋ origin/$INTEGRATION doesn't exist. Push it first." >&2; exit 1; }
-    for i in $(seq "$COUNT"); do
-      dir="$(lane_dir "$i")"; br="$PREFIX$i"
-      if [ -e "$dir" ]; then echo "• Lane $i is already open: $dir"; continue; fi
-      if git show-ref -q --verify "refs/heads/$br"; then
-        git worktree add -q "$dir" "$br"
-      elif git show-ref -q --verify "refs/remotes/origin/$br"; then
-        git worktree add -q --track -b "$br" "$dir" "origin/$br"
-      else
-        git worktree add -q --no-track -b "$br" "$dir" "origin/$INTEGRATION"
-      fi
-      for f in "${ENV_FILES[@]}"; do if [ -f "$f" ]; then cp "$f" "$dir/$f"; fi; done   # copied, never printed
-      if [ -f package-lock.json ]; then (cd "$dir" && npm ci --silent >/dev/null); fi
-      git -C "$dir" push -q -u origin "$br"
-      echo "✅ Lane $i: $dir on $br"
-    done
-    echo
-    echo "Open one terminal per lane (or run: $0 terminals), then start Claude in it:"
-    for i in $(seq "$COUNT"); do echo "  cd \"$(lane_dir "$i")\" && claude"; done
-    ;;
-  terminals)
-    for i in $(seq "$COUNT"); do
-      dir="$(lane_dir "$i")"
-      if [ -d "$dir" ]; then open -a Terminal "$dir"; else echo "Lane $i isn't open. Run: $0 open" >&2; fi
-    done
-    echo "In each new window, type: claude"
-    ;;
-  status)
-    git fetch -q origin || true
-    for i in $(seq "$COUNT"); do
-      dir="$(lane_dir "$i")"; br="$PREFIX$i"
-      if [ -d "$dir" ]; then
-        ahead="$(git rev-list --count "origin/$INTEGRATION..$br" 2>/dev/null || echo "?")"
-        dirty=""; if [ -n "$(git -C "$dir" status --porcelain)" ]; then dirty=", uncommitted changes"; fi
-        echo "Lane $i  $dir  ($br): $ahead commit(s) not on $INTEGRATION$dirty"
-      else
-        echo "Lane $i  not open"
-      fi
-    done
-    ;;
-  close)
-    i="${2:?Which lane? For example: $0 close 2}"; dir="$(lane_dir "$i")"; br="$PREFIX$i"
-    [ -d "$dir" ] || { echo "Lane $i isn't open."; exit 0; }
-    git fetch -q origin
-    [ -z "$(git -C "$dir" status --porcelain)" ] || { echo "✋ Lane $i has uncommitted changes." >&2; exit 1; }
-    [ "$(git rev-list --count "origin/$INTEGRATION..$br")" = 0 ] || { echo "✋ Lane $i has work that isn't on $INTEGRATION yet." >&2; exit 1; }
-    git worktree remove --force "$dir"   # --force only for the ignored files (env copies, node_modules)
-    echo "✅ Closed lane $i. The branch $br stays."
-    ;;
-  *)
-    sed -n '2,6p' "$0"; exit 1
-    ;;
-esac
-```

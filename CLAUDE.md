@@ -2,7 +2,7 @@
 
 # Git workflow
 
-Every change goes straight to `main`, except the UI rebuild in **UI redesign** below, which uses the `redesign` branch and its lane branches. Do not create other feature branches, and do not wait to be asked.
+Every change goes straight to `main`, except the UI rebuild in **UI redesign** below, which uses the `redesign` branch. Do not create other feature branches, and do not wait to be asked.
 
 - After each change (code, docs, or config), commit it on `main` and push to `origin main` in the same turn.
 - Write the commit message to describe what will be visible or different in the deployment (the user-facing or behavioral effect), not a file or diff summary.
@@ -15,10 +15,9 @@ Every change goes straight to `main`, except the UI rebuild in **UI redesign** b
 - Never read from the studio folder, and never send anything from this codebase into it, except `redesign/handoff/` through `redesign/studio.sh enter`.
 - Before every `enter`, run the banned-word scan on every file in `redesign/handoff/`.
 - Don't save memories that describe the current UI.
-- At the start of each redesign session, check the model against the plan's "Picks per step" (or §7.0 in the implementation plan during the rebuild), using the table in `~/.claude/CLAUDE.md`. If the current model is lower, say so and suggest switching.
-- When the owner says **"Import the approved design"**: run `redesign/studio.sh import`, confirm `redesign/design/` arrived, tick the step it belongs to (5b, or the matching rows in `needs.md` and §9.1), and offer the next step.
-- Rebuild (Step 7): work only on the `redesign` branch or a lane branch (`redesign-lane-1` to `-3`), one task per session, reading only that task's plan section, design-guide section and prototype file. Never copy markup, CSS, names or wording from the old UI.
-- Lanes: `redesign/lanes.md` says which lane (terminal, folder `../deus-team-tasks-l1` to `-l3`) builds which task, with which model and effort. At the start of a session in a lane, check the branch is that lane's, then `git fetch origin && git merge origin/redesign`. Stay in your lane: only your own tasks, never `main` or `redesign` checked out there. Deliver each finished task with `git push origin HEAD:redesign` after merging `origin/redesign` (fast-forward only, never force).
-- After every rebuild task: tick its **Done** box in the implementation plan's §7.0 table (date, lane and commit) and its box in `redesign/lanes.md`, in the same commit as the work, and nowhere else. The phase review ticks §5, §6 and §10 and the phase in `redesign/redesign-plan.md`'s checklist. Add a one-to-three-line entry to `CHANGELOG.md`, never to `CLAUDE.md` or `AGENTS.md`.
-- Checks per task are the light ones in §7.0; the full end-to-end suite runs at phase reviews.
-- Design gaps: add them to §9.1 of the implementation plan, then write them as needs in `redesign/handoff/needs.md` (the design-gap loop). Never fill a gap from the old app.
+- At the start of each redesign session, check the model against the plan's "Picks per step" (or the implementation plan's task table during the rebuild), using the table in `~/.claude/CLAUDE.md`. If the current model is lower, say so and suggest switching.
+- When the owner says **"Import the approved design"**: run `redesign/studio.sh import`, confirm `redesign/design/` arrived, tick the step it belongs to (5b, or the matching rows in `needs.md` and the implementation plan's open items), and offer the next step.
+- Rebuild (Step 7): work only on the `redesign` branch, in one terminal, one task per session, reading only that task's plan section, design-guide section and prototype file. Never copy markup, CSS, names or wording from the old UI.
+- After every rebuild task: run the light checks from the implementation plan, tick the task's **Done** cell in its task table (date and commit) in the same commit as the work, and push to `redesign`. The phase review ticks the phase in `redesign/redesign-plan.md`'s checklist. The full smoke suite runs at phase reviews.
+- `redesign` merges into `main` only when the owner says so, after the Phase 4 review.
+- Design gaps: add them to the implementation plan's open items, then write them as needs in `redesign/handoff/needs.md` (the design-gap loop). Never fill a gap from the old app.
