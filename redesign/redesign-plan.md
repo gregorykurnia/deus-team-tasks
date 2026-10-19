@@ -38,40 +38,40 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 
 ## Checklist
 
-When a step finishes, Claude ticks its box here in the same commit, never before. Studio steps (4a–5) happen in the studio, so they're ticked from the codebase when you report them done, or at the import at the latest.
+When a step finishes, Claude ticks its box here in the same commit, never before. Studio steps (4a–5) happen in the studio, so they're ticked from the codebase when you report them done, or at the import at the latest. Each line ends with its pick: the model and effort, then who runs it.
 
 **Setup**
-- [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run
-- [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56)
+- [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run — **Haiku 5.5 Max** · Claude on `<base>`
+- [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56) — **Haiku 5.5 High** · fresh studio session
 
 **Discovery (sees the old app)**
-- [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md`
-- [ ] Step 1: second leak review; removed details logged in §7
-- [ ] Step 1b: banned-word scan clean
-- [ ] Step 1b: guess-the-layout test passed (§8)
+- [ ] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
+- [ ] Step 1: second leak review; removed details logged in §7 — **Sonnet 5.5 High** · fresh session on `<base>`
+- [ ] Step 1b: banned-word scan clean — **Haiku 5.5 High** · Claude on `<base>`
+- [ ] Step 1b: guess-the-layout test passed (§8) — **Opus 5.5 High** · fresh studio session (the test is only as strict as its reader)
 
 **Brief (you, without opening the app)**
-- [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED`
-- [ ] Step 3: `brief.md` status `FILLED`, including the branding decision
+- [ ] Step 2: §4–§5 decided; `priorities.md` status `FILLED` — you · helper session **Haiku 5.5 Max**
+- [ ] Step 3: `brief.md` status `FILLED`, including the branding decision — you · helper session **Haiku 5.5 Max**
 
 **Design (studio, never sees the old app)**
-- [ ] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md`
-- [ ] Step 4b: all job stories and states prototyped, including stress data
-- [ ] Step 4c: design guide complete
-- [ ] Step 5: coverage audit passed
-- [ ] Step 5b: design guide approved, versioned and imported
+- [ ] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md` — **Opus 5.5 High** · studio; screenshots by `! ./shoot`, no model
+- [ ] Step 4b: all job stories and states prototyped, including stress data — **Opus 5.5 High** · studio
+- [ ] Step 4c: design guide complete — **Opus 5.5 High** · studio
+- [ ] Step 5: coverage audit passed — **Sonnet 5.5 High** · fresh studio session
+- [ ] Step 5b: design guide approved, versioned and imported — you approve, then **Haiku 5.5 High** · Claude on `<base>`
 
 **Implementation plan (sees repo and approved design)**
-- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop
-- [ ] Plan approved
+- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop — **Opus 5.5 High** · Agent C
+- [ ] Plan approved — you
 
 **Rebuild (on `redesign`)**
-- [ ] `redesign` branch created and pushed
-- [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed
-- [ ] Phase 2: tokens, base styles, app shell, shared components; review passed
-- [ ] Phase 3: every screen with all its states, phone and desktop; review passed
-- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed
-- [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI
+- [ ] `redesign` branch created and pushed — **Haiku 5.5 Max**
+- [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
+- [ ] Phase 2: tokens, base styles, app shell, shared components; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
+- [ ] Phase 3: every screen with all its states, phone and desktop; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
+- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
+- [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI — **Sonnet 5.5 High**
 
 ---
 
@@ -109,24 +109,7 @@ Never pick **Opus 5.5 Low** or **Sonnet 5.5 Medium**: Haiku 5.5 Max beats both o
 
 ### Picks per step
 
-| Step | Who | Pick |
-|---|---|---|
-| 0 Setup | Claude on `<base>` | Haiku 5.5 Max |
-| 0b Firewall check | fresh studio session | Haiku 5.5 High |
-| 1 Capability inventory | Agent A | Opus 5.5 Medium (Opus 5.5 High if the codebase is large or its docs are out of date) |
-| 1 Second leak review | fresh session on `<base>` | Sonnet 5.5 High |
-| 1b Banned-word scan | Claude on `<base>` | Haiku 5.5 High |
-| 1b Guess-the-layout test | fresh studio session | Opus 5.5 High (the test is only as strict as its reader, so use the designer's model) |
-| 2–3 Priorities and brief | you, with a helper session | Haiku 5.5 Max |
-| 4a Three directions | Agent B (studio) | Opus 5.5 High |
-| 4a Screenshots | script | no model |
-| 4b Full prototype | Agent B (studio) | Opus 5.5 High |
-| 4c Design guide | Agent B (studio) | Opus 5.5 High |
-| 5 Coverage audit | fresh studio session | Sonnet 5.5 High |
-| 5b Import | Claude on `<base>` | Haiku 5.5 High |
-| 6 Implementation plan | Agent C | Opus 5.5 High |
-| 7 Rebuild tasks | one session per task, on `redesign` | set per task in the implementation plan's task table |
-| 7 End-of-phase review | fresh session | Opus 5.5 High |
+Each step's pick (model, effort and who runs it) is on its line in the **Checklist** near the top. That's the only copy: when a pick moves (see below), change it there.
 
 ---
 
