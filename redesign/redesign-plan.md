@@ -506,6 +506,7 @@ ensure_studio() {
 write_guard_files() {  # rewritten on every init/enter, so template fixes arrive and tampering is undone
   cp "$ROOT/redesign/studio-template/CLAUDE.md" "$STUDIO/CLAUDE.md"
   cp "$ROOT/redesign/studio-template/settings.json" "$STUDIO/.claude/settings.json"
+  rm -f "$STUDIO/.claude/settings.local.json"  # drop any "always allow" clicked in a studio session
   printf '.DS_Store\nnode_modules/\n.tmp/\n.claude/settings.local.json\n' > "$STUDIO/.gitignore"
   cat > "$STUDIO/start" <<'START'
 #!/usr/bin/env bash
