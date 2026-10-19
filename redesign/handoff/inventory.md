@@ -55,7 +55,7 @@ What people need to be able to do. Each need is a job story with an ID. The grou
 ## Know what's due and who's on it (D)
 
 - **D1** When I plan the next weeks, I want to spot where tasks overlap, where there are gaps and where deadlines bunch up, and who is carrying each part, so that I can rebalance before a crunch.
-- **D2** When I discuss one slice of the work, I want to narrow what I'm looking at to client work, prospect work, ungrouped work or a single task group, so that each conversation stays focused.
+- **D2** When I discuss one slice of the work, I want to narrow what I'm looking at to one kind of work (internal, prospect or client) or one task group, so that each conversation stays focused.
 - **D3** When a task has no dates, I want to notice it and be able to fix it, so that it doesn't silently fall out of the plan.
 - **D4** When I start a day, I want to know everything that is active on a given date, which of it begins or finishes that day, who is responsible and informed, and the key points, so that I know what today involves.
 - **D5** When I check what a day involves, I want to check any other date just as easily; and the first time I look, I want to land on today if something is happening, otherwise on the next date that has something, so that I never start on an empty day.
@@ -74,7 +74,7 @@ What people need to be able to do. Each need is a job story with an ID. The grou
 - **R4** When I report on our track record, I want to quote how many subsidiaries we've served, how many parent companies are excluded from the count, how many are counted, and the resulting total number of clients, so that I can quote figures with confidence.
 - **R5** When I report by sector, I want a breakdown of how many counted companies (parents plus their subsidiaries) fall in each sector, largest first, with each one's share of the total and a figure for those with no sector, adding up to the same total, so that I can show where our experience lies.
 - **R6** When I type a sector, I want to be offered existing sectors and have different spellings ("retail", " Retail ") treated as the same sector, so that the breakdown isn't split by typos.
-- **R7** When the record is long, I want to search across parent companies, subsidiaries and sectors (a matching subsidiary shown with its parent), look at parent companies alone or with their subsidiaries, and order them by number of subsidiaries, sector, whether counted or name, so that I can find and check anything.
+- **R7** When the record is long, I want to search across parent companies, subsidiaries and sectors (a matching subsidiary shown with its parent), see which subsidiaries belong to any parent company, and order them by number of subsidiaries, sector, whether counted or name, so that I can find and check anything.
 - **R8** When I delete a parent company that still has subsidiaries, I want to be told to move or delete them first, so that no subsidiary is orphaned.
 - **R9** When saving fails, I want a short message asking me to try again, so that I know it didn't go through.
 
@@ -114,7 +114,7 @@ What people need to be able to do. Each need is a job story with an ID. The grou
 - **Read-only:** external events.
 - **Live-synced:** every change by anyone appears for everyone.
 - **Urgency:** task deadline within 3 days or missed; days since last action (fine, getting late, too long); company target date close or missed; company going cold (no contact for 14+ days).
-- **Done:** finished tasks hidden by default; when shown, they look clearly finished.
+- **Done:** finished tasks stay out of open work, and look clearly finished wherever they appear.
 - **Undated:** tasks without dates.
 - **Not counted:** a parent company kept on record but excluded from totals.
 - **Required missing:** a task without a description, a company without a name, a task group without a name or with a name already in use.

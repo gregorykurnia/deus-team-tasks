@@ -198,7 +198,27 @@ Did not match: bottom tab bar on phones, quick-add field, informed-note input, d
 
 Kept on purpose: W12 (three kinds of work is the core business rule), B5, B10, B11, B13, U4, U5, U6, R3, R5, M2, M3 (genuine needs; the designer may land on similar patterns from the need alone).
 
-Next: run the test again with a new fresh studio session (after `enter`).
+### Run 2, 2026-10-19: nearly passed
+
+New fresh studio session (Opus 5.5 High) after commit `539f3fb`. The guess no longer follows the real order or labels, and several areas now differ entirely:
+- **Qualification notes:** it guessed a list plus a form for each prospect (real: one row per prospect, one column per heading).
+- **Task groups:** a master/detail list (real: filter by group with counts, plus collapsible sections).
+- **Undated tasks:** a warning count (real: a "No dates" row).
+- **Stat cards and company groups:** guessed in the new inventory order, not the real one. Three prospect figures instead of the real four cards.
+
+What still matches the real app mostly follows from the needs themselves: four groups of companies with counts and their own fields, inline cell edits, search and filters, follow-up task with a confirmation, month grid with a tasks/events switch and "+n more", two counted lists for one person, Starts/Ends tags, sector bars, per-parent subsidiaries with a counted switch, flows with a decision and good/bad outcomes.
+
+Three hints remained and were rewritten (2026-10-19, Opus 5.5 High):
+
+| Story | Removed | Why it leaked |
+|---|---|---|
+| States: Done | "hidden by default; when shown" | The show/hide completed switch with a count (matched in both runs) |
+| D2 | The exact options "client, prospect, ungrouped, single group" | The timeline filter's option list |
+| R7 | "parent companies alone or with their subsidiaries" | Expand/collapse-all switch |
+
+Also noticed: the guess inferred the app's history (task tracker first, sales tracking added later) from the studio folder name. That's true but isn't layout, and the folder name comes from the playbook's naming scheme, so nothing to change.
+
+Next: run 3 as a quick confirmation.
 
 ## §9 Decisions made in Step 2
 
