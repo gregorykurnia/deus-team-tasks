@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Screenshots design directions at desktop and phone width, then opens them.
+# The OWNER runs this from inside the studio session as `! ./shoot` (or from a terminal):
+#   ./shoot                 every folder in redesign/design/directions/
+#   ./shoot <folder>...     only these folders (each holds an index.html, inside redesign/design/)
+# Pages are served from redesign/design/ over a local web server, so they can't load local files
+# from anywhere else. Chrome reaches Google Fonts only; all other traffic goes to a dead proxy.
+set -euo pipefail
+cd "$(dirname "$0")"
+STUDIO="$PWD"
+DESIGN="$STUDIO/redesign/design"
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+FONTS="fonts.googleapis.com;fonts.gstatic.com"
+
+if [ -n "$(find "$DESIGN" -type l -print -quit)" ]; then
+  echo "✋ redesign/design/ contains symlinks. Remove them first:" >&2
+  find "$DESIGN" -type l >&2
+  exit 1
+fi
+
+mkdir -p .tmp && export TMPDIR="$STUDIO/.tmp"
+PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')"
+python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$DESIGN" >/dev/null 2>&1 &
+SERVER=$!
+trap 'kill $SERVER 2>/dev/null' EXIT
+for _ in $(seq 50); do curl -s -o /dev/null "http://127.0.0.1:$PORT/" && break; sleep 0.1; done
+
+shot() {  # $1 = url, $2 = width,height, $3 = output png
+  if [ -x "$CHROME" ]; then
+    "$CHROME" --headless=new --hide-scrollbars --user-data-dir="$STUDIO/.tmp/chrome" \
+      --proxy-server="127.0.0.1:9" --proxy-bypass-list="$FONTS" \
+      --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE fonts.googleapis.com, EXCLUDE fonts.gstatic.com, EXCLUDE 127.0.0.1" \
+      --virtual-time-budget=5000 --window-size="$2" --screenshot="$3" "$1" >/dev/null 2>&1
+  else
+    npx -y playwright screenshot --proxy-server="127.0.0.1:9" --proxy-bypass="$FONTS" \
+      --viewport-size="$2" "$1" "$3" >/dev/null
+  fi
+}
+
+if [ "$#" -gt 0 ]; then dirs=("$@"); else dirs=("$DESIGN"/directions/*/); fi
+pngs=()
+for d in "${dirs[@]}"; do
+  [ -d "$d" ] || continue
+  d="$(cd "$d" && pwd -P)"
+  case "$d" in "$DESIGN"/*) ;; *) echo "✋ Skipping $d: not inside redesign/design/." >&2; continue;; esac
+  [ -f "$d/index.html" ] || continue
+  url="http://127.0.0.1:$PORT/${d#"$DESIGN"/}/index.html"
+  shot "$url" 1440,900 "$d/desktop.png"
+  shot "$url" 390,844 "$d/phone.png"
+  pngs+=("$d/desktop.png" "$d/phone.png")
+  echo "📸 ${d#"$DESIGN"/}"
+done
+if [ "${#pngs[@]}" -gt 0 ] && [ -z "${SHOOT_NO_OPEN:-}" ]; then open "${pngs[@]}"; fi

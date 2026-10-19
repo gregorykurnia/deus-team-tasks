@@ -1,0 +1,71 @@
+{
+  "autoMemoryEnabled": false,
+  "disableClaudeAiConnectors": true,
+  "enableArtifact": false,
+  "deniedMcpServers": [{ "serverName": "claude.ai Claude Docs" }],
+  "enabledPlugins": {
+    "chrome-devtools-mcp@claude-plugins-official": false,
+    "claude-code-setup@anthropic-plugin-directory": false,
+    "claude-md-management@anthropic-plugin-directory": false,
+    "code-simplifier@anthropic-plugin-directory": false,
+    "context7@anthropic-plugin-directory": false,
+    "feature-dev@anthropic-plugin-directory": false,
+    "frontend-design@anthropic-plugin-directory": true,
+    "github@anthropic-plugin-directory": false,
+    "playwright@anthropic-plugin-directory": false,
+    "security-guidance@anthropic-plugin-directory": false,
+    "superpowers@anthropic-plugin-directory": false,
+    "vercel@claude-plugins-official": false
+  },
+  "permissions": {
+    "deny": [
+      "mcp__*",
+      "WebFetch",
+      "WebSearch",
+      "Artifact",
+      "DesignSync",
+      "SendMessage",
+      "ListAgents",
+      "RemoteTrigger",
+      "ShareOnboardingGuide",
+      "Read(//Users/gregorykurnia/projects/deus-team-tasks/**)",
+      "Edit(//Users/gregorykurnia/projects/deus-team-tasks/**)",
+      "Read(~/.claude/history.jsonl)",
+      "Read(~/.claude/projects/**)",
+      "Read(~/.claude/file-history/**)",
+      "Read(~/.claude/plans/**)",
+      "Read(~/.claude/todos/**)",
+      "Read(~/.claude/playbooks/**)",
+      "Read(~/.local/share/kilo/**)",
+      "Edit(~/.local/share/kilo/**)",
+      "Read(~/Desktop/**)",
+      "Read(~/Downloads/**)",
+      "Read(~/Pictures/**)",
+      "Edit(/start)",
+      "Edit(/shoot)",
+      "Edit(/CLAUDE.md)",
+      "Edit(/.claude/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "failIfUnavailable": true,
+    "filesystem": {
+      "denyRead": [
+        "/Users/gregorykurnia/projects/deus-team-tasks",
+        "~/.claude/history.jsonl",
+        "~/.claude/projects",
+        "~/.claude/file-history",
+        "~/.claude/plans",
+        "~/.claude/todos",
+        "~/.claude/playbooks",
+        "~/.local/share/kilo",
+        "~/Desktop",
+        "~/Downloads",
+        "~/Pictures"
+      ],
+      "denyWrite": ["./start", "./shoot", "./CLAUDE.md", "./.claude"]
+    }
+  }
+}

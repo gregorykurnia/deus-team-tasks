@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Starts a brand-new, isolated design session: no MCP servers, no claude.ai connectors,
+# no auto memory, no artifacts. Never continue or resume an old session.
+cd "$(dirname "$0")"
+for a in "$@"; do
+  case "$a" in -c|--continue|-r|--resume|--resume=*|--fork-session)
+    echo "✋ Always start a brand-new session." >&2; exit 1;;
+  esac
+done
+export ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 CLAUDE_CODE_DISABLE_ARTIFACT=1
+# Your arguments go first: --mcp-config takes several values and would swallow anything after it.
+exec claude "$@" --strict-mcp-config --mcp-config '{"mcpServers":{}}'
