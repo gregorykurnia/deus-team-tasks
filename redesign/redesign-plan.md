@@ -11,6 +11,7 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 ## Project settings: deus-team-tasks (filled in Step 0)
 
 - **Folders:** codebase `/Users/gregorykurnia/projects/deus-team-tasks` · studio `../deus-team-tasks-studio`. `<project>` = `deus-team-tasks`, `<base>` = `main`.
+- **Light mode only (brief, 2026-10-19):** no dark mode anywhere. Step 4b prototypes and the rebuild skip it, even where this playbook says "light and dark".
 - **Lean rebuild (decided 2026-10-19):** Steps 6–7 are cut down for a project this size: one `redesign` branch, one terminal, four phases, no lanes. Steps 0–5 (the design half) follow the playbook unchanged.
 - **Repo:** `https://github.com/gregorykurnia/deus-team-tasks`. **Live site:** `https://deus-team-tasks.vercel.app` (assumed from the project name, not yet checked; confirm before Step 0b).
 - **Source files for the inventory** (code only. `docs/`, `README.md`, `CLAUDE.md` and `AGENTS.md` describe the current app and are not inventory sources):
@@ -52,7 +53,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 
 **Brief (you, without opening the app)**
 - [x] Step 2: §4–§5 decided; `priorities.md` status `FILLED` — you · helper session **Haiku 5.5 Max**
-- [ ] Step 3: `brief.md` status `FILLED`, including the branding decision — you · helper session **Haiku 5.5 Max**
+- [x] Step 3: `brief.md` status `FILLED`, including the branding decision — you · helper session **Haiku 5.5 Max**
 
 **Design (studio, never sees the old app)**
 - [ ] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md` — **Opus 5.5 High** · studio; screenshots by `! ./shoot`, no model
