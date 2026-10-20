@@ -3,7 +3,8 @@
 // The company record (guide 6.5, 4.11, B1, B10 to B13): a 620px sheet, a bottom sheet on phones. The badge, the name, the
 // group and the contact; then Follow-up task, Last action: today, the qualification notes and Move. A notice for anything
 // urgent, every field the group has in sections, each opening its quick editor in place, and the company's tasks with the
-// kept-in-step note. There is no Save: each change saves itself, as the foot says.
+// kept-in-step note. There is no Save: each change saves itself, as the foot says. Edit fields opens the group's Fields
+// sheet over it.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -165,7 +166,14 @@ export default function CompanyRecord({ company: c, settings, today, online, act
         )}
         {recordSections(fields).map((s) => (
           <section key={s.title} className={styles.rsect} aria-label={s.title}>
-            <h3>{s.title}</h3>
+            <h3>
+              {s.title}
+              {s.own && (
+                <Link className={`${buttonClass("link")} ${styles.rlink}`} href={over(pathname, search, `fields=${group}`)} scroll={false}>
+                  Edit fields
+                </Link>
+              )}
+            </h3>
             {s.fields.length ? s.fields.map(prop) : <p className={styles.rnone}>No fields of your own yet in this group.</p>}
           </section>
         ))}

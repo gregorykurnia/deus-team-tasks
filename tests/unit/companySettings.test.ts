@@ -9,10 +9,12 @@ import {
   addOption,
   addOwnField,
   DEFAULT_COMPANY_SETTINGS,
+  fieldNameTaken,
   nearestOptionColour,
   readCompanySettings,
   recolourOption,
   removeOption,
+  removedFieldsWithValues,
   removeOwnField,
   renameField,
   renameOption,
@@ -122,6 +124,26 @@ describe("options (C3)", () => {
     });
   });
 
+  it("keeps High, Not now and No: Where to act, follow-up tasks and the No or not now group depend on them (R1)", async () => {
+    const s = readCompanySettings({ options: { priority: [{ name: "Medium", colour: "amber" }], answer: [] } });
+    expect(s.options.priority.map((o) => [o.name, o.role ?? null])).toEqual([
+      ["High", "highPriority"],
+      ["Medium", null],
+    ]);
+    expect(s.options.answer.map((o) => [o.name, o.role])).toEqual([
+      ["No", "no"],
+      ["Not now", "notNow"],
+    ]);
+    const companies = [co(1, { priority: "High", answer: "Not now" })];
+    await seed("clients", "pipeline", companies, { keepIdField: true });
+    await expect(renameOption("priority", "High", "Urgent", companies)).rejects.toMatchObject({ problem: "locked" });
+    await expect(removeOption("answer", "Not now", companies)).rejects.toMatchObject({ problem: "locked" });
+    await expect(removeOption("answer", "No", companies)).rejects.toMatchObject({ problem: "locked" });
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ priority: "High", answer: "Not now" });
+    await recolourOption("priority", "High", "pink");
+    expect((await storedSettings()).options.priority[0]).toEqual({ name: "High", colour: "pink", role: "highPriority" });
+  });
+
   it("adds an option with its colour", async () => {
     await addOption("type", "Reseller", "pink");
     expect((await storedSettings()).options.type.at(-1)).toEqual({ name: "Reseller", colour: "pink" });
@@ -139,6 +161,23 @@ describe("fields per group (C1, C2)", () => {
       shown: true,
       own: false,
     });
+  });
+
+  it("refuses a field name the group already has, ignoring case, and Company name", async () => {
+    expect(fieldNameTaken(DEFAULT_COMPANY_SETTINGS.fields.active, " status ")).toBe(true);
+    expect(fieldNameTaken(DEFAULT_COMPANY_SETTINGS.fields.active, "Company Name")).toBe(true);
+    expect(fieldNameTaken(DEFAULT_COMPANY_SETTINGS.fields.active, "Status", "status")).toBe(false);
+    expect(fieldNameTaken(DEFAULT_COMPANY_SETTINGS.fields.toApproach, "Status")).toBe(false);
+    await expect(renameField("active", "pic", "priority")).rejects.toMatchObject({ problem: "taken" });
+    await expect(renameField("active", "pic", " ")).rejects.toMatchObject({ problem: "missing" });
+    await expect(addOwnField("active", "Next Actions", "text")).rejects.toMatchObject({ problem: "taken" });
+    expect(await addOwnField("toApproach", "Status", "text")).toMatch(/^cx_/);
+  });
+
+  it("counts removed own fields whose values companies still hold", () => {
+    const s = readCompanySettings({ fields: { active: [{ key: "cx_1", label: "Region", type: "text", shown: true, own: true }] } });
+    const companies = [co(1, { cx_1: "Java", cx_2: "Gone", cx_3: "" }), co(2, { cx_2: "Also gone", cx_4: "Old" }), co(3, { status: "Drop" })];
+    expect(removedFieldsWithValues(companies, s)).toBe(2); // cx_2 and cx_4; cx_1 is in use and cx_3 is empty
   });
 
   it("adds an own choice field with options, and removes only own fields", async () => {

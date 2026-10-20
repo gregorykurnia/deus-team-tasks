@@ -4,7 +4,8 @@
 // (group, search, filters, sort) lives in the address, so a link lands on the right list and a reload keeps it. Every source
 // loads on its own. Search covers the group you are in and says where else it found something. Every cell opens its quick
 // editor, ⋯ opens the row menu, and a company opens its record over the list (?company=, so a reload keeps it). New
-// company is ?newCompany=1. Fields and Export come with task 3.10.
+// company is ?newCompany=1, and the Fields sheet ?fields=<group>. Options open from a field or a choice editor, and Export
+// says what the file holds before it downloads.
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompanies, useCompaniesById, useCompanyOptions, useNotes, useTasks } from "@/desk/DeskData";
@@ -13,7 +14,16 @@ import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { deleteWording, hasField, isKeptInStep, RENAME_MISSING } from "@/lib/companyEdit";
-import { COMPANY_GROUP_LABELS, companiesInGroup, companyGroup, groupSizes, productOptions, whereToActCounts, type CompanyGroup } from "@/lib/companies";
+import {
+  COMPANY_GROUP_LABELS,
+  COMPANY_GROUPS,
+  companiesInGroup,
+  companyGroup,
+  groupSizes,
+  productOptions,
+  whereToActCounts,
+  type CompanyGroup,
+} from "@/lib/companies";
 import type { CompanyField } from "@/lib/companySettings";
 import { failureMessage, useConnection } from "@/lib/connection";
 import {
@@ -50,9 +60,12 @@ import CellEditor from "./CellEditor";
 import CompanyFilters from "./CompanyFilters";
 import CompanyList from "./CompanyList";
 import CompanyRecord from "./CompanyRecord";
+import ExportDialog from "./ExportDialog";
+import FieldsSheet from "./FieldsSheet";
 import GroupTiles from "./GroupTiles";
 import MoveDialog from "./MoveDialog";
 import NewCompanySheet from "./NewCompanySheet";
+import OptionsDialog, { type OptionChanges } from "./OptionsDialog";
 import RowMenu from "./RowMenu";
 import { notesLink, useCompanyActions } from "./useCompanyActions";
 import WhereToAct from "./WhereToAct";
@@ -176,6 +189,23 @@ export default function CompaniesScreen() {
     // Only as the companies first arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settled]);
+
+  /* ---------- Fields, options and export (task 3.10) ---------- */
+
+  const fieldsOver = useOverParam("fields");
+  const fieldsParam = search.get("fields") as CompanyGroup | null;
+  const fieldsGroup = fieldsParam && COMPANY_GROUPS.includes(fieldsParam) ? fieldsParam : state.group;
+  const [optionsFor, setOptionsFor] = useState<EditField | null>(null);
+  const [exporting, setExporting] = useState(false);
+  // A filter on an option follows its new name, and goes with it when it's removed.
+  const optionChanges: OptionChanges = {
+    onRenamed: (key, from, to) => {
+      if ((key === "status" || key === "priority") && state[key] === from) update((now) => ({ ...now, [key]: to }));
+    },
+    onRemoved: (key, name) => {
+      if ((key === "status" || key === "priority") && state[key] === name) update((now) => ({ ...now, [key]: null }));
+    },
+  };
 
   const newCompany = useOverParam("newCompany");
   function added(id: number, name: string, group: CompanyGroup) {
@@ -352,7 +382,17 @@ export default function CompaniesScreen() {
         <WhereToAct counts={whereToActCounts(active, today)} current={state.act} onPick={(act) => update((now) => ({ ...now, act }))} />
       )}
       <section className={styles.panel} aria-label={look.label}>
-        {ready && <CompanyFilters state={state} fields={fields} options={settings.options} products={products} onState={(next) => update(() => next)} />}
+        {ready && (
+          <CompanyFilters
+            state={state}
+            fields={fields}
+            options={settings.options}
+            products={products}
+            onState={(next) => update(() => next)}
+            onFields={() => actions.openOver(`fields=${state.group}`)}
+            onExport={() => setExporting(true)}
+          />
+        )}
         {body}
       </section>
 
@@ -381,6 +421,21 @@ export default function CompaniesScreen() {
           onDelete={setDeleting}
         />
       )}
+      {fieldsOver.open && !settingsLoading && (
+        <FieldsSheet
+          group={fieldsGroup}
+          settings={settings}
+          companies={companies.rows}
+          online={online}
+          onGroup={(g) => router.replace(over(pathname, window.location.search, `fields=${g}`), { scroll: false })}
+          onClose={fieldsOver.close}
+          {...optionChanges}
+        />
+      )}
+      {optionsFor && <OptionsDialog field={optionsFor} settings={settings} companies={companies.rows} onClose={() => setOptionsFor(null)} {...optionChanges} />}
+      {exporting && listing && today && (
+        <ExportDialog group={state.group} companies={listing.sorted} fields={shown} filtered={filtered} today={today} onClose={() => setExporting(false)} />
+      )}
       {newCompany.open && <NewCompanySheet group={state.group} settings={settings} onClose={newCompany.close} onAdded={added} />}
 
       {editing && today && (() => {
@@ -400,6 +455,7 @@ export default function CompaniesScreen() {
             optionNotes={optionNotes}
             synced={isKeptInStep(field.key) && openTasksOf(c.id) > 0}
             required={field.key === "company" ? RENAME_MISSING : undefined}
+            onEditOptions={field.type === "choice" ? () => setOptionsFor(field) : undefined}
             today={today}
             onSave={(value) => void (field.key === "company" && typeof value === "string" ? actions.rename(c, value) : actions.setValue(c, field, value))}
           />

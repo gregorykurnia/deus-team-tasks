@@ -2,7 +2,7 @@
 // carries over and asks for, what the record warns about, and what a deletion leaves behind. Pure; the writes are in
 // companyWrites.ts and the screen draws the rest.
 import type { PipelineEntry } from "./clientTypes";
-import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, type CompanyGroup } from "./companies";
+import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
 import type { ChoiceOption, CompanyField, CompanySettings } from "./companySettings";
 import { addDays, daysBetween, plural, shortDate, todayIso } from "./dates";
 import { GONE_COLD_DAYS } from "./urgency";
@@ -95,7 +95,6 @@ export function moveChoices(settings: CompanySettings, key: string): ChoiceOptio
 }
 
 const MEETING_SOON = "Meeting Soon";
-const NOT_NOW = "Not now";
 
 // What the move dialog fills in before anyone types: an Active company needs a status (the first contact was made, so
 // coming from To approach the last action is today), and No or not now starts on "Not now".
@@ -106,7 +105,7 @@ export function moveDefaults(c: PipelineEntry, to: CompanyGroup, settings: Compa
     if ((!c.status || c.status === DEAL_DONE_STATUS) && moveChoices(settings, "status").some((o) => o.name === MEETING_SOON)) d.status = MEETING_SOON;
     if (from === "toApproach") d.date = today;
   }
-  if (to === "noOrNotNow" && !c.answer && (settings.options.answer ?? []).some((o) => o.name === NOT_NOW)) d.answer = NOT_NOW;
+  if (to === "noOrNotNow" && !c.answer && (settings.options.answer ?? []).some((o) => o.name === NOT_NOW_ANSWER)) d.answer = NOT_NOW_ANSWER;
   return d;
 }
 

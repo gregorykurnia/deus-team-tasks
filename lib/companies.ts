@@ -21,8 +21,13 @@ export const COMPANY_GROUP_LABELS: Record<CompanyGroup, string> = {
 export const DEAL_DONE_STATUS = "Client / Partner Done Deal";
 export const FOLLOW_UP_STATUS = "To Follow Up";
 
+// The priority Where to act counts, and a follow-up task takes on.
+export const HIGH_PRIORITY = "High";
+
 // "No or not now" tells on hold from rejected (D-011).
-export const ANSWERS = ["Not now", "No"] as const;
+export const NOT_NOW_ANSWER = "Not now";
+export const NO_ANSWER = "No";
+export const ANSWERS = [NOT_NOW_ANSWER, NO_ANSWER] as const;
 export type Answer = (typeof ANSWERS)[number];
 
 export function companyGroup(c: Pick<PipelineEntry, "_raw" | "_hold" | "status">): CompanyGroup {
@@ -196,7 +201,7 @@ export function isWhereToAct(c: PipelineEntry, kind: WhereToAct, today: string =
     case "followUp":
       return c.status === FOLLOW_UP_STATUS;
     case "highPriority":
-      return c.priority === "High";
+      return c.priority === HIGH_PRIORITY;
     case "targetClose":
       return isTargetClose(c.target, today);
   }
@@ -221,7 +226,7 @@ export function followUpTaskFor(c: PipelineEntry, today: string = todayIso()): N
   return {
     task: `Follow up with ${c.company}`,
     taskType: "Follow Up",
-    priority: c.priority === "High" ? "High" : undefined,
+    priority: c.priority === HIGH_PRIORITY ? "High" : undefined,
     responsible: [],
     informed: [],
     keyPoints: c.notes ?? "",

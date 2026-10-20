@@ -1,7 +1,7 @@
 "use client";
 
 // The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, then
-// Sort. A filter that's on shows its value and a round × that clears it. Fields and Export come with task 3.10.
+// Sort, Fields and Export. A filter that's on shows its value and a round × that clears it.
 import { useRef, useState } from "react";
 import type { ProductOption } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
@@ -15,7 +15,7 @@ import {
   sortSummary,
   type CompanyViewState,
 } from "@/lib/companyView";
-import FilterButton from "@/ui/FilterButton";
+import FilterButton, { FilterAction } from "@/ui/FilterButton";
 import Menu, { MenuChoice, MenuFoot, MenuHeading, MenuSeparator } from "@/ui/Menu";
 import OptionChip from "@/ui/OptionChip";
 import styles from "./Companies.module.css";
@@ -28,9 +28,11 @@ interface CompanyFiltersProps {
   options: Record<string, ChoiceOption[]>;
   products: ProductOption[]; // written in the group, spellings merged
   onState: (next: CompanyViewState) => void;
+  onFields: () => void;
+  onExport: () => void;
 }
 
-export default function CompanyFilters({ state, fields, options, products, onState }: CompanyFiltersProps) {
+export default function CompanyFilters({ state, fields, options, products, onState, onFields, onExport }: CompanyFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const productRef = useRef<HTMLButtonElement>(null);
   const sortRef = useRef<HTMLButtonElement>(null);
@@ -41,7 +43,7 @@ export default function CompanyFilters({ state, fields, options, products, onSta
   const dirs = directionLabels(sort.key, fields.find((f) => f.key === sort.key));
 
   return (
-    <div className={styles.filters} role="toolbar" aria-label="Filter and sort">
+    <div className={styles.filters} role="toolbar" aria-label="Filter, sort and export">
       {has.status && <ChoiceFilter name="status" label="Status" any="Any status" state={state} options={options.status ?? []} onState={onState} />}
       {has.priority && <ChoiceFilter name="priority" label="Priority" any="Any priority" state={state} options={options.priority ?? []} onState={onState} />}
       {has.product && (
@@ -86,6 +88,8 @@ export default function CompanyFilters({ state, fields, options, products, onSta
         </MenuChoice>
         <MenuFoot>Companies without a value always go last.</MenuFoot>
       </Menu>
+      <FilterAction icon="sliders" label="Fields" opens="dialog" onClick={onFields} />
+      <FilterAction icon="download" label="Export" opens="dialog" onClick={onExport} />
     </div>
   );
 }

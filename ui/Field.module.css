@@ -2,10 +2,12 @@
   display: block;
 }
 
+/* A long "optional" note wraps under the label rather than breaking the label's word. */
 .label {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 2px 8px;
   margin-bottom: 7px;
   font-size: 13px;
   font-weight: var(--w-bold);

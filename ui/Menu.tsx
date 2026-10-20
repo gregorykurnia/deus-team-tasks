@@ -10,6 +10,7 @@ import Icon, { type IconName } from "./Icon";
 import type { OptionTone } from "./OptionChip";
 import { inView, placeMenu } from "./placeMenu";
 import { useIsClient } from "./useIsClient";
+import { hasLayer } from "./overlayStack";
 import { useOverlay } from "./useOverlay";
 import styles from "./Menu.module.css";
 
@@ -42,6 +43,8 @@ const ITEMS = '[role^="menuitem"]:not(:disabled)';
 
 function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, children }: MenuProps) {
   const panel = useRef<HTMLDivElement>(null);
+  // A menu opened from inside a dialog (an option's colour) sits above it; decided once, as it opens.
+  const [overDialog] = useState(() => hasLayer("dialog"));
   useOverlay({ kind: "menu", onClose, panel, restore: anchorRef, trap: form, initialFocus: initialFocus ?? ['[aria-checked="true"]', ITEMS, "input"] });
 
   const closeRef = useRef(onClose);
@@ -103,8 +106,8 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, 
 
   return (
     <MenuContext.Provider value={{ close: onClose }}>
-      <div className={styles.catcher} onClick={onClose} aria-hidden="true" />
-      <div ref={panel} className={form ? `${styles.menu} ${styles.form}` : styles.menu} role="menu" aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
+      <div className={overDialog ? `${styles.catcher} ${styles.overDialog}` : styles.catcher} onClick={onClose} aria-hidden="true" />
+      <div ref={panel} className={[styles.menu, form && styles.form, overDialog && styles.overDialog].filter(Boolean).join(" ")} role="menu" aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
         {children}
       </div>
     </MenuContext.Provider>
@@ -218,7 +221,7 @@ export function MenuNumber({ label, unit, initial, onApply }: { label: string; u
   );
 }
 
-const TONE_NAMES: Record<OptionTone, string> = {
+export const TONE_NAMES: Record<OptionTone, string> = {
   blue: "Blue",
   sky: "Sky",
   teal: "Teal",
@@ -229,6 +232,11 @@ const TONE_NAMES: Record<OptionTone, string> = {
   pink: "Pink",
   slate: "Grey",
 };
+
+// One colour as a small square: the palette's, and the options dialog's colour buttons.
+export function Swatch({ tone }: { tone: OptionTone }) {
+  return <span className={`${styles.swatch} ${styles[tone]}`} aria-hidden="true" />;
+}
 
 // A grid of swatches, three across.
 export function MenuPalette({ tones, value, onPick }: { tones: OptionTone[]; value: OptionTone; onPick: (tone: OptionTone) => void }) {
@@ -248,7 +256,7 @@ export function MenuPalette({ tones, value, onPick }: { tones: OptionTone[]; val
             close();
           }}
         >
-          <span className={`${styles.swatch} ${styles[tone]}`} />
+          <Swatch tone={tone} />
         </button>
       ))}
     </div>

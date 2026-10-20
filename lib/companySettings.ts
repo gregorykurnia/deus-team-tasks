@@ -7,7 +7,7 @@ import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { assertOnline, forgetSource, reportSnapshot, watchSource } from "./connection";
 import { db } from "./firebase";
-import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, type CompanyGroup } from "./companies";
+import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
 import { replaceFieldValue } from "./companyWrites";
 import type { PipelineEntry } from "./clientTypes";
 
@@ -17,8 +17,10 @@ import type { PipelineEntry } from "./clientTypes";
 export const OPTION_COLOURS = ["blue", "sky", "teal", "green", "amber", "red", "violet", "pink", "slate"] as const;
 export type OptionColour = (typeof OPTION_COLOURS)[number];
 
-// The two options the groups and figures depend on: they can only be recoloured.
-export type LockedRole = "dealDone" | "followUp";
+// The options the groups, where to act and follow-up tasks depend on: they can only be recoloured. Deal done and
+// Follow-up due are the guide's (6.5). High, Not now and No follow the same rule (R1, gap N9, provisional): where to
+// act counts High, a follow-up task takes its priority from it, and the two answers tell on hold from rejected.
+export type LockedRole = "dealDone" | "followUp" | "highPriority" | "notNow" | "no";
 
 export interface ChoiceOption {
   name: string; // the value stored on companies
@@ -57,9 +59,29 @@ const DEFAULT_OPTIONS: Record<string, ChoiceOption[]> = {
     opt("Drop", "red"),
   ],
   type: [opt("Client", "blue"), opt("Partner", "green"), opt("Individual Partner", "violet")],
-  priority: [opt("High", "red"), opt("Medium", "amber"), opt("Low", "slate")],
-  answer: [opt("Not now", "amber"), opt("No", "slate")],
+  priority: [opt(HIGH_PRIORITY, "red", "highPriority"), opt("Medium", "amber"), opt("Low", "slate")],
+  answer: [opt(NOT_NOW_ANSWER, "amber", "notNow"), opt(NO_ANSWER, "slate", "no")],
 };
+
+// Each locked option: its field, its stored name, the colour it starts with, and why it's locked.
+export const LOCKED_OPTIONS: { field: string; role: LockedRole; name: string; colour: OptionColour; reason: string }[] = [
+  { field: "status", role: "dealDone", name: DEAL_DONE_STATUS, colour: "green", reason: "Moves the company to Deal done" },
+  { field: "status", role: "followUp", name: FOLLOW_UP_STATUS, colour: "amber", reason: "Shows who is waiting on us" },
+  { field: "priority", role: "highPriority", name: HIGH_PRIORITY, colour: "red", reason: "Counts in High priority, under Where to act" },
+  { field: "answer", role: "notNow", name: NOT_NOW_ANSWER, colour: "amber", reason: "Means on hold" },
+  { field: "answer", role: "no", name: NO_ANSWER, colour: "slate", reason: "Means rejected" },
+];
+
+// What depends on a field's locked options, for the options dialog: "the groups and the figures depend on them".
+export const LOCKED_DEPEND: Record<string, string> = {
+  status: "the groups and the figures depend on",
+  priority: "Where to act and follow-up tasks depend on",
+  answer: "the No or not now group depends on",
+};
+
+export function lockReason(role: LockedRole): string {
+  return LOCKED_OPTIONS.find((l) => l.role === role)!.reason;
+}
 
 const field = (key: string, label: string, type: FieldType, shown: boolean): CompanyField => ({ key, label, type, shown, own: false });
 
@@ -131,14 +153,11 @@ export function readCompanySettings(data: unknown): CompanySettings {
         .map((o) => opt(o.name, isColour(o.colour) ? o.colour : "slate")); // roles go by name, below
     }
   }
-  for (const [role, name, colour] of [
-    ["dealDone", DEAL_DONE_STATUS, "green"],
-    ["followUp", FOLLOW_UP_STATUS, "amber"],
-  ] as const) {
-    const status = (settings.options.status ??= []);
-    const existing = status.find((o) => o.name === name);
+  for (const { field: key, role, name, colour } of LOCKED_OPTIONS) {
+    const list = (settings.options[key] ??= []);
+    const existing = list.find((o) => o.name === name);
     if (existing) existing.role = role;
-    else status.unshift(opt(name, colour, role));
+    else list.unshift(opt(name, colour, role));
   }
   if (stored.fields && typeof stored.fields === "object") {
     for (const g of GROUPS) {
@@ -224,8 +243,7 @@ function checkName(s: CompanySettings, fieldKey: string, name: string, except?: 
   return clean;
 }
 
-const lockedMessage = (o: ChoiceOption) =>
-  `"${o.name}" can't be renamed or removed: ${o.role === "dealDone" ? "it moves companies to Deal done" : "it shows who is waiting on our follow-up"}. It can be recoloured.`;
+const lockedMessage = (o: ChoiceOption) => `“${o.name}” can’t be renamed or removed: ${lockReason(o.role!).toLowerCase()}. Its colour can change.`;
 
 export async function addOption(fieldKey: string, name: string, colour: OptionColour): Promise<void> {
   await changeSettings("No connection. The option wasn't added.", (s) => {
@@ -283,21 +301,33 @@ export async function setFieldShown(group: CompanyGroup, key: string, shown: boo
   });
 }
 
+// Whether a group already has a field by this name, ignoring case and the spaces around it. "Company name" is taken.
+export function fieldNameTaken(fields: Pick<CompanyField, "key" | "label">[], name: string, exceptKey?: string): boolean {
+  const clean = name.trim().toLowerCase();
+  return clean === "company name" || fields.some((f) => f.key !== exceptKey && f.label.trim().toLowerCase() === clean);
+}
+
+function checkFieldName(s: CompanySettings, group: CompanyGroup, label: string, exceptKey?: string): string {
+  const clean = label.trim();
+  if (!clean) throw new SettingsError("missing", "Enter a name.");
+  if (fieldNameTaken(s.fields[group], clean, exceptKey)) throw new SettingsError("taken", "A field with that name already exists.");
+  return clean;
+}
+
 export async function renameField(group: CompanyGroup, key: string, label: string): Promise<void> {
   await changeSettings("No connection. The field wasn't renamed.", (s) => {
-    const clean = label.trim();
-    if (!clean) throw new SettingsError("missing", "Enter a name.");
-    findField(s, group, key).label = clean;
+    const f = findField(s, group, key);
+    f.label = checkFieldName(s, group, label, key);
   });
 }
 
+const OWN_KEY_PREFIX = "cx_";
+
 // Adds an own field to a group, with its options for a choice. Returns its key.
 export async function addOwnField(group: CompanyGroup, label: string, type: FieldType, options: ChoiceOption[] = []): Promise<string> {
-  const key = `cx_${Date.now()}`;
+  const key = `${OWN_KEY_PREFIX}${Date.now()}`;
   await changeSettings("No connection. The field wasn't added.", (s) => {
-    const clean = label.trim();
-    if (!clean) throw new SettingsError("missing", "Enter a name.");
-    s.fields[group].push({ key, label: clean, type, shown: true, own: true });
+    s.fields[group].push({ key, label: checkFieldName(s, group, label), type, shown: true, own: true });
     if (type === "choice") s.options[key] = options.map((o) => opt(o.name.trim(), o.colour)).filter((o) => o.name);
   });
   return key;
@@ -310,6 +340,19 @@ export async function removeOwnField(group: CompanyGroup, key: string): Promise<
     if (!f.own) throw new SettingsError("notOwn", "Only fields the team added can be removed.");
     s.fields[group] = s.fields[group].filter((x) => x !== f);
   });
+}
+
+// Own fields removed from every group whose values companies still hold (C2: removing keeps what was entered). Only the
+// fields this app adds (cx_ keys) count, so nothing else stored on a company is mistaken for one.
+export function removedFieldsWithValues(companies: PipelineEntry[], s: CompanySettings): number {
+  const inUse = new Set(Object.values(s.fields).flatMap((list) => list.map((f) => f.key)));
+  const left = new Set<string>();
+  for (const c of companies) {
+    for (const [k, v] of Object.entries(c)) {
+      if (k.startsWith(OWN_KEY_PREFIX) && !inUse.has(k) && v !== undefined && v !== null && v !== "") left.add(k);
+    }
+  }
+  return left.size;
 }
 
 /* ---------- Colours from the old settings ---------- */

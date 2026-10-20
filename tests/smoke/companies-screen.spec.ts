@@ -6,7 +6,7 @@ import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies } from "./data";
 
 const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}`) });
-const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Filter and sort" });
+const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Filter, sort and export" });
 const filter = (page: Page, name: string | RegExp) => toolbar(page).getByRole("button", { name });
 const search = (page: Page) => page.getByRole("searchbox", { name: "Search companies" });
 const panel = (page: Page, name: string) => page.getByRole("region", { name });

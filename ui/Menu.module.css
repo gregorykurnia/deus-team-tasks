@@ -189,3 +189,12 @@
 .violet { --sw-bg: var(--opt-violet-bg); --sw-fg: var(--opt-violet); }
 .pink { --sw-bg: var(--opt-pink-bg); --sw-fg: var(--opt-pink); }
 .slate { --sw-bg: var(--opt-slate-bg); --sw-fg: var(--opt-slate); }
+
+/* Over a dialog: between the dialog over a sheet and the toasts. */
+.catcher.overDialog {
+  z-index: calc(var(--z-dialog-over-sheet) + 1);
+}
+
+.menu.overDialog {
+  z-index: calc(var(--z-dialog-over-sheet) + 2);
+}

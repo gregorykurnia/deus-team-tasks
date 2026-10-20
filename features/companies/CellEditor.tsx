@@ -1,7 +1,7 @@
 "use client";
 
 // The quick editor (guide 4.9): one detail changed in one step, in a menu anchored to the value. A choice shows its options
-// as chips with the chosen one ticked, then Clear. A date has a field, quick picks, then Clear and Save. Text has a field
+// as chips with the chosen one ticked, then Clear and Edit options. A date has a field, quick picks, then Clear and Save. Text has a field
 // (or a 130px text box) with Save. Enter saves (Ctrl + Enter in a text box), and the screen's toast offers Undo.
 import { useState, type KeyboardEvent, type RefObject } from "react";
 import { parseValue, quickPicks, sameValue, type FieldValue } from "@/lib/companyEdit";
@@ -24,6 +24,7 @@ interface CellEditorProps {
   optionNotes?: Record<string, string>; // a note beside an option: "Moves it to Deal done"
   synced?: boolean; // linked tasks follow this date (B12)
   required?: string; // the company's name: what to say when it's emptied
+  onEditOptions?: () => void; // a choice field: its options dialog
   today: string;
   onSave: (value: FieldValue) => void;
 }
@@ -46,7 +47,7 @@ export default function CellEditor(props: CellEditorProps) {
   );
 }
 
-function ChoiceEditor({ value, options = [], optionNotes = {}, onSave }: CellEditorProps) {
+function ChoiceEditor({ value, options = [], optionNotes = {}, onSave, onEditOptions }: CellEditorProps) {
   return (
     <>
       {options.map((o) => (
@@ -63,6 +64,14 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, onSave }: CellEdi
           <MenuSeparator />
           <MenuItem icon="x" onSelect={() => onSave(undefined)}>
             Clear
+          </MenuItem>
+        </>
+      )}
+      {onEditOptions && (
+        <>
+          <MenuSeparator />
+          <MenuItem icon="sliders" onSelect={onEditOptions}>
+            Edit options
           </MenuItem>
         </>
       )}

@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9
 
 # Needs
 
@@ -14,3 +14,4 @@ Design gaps found after the design was approved, written as job stories.
 | N6 | When I open a task from a link that no longer leads anywhere (someone deleted the task), or a colleague deletes the task while I have it open and am changing it, I want to be told the task is gone, and not lose sight of what I typed, so that I'm not left wondering whether my change was saved. | Task 3.1 | open |
 | N7 | When I open a task group from a link or a bookmark after someone deleted it, or a colleague deletes it while I am looking at it, I want to be told it is gone and be pointed back to my tasks, so that I am not left on an empty page wondering what happened. | Task 3.3 | open |
 | N8 | When I open a company from a link after someone deleted it, or a colleague deletes a company while I have it open, I want to be told it is gone, so that I am not left wondering whether my changes to it were saved. | Task 3.9 | open |
+| N9 | When I tidy up the choices for a company's priority, or for the answer a company gave (no, or not now), I want to know which of those choices the team's counts and follow-ups depend on, and be kept from renaming or removing them, so that where to act, follow-up tasks and the split between on hold and rejected keep working. | Task 3.10 | open |
