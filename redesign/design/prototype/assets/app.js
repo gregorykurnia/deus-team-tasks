@@ -16,6 +16,7 @@
     cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="4"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     building: '<path d="M4 20.5V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14.5M15 10h3a2 2 0 0 1 2 2v8.5M2.5 20.5h19M8 8h3M8 12h3M8 16h3"/>',
     note: '<path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/>',
+    copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="3"/><path d="M15.5 5.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v9A1.5 1.5 0 0 0 5 15.5h.5"/>',
     archive: '<rect x="3" y="4" width="18" height="5" rx="2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/>',
     flow: '<rect x="3" y="3.5" width="7" height="5" rx="2"/><rect x="14" y="15.5" width="7" height="5" rx="2"/><path d="M6.5 8.5v4a3 3 0 0 0 3 3h4.5"/>',
     more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
@@ -64,6 +65,7 @@
     text: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
     hash: '<path d="M9 4 7.5 20M16.5 4 15 20M4.5 9h16M3.5 15h16"/>',
     choice: '<circle cx="7" cy="8" r="2"/><circle cx="7" cy="16" r="2"/><path d="M12 8h8M12 16h8"/>',
+    tree: '<path d="M6 4v12a2 2 0 0 0 2 2h4M6 9h6"/><rect x="13" y="6" width="7" height="6" rx="2"/><rect x="13" y="15" width="7" height="6" rx="2"/>',
     para: '<path d="M4 6h16M4 10h16M4 14h16M4 18h10"/>',
   };
   P.ic = (name, cls) => `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -109,13 +111,13 @@
   /* ---------- Data ---------- */
   P.db = P.stress ? PROTO_DATA.stress() : PROTO_DATA.normal();
   // Changes made while clicking through carry across pages in this tab (normal state only). ?reset starts over.
-  const SAVE_KEY = 'proto.db.v5.' + (P.stress ? 'stress' : 'normal');
+  const SAVE_KEY = 'proto.db.v6.' + (P.stress ? 'stress' : 'normal');
   try {
     if (qs.has('reset')) sessionStorage.removeItem(SAVE_KEY);
     else if (!P.state && sessionStorage.getItem(SAVE_KEY)) P.db = JSON.parse(sessionStorage.getItem(SAVE_KEY));
   } catch (e) { /* storage unavailable */ }
   P.save = () => { if (P.state) return; try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(P.db)); } catch (e) { /* full or unavailable */ } };
-  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; P.db.notes = []; }
+  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; P.db.notes = []; P.db.past = []; }
   if (P.state === 'no-clients') P.db.tasks = P.db.tasks.filter((t) => { const c = t.co && P.db.companies.find((x) => x.id === t.co); return !(c && c.stage === 'done'); });
   if (P.state === 'quiet') P.db.tasks = P.db.tasks.filter((t) => t.done || (t.end && P.diff(t.end) > 3));
   P.loading = P.state === 'loading' || P.state === 'offline-empty';
@@ -202,7 +204,7 @@
     { id: 'plan', label: 'Plan', icon: 'cal', href: 'plan.html' },
     { id: 'companies', label: 'Companies', icon: 'building', href: 'companies.html' },
     { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'notes.html' },
-    { id: 'past', label: 'Past clients', icon: 'archive', href: 'soon.html?area=past' },
+    { id: 'past', label: 'Past clients', icon: 'archive', href: 'past.html' },
     { id: 'flows', label: 'Flows', icon: 'flow', href: 'soon.html?area=flows' },
   ];
   P.NAV = NAV;

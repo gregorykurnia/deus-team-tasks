@@ -104,3 +104,28 @@ Qualification notes has its own page (`prototype/notes.html`), from the side bar
 - **Order and filters:** last edited first by default, or by likelihood or name. Filters: all prospects, tracked companies, or not tracked yet.
 - **Live (A1):** a heading a colleague just changed shows "Changed just now". If you're writing in that same heading at that moment, your text isn't replaced while you type. Two people writing in the same heading at once is not designed further.
 - **Mock data:** 10 sets of notes (8 tracked companies, 2 not tracked yet; one has no rating). Stress data has 1,500 sets in several scripts, one set with every heading empty, and one with very long remarks.
+
+## D-015 — Group 4 approved (2026-10-20)
+Owner: "Continue the expand chosen direction, i believe groups 1-4 is done and review". Recorded as approval of group 4 (qualification notes, D-014). Group 5 started in the same session.
+
+## D-016 — Group 5: past clients (2026-10-20)
+Past clients has its own page (`prototype/past.html`), from the side bar and, on phones, from More.
+- **Words:** every company that isn't under another one is a **parent company**, even with no subsidiaries, because R4 counts them that way. There are two levels only: parent company and subsidiary.
+- **Totals (R3, R4):** the page opens on the number to quote, "Clients we’ve served", and how it adds up: parent companies counted + subsidiaries = clients in total. Below, in a dashed tile, how many umbrella companies are kept but not counted; tapping it lists only them. "Copy these figures" copies a sentence ready to paste, with the three largest sectors.
+- **Not counted (R3):** set per parent company from its menu, or from its "Not counted" tag. Not-counted companies have a dashed outline, the same sign used for "outside" elsewhere (informed people, notes not tracked yet). An open umbrella company says that its subsidiaries still count. The message says how the total changes, with Undo.
+- **By sector (R5):** counts every counted company once, in its own sector (subsidiaries have their own sector). Largest first, with the count and the share, then "No sector" on its own line, then the total, which always equals the client total. The top 8 show first, then "Show all". Tapping a sector shows its companies. On phones, a switch at the top moves between Companies and By sector.
+- **Sector spellings (R6):** every sector field offers the sectors already in use, with how many companies use each. A spelling that matches one when case and spaces are ignored is saved as that one, and a note says so before saving. Older spellings in the data are merged everywhere (breakdown, search, filter, export), shown with the spelling most companies use.
+- **The record (R2, R7):** one row per parent company, with its sector and number of subsidiaries. Opening a row shows its subsidiaries as a small tree; "Show all subsidiaries" opens every row. Search covers names and sectors. A matching subsidiary shows under its parent with the words highlighted, and the rest stay behind "Show its other n subsidiaries". Order by name, number of subsidiaries, sector, or counted, either way round, with empty sectors last. The inventory names no default, so it's name, A to Z.
+- **Changing (R2):** the name and the sector open small editors in place, as for companies (D-011), and save on their own with Undo.
+- **Adding (R1, R2):** "Add a past client" asks for the name (required), the sector, and where it sits: a parent company (with "Count it in the totals", on by default) or a subsidiary of a chosen parent (taking the parent's sector unless changed). Inside an open parent company, an "Add a subsidiary" line adds one with just a name and Enter.
+- **Moving (R2):** from a subsidiary's menu, choose the new parent company from a searchable list. "Moving…" shows while it saves, then Undo. If there's no other parent company, the dialog says so and offers to add one.
+- **Deleting (R8):** a parent company that still has subsidiaries can't be deleted. The dialog explains why and offers "Show its subsidiaries". Anything else asks first and says how the total changes.
+- **Saving (R9):** adding and moving show progress ("Adding…", "Moving…"). If saving fails, the dialog keeps what was typed and says "Couldn’t save… Try again". A change made in place shows a short message with "Try again".
+- **Export (E1):** always the full record, whatever the search shows. Each subsidiary follows its parent. Columns: Name, Parent or subsidiary, Parent company, Sector, Counted. Sectors are written the way the breakdown shows them.
+- **Live (A1):** a subsidiary a colleague adds appears with "Just added", and the totals update.
+- **Mock data:** 21 parent companies (3 umbrella companies not counted), 29 subsidiaries, one parent and one subsidiary with no sector, and two variant spellings. Stress data: 1,200 parent companies, 4,369 subsidiaries, one parent with 340, 45 sectors (other scripts, very long names), about a fifth with no sector, and three spellings of Retail.
+
+**Owner to confirm** (proposals, not adopted silently):
+1. **Subsidiaries have their own sector,** filled in from the parent's when added. The alternative is that a subsidiary always takes its parent's sector.
+2. **"Parent company" for every company not under another,** even one with no subsidiaries, matching how R4 counts. The alternative is calling those just "companies" and keeping "parent company" for the ones with subsidiaries.
+3. **Not built, for later if wanted:** an "Add to past clients" action on a Deal done company's record, so finished clients reach this record in one step. The inventory keeps the two areas separate, so it's left out.

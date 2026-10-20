@@ -215,7 +215,34 @@
         remarks: 'Only had ten minutes at the booth. The person we met was their regional manager, not the buyer.' }),
       N({ id: 'n10', name: 'dr. Sari’s clinic group', likely: '', edited: d(-6), h: { need: 'Payroll, maybe scheduling.' } }),
     ];
-    return { people, companies, groups, tasks, events, notes, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+    // Past clients (R1 to R6): parent companies with subsidiaries under them. Umbrella parents are kept but not counted (R3).
+    // Two spellings of a sector on purpose ("retail ", "education"): the breakdown still treats them as one (R6).
+    const PC = (id, name, sector, counted, subs) => [{ id, name, sector, parent: null, counted: counted !== false }]
+      .concat((subs || []).map(([sn, ss], i) => ({ id: id + '-' + (i + 1), name: sn, sector: ss, parent: id, counted: true })));
+    const past = [].concat(
+      PC('p1', 'Meridian Bank', 'Banking', true, [['Meridian Syariah', 'Banking'], ['Meridian Finance', 'Financial services'], ['Meridian Insurance', 'Insurance']]),
+      PC('p2', 'Solace Hotels Group', 'Hospitality', false, [['Solace Bali', 'Hospitality'], ['Solace Jakarta', 'Hospitality'], ['Solace Lombok', 'Hospitality'], ['Solace Yogyakarta', 'Hospitality'], ['Solace Spa', 'Wellness']]),
+      PC('p3', 'Nusantara Retail Holdings', 'Retail', false, [['Toko Nusa', 'Retail'], ['Nusa Mart', 'retail '], ['NusaFresh', 'Food and beverage'], ['Nusa Online', 'Retail'], ['Nusa Pharmacy', 'Healthcare']]),
+      PC('p4', 'Tirta Water', 'Utilities'),
+      PC('p5', 'Aurora Schools', 'Education', true, [['Aurora Kids', 'Education'], ['Aurora Academy', 'education']]),
+      PC('p6', 'Pedati Courier', 'Logistics'),
+      PC('p7', 'Sinar Optik', 'Retail'),
+      PC('p8', 'Kencana Healthcare Group', 'Healthcare', true, [['Kencana Clinic Bandung', 'Healthcare'], ['Kencana Clinic Surabaya', 'Healthcare'], ['Kencana Lab', 'Healthcare'], ['Kencana Pharma', 'Pharmaceuticals']]),
+      PC('p9', 'Bumi Logistik', 'Logistics', true, [['Bumi Cold Storage', 'Logistics'], ['Bumi Express', 'Logistics']]),
+      PC('p10', 'Warung Rasa', 'Food and beverage'),
+      PC('p11', 'Pratama Motor Group', 'Automotive', false, [['Pratama Dealer Jakarta', 'Automotive'], ['Pratama Parts', 'Automotive'], ['Pratama Rental', 'Automotive']]),
+      PC('p12', 'Citra Media', 'Media'),
+      PC('p13', 'Delima Property', 'Property', true, [['Delima Residence', 'Property']]),
+      PC('p14', 'Garuda Air Services', ''),
+      PC('p15', 'Mitra Konstruksi', 'Construction'),
+      PC('p16', 'Lestari Farms', 'Agriculture', true, [['Lestari Dairy', 'Food and beverage']]),
+      PC('p17', 'Puspa Florist', 'Retail'),
+      PC('p18', 'Harmoni Telecom', 'Telecoms', true, [['Harmoni Fibre', 'Telecoms'], ['Harmoni Data Centre', '']]),
+      PC('p19', 'Indah Textiles', 'Manufacturing'),
+      PC('p20', 'Kopi Senja', 'Food and beverage', true, [['Kopi Senja Roastery', 'Food and beverage']]),
+      PC('p21', 'Bintaro Dental', 'Healthcare'),
+    );
+    return { people, companies, groups, tasks, events, notes, past, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   /* ---------- Stress data ---------- */
@@ -354,7 +381,28 @@
         likely: p2(['vhigh', 'high', 'med', 'mlow', 'low', '']), edited: d(-b2(0, 300)), h, remarks: i === 0 ? Array.from({ length: 60 }, () => longText).join('\n\n') : (r2() < 0.3 ? longText : '') });
     }
     notes[1].h = {}; // a set with every heading empty
-    return { people, companies, groups, tasks, events, notes, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+
+    // Past clients: 1,200 parent companies, about 3,800 subsidiaries, one parent with 340 of them, 45 sectors written in
+    // several spellings and scripts, and many without a sector. Only two levels exist: parent and subsidiary.
+    const sectors = ['Banking', 'Retail', ' retail', 'RETAIL', 'Healthcare', 'Logistics', 'Hospitality', 'Food and beverage', 'Education', 'Utilities', 'Property', 'Telecoms', 'Automotive', 'Insurance', 'Media',
+      'Manufacturing of industrial machinery and spare parts for the mining sector', '製造業', 'الخدمات المصرفية', 'การท่องเที่ยว', 'Agriculture', 'Construction', 'Energy', 'Mining', 'Pharmaceuticals', 'Wellness', 'Government', 'Non-profit',
+      'Fintech', 'E-commerce', 'Aviation', 'Shipping', 'Textiles', 'Chemicals', 'Beauty', 'Sports', 'Legal services', 'Consulting', 'Security', 'Printing', 'Furniture', 'Fisheries', 'Plantation', 'Cement', 'Steel', 'Water treatment'];
+    const pastNames = [['Internationalebeschaffungsgesellschaftfürindustrieanlagenundmaschinenbau', 'Manufacturing of industrial machinery and spare parts for the mining sector'],
+      ['PT Sinar Nusantara Agribusiness and Food Processing International Holdings Group Tbk', 'Food and beverage'], ['北京字节跳动科技有限公司', '製造業'], ['شركة الاتصالات السعودية', 'Telecoms'],
+      ['บริษัท ไทยเบฟเวอเรจ จำกัด (มหาชน)', 'การท่องเที่ยว'], ['X', ''], ['Ab', 'Retail'], ['Samsung Electronics 삼성전자', 'Manufacturing of industrial machinery and spare parts for the mining sector'], ['株式会社ファーストリテイリング', 'Retail']];
+    const past = [];
+    for (let i = 0; i < 1200; i++) {
+      const id = 'sp' + i;
+      const [name, sec] = i < pastNames.length ? pastNames[i] : [p2(['PT ', 'CV ', '', '']) + p2(['Sinar', 'Maju', 'Jaya', 'Abadi', 'Mega', 'Surya', 'Bumi', 'Cahaya', 'Karya', 'Prima']) + ' ' + p2(['Group', 'Holdings', 'Nusantara', 'Sentosa', 'Makmur', 'Teknik']) + ' ' + (i + 1), r2() < 0.2 ? '' : p2(sectors)];
+      const umbrella = i === 1 || r2() < 0.05;
+      past.push({ id, name, sector: sec, parent: null, counted: !umbrella });
+      const nSubs = i === 1 ? 340 : (r2() < 0.45 ? 0 : (r2() < 0.1 ? b2(12, 60) : b2(1, 5)));
+      for (let j = 0; j < nSubs; j++) {
+        past.push({ id: id + '-' + j, parent: id, counted: true, sector: r2() < 0.18 ? '' : (r2() < 0.6 && sec ? sec : p2(sectors)),
+          name: j === 0 && i === 1 ? 'Anakperusahaanpengolahanmakanandanminumanwilayahindonesiatimurdanbaratsertasekitarnya' : (j === 1 && i === 1 ? '新加坡子公司 ' + j : p2(['PT ', '']) + p2(['Sinar', 'Maju', 'Jaya', 'Abadi', 'Mega']) + ' ' + p2(['Cabang', 'Unit', 'Branch', 'Distribusi', 'Retail']) + ' ' + (j + 1)) });
+      }
+    }
+    return { people, companies, groups, tasks, events, notes, past, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   window.PROTO_DATA = { TODAY, d, normal, stress };
