@@ -88,7 +88,7 @@
     const bars = days.map((d, i) => {
       const n = d.p + d.c + d.t;
       const label = `${P.wd(d.iso)}: ${plural(n, 'deadline')}${d.e ? ', ' + plural(d.e, 'event') : ''}`;
-      return `<a class="cbar${i === 0 ? ' today' : ''}${d.we ? ' we' : ''}" href="${P.keep('soon.html?area=plan&date=' + d.iso)}" title="${label}" aria-label="${label}">${seg('p', d.p)}${seg('c', d.c)}${seg('t', d.t)}${seg('e', Math.min(d.e, 6) * 0.6)}</a>`;
+      return `<a class="cbar${i === 0 ? ' today' : ''}${d.we ? ' we' : ''}" href="${P.keep('plan.html?view=day&date=' + d.iso)}" title="${label}" aria-label="${label}">${seg('p', d.p)}${seg('c', d.c)}${seg('t', d.t)}${seg('e', Math.min(d.e, 6) * 0.6)}</a>`;
     }).join('');
     const labels = days.map((d, i) => `<span class="${i === 0 ? 'td' : ''}">${i === 0 ? 'Today' : d.x.getDate()}</span>`).join('');
     const evNote = P.eventsState === 'ok' ? '<span><i style="background:#cbd8ec"></i>Calendar events</span>' : '<span style="color:var(--muted)">Calendar events unavailable</span>';
@@ -140,7 +140,7 @@
       const evs = P.db.events.filter((e) => e.date === P.iso(0)).sort((a, b) => (b.allDay - a.allDay) || (a.start || '').localeCompare(b.start || ''));
       const shown = evs.slice(0, 8);
       body = evs.length ? shown.map((e) => `<div class="ev"><span class="bar-c"></span><div style="min-width:0"><p>${esc(e.title)}</p><small>${e.allDay ? 'All day' : `${e.start} to ${e.end}`}</small></div><a class="open" href="${e.url}" target="_blank" rel="noopener" aria-label="Open “${esc(e.title)}” in the team calendar" title="Open in the team calendar">${ic('ext')}</a></div>`).join('')
-        + (evs.length > shown.length ? `<div class="panel-foot"><a class="btn sm quiet" href="${P.keep('soon.html?area=plan')}">${plural(evs.length - shown.length, 'more event')} today</a></div>` : '')
+        + (evs.length > shown.length ? `<div class="panel-foot"><a class="btn sm quiet" href="${P.keep('plan.html?view=day')}">${plural(evs.length - shown.length, 'more event')} today</a></div>` : '')
         : `<div class="empty sm"><div class="art">${ic('cal')}</div><h3>No events today</h3><p>Nothing is on the team calendar.</p></div>`;
     }
     return `<section class="panel glass" aria-labelledby="c-h">${head}${body}</section>`;
@@ -158,8 +158,8 @@
       body = rows.length ? rows.slice(0, 6).map(([n, r]) => {
         const lit = Math.ceil((r.own / max) * 5);
         const away = P.eventsState === 'ok' && ooo.some((o) => n.startsWith(o));
-        return `<a class="who" href="${P.keep('soon.html?area=plan&person=' + encodeURIComponent(n))}">${P.av(n)}<div style="min-width:0"><p>${esc(n)}</p><small>Owns ${num(r.own)}${away ? ', out of office today' : `, informed on ${num(r.inf)}`}</small></div><span class="load" role="img" aria-label="Load ${lit} of 5">${[0, 1, 2, 3, 4].map((i) => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span></a>`;
-      }).join('') + (rows.length > 6 ? `<div class="panel-foot"><a class="btn sm quiet" href="${P.keep('soon.html?area=plan')}">All ${num(rows.length)} people</a></div>` : '')
+        return `<a class="who" href="${P.keep('plan.html?view=people&person=' + encodeURIComponent(n))}">${P.av(n)}<div style="min-width:0"><p>${esc(n)}</p><small>Owns ${num(r.own)}${away ? ', out of office today' : `, informed on ${num(r.inf)}`}</small></div><span class="load" role="img" aria-label="Load ${lit} of 5">${[0, 1, 2, 3, 4].map((i) => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span></a>`;
+      }).join('') + (rows.length > 6 ? `<div class="panel-foot"><a class="btn sm quiet" href="${P.keep('plan.html?view=people')}">All ${num(rows.length)} people</a></div>` : '')
         : `<div class="empty sm"><div class="art">${ic('team')}</div><h3>Nobody is assigned yet</h3><p>Name a responsible person on a task and their load shows here.</p></div>`;
     }
     return `<section class="panel glass" aria-labelledby="w-h"><div class="panel-head"><h2 id="w-h">Who's carrying what</h2></div>${body}</section>`;

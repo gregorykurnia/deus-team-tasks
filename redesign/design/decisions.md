@@ -45,3 +45,15 @@ Design, on the All tasks screen and inside a task group:
 - **Move to group** applies only to internal work. Company tasks in the selection stay with their companies, and the menu says so. A new group can be created from the menu, and the tasks move straight into it.
 - **Delete** asks first ("Delete 3 tasks?"). Mark done, mark not done and move can be undone from the confirmation message.
 
+
+## D-009 — Group 2: Plan (2026-10-20)
+Plan has four views, switched at the top: **Timeline** (opens first; D1, D7, D8), **Month** (D5, D7), **Day** (D4, D5) and **People** (D6). A second switch shows **tasks and events**, **tasks only** or **events only** (D8). Work and Person filters narrow every view (D2). Any task opens its details panel, and the circle marks it done (D11).
+- **Timeline:** four weeks, stepping two weeks at a time. One row per responsible person, or per kind of work. A task with several responsible people shows in each of their rows. Bars run from start to deadline. A task with only a deadline is a diamond. A task with no deadline fades out to the right. A missed deadline gets a red edge.
+- **Crunches and gaps (D1):** the busiest days (at least 2 deadlines, well above the average) are tinted amber across the whole timeline. Chips above it name the busiest day, the longest quiet stretch of weekdays, overdue tasks that ended before the range, and how many tasks have no dates (D3, linking to All tasks). A person's row says when 4 or more of their tasks run at once.
+- **Busy rows:** each row shows 4 lines of bars, then "Show n more", so one busy person can't push everyone else off screen.
+- **Events (D7–D9):** one read-only "Team calendar" row with a count per day, not bars, so task rows stay readable. In events only, each day lists start times ("Day" for all-day events). Any day opens the Day view, where each event has its time and a link to the team calendar. When the calendar isn't set up or fails, that row (and the Day view) says so, and tasks carry on (D10).
+- **Day (D4, D5):** the first look lands on today if anything is happening; otherwise on the next day with something, with a note and "Show today". A week strip and a date picker reach any date. Tasks are split into deadline, starting and under way, each with responsible people, informed people with their notes, and key points.
+- **People (D6):** everyone is ranked by how much they own. A bar shows owned (solid) against kept informed (outlined), next to a two-week deadline strip. A person's page splits "Responsible for" from "Kept informed on", showing their part (the note) on each task.
+- **Phones:** the timeline scrolls sideways and starts at today's column, with the avatars pinned on the left. The month shows dots per day, and tapping a day lists it underneath. The Day and People views stack.
+- Today's two-week chart and its "Who's carrying what" panel now open Plan (the day, or the person).
+- Mock data gained a few tasks and events, and one person with no tasks (Joko Susanto), for the "person with no tasks" state.

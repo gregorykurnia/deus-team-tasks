@@ -50,6 +50,8 @@
     info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
     minus: '<path d="M6 12h12"/>',
     checks: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="m8 12 3 3 5-6"/>',
+    left: '<path d="m15 6-6 6 6 6"/>',
+    right: '<path d="m9 6 6 6-6 6"/>',
     done: '<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
   };
   P.ic = (name, cls) => `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -185,7 +187,7 @@
   const NAV = [
     { id: 'today', label: 'Today', icon: 'sun', href: 'index.html' },
     { id: 'tasks', label: 'All tasks', icon: 'list', href: 'tasks.html' },
-    { id: 'plan', label: 'Plan', icon: 'cal', href: 'soon.html?area=plan' },
+    { id: 'plan', label: 'Plan', icon: 'cal', href: 'plan.html' },
     { id: 'companies', label: 'Companies', icon: 'building', href: 'soon.html?area=companies' },
     { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'soon.html?area=notes' },
     { id: 'past', label: 'Past clients', icon: 'archive', href: 'soon.html?area=past' },

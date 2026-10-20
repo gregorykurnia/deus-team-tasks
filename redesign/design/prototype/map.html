@@ -83,6 +83,47 @@
     <tr><td>Delete a task</td><td><a href="tasks.html?open=task-delete">Confirm</a></td></tr>
   </table></section>
 
+  <section class="panel glass"><h2>Plan: timeline</h2><p class="ids">D1, D2, D3 (count of undated tasks), D7, D8, D9, D10, D11, A1</p>
+  <table>
+    <tr><td>Four weeks, one row per person, crunch days marked</td><td><a href="plan.html">Normal</a><a href="plan.html?stress">Stress (30 people, rows folded)</a></td></tr>
+    <tr><td>One row per kind of work</td><td><a href="plan.html?rows=kind">Open</a></td></tr>
+    <tr><td>One person: owned solid, kept informed outlined</td><td><a href="plan.html?person=Maya%20Chen">Maya Chen</a><a href="plan.html?person=Kevin%20Tan&stress">Stress</a></td></tr>
+    <tr><td>One slice of the work</td><td><a href="plan.html?work=cli">Clients</a><a href="plan.html?work=int">Internal</a><a href="plan.html?work=g:q4">Q4 planning group</a></td></tr>
+    <tr><td>Tasks only, events only</td><td><a href="plan.html?show=tasks">Tasks</a><a href="plan.html?show=events">Events</a><a href="plan.html?show=events&stress">Events, stress</a></td></tr>
+    <tr><td>Nothing in these four weeks, nothing yet</td><td><a href="plan.html?from=2031-03-03">No tasks in range</a><a href="plan.html?state=empty">Nothing yet</a></td></tr>
+    <tr><td>Rows, person and work menus</td><td><a href="plan.html?open=rows">Rows</a><a href="plan.html?open=person">Person</a><a href="plan.html?open=work">Work</a></td></tr>
+    <tr><td>Loading, events loading</td><td><a href="plan.html?state=loading">Everything</a><a href="plan.html?state=events-loading">Events only</a></td></tr>
+    <tr><td>Calendar not set up / couldn't load</td><td><a href="plan.html?state=events-off">Not set up</a><a href="plan.html?state=events-fail">Failed</a><a href="plan.html?state=events-fail&show=events">Failed, events only</a></td></tr>
+    <tr><td>No connection, live change from a colleague</td><td><a href="plan.html?state=offline">Offline</a><a href="plan.html?state=offline-empty">Offline, nothing loaded</a><a href="plan.html?state=live">Live change</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: month</h2><p class="ids">D5, D7, D8, D9, D10, D11</p>
+  <table>
+    <tr><td>This month (on phones: dots, and the chosen day listed below)</td><td><a href="plan.html?view=month">Normal</a><a href="plan.html?view=month&stress">Stress</a></td></tr>
+    <tr><td>Tasks only, events only</td><td><a href="plan.html?view=month&show=tasks">Tasks</a><a href="plan.html?view=month&show=events">Events</a></td></tr>
+    <tr><td>Nothing in a month</td><td><a href="plan.html?view=month&month=2031-03">Open</a><a href="plan.html?view=month&state=empty">Nothing yet</a></td></tr>
+    <tr><td>Loading, calendar failed, no connection</td><td><a href="plan.html?view=month&state=loading">Loading</a><a href="plan.html?view=month&state=events-fail">Calendar failed</a><a href="plan.html?view=month&state=offline">Offline</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: one day</h2><p class="ids">D4, D5, D9, D10, D11</p>
+  <table>
+    <tr><td>First look: today, with due, starting and under way</td><td><a href="plan.html?view=day">Normal</a><a href="plan.html?view=day&stress">Stress (60 tasks, 25 events)</a></td></tr>
+    <tr><td>Nothing today: lands on the next day with something</td><td><a href="plan.html?view=day&state=free-today">Open</a></td></tr>
+    <tr><td>Nothing on a chosen day</td><td><a href="plan.html?view=day&date=2031-03-04">Open</a><a href="plan.html?view=day&state=empty">Nothing yet</a></td></tr>
+    <tr><td>One person's day, events only</td><td><a href="plan.html?view=day&person=Sarah%20Lim">Sarah Lim</a><a href="plan.html?view=day&show=events">Events only</a></td></tr>
+    <tr><td>Loading, calendar not set up or failed, no connection</td><td><a href="plan.html?view=day&state=loading">Loading</a><a href="plan.html?view=day&state=events-off">Not set up</a><a href="plan.html?view=day&state=events-fail">Failed</a><a href="plan.html?view=day&state=offline">Offline</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="plan.html?view=day&state=live">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: people</h2><p class="ids">D1 (who carries what), D6, D11</p>
+  <table>
+    <tr><td>Everyone: owned and informed, deadlines ahead</td><td><a href="plan.html?view=people">Normal</a><a href="plan.html?view=people&stress">Stress (30 people, search)</a></td></tr>
+    <tr><td>One person: responsible for, kept informed on (with their part)</td><td><a href="plan.html?view=people&person=Kevin%20Tan">Kevin Tan</a><a href="plan.html?view=people&person=Maya%20Chen">Maya Chen</a><a href="plan.html?view=people&person=Rina%20Hartono&stress">Stress</a></td></tr>
+    <tr><td>A person with no tasks</td><td><a href="plan.html?view=people&person=Joko%20Susanto">Open</a></td></tr>
+    <tr><td>One kind of work</td><td><a href="plan.html?view=people&work=pro">Prospects</a></td></tr>
+    <tr><td>Loading, nothing yet</td><td><a href="plan.html?view=people&state=loading">Loading</a><a href="plan.html?view=people&state=empty">Nothing yet</a></td></tr>
+  </table></section>
+
   <section class="panel glass"><h2>Moving around on phones</h2><p class="ids">A2, A4</p>
   <table>
     <tr><td>Tab bar, raised add button, More</td><td><a href="index.html?open=more">More sheet</a></td></tr>
@@ -91,7 +132,6 @@
 
   <section class="panel glass"><h2>Coming in later sessions</h2>
   <table class="later">
-    <tr><td>Plan</td><td>D1, D4 to D10</td></tr>
     <tr><td>Companies, fields and options</td><td>B1 to B14, C1 to C3, E1</td></tr>
     <tr><td>Qualification notes</td><td>U1 to U8, E1</td></tr>
     <tr><td>Past clients</td><td>R1 to R9, E1</td></tr>

@@ -13,7 +13,7 @@
 
   /* ---------- Normal data ---------- */
   function normal() {
-    const people = ['Rina Hartono', 'Kevin Tan', 'Dimas Prasetyo', 'Aditya Wijaya', 'Sarah Lim', 'Maya Chen'];
+    const people = ['Rina Hartono', 'Kevin Tan', 'Dimas Prasetyo', 'Aditya Wijaya', 'Sarah Lim', 'Maya Chen', 'Joko Susanto'];
     // Companies: only what tasks need here. "done" means the deal is done, so its tasks count as client work.
     const companies = [
       { id: 'hal', name: 'Halcyon Logistics', short: 'HL', stage: 'active', target: d(-1), last: d(-6) },
@@ -62,6 +62,9 @@
       T({ id: 't22', desc: 'Prepare the contract draft', co: 'pel', type: 'Proposal', prio: 'high', end: d(6), last: d(-3), resp: ['Rina Hartono'], inf: [{ name: 'Sarah Lim', note: 'backup' }] }),
       T({ id: 't23', desc: 'Check in after the go-live', co: 'tir', type: 'Follow-up', touch: 'Call', end: d(11), last: d(-1), resp: ['Sarah Lim'] }),
       T({ id: 't24', desc: 'Set up desks for new joiners', group: 'office', type: 'Admin', end: d(18), resp: ['Dimas Prasetyo'] }),
+      T({ id: 't29', desc: 'Research CRM integrations for the sales pipeline', group: 'ops', type: 'Admin', start: d(-4), resp: ['Kevin Tan'], inf: [{ name: 'Rina Hartono', note: 'decides' }] }),
+      T({ id: 't30', desc: 'Prepare the trade fair booth materials', group: 'q4', type: 'Admin', prio: 'medium', start: d(1), end: d(7), resp: ['Maya Chen', 'Sarah Lim'], inf: [{ name: 'Kevin Tan', note: 'staffs the booth' }] }),
+      T({ id: 't31', desc: 'Send the year-end pricing letter', co: 'mer', type: 'Renewal', touch: 'Email', start: d(14), end: d(21), last: d(-2), resp: ['Aditya Wijaya'] }),
       T({ id: 't28', desc: 'Draft the first outreach email', co: 'lum', type: 'Follow-up', touch: 'Email', prio: 'low', end: d(9), resp: ['Maya Chen'] }),
       // Finished
       T({ id: 'd1', desc: 'Send the welcome email', co: 'tir', type: 'Follow-up', touch: 'Email', end: d(-1), last: d(-1), resp: ['Sarah Lim'], done: true, doneAt: d(-1) }),
@@ -85,7 +88,14 @@
       ev({ date: d(8), title: 'Trade fair setup', allDay: true }),
       ev({ date: d(9), title: 'Trade fair', allDay: true }),
       ev({ date: d(9), title: 'Client dinner', start: '19:00', end: '21:00' }),
+      ev({ date: d(5), title: 'Partner webinar', start: '14:00', end: '15:00' }),
+      ev({ date: d(6), title: 'Weekly pipeline sync', start: '09:30', end: '10:15' }),
+      ev({ date: d(10), title: 'Quarterly review with Meridian Bank', start: '10:00', end: '12:00' }),
       ev({ date: d(13), title: 'Weekly pipeline sync', start: '09:30', end: '10:15' }),
+      ev({ date: d(16), title: 'Team offsite', allDay: true }),
+      ev({ date: d(17), title: 'Team offsite', allDay: true }),
+      ev({ date: d(20), title: 'Weekly pipeline sync', start: '09:30', end: '10:15' }),
+      ev({ date: d(23), title: 'Board update', start: '15:00', end: '16:00' }),
     ];
     return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice() };
   }
