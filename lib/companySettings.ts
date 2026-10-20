@@ -5,7 +5,7 @@
 // the browser until the launch import (task 4.8).
 import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { assertOnline, reportSnapshot } from "./connection";
+import { assertOnline, forgetSource, reportSnapshot, watchSource } from "./connection";
 import { db } from "./firebase";
 import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, type CompanyGroup } from "./companies";
 import { replaceFieldValue } from "./companyWrites";
@@ -158,22 +158,26 @@ const SETTINGS_REF = () => doc(db, "settings", "companies");
 
 export function useCompanySettings(): { settings: CompanySettings; loading: boolean; stored: boolean } {
   const [state, setState] = useState({ settings: DEFAULT_COMPANY_SETTINGS, loading: true, stored: false });
-  useEffect(
-    () =>
-      onSnapshot(
-        SETTINGS_REF(),
-        { includeMetadataChanges: true },
-        (snap) => {
-          reportSnapshot("settings", snap.metadata.fromCache);
-          setState({ settings: readCompanySettings(snap.data()), loading: false, stored: snap.exists() });
-        },
-        (error) => {
-          console.error("Unable to load the company settings", error);
-          setState((s) => ({ ...s, loading: false }));
-        }
-      ),
-    []
-  );
+  useEffect(() => {
+    watchSource("settings");
+    const unsubscribe = onSnapshot(
+      SETTINGS_REF(),
+      { includeMetadataChanges: true },
+      (snap) => {
+        reportSnapshot("settings", snap.metadata.fromCache);
+        setState({ settings: readCompanySettings(snap.data()), loading: false, stored: snap.exists() });
+      },
+      (error) => {
+        console.error("Unable to load the company settings", error);
+        forgetSource("settings"); // Firestore closes a listener that reports an error
+        setState((s) => ({ ...s, loading: false }));
+      }
+    );
+    return () => {
+      unsubscribe();
+      forgetSource("settings");
+    };
+  }, []);
   return state;
 }
 

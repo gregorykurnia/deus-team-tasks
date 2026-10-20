@@ -1,0 +1,682 @@
+/* Companies (guide 4.9, 4.10, 6.5). Values are the prototype's (assets/app.css, "The four groups", "Where to act" and
+   "The list"), taken from the tokens. Words sit on the -ink tones; rings and bars use the base colours. */
+
+.screenNote {
+  margin-top: 14px;
+}
+
+.panelNote {
+  margin: 4px 6px 8px;
+}
+
+.phoneSearch {
+  margin-top: 12px;
+}
+
+/* ---------- The four groups (B2) ---------- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.toApproach { --gc: var(--g-lead-ink); --gs: var(--g-lead-soft); --ring: var(--g-lead); }
+.active { --gc: var(--pro-ink); --gs: var(--pro-soft); --ring: var(--pro); }
+.dealDone { --gc: var(--cli-ink); --gs: var(--cli-soft); --ring: var(--cli); }
+.noOrNotNow { --gc: var(--int-ink); --gs: var(--int-soft); --ring: var(--int); }
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-radius: var(--r-l);
+  background: rgba(255, 255, 255, .55);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 10px 30px -18px rgba(40, 46, 110, .35);
+  text-align: left;
+  transition: background .15s, box-shadow .15s;
+}
+
+.tile::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--gs), transparent);
+  pointer-events: none;
+}
+
+.tile:hover {
+  background: rgba(255, 255, 255, .82);
+}
+
+.tile[aria-pressed="true"] {
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--ring), 0 18px 40px -20px var(--ring);
+}
+
+.tileTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: var(--w-bold);
+}
+
+.tile[aria-pressed="true"] .tileTop {
+  color: var(--ink);
+}
+
+.tileTop i {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--gs);
+  color: var(--gc);
+}
+
+.tileCount {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  font-size: 34px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: var(--num);
+}
+
+.tile small {
+  position: relative;
+  z-index: 1;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+}
+
+/* ---------- Where to act (B6, B7) ---------- */
+.wta {
+  margin-top: 20px;
+}
+
+.wtaHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 10px 4px;
+  font-size: 15px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.01em;
+}
+
+.wtaHead span {
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+}
+
+.wtaGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.blue { --tc: var(--blue); --tci: var(--blue-ink); --ts: var(--blue-soft); }
+.red { --tc: var(--red); --tci: var(--red-ink); --ts: var(--red-soft); }
+.amber { --tc: var(--amber); --tci: var(--amber-ink); --ts: var(--amber-soft); }
+.violet { --tc: var(--violet); --tci: var(--violet); --ts: var(--violet-soft); }
+
+.act {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 14px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 6px 16px -12px rgba(40, 46, 110, .35);
+  text-align: left;
+}
+
+.act:hover {
+  background: var(--surface);
+}
+
+.act[aria-pressed="true"] {
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--tc), 0 12px 26px -16px var(--tc);
+}
+
+.actTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actTop i {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ts);
+  color: var(--tci);
+}
+
+.actTop b {
+  font-size: 24px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+  font-variant-numeric: var(--num);
+}
+
+.of {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.actLabel {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-bold);
+}
+
+.actBar {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+}
+
+.actBar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--tc);
+}
+
+/* ---------- The panel: filters, results line, list ---------- */
+.panel {
+  min-width: 0;
+  margin-top: 18px;
+  padding: 8px 8px 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-l);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 12px;
+}
+
+.result {
+  margin: 0;
+  padding: 0 14px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.result b {
+  color: var(--ink-2);
+}
+
+.linkButton {
+  margin-left: 10px;
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+  padding: 0 6px;
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+/* ---------- The list (B10): the name stays put when it scrolls sideways ---------- */
+.wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  min-width: var(--minw);
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  gap: 14px;
+  align-items: center;
+  margin: 0 6px;
+  padding: 0 8px 0 14px;
+}
+
+.head {
+  padding-top: 4px;
+  padding-bottom: 8px;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.sortHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-weight: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sortHead:hover,
+.sortHead[aria-current] {
+  color: var(--ink);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+}
+
+.row {
+  min-height: 62px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+  border-radius: var(--r-m);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-row);
+  transition: box-shadow .15s, background .15s;
+}
+
+.row:hover {
+  background: var(--surface);
+  box-shadow: var(--shadow-hover);
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.row .name,
+.head .name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  align-self: stretch;
+  margin: -9px 0 -9px -14px;
+  padding: 9px 0 9px 14px;
+  border-radius: var(--r-m) 0 0 var(--r-m);
+  background: var(--surface);
+}
+
+/* The head's pinned cell fades out to the right, so the other heads never run into it when the list scrolls sideways. */
+.head .name {
+  margin: 0 0 0 -14px;
+  padding: 0 14px 0 14px;
+  background: linear-gradient(90deg, var(--surface-sheet) 85%, transparent);
+}
+
+.mono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--gs);
+  color: var(--gc);
+  font-size: 13px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+}
+
+.who {
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--t-h4);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-h4);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.meta {
+  min-width: 0;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A value: the field's label is for screen readers on large screens and shows on phones. */
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 40px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-medium);
+}
+
+.lbl {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tx {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.long .tx {
+  display: -webkit-box;
+  line-height: 1.45;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.none {
+  color: var(--faint);
+}
+
+.dv,
+.nv {
+  font-variant-numeric: var(--num);
+  white-space: nowrap;
+}
+
+.redWords {
+  color: var(--red-ink);
+  font-weight: var(--w-bold);
+}
+
+.amberWords {
+  color: var(--amber-ink);
+  font-weight: var(--w-bold);
+}
+
+.nothing {
+  padding: 6px;
+}
+
+.elsewhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.hchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line-quiet), 0 4px 10px -6px rgba(30, 60, 130, .25);
+  font-size: 13px;
+  font-weight: var(--w-bold);
+}
+
+.hchip:hover {
+  box-shadow: 0 0 0 1px rgba(47, 107, 234, .35), 0 6px 14px -6px rgba(30, 60, 130, .3);
+}
+
+.hchip i {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--gs);
+  color: var(--gc);
+  font-size: var(--t-label);
+  font-style: normal;
+  font-weight: var(--w-heavy);
+  font-variant-numeric: var(--num);
+}
+
+@media (max-width: 1100px) {
+  .tiles {
+    gap: 10px;
+  }
+
+  .tile {
+    padding: 14px;
+  }
+
+  .tileCount {
+    font-size: 28px;
+  }
+
+  .wtaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 760px and under (--bp-list): the head goes (the Sort menu stays), the filters scroll sideways in one row, tiles go two
+   by two and each row becomes a card with labelled details; empty details are hidden. */
+@media (max-width: 760px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .table {
+    min-width: 0;
+  }
+
+  .head {
+    display: none;
+  }
+
+  .filters {
+    flex-wrap: nowrap;
+    margin: 0 -4px;
+    padding: 4px 10px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .row {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 4px;
+    padding: 12px 44px 12px 62px;
+  }
+
+  .row .name {
+    position: static;
+    flex: 1 0 100%;
+    margin: 0 0 2px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .row .mono {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+  }
+
+  .cell {
+    flex: none;
+    max-width: 100%;
+    min-height: 0;
+    padding: 2px 4px;
+    gap: 5px;
+    font-size: var(--t-label);
+  }
+
+  .lbl {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--muted);
+    font-weight: var(--w-semibold);
+  }
+
+  /* Chips and date pills say what they are on their own. */
+  .choice .lbl,
+  .pillCell .lbl {
+    display: none;
+  }
+
+  .emptyCell {
+    display: none;
+  }
+
+  .long {
+    flex-basis: 100%;
+  }
+
+  .wrap {
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 6px 4px 8px;
+  }
+
+  .tiles {
+    gap: 8px;
+  }
+
+  .tile {
+    padding: 12px 12px 11px;
+    border-radius: 18px;
+  }
+
+  .tileTop {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .tileTop i {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+  }
+
+  .tileCount {
+    margin-top: 6px;
+    font-size: 24px;
+  }
+
+  .tile small {
+    font-size: 11.5px;
+  }
+
+  .wta {
+    margin-top: 16px;
+  }
+
+  .wtaGrid {
+    gap: 8px;
+  }
+
+  .act {
+    gap: 5px;
+    padding: 10px 12px 12px;
+    border-radius: 16px;
+  }
+
+  .actTop b {
+    font-size: 20px;
+  }
+
+  .actLabel {
+    font-size: 12.5px;
+  }
+}

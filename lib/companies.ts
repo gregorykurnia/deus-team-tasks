@@ -104,6 +104,11 @@ const SEARCHED: Record<CompanyGroup, (keyof PipelineEntry)[]> = {
   noOrNotNow: ["company", "pic", "sourcing", "product", "reason"],
 };
 
+// The fields Search looks at in a group, for the highlight on the words that matched.
+export function searchedFields(group: CompanyGroup): string[] {
+  return SEARCHED[group] as string[];
+}
+
 // Search covers the name, contact person, source and products, plus industry
 // and notes in To approach, and the reason in No or not now.
 export function matchesCompanySearch(c: PipelineEntry, query: string): boolean {
@@ -140,7 +145,11 @@ export type CompanySortDir = "asc" | "desc";
 
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
 
-function companySortValue(c: PipelineEntry, key: string, numeric: boolean, today: string): string | number | null {
+function companySortValue(c: PipelineEntry, key: string, numeric: boolean, today: string, order?: string[]): string | number | null {
+  if (order) {
+    const at = order.indexOf(String(c[key] ?? ""));
+    return at < 0 ? null : at; // a choice field goes by the order of its options; a value that isn't one of them counts as empty
+  }
   if (key === "priority") return c.priority ? PRIORITY_RANK[c.priority] ?? 3 : null;
   if (key === "since") return c.date ? idleDays(c.date, today) : null; // days since the last action
   const v = c[key];
@@ -152,16 +161,16 @@ function companySortValue(c: PipelineEntry, key: string, numeric: boolean, today
   return typeof v === "string" ? v.toLowerCase() : String(v);
 }
 
-// Any field, either way round. Empty values always go last (guide 5.6).
+// Any field, either way round. Empty values always go last (guide 5.6). A choice field passes its option names as `order`.
 export function sortCompanies(
   companies: PipelineEntry[],
   key: string,
   dir: CompanySortDir,
-  { numeric = false, today = todayIso() }: { numeric?: boolean; today?: string } = {}
+  { numeric = false, today = todayIso(), order }: { numeric?: boolean; today?: string; order?: string[] } = {}
 ): PipelineEntry[] {
   const sign = dir === "asc" ? 1 : -1;
   return companies
-    .map((c, i) => ({ c, i, v: companySortValue(c, key, numeric, today) }))
+    .map((c, i) => ({ c, i, v: companySortValue(c, key, numeric, today, order) }))
     .sort((a, b) => {
       if (a.v === null || b.v === null) return a.v === b.v ? a.i - b.i : a.v === null ? 1 : -1;
       if (a.v < b.v) return -sign;

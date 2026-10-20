@@ -6,6 +6,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import type { HistoricalClient } from "@/lib/historicalClientTypes";
+import { useCompanySettings, type CompanySettings } from "@/lib/companySettings";
 import { companiesById, type CompaniesById } from "@/lib/kinds";
 import { useLiveQuery, type LiveRows } from "@/lib/liveQuery";
 import type { ProspectJournalEntry } from "@/lib/prospectJournalTypes";
@@ -23,6 +24,7 @@ interface Desk {
   groups: LiveRows<TaskGroup>; // in the order they were made
   companies: LiveRows<PipelineEntry>;
   companiesById: CompaniesById;
+  settings: { settings: CompanySettings; loading: boolean; stored: boolean }; // the team's company options and fields, or the defaults
   notes: LiveRows<ProspectJournalEntry>;
   pastClients: LiveRows<HistoricalClient>;
   flows: LiveRows<Flow>;
@@ -40,14 +42,15 @@ export function DeskData({ children }: { children: ReactNode }) {
   const tasks = useLiveQuery("tasks", tasksQuery, taskRows);
   const groups = useLiveQuery("taskGroups", taskGroupsQuery, groupRows);
   const companies = useLiveQuery("companies", companiesQuery, companyRows);
+  const settings = useCompanySettings();
   const notes = useLiveQuery("notes", notesQuery, toNotes);
   const pastClients = useLiveQuery("pastClients", pastClientsQuery, pastClientRows);
   const flows = useLiveQuery("flows", flowsQuery, flowRows);
   const byId = useMemo(() => companiesById(companies.rows), [companies.rows]);
 
   const desk = useMemo(
-    () => ({ tasks, groups, companies, companiesById: byId, notes, pastClients, flows }),
-    [tasks, groups, companies, byId, notes, pastClients, flows]
+    () => ({ tasks, groups, companies, companiesById: byId, settings, notes, pastClients, flows }),
+    [tasks, groups, companies, byId, settings, notes, pastClients, flows]
   );
   return <DeskContext.Provider value={desk}>{children}</DeskContext.Provider>;
 }
@@ -62,6 +65,7 @@ export const useTasks = () => useDesk().tasks;
 export const useTaskGroups = () => useDesk().groups;
 export const useCompanies = () => useDesk().companies;
 export const useCompaniesById = () => useDesk().companiesById;
+export const useCompanyOptions = () => useDesk().settings;
 export const useNotes = () => useDesk().notes;
 export const usePastClients = () => useDesk().pastClients;
 export const useFlows = () => useDesk().flows;
