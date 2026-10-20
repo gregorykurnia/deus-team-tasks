@@ -4,8 +4,8 @@
 |---|---|
 | 1. Three directions | Round 1 (A, B, C) rejected as too plain, see D-002; kept in `round-1/`. Round 2 built: `d-glass`, `e-tide`, `f-bento`. Owner chose a mix of D and F in calm blue (D-003): `g-glass-blue`. **Approved (D-004). Done.** |
 | 2. Full prototype | Built in `prototype/` (open `prototype/index.html`; `prototype/map.html` lists every screen and state). Groups 1 and 2 done: shell, Today, All tasks, task groups, task details, selecting several tasks (D-005 to D-008); Plan (D-009, approved D-010). Group 3 done: companies, fields and options, and export (D-011, D-012, approved D-013). Group 4 done: qualification notes (D-014, approved D-015). Group 5 built: past clients (D-016). Group 6 built: flows, installing and opening offline (D-017, D-018; board in `prototype/install.html`). Groups 5 and 6 approved (D-019). **Done.** |
-| 3. Design guide | Draft written: `design-guide.md` and `tokens.css` (contrast raised to AA, D-020, approved in D-021). Waiting for the owner's review of the guide as a whole. |
-| 4. Coverage | Not started |
+| 3. Design guide | `design-guide.md` and `tokens.css`. Contrast raised to AA (D-020, D-021). Approved (D-022). **Done.** |
+| 4. Coverage | Next, in a fresh session (Sonnet 5.5 High) |
 | 5. Freeze | Not started |
 
 Notes
