@@ -1,6 +1,6 @@
 # UI implementation plan
 
-**Status: DRAFT, waiting for the owner's approval** (Step 6 of `redesign/redesign-plan.md`). Agent C maps design → code only. Design gaps go to §7 and through the design-gap loop, never filled in from the old app.
+**Status: APPROVED by the owner (2026-10-20)** (Step 6 of `redesign/redesign-plan.md`). Agent C maps design → code only. Design gaps go to §7 and through the design-gap loop, never filled in from the old app.
 
 How to use it: the **task table in §5 is the build checklist** and the only place to tick. Work top to bottom, one task per session (`/clear` first). Check the model and effort against the task's row before starting, and read only that task's section below, the guide sections it names and its prototype page.
 
@@ -197,7 +197,7 @@ Done cells: date and commit, plus a short phrase only if something changed from 
 
 **1.6 Data additions, connection, calendar.** Backward compatible only: `tasks.completedAt` set on done and cleared on not done; `flows.updatedAt`; `answer` on No-or-not-now companies; remove auto-seeding of sample data (Q7). `lib/connection.ts`: online state from `navigator.onLine` plus snapshot `fromCache`, last-loaded time, `OfflineError` guard for writes (notes exempt). `persistentLocalCache` in both Firestore setups. Calendar route returns `status: ok | off | failed`, 24-hour start and end times, all-day, link. **Done when** unit tests cover the guard and the route shape, smoke specs pass.
 
-**1.7 Shared company settings.** Firestore doc `settings/companies` in `clientsDb`: options per choice field (name, colour token from the nine `--opt-*` pairs, locked role `dealDone` / `followUp`), fields per group (label, type, shown, own). `lib/companySettings.ts` reads it, falling back to the built-in defaults when missing; rename an option updates every company in batches and reports how many; remove clears it; locked options can only be recoloured. The old UI keeps using localStorage until the merge; the import is task 4.8. Needs Q6. **Done when** unit tests cover rename, remove and lock rules against the emulator.
+**1.7 Shared company settings.** Firestore doc `settings/companies` in `db` (the `deus-team-tasks` project, whose rules are in this repo; Q6): options per choice field (name, colour token from the nine `--opt-*` pairs, locked role `dealDone` / `followUp`), fields per group (label, type, shown, own). `lib/companySettings.ts` reads it, falling back to the built-in defaults when missing; rename an option updates every company in batches and reports how many; remove clears it; locked options can only be recoloured. Add `match /settings/{docId}` to `firestore.rules` and publish it (`npx firebase deploy --only firestore:rules`; the owner logs in with `! npx firebase login`). The old UI keeps using localStorage until the merge; the import is task 4.8. **Done when** unit tests cover rename, remove and lock rules against the emulator, and the published rules allow `settings`.
 
 ### Phase 2: foundations
 
@@ -205,7 +205,7 @@ Done cells: date and commit, plus a short phrase only if something changed from 
 
 **2.2 Icons.** `ui/Icon.tsx` with every icon in the prototype's `ICONS` map plus guide 2.6's table; sizes 13–21. **Done when** the dev gallery shows them all.
 
-**2.3 App shell.** Route groups and pages (empty screens with titles), `DeskData` provider and readers, SideNav (areas with counts, task groups with star and open count, install entry, live dot), TabBar with the raised + (opens `?task=new`), More sheet, PageHeader (title, subtitle, search, main action; phone placement), ConnectionBanner and back-online toast. Refs: guide 3, 5.8; prototype `index.html` shell, `?open=more`, `?state=offline`. **Done when** every area is reachable in one step on desktop and two on a 390px phone, `aria-current` is set, and the offline banner appears with the emulator stopped.
+**2.3 App shell.** Route groups and pages (empty screens with titles), `DeskData` provider and readers, SideNav (brand per Q9: the DEUS mark and "DEUS Team Space"; areas with counts, task groups with star and open count, install entry, live dot), TabBar with the raised + (opens `?task=new`), More sheet, PageHeader (title, subtitle, search, main action; phone placement), ConnectionBanner and back-online toast. Refs: guide 3, 5.8; prototype `index.html` shell, `?open=more`, `?state=offline`. **Done when** every area is reachable in one step on desktop and two on a 390px phone, `aria-current` is set, and the offline banner appears with the emulator stopped.
 
 **2.4 Display components.** Buttons (all variants, busy, disabled), pills, tags, option chips, avatars and stacks, person chip, notices, empty states, skeletons, load and likelihood meters. Port from the prototype's CSS with the guide's changed values. A dev-only `/gallery` route (not built in production) shows each with its states. Refs: 4.1, 4.4, 4.5, 4.14, 4.15. **Done when** the gallery matches the prototype in a side-by-side screenshot.
 
@@ -249,7 +249,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 ### Phase 4: edge surfaces and launch
 
-**4.1 Install and PWA.** Install sheet (browser prompt, iPhone steps, installed notice), install entries hidden once installed, `manifest.ts` (name "DEUS Team Space", short name per what fits under an icon, theme `#eef3fb`, icons from the DEUS logo per Q9 with a maskable safe zone), launch screen, service worker with a per-build cache name, production-only registration, offline first-open empty states per area. Prototype `install.html`. Guide 6.9.
+**4.1 Install and PWA.** Install sheet (browser prompt, iPhone steps, installed notice), install entries hidden once installed, `manifest.ts` (name "DEUS Team Space", short name per what fits under an icon, theme `#eef3fb`, icons from `redesign/brand/deus-logo.jpeg` as supplied per Q9, the maskable one with the logo inside the safe zone on the same navy), launch screen, service worker with a per-build cache name, production-only registration, offline first-open empty states per area. Prototype `install.html`. Guide 6.9.
 
 **4.2 Live and leftovers.** Arrive glow and "Just changed" on every screen, the many-changes toast (N2), back online message, anything still open on the §4 checklist, and N1 / N3 once designed.
 
@@ -263,7 +263,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.7 Old files out.** Delete every file in the "Replaces" column of §3 and old helpers no longer used (`clientLocalConfig.ts` after 4.8, `clientColumnResize.ts`, `colors.ts`, seed files), drop Geist. `scripts/old-names-check.sh` greps `app/ desk/ ui/ features/ styles/` for the old component and file names; it must print nothing.
 
-**4.8 Data step for launch.** A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections. Needs Q6.
+**4.8 Data step for launch.** A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections.
 
 ## 6. Rollback
 
@@ -279,7 +279,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N2 | The many-changes toast names the colleague ("Kevin Tan’s changes just came in"), but nobody signs in, so the app can't know who changed something. | 4.2 |
 | N3 | Today's search says it covers tasks, companies and notes, but no results for companies and notes are designed (the prototype sends the query to All tasks only). | 3.2 (search only) |
 
-**Questions for the owner** (answered 2026-10-20: the recommendation for each, and Q5 as below)
+**Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 
 | # | Question | Answer |
 |---|---|---|
@@ -288,10 +288,10 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | Q3 | Which stored status is the locked "Follow-up due". | "To Follow Up". "Client / Partner Done Deal" is Deal done. |
 | Q4 | Whose company options and fields become the team's at launch. | The owner's main computer. |
 | Q5 | App name and logo. | **DEUS Team Space**, with the DEUS logo. Replaces "Team desk" and the striped placeholder everywhere (2.3 side bar, 4.1 manifest, icons, launch screen). |
-| Q6 | The client tracker project's (`deus-client-tracker`) Firestore rules aren't in this repo; the new `settings` collection must be allowed. | Check them in the Firebase console and add the rules file to the repo. **Still open:** the owner pastes the rules (Firestore → Rules in `deus-client-tracker`). Blocks 1.7. |
+| Q6 | Where the shared company settings live, given the `deus-client-tracker` rules aren't in this repo. | In `deus-team-tasks` (`settings` collection), whose rules are in `firestore.rules`. The client tracker's rules aren't needed. |
 | Q7 | Stop re-creating sample data when a collection is empty. | Yes (1.6). |
 | Q8 | Add the selecting-several story (D-008) to the inventory. | The owner adds it on their side. |
-| Q9 | The only logo file in the repo is `public/icon-512x512.png`: a cream mark and "DEUS / Human Capital Services" on dark navy. Guide 6.9 puts the logo on a **light** tile, where the cream mark would disappear. | **Open:** the owner supplies the logo as SVG or transparent PNG, ideally a version for light backgrounds. If there is none, the owner decides (brief: branding clashes are the owner's call) between a dark navy icon tile and a dark recolour of the mark. Blocks 4.1 only; 2.3 can start with the mark as an image. |
+| Q9 | The logo (`redesign/brand/deus-logo.jpeg`, 1068px, cream on dark navy) disappears on the guide's light icon tile (6.9). | Keep the logo **as supplied** (brief: the logo stays as it is). App icon and launch-screen logo: the logo on its own navy square. Side bar brand (3): the mark only (the square with the person) in a small navy rounded square, beside "DEUS Team Space"; the tagline is left out at that size. Deliberate difference from guide 3 and 6.9, by the owner's call reserved in guide 9; 4.4 logs it, not a fix. |
 
 ## 8. Done when
 
