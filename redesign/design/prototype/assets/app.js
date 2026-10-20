@@ -48,6 +48,8 @@
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+    minus: '<path d="M6 12h12"/>',
+    checks: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="m8 12 3 3 5-6"/>',
     done: '<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
   };
   P.ic = (name, cls) => `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -236,7 +238,7 @@
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   P.el = el;
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && layers.length) { e.preventDefault(); P.closeTop(); }
+    if (e.key === 'Escape' && layers.length) { e.preventDefault(); e.stopImmediatePropagation(); P.closeTop(); }
   });
 
   /* Popover menu anchored to a button */

@@ -14,7 +14,11 @@
     sort: q.get('sort') || '',
     dir: q.get('dir') || '',
     limit: 100,
+    sel: null, // Set of selected ids while selecting several tasks (D-008); null when not selecting
+    selAll: false, // every task matching the current filters, beyond the ones shown
   };
+  let lastSorted = [];
+  let pendingMove = null; // tasks waiting for a group created from the move menu
 
   if (ui.group && !P.group(ui.group)) ui.group = null;
 
@@ -140,15 +144,24 @@
     if (!cols.includes('end') && ui.view === 'open' && P.deadline(t).tone !== 'calm') meta.push(`<span>${esc(P.deadline(t).label)}</span>`);
     if (P.liveIds && P.liveIds.has(t.id)) meta.push('<span class="live-tag">Just changed</span>');
     const isDone = t.done;
-    return `<div class="trow k-${k}${isDone ? ' is-done' : ''}${t.id === P.justDone ? ' is-leaving' : ''}${P.flash.has(t.id) ? ' is-new' : ''}" data-open="${t.id}" style="--cols:${gridCols()}">
-      <button class="check" data-done="${t.id}" aria-label="${isDone ? 'Mark not done' : 'Mark done'}: ${esc(t.desc)}">${ic('check')}</button>
+    const picked = ui.sel && (ui.selAll || ui.sel.has(t.id));
+    const lead = ui.sel
+      ? `<button class="selbox" data-sel="${t.id}" role="checkbox" aria-checked="${picked ? 'true' : 'false'}" aria-label="Select: ${esc(t.desc)}">${ic('check')}</button>`
+      : `<button class="check" data-done="${t.id}" aria-label="${isDone ? 'Mark not done' : 'Mark done'}: ${esc(t.desc)}">${ic('check')}</button>`;
+    return `<div class="trow k-${k}${isDone ? ' is-done' : ''}${picked ? ' is-sel' : ''}${t.id === P.justDone ? ' is-leaving' : ''}${P.flash.has(t.id) ? ' is-new' : ''}" data-open="${t.id}" style="--cols:${gridCols()}">
+      ${lead}
       <div class="desc"><p class="tt">${esc(t.desc)}</p>${meta.length ? `<p class="meta">${meta.join('')}</p>` : ''}</div>
       ${visCols().map((c) => cell(t, c)).join('')}</div>`;
   }
   function headRow() {
     const k = sortKey(); const d = sortDir();
     const th = (label, key) => (key ? `<button data-sort="${key}"${k === key ? ` aria-sort="${d === 'asc' ? 'ascending' : 'descending'}"` : ''}>${label}${k === key ? ic(d === 'asc' ? 'up' : 'down') : ''}</button>` : `<span>${label}</span>`);
-    return `<div class="thead" style="--cols:${gridCols()}"><span></span>${th('Description', 'desc')}${visCols().map((c) => {
+    let lead = '<span></span>';
+    if (ui.sel) {
+      const n = selectedIds().length; const all = n && n >= lastSorted.length;
+      lead = `<button class="selbox" data-selpage role="checkbox" aria-checked="${all ? 'true' : (n ? 'mixed' : 'false')}" aria-label="Select every task in the list">${ic(n && !all ? 'minus' : 'check')}</button>`;
+    }
+    return `<div class="thead" style="--cols:${gridCols()}">${lead}${th('Description', 'desc')}${visCols().map((c) => {
       if (c.id === 'end' && ui.view === 'done') return th('Finished', 'doneAt');
       return th(c.label, c.sort);
     }).join('')}</div>`;
@@ -195,6 +208,7 @@
     const k = sortKey();
     parts.push(`<button class="fbtn" data-menu="sort" aria-haspopup="menu">${ic('sort')}Sort <span class="v">${SORTS[k]}, ${dirLabels(k)[sortDir() === 'asc' ? 0 : 1].toLowerCase()}</span>${ic('down')}</button>`);
     parts.push('<span class="sp"></span>');
+    parts.push(`<button class="fbtn${ui.sel ? ' on' : ''}" data-selmode aria-pressed="${!!ui.sel}">${ic('checks')}${ui.sel ? 'Selecting' : 'Select'}</button>`);
     parts.push(`<button class="fbtn" data-menu="cols" aria-haspopup="menu">${ic('cols')}Details shown${ic('down')}</button>`);
     return `<div class="filters" role="toolbar" aria-label="Filter and sort">${parts.join('')}</div>`;
   }
@@ -222,6 +236,8 @@
     const filtered = apply(scoped);
     const sorted = sortList(filtered);
     const shown = sorted.slice(0, ui.limit);
+    lastSorted = sorted;
+    if (ui.sel && !sorted.length) ui.sel = null;
     const g = P.group(ui.group);
     let body;
     if (P.loading && P.state !== 'offline-empty') {
@@ -241,8 +257,78 @@
     P.$('#main').innerHTML = `${header()}${P.offlineBanner()}${groupChips()}
       <label class="search glass m-search">${ic('search')}<span class="sr">Search tasks</span><input type="search" data-q value="${esc(ui.q)}" placeholder="${g ? 'Search this group' : 'Search tasks'}"></label>
       ${tbar(scoped)}
-      <section class="panel glass" style="margin-top:14px" aria-label="${g ? esc(g.name) : 'Tasks'}">${P.loading ? '' : filters()}${capture}${body}</section>`;
+      <section class="panel glass" style="margin-top:14px" aria-label="${g ? esc(g.name) : 'Tasks'}">${P.loading ? '' : filters()}${ui.sel ? '' : capture}${body}</section>`;
+    selBar();
     syncUrl();
+  }
+
+  /* ---------- Selecting several tasks (D-008) ---------- */
+  function selectedIds() {
+    if (!ui.sel) return [];
+    if (ui.selAll) return lastSorted.map((t) => t.id);
+    const live = new Set(lastSorted.map((t) => t.id));
+    return Array.from(ui.sel).filter((id) => live.has(id));
+  }
+  function startSelecting(ids) { ui.sel = new Set(ids || []); ui.selAll = false; render(); }
+  function stopSelecting() { ui.sel = null; ui.selAll = false; render(); const b = P.$('[data-selmode]'); if (b) b.focus(); }
+  function toggleSel(id) {
+    if (ui.selAll) { ui.sel = new Set(lastSorted.map((t) => t.id)); ui.selAll = false; }
+    if (ui.sel.has(id)) ui.sel.delete(id); else ui.sel.add(id);
+    render();
+  }
+  function selBar() {
+    let bar = P.$('#selbar');
+    if (!ui.sel) { if (bar) bar.remove(); document.body.classList.remove('selecting'); return; }
+    if (!bar) { bar = P.el('<div id="selbar" class="selbar" role="region" aria-label="Selected tasks"></div>'); document.body.appendChild(bar); }
+    document.body.classList.add('selecting');
+    const ids = selectedIds(); const n = ids.length; const total = lastSorted.length;
+    const count = n === 0 ? 'Choose tasks' : (ui.selAll && total > 1 ? `All ${num(n)} selected` : `${num(n)} selected`);
+    const more = !ui.selAll && total > n ? `<button class="link" data-selall>Select all ${num(total)}</button>` : '';
+    const off = n ? '' : ' disabled';
+    const doneBtn = ui.view === 'done'
+      ? `<button class="sb" data-bulk="reopen"${off}>${ic('undo')}<span>Mark not done</span></button>`
+      : `<button class="sb" data-bulk="done"${off}>${ic('check')}<span>Mark done</span></button>`;
+    bar.innerHTML = `<div class="sb-count" role="status"><b>${count}</b>${more}</div>
+      <div class="sb-acts">${doneBtn}
+        <button class="sb" data-bulk="move"${off}>${ic('folder')}<span>Move to group</span></button>
+        <button class="sb red" data-bulk="delete"${off}>${ic('trash')}<span>Delete</span></button></div>
+      <button class="icon-btn" data-bulk="cancel" aria-label="Stop selecting" title="Stop selecting (Esc)">${ic('x')}</button>`;
+  }
+  function bulk(action, btn) {
+    const ids = selectedIds(); if (!ids.length && action !== 'cancel') return;
+    const tasks = ids.map((id) => P.task(id)).filter(Boolean);
+    const n = tasks.length;
+    if (action === 'cancel') return stopSelecting();
+    if (P.offline && action !== 'move') { P.toast(`No connection. ${n === 1 ? 'The task wasn\'t' : 'The tasks weren\'t'} changed.`, { err: true }); return; }
+    if (action === 'done' || action === 'reopen') {
+      const was = tasks.map((t) => [t, t.done, t.doneAt]);
+      tasks.forEach((t) => { t.done = action === 'done'; t.doneAt = action === 'done' ? P.iso(0) : null; });
+      ui.sel = null; ui.selAll = false; P.render();
+      P.toast(action === 'done' ? `${plural(n, 'task')} marked done` : `${plural(n, 'task')} moved back to open tasks`, { action: 'Undo', onAction: () => { was.forEach(([t, d, at]) => { t.done = d; t.doneAt = at; P.flash.add(t.id); }); P.render(); } });
+      return;
+    }
+    if (action === 'delete') {
+      P.confirm({ title: `Delete ${plural(n, 'task')}?`, quote: n === 1 ? tasks[0].desc : null, body: `${n === 1 ? 'It' : 'They'} will be removed for everyone on the team.`, ok: `Delete ${plural(n, 'task')}`, onOk: () => {
+        const gone = new Set(ids);
+        P.db.tasks = P.db.tasks.filter((t) => !gone.has(t.id));
+        ui.sel = null; ui.selAll = false; P.render(); P.toast(`${plural(n, 'task')} deleted`);
+      } });
+      return;
+    }
+    if (action === 'move') {
+      const internal = tasks.filter((t) => !t.co); const coN = n - internal.length;
+      const note = coN ? `<p class="foot">${coN === n ? 'Only internal work goes in task groups. These tasks belong to companies.' : `${plural(coN, 'company task')} will stay with ${coN === 1 ? 'its company' : 'their companies'}.`}</p>` : '';
+      const opts = internal.length ? P.sortedGroups().map((g) => `<button class="mi" data-v="${g.id}">${P.gi(g)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</span></button>`).join('') + `<hr><button class="mi" data-v="">${ic('x')}<span>No group</span></button><button class="mi" data-v="+new">${ic('plus')}<span>New group…</span></button>` : '';
+      P.menu(btn, `<h4>Move ${plural(internal.length, 'internal task')} to</h4>${opts}${note}`, (v) => {
+        if (v === '+new') { P.closeTop(); pendingMove = internal; P.openGroup(null); return true; }
+        if (P.offline) { P.toast('No connection. The tasks weren\'t moved.', { err: true }); return; }
+        const g = P.group(v);
+        const before = internal.map((t) => [t, t.group]);
+        internal.forEach((t) => { t.group = v || null; P.flash.add(t.id); });
+        ui.sel = null; ui.selAll = false; P.render();
+        P.toast(`Moved ${plural(internal.length, 'task')} ${g ? 'to ' + g.name : 'out of their groups'}${coN ? `. ${plural(coN, 'company task')} stayed put.` : ''}`, { action: 'Undo', onAction: () => { before.forEach(([t, gid]) => { t.group = gid; P.flash.add(t.id); }); P.render(); } });
+      }, { alignRight: innerWidth > 760 });
+    }
   }
 
   /* ---------- Menus ---------- */
@@ -296,6 +382,9 @@
     const mb = t.closest('[data-menu]'); if (mb) { openMenu(mb.dataset.menu, mb); return; }
     if (t.closest('[data-gmenu]')) { openMenu('gmenu', t.closest('[data-gmenu]')); return; }
     if (t.closest('[data-star]')) { P.toggleImportant(ui.group); return; }
+    if (t.closest('[data-selmode]')) { if (ui.sel) stopSelecting(); else startSelecting(); return; }
+    if (t.closest('[data-selpage]')) { const all = selectedIds().length >= lastSorted.length; ui.selAll = false; ui.sel = new Set(all ? [] : lastSorted.slice(0, ui.limit).map((x) => x.id)); render(); return; }
+    const sb = t.closest('[data-sel]'); if (sb) { e.stopPropagation(); toggleSel(sb.dataset.sel); return; }
     const done = t.closest('[data-done]');
     if (done) { e.stopPropagation(); const task = P.task(done.dataset.done); if (task.done) P.reopen(task.id); else P.markDone(task.id); return; }
     const k = t.closest('[data-kind]'); if (k) { ui.kind = k.dataset.kind; ui.limit = 100; if (ui.kind === 'int') ui.idle = 0; render(); return; }
@@ -305,8 +394,16 @@
     const r = t.closest('[data-range]'); if (r) { ui.range = r.dataset.range; render(); return; }
     if (t.closest('[data-more]')) { ui.limit += 100; render(); return; }
     const row = t.closest('[data-open]');
-    if (row && !t.closest('a')) P.openTask(row.dataset.open);
+    if (row && !t.closest('a')) { if (ui.sel) toggleSel(row.dataset.open); else P.openTask(row.dataset.open); }
   });
+  // The selection bar lives outside #app, at the bottom of the screen.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('#selbar [data-bulk], #selbar [data-selall]');
+    if (!b || b.disabled) return;
+    if (b.dataset.selall !== undefined) { ui.selAll = true; render(); return; }
+    bulk(b.dataset.bulk, b);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ui.sel && !document.querySelector('.menu, .dialog, .sheet')) stopSelecting(); });
   P.$('#app').addEventListener('keydown', (e) => {
     if (e.target.matches('[data-capture]') && e.key === 'Enter') {
       const val = e.target.value; if (!val.trim()) return;
@@ -327,13 +424,18 @@
     }, 180);
   });
 
-  P.onGroupCreated = (g) => { ui.group = g.id; ui.view = 'open'; ui.q = ''; ui.due = ''; ui.type = ''; P.groupId = g.id; P.render(); P.toast(`Group “${g.name}” created`); };
+  P.onGroupCreated = (g) => {
+    if (pendingMove) {
+      const n = pendingMove.length; pendingMove.forEach((t) => { t.group = g.id; P.flash.add(t.id); }); pendingMove = null;
+      ui.sel = null; ui.selAll = false; P.render(); P.toast(`Group “${g.name}” created, and ${plural(n, 'task')} moved into it`); return;
+    }
+    ui.group = g.id; ui.view = 'open'; ui.q = ''; ui.due = ''; ui.type = ''; P.groupId = g.id; P.render(); P.toast(`Group “${g.name}” created`); };
   P.onGroupDeleted = (g) => { if (ui.group === g.id) { ui.group = null; ui.kind = 'int'; P.groupId = null; } P.render(); P.toast(`Group “${g.name}” deleted. Its tasks are now ungrouped.`); };
 
   P.boot({
     page: 'tasks', groupId: ui.group, render,
     states: [['', 'Normal'], ['no-clients', 'No client work'], ['empty', 'Nothing yet (no tasks)'], ['loading', 'Loading'], ['offline', 'No connection'], ['offline-empty', 'No connection, nothing loaded'], ['group-fail', 'Creating a group fails'], ['live', 'Live change from a colleague']],
-    opens: [['task-new', 'New task (quick)'], ['task-new-full', 'New task (all details)'], ['task-required', 'Description missing'], ['task-edit', 'Edit a company task'], ['task-edit-int', 'Edit an internal task'], ['task-done', 'A finished task'], ['task-names', 'Name suggestions'], ['task-names-new', 'Adding a new name'], ['task-delete', 'Delete a task'], ['columns', 'Details shown'], ['sort', 'Sort menu'], ['idle', 'No action for'], ['group-new', 'New task group'], ['group-empty', 'Group name missing'], ['group-dup', 'Group name taken'], ['group-fail', 'Group couldn\'t be created'], ['group-rename', 'Rename a group'], ['group-delete', 'Delete a group'], ['more', 'Phone: More']],
+    opens: [['task-new', 'New task (quick)'], ['task-new-full', 'New task (all details)'], ['task-required', 'Description missing'], ['task-edit', 'Edit a company task'], ['task-edit-int', 'Edit an internal task'], ['task-done', 'A finished task'], ['task-names', 'Name suggestions'], ['task-names-new', 'Adding a new name'], ['task-delete', 'Delete a task'], ['columns', 'Details shown'], ['sort', 'Sort menu'], ['idle', 'No action for'], ['group-new', 'New task group'], ['group-empty', 'Group name missing'], ['group-dup', 'Group name taken'], ['group-fail', 'Group couldn\'t be created'], ['group-rename', 'Rename a group'], ['group-delete', 'Delete a group'], ['select', 'Selecting several'], ['select-none', 'Selecting, none chosen yet'], ['select-all', 'All matching selected'], ['select-move', 'Move selected to a group'], ['select-delete', 'Delete selected'], ['more', 'Phone: More']],
     afterBoot() {
       if (q.get('focus') === 'search') { const i = P.$(innerWidth < 900 ? '.m-search input' : '.bar .search input'); if (i) i.focus(); }
       if (P.state === 'live') setTimeout(() => {
@@ -346,6 +448,14 @@
       }, 1200);
     },
     onOpen(o) {
+      if (o.startsWith('select')) {
+        if (o === 'select-none') return startSelecting();
+        startSelecting(lastSorted.slice(0, 3).map((x) => x.id));
+        if (o === 'select-all') { ui.selAll = true; render(); }
+        if (o === 'select-move') { ui.sel = new Set(lastSorted.filter((x) => !x.co).slice(0, 2).concat(lastSorted.filter((x) => x.co).slice(0, 1)).map((x) => x.id)); render(); bulk('move', P.$('#selbar [data-bulk="move"]')); }
+        if (o === 'select-delete') bulk('delete');
+        return;
+      }
       const map = { columns: 'cols', sort: 'sort', idle: 'idle' };
       if (map[o]) { const b = P.$(`[data-menu="${map[o]}"]`); if (b) openMenu(map[o], b); }
     },

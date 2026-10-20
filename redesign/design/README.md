@@ -3,7 +3,7 @@
 | Stage | Status |
 |---|---|
 | 1. Three directions | Round 1 (A, B, C) rejected as too plain, see D-002; kept in `round-1/`. Round 2 built: `d-glass`, `e-tide`, `f-bento`. Owner chose a mix of D and F in calm blue (D-003): `g-glass-blue`. **Approved (D-004). Done.** |
-| 2. Full prototype | In progress in `prototype/` (open `prototype/index.html`; `prototype/map.html` lists every screen and state). Group 1 of 6 done: shell, Today, All tasks, task groups, task details (D-005 to D-007). Next: group 2, Plan. |
+| 2. Full prototype | In progress in `prototype/` (open `prototype/index.html`; `prototype/map.html` lists every screen and state). Group 1 of 6 done: shell, Today, All tasks, task groups, task details, selecting several tasks (D-005 to D-008). Next: group 2, Plan. |
 | 3. Design guide | Not started |
 | 4. Coverage | Not started |
 | 5. Freeze | Not started |
