@@ -175,7 +175,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | R3 | **Phase 3 review** | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-3.md`; later items added to 4.2, 4.3) |
 | R3.1 | Phase 3 review fixes (listed in `redesign/reviews/phase-3.md`); then tick Phase 3 in `redesign/redesign-plan.md` | Opus 5.5 High | 2026-10-20 (same commit as R3; gaps N13–N15 provisional) |
 | **4** | **Phase 4: edge surfaces and launch** | | |
-| 4.1 | Install and PWA: install sheet, manifest, icons, launch screen, service worker, offline first open | Sonnet 5.5 High | |
+| 4.1 | Install and PWA: install sheet, manifest, icons, launch screen, service worker, offline first open | Sonnet 5.5 High | 2026-10-20 · this commit (install sheet is `?install=1`; short name "DEUS Space"; iPhone launch screen is in-app, no startup images; gap N16 provisional; Android install and the iPhone steps need a real-device check, left to 4.4) |
 | 4.2 | Live changes and the rest of the §4 checklist (needs N1–N3 built here once designed) | Sonnet 5.5 High | |
 | 4.3 | Smoke tests rewritten for the new UI, all passing | Opus 5.5 High | |
 | 4.4 | Screenshots against the prototype, every state on `map.html`, phone and desktop | Sonnet 5.5 High | |
@@ -293,6 +293,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N13 | A change that wasn't saved, only partly saved, or waits for the connection (R3): the guide's save line has Saving…, Saved and kept on this device only. Provisional: notes and flows say "Not saved." in red ink with Try again (the text stays, and goes out with the next save); flows being edited offline keep the fields read only with "Not saved yet. Saves when you’re back online."; a bulk task change that only partly saved says "450 of 1,200 tasks marked done. Couldn’t mark the other 750 done…" with Undo for the saved part; an option rename whose companies didn't all follow says so with Try again. | nothing (provisional built) |
 | N14 | A task link opened offline when the task isn't on the device (R3). Provisional: the sheet stays open with a small empty state ("This task isn’t on this device yet. It will open once you are back online.") and opens the task when it arrives. | nothing (provisional built) |
 | N15 | "A company" chosen in the task sheet with no company picked (R3): it used to save as internal work. Provisional: a required-field error, "Choose the company this task is about, or switch to Internal work." | nothing (provisional built) |
+| N16 | The install sheet in a browser that neither offers installing nor is Safari on iPhone or iPad (4.1), such as Firefox or desktop Safari. Provisional: the sheet keeps its icon and three perks, with an info notice ("This browser can’t install it from here. In Chrome or Edge, use the install button at the end of the address bar. On iPhone or iPad, open this page in Safari.") and a Close button. | nothing (provisional built) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

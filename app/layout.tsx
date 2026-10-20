@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import LaunchScreen from "@/features/install/LaunchScreen";
+import ServiceWorker from "@/features/install/ServiceWorker";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -10,13 +11,13 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DEUS Platform",
-  description: "DEUS handover plan — tasks, timeline, and assignee tracking",
+  title: "DEUS Team Space",
+  description: "Tasks, plan, companies, qualification notes, past clients and flows for the DEUS team.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DEUS Platform",
+    title: "DEUS Team Space",
   },
   icons: {
     icon: [
@@ -39,8 +40,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <LaunchScreen />
         {children}
-        <ServiceWorkerRegister />
+        <ServiceWorker />
       </body>
     </html>
   );

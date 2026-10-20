@@ -5,6 +5,7 @@ import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
 import { ToasterProvider } from "@/ui/Toaster";
 import TabBar from "@/desk/TabBar";
+import InstallHost from "@/features/install/InstallHost";
 import TaskSheetHost from "@/features/task-sheet/TaskSheetHost";
 import styles from "@/desk/DeskShell.module.css";
 
@@ -24,6 +25,9 @@ export default function DeskLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <Suspense fallback={null}>
           <TaskSheetHost />
+        </Suspense>
+        <Suspense fallback={null}>
+          <InstallHost />
         </Suspense>
         <BackOnlineToast />
       </ToasterProvider>
