@@ -1,0 +1,30 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-quiet);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+}
+
+.chip:hover {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px rgba(27, 31, 59, 0.25);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  box-shadow: inset 0 0 0 1.5px rgba(47, 107, 234, 0.45);
+}

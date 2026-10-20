@@ -1,0 +1,60 @@
+.track {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+}
+
+.full {
+  display: flex;
+  width: 100%;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+  white-space: nowrap;
+}
+
+.full .option {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.option:hover {
+  color: var(--ink);
+}
+
+.option[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-current);
+}
+
+.count {
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+  font-variant-numeric: var(--num);
+}
+
+/* 640px and under (--bp-phone): the options share the width equally. */
+@media (max-width: 640px) {
+  .track {
+    display: flex;
+    width: 100%;
+  }
+
+  .option {
+    flex: 1;
+    padding: 7px 4px;
+  }
+}

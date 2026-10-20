@@ -1,0 +1,202 @@
+/* Fields (guide 4.13): 46px, white, 14px corners, a 3:1 grey outline (D-021), darker on hover. Focus is a 2px blue outline
+   with a soft halo. A missing required field is red with a red halo. */
+.input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  outline: none;
+}
+
+.input:hover:not(:disabled):not(:focus) {
+  box-shadow: inset 0 0 0 1.5px var(--line-field-hover);
+}
+
+.input:focus {
+  box-shadow: var(--focus-field);
+}
+
+.input::placeholder {
+  color: var(--muted);
+}
+
+.input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.input[aria-invalid="true"],
+.input[aria-invalid="true"]:focus {
+  box-shadow: inset 0 0 0 2px var(--red), 0 0 0 4px rgba(217, 47, 67, 0.1);
+}
+
+.number,
+.dateInput {
+  font-variant-numeric: var(--num);
+}
+
+.textarea {
+  height: auto;
+  min-height: 92px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.big {
+  min-height: 72px;
+  font-size: 17px;
+  font-weight: var(--w-bold);
+  letter-spacing: -0.01em;
+}
+
+.select {
+  padding-right: 40px;
+  appearance: none;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23616a7d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px;
+}
+
+.date {
+  position: relative;
+}
+
+.dateInput {
+  padding-right: 40px;
+}
+
+.clear {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.clear:hover {
+  background: var(--fill);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* A switch: 42 × 26, blue when on. The off track is the 3:1 grey so the control's edge shows (guide 8). */
+.switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 26px;
+  border-radius: var(--r-pill);
+  background: var(--line-field);
+  transition: background var(--dur-hover);
+}
+
+.switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(20, 30, 70, 0.25);
+  transition: transform var(--dur-hover);
+}
+
+.switch[aria-pressed="true"] {
+  background: var(--blue);
+}
+
+.switch[aria-pressed="true"] i {
+  transform: translateX(16px);
+}
+
+.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Search: a glass pill with an icon. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 300px;
+  height: 44px;
+  padding: 0 16px 0 15px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-weight: var(--w-medium);
+}
+
+.search input {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--muted);
+}
+
+.search:focus-within {
+  outline: var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .search {
+    width: 100%;
+  }
+}
+
+/* In place: reads as a document. A 3% tint on hover, a white field with a strong blue outline on focus. */
+.inplace {
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.inplace:hover:not(:focus) {
+  background: rgba(27, 31, 59, 0.03);
+}
+
+.inplace:focus {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.inplace::placeholder {
+  color: var(--muted);
+}
+
+.inplaceText {
+  min-height: 3em;
+  line-height: var(--lh-write);
+  resize: vertical;
+}

@@ -14,6 +14,7 @@ import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
 import { LikelihoodMeter, LoadMeter, type Rating } from "@/ui/Meter";
 import { Suspense } from "react";
 import { ToasterProvider } from "@/ui/Toaster";
+import FieldDemos from "./FieldDemos";
 import OverlayDemos from "./OverlayDemos";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
@@ -229,7 +230,7 @@ export function Empty() {
   return (
     <Section id="empty" title="Empty, loading and meters (4.15, 4.5, 4.12)">
       <div className="grid w-full gap-6 md:grid-cols-2">
-        <div className="rounded-l bg-glass-strong">
+        <div className="rounded-panel bg-glass-strong">
           <EmptyState
             icon="flow"
             title="No flows yet"
@@ -238,12 +239,12 @@ export function Empty() {
             Write down how a recurring process moves between people.
           </EmptyState>
         </div>
-        <div className="rounded-l bg-glass-strong">
+        <div className="rounded-panel bg-glass-strong">
           <EmptyState size="small" icon="cal" title="No events today">
             Nothing is on the team calendar.
           </EmptyState>
         </div>
-        <div className="rounded-l bg-glass-strong">
+        <div className="rounded-panel bg-glass-strong">
           <EmptyState
             size="small"
             icon="search"
@@ -251,7 +252,7 @@ export function Empty() {
             actions={<Button small>Clear search</Button>}
           />
         </div>
-        <div className="flex flex-col gap-4 rounded-l bg-glass-strong p-5">
+        <div className="flex flex-col gap-4 rounded-panel bg-glass-strong p-5">
           <LoadingLine>Loading tasks</LoadingLine>
           <SkeletonRow />
           <SkeletonRow />
@@ -294,6 +295,14 @@ export function Overlays() {
           </Suspense>
         </ToasterProvider>
       </div>
+    </Section>
+  );
+}
+
+export function Fields() {
+  return (
+    <Section id="fields" title="Fields (4.2, 4.3, 4.13, 5.11)">
+      <FieldDemos />
     </Section>
   );
 }

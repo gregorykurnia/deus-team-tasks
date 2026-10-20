@@ -46,3 +46,54 @@ export function hue(name: string): number {
   for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
   return h % HUE_COUNT;
 }
+
+/* ---------- The people picker (W4, guide 4.13, 5.11) ---------- */
+
+export interface NameCount {
+  name: string;
+  open: number; // open tasks the person owns or is kept informed on
+}
+
+// Every name in use with its open tasks, A to Z. A person on no open task is listed with 0.
+export function openCountsByName(
+  tasks: Pick<Task, "responsible" | "informed" | "completed">[],
+  extra: Iterable<string> = [],
+  flowRoles: FlowRole[] = []
+): NameCount[] {
+  const counts = new Map<string, number>();
+  for (const name of namesInUse(tasks, extra, flowRoles)) counts.set(name, 0);
+  for (const t of tasks) {
+    if (t.completed) continue;
+    const people = new Set([...t.responsible, ...t.informed.map((p) => p.name)].filter(isPerson));
+    for (const name of people) counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts].map(([name, open]) => ({ name, open })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface NameMatches {
+  existing: NameCount[]; // names already in use, best match first
+  addNew: string | null; // the typed text, offered as a new name
+}
+
+const tidy = (s: string) => s.trim().replace(/\s+/g, " ");
+const keyOf = (s: string) => tidy(s).toLowerCase();
+
+// Names already in use come first: those that start with the text, then those with a word that starts with
+// it, then the rest, A to Z within each. People already chosen are left out. The typed text is offered as a
+// new name unless it is already in use or already chosen, ignoring case and extra spaces.
+export function matchNames(query: string, names: NameCount[], chosen: string[]): NameMatches {
+  const typed = tidy(query);
+  const q = typed.toLowerCase();
+  const taken = new Set(chosen.map(keyOf));
+  const free = names.filter((n) => !taken.has(keyOf(n.name)));
+  const rank = (name: string) => {
+    const k = keyOf(name);
+    if (k.startsWith(q)) return 0;
+    return k.split(" ").some((word) => word.startsWith(q)) ? 1 : 2;
+  };
+  const existing = (q ? free.filter((n) => keyOf(n.name).includes(q)) : free).sort(
+    (a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name)
+  );
+  const inUse = taken.has(q) || names.some((n) => keyOf(n.name) === q);
+  return { existing, addNew: typed && !inUse ? typed : null };
+}

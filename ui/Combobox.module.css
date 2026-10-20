@@ -1,0 +1,89 @@
+.input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  outline: none;
+}
+
+.input:hover:not(:focus) {
+  box-shadow: inset 0 0 0 1.5px var(--line-field-hover);
+}
+
+.input:focus {
+  box-shadow: var(--focus-field);
+}
+
+.input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--red), 0 0 0 4px rgba(217, 47, 67, 0.1);
+}
+
+.input::placeholder,
+.bare::placeholder {
+  color: var(--muted);
+}
+
+/* Inside a picker's own box. */
+.bare {
+  flex: 1;
+  min-width: 120px;
+  height: 34px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  outline: none;
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 5;
+  max-height: 260px;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--hair), var(--shadow-pop);
+}
+
+.heading {
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  font-weight: var(--w-semibold);
+  cursor: pointer;
+}
+
+.option[aria-selected="true"] {
+  background: var(--fill);
+}
+
+.option small {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: var(--w-medium);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.isNew {
+  color: var(--blue-ink);
+}

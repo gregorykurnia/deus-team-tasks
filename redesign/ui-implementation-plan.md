@@ -152,8 +152,8 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 2.2 | Icon set | Haiku 5.5 Max | 2026-10-20 · `ab2b618` (creates /gallery with the icons; 2.4 adds the rest) |
 | 2.3 | App shell: routes, DeskData, side bar, tab bar, More, page header, banner, live dot | Opus 5.5 High | 2026-10-20 · `0a3d24b` (old screens at `/old`; More and the back-online toast move onto 2.5's Sheet and Toaster) |
 | 2.4 | Display components: buttons, pills, tags, chips, avatars, notices, empty, skeleton, meters + dev gallery | Haiku 5.5 Max | 2026-10-20 · `036597b` (gallery side by side with the prototype) |
-| 2.5 | Overlays: menu, sheet, bottom sheet, dialog, confirm, toaster | Sonnet 5.5 High |  2026-10-20 · this commit (More and the back-online toast now use Sheet and Toaster) |
-| 2.6 | Fields: all field variants, segmented, filter button, people picker, sector picker, in-place field | Sonnet 5.5 High | |
+| 2.5 | Overlays: menu, sheet, bottom sheet, dialog, confirm, toaster | Sonnet 5.5 High | 2026-10-20 · `1aa1ae3` (More and the back-online toast now use Sheet and Toaster) |
+| 2.6 | Fields: all field variants, segmented, filter button, people picker, sector picker, in-place field | Sonnet 5.5 High | 2026-10-20 · this commit (choice chips built here; picker matching lives in lib/people and lib/sectors) |
 | 2.7 | Task row family, done circle, urgency rules wired in, selecting checkboxes | Sonnet 5.5 High | |
 | R2 | **Phase 2 review** | Opus 5.5 High | |
 | **3** | **Phase 3: screens (all states, phone and desktop)** | | |

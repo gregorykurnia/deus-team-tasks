@@ -1,0 +1,8 @@
+/* The list opens under the input, not under the note. */
+.box {
+  position: relative;
+}
+
+.note:not(:empty) {
+  margin-top: 10px;
+}

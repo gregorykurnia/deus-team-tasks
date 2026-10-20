@@ -1,0 +1,128 @@
+/* A field holding person chips, with the input after them. */
+.people {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+}
+
+.people:hover:not(:focus-within) {
+  box-shadow: inset 0 0 0 1.5px var(--line-field-hover);
+}
+
+.people:focus-within {
+  box-shadow: var(--focus-field);
+}
+
+.plus {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--blue-soft);
+}
+
+.informed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 8px;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: var(--w-semibold);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--fill);
+  font-size: 13.5px;
+  font-weight: var(--w-medium);
+  outline: none;
+}
+
+.note:focus {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.note::placeholder {
+  color: var(--muted);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.remove:hover {
+  background: var(--fill);
+}
+
+.add {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+  color: var(--muted);
+}
+
+.add:focus-within {
+  box-shadow: var(--focus-field);
+}
+
+/* 640px and under: the note goes under the name. */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) 32px;
+  }
+
+  .note {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
