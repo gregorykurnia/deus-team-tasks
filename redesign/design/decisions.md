@@ -181,3 +181,11 @@ The guide and `tokens.css` are updated to match. The prototype isn't updated, so
 
 ## D-022 — Design guide approved; stage 3 done (2026-10-20)
 Owner: "I approve of the guide". Recorded as approval of `design-guide.md` and `tokens.css`, with D-020 and D-021 included. The guide stays unversioned until the freeze (stage 5). Next: stage 4, the coverage check, in a fresh session.
+
+## D-023 — Coverage check (stage 4) (2026-10-20)
+`coverage.md` maps all 69 job stories and every state in the inventory to the prototype and the guide. Nothing is missing. One mismatch found:
+
+**Owner to decide** (proposal, not adopted silently): **who the "fields the list shows" choice belongs to (C2).** Guide 5.6 says the company group's fields are "remembered on the device", like the task columns (W15). The prototype doesn't remember them at all, and the inventory only asks for remembering on W15. Two ways to settle it:
+1. **Shared by the team** (designer's recommendation): the switches are saved with the group, so everyone sees the same fields and the export matches what colleagues see. This fits "choose which fields matter for each group" as a team decision, and "everyone uses the same shared data".
+2. **Per device**, as the guide says now: each person picks their own columns, and the export follows the person's own choice. Matches W15.
+Until the owner answers, neither the guide nor the prototype is changed. If the answer is 1, guide 5.6 and the Fields sheet's help text change, and the guide gets a version at the freeze as usual.
