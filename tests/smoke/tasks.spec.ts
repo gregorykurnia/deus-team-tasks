@@ -185,11 +185,15 @@ test("A3: with no connection a new task is refused, and nothing is stored", asyn
   await page.getByRole("button", { name: "+ Add task", exact: true }).click();
   const modal = taskModal(page, "New Task");
   await modal.getByPlaceholder("Describe the task…").fill("Written offline");
-  const refusal = page.waitForEvent("dialog");
+  // The alert is dismissed in its handler. If it opens while the click is still being acknowledged, the click can't
+  // finish until the dialog closes, so waiting for the click first would hang.
+  const messages: string[] = [];
+  page.once("dialog", (dialog) => {
+    messages.push(dialog.message());
+    void dialog.dismiss();
+  });
   await modal.getByRole("button", { name: "Save" }).click();
-  const dialog = await refusal;
-  expect(dialog.message()).toBe("No connection. The task wasn't added.");
-  await dialog.dismiss();
+  await expect.poll(() => messages).toEqual(["No connection. The task wasn't added."]);
   // Refused before reaching Firestore, so nothing is queued to arrive later.
   await context.setOffline(false);
   expect((await stored("tasks", "tasks")).map((t) => t.task)).toEqual(["Baseline task"]);
