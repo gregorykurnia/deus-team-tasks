@@ -10,12 +10,14 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import { searchedFields, type CompanyGroup, type CompanySortDir } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
 import { cellOf, cellWords, gridOf, subline, type Cell } from "@/lib/companyView";
+import { isTagged, useArrivals } from "@/lib/liveChanges";
 import { initials } from "@/lib/people";
 import Button from "@/ui/Button";
 import Highlight from "@/ui/Highlight";
 import Icon from "@/ui/Icon";
 import OptionChip from "@/ui/OptionChip";
 import Pill from "@/ui/Pill";
+import { LiveTag } from "@/ui/Tag";
 import styles from "./Companies.module.css";
 
 const num = (n: number) => n.toLocaleString("en-GB");
@@ -76,6 +78,7 @@ export function CellValue({ cell, query, searched }: { cell: Cell; query: string
 export default function CompanyList(props: CompanyListProps) {
   const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu } = props;
   const grid = gridOf(fields);
+  const arrivals = useArrivals("companies");
   const searchedKeys = new Set(searchedFields(group));
   const head = (label: string, key: string) => {
     const on = sort.key === key;
@@ -103,8 +106,9 @@ export default function CompanyList(props: CompanyListProps) {
           <div className={styles.list}>
             {companies.map((c) => {
               const sub = subline(c, group);
+              const arrival = arrivals.get(String(c.id)) ?? "none";
               return (
-                <article key={c.id} className={styles.row} aria-label={c.company} onClick={openFromRow}>
+                <article key={c.id} className={styles.row} aria-label={c.company} onClick={openFromRow} data-new={arrival !== "none" || undefined}>
                   <div className={styles.name}>
                     <span className={`${styles.mono} ${styles[group]}`} aria-hidden="true">
                       {initials(c.company)}
@@ -115,9 +119,14 @@ export default function CompanyList(props: CompanyListProps) {
                           <Highlight text={c.company} query={query} />
                         </Link>
                       </p>
-                      {sub && (
+                      {(sub || isTagged(arrival)) && (
                         <p className={styles.meta}>
-                          <Highlight text={sub} query={query} />
+                          {sub && <Highlight text={sub} query={query} />}
+                          {isTagged(arrival) && (
+                            <span className={styles.liveGap}>
+                              <LiveTag />
+                            </span>
+                          )}
                         </p>
                       )}
                     </div>

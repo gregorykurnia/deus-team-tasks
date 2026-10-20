@@ -225,7 +225,8 @@ test("R8, 5.4: Undo never brings a subsidiary back under a parent company that's
   await menuItem(page, "Delete company").click();
   await page.getByRole("alertdialog", { name: "Delete Nusa Retail?" }).getByRole("button", { name: "Delete company" }).click();
   await expect.poll(async () => (await stored()).some((d) => d.id === "nusa")).toBe(false);
-  await toasts(page).filter({ hasText: "Nusa Outlet deleted" }).getByRole("button", { name: "Undo" }).click();
+  // Both deletes still have their toast, the older one first: its Undo is the first.
+  await toasts(page).getByRole("button", { name: "Undo" }).first().click();
   await expect(page.getByText("Nusa Outlet can’t come back: Nusa Retail isn’t there any more.")).toBeVisible();
   expect((await stored()).some((d) => d.id === "nusa-1")).toBe(false);
 });

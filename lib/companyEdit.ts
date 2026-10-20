@@ -230,6 +230,14 @@ export function deleteWording(tasks: { total: number; open: number }, hasNotes: 
   return parts.join(" ");
 }
 
+// A delete that stopped part way (N13), worded as the task screens word a bulk change that only partly saved: how far it
+// got and what didn't. The company is still there, and pressing Delete again finishes it.
+export function partlyDeleteWording(name: string, changed: number, left: number): string {
+  const num = (n: number) => n.toLocaleString("en-GB");
+  const total = changed + left;
+  return `${num(changed)} of ${plural(total, "task")} of ${name} became internal work. Couldn’t change the other ${num(left)}, so ${name} wasn’t deleted. Check your connection and press Delete again to finish.`;
+}
+
 type SourceState = { loading: boolean; fromCache: boolean; error: Error | null };
 
 // Why Delete company can't be pressed yet, or null when it can. Deleting turns every task of the company into internal

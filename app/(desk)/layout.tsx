@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { BackOnlineToast } from "@/desk/ConnectionBanner";
 import { DeskData } from "@/desk/DeskData";
+import ManyChangesToast from "@/desk/ManyChangesToast";
 import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
 import { ToasterProvider } from "@/ui/Toaster";
@@ -30,6 +31,7 @@ export default function DeskLayout({ children }: LayoutProps<"/">) {
           <InstallHost />
         </Suspense>
         <BackOnlineToast />
+        <ManyChangesToast />
       </ToasterProvider>
     </DeskData>
   );

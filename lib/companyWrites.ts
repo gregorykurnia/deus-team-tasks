@@ -2,13 +2,13 @@
 // change (so a company's own fields are never lost), a field set to undefined
 // is cleared, and new ids are never reused.
 import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
-import { commitInChunks, type BatchOp } from "./batches";
+import { commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
 import { NOTES } from "./noteWrites";
-import { addTask, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
+import { addTask, PartlyChanged, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
 import type { CompaniesById } from "./kinds";
 import type { PipelineEntry } from "./clientTypes";
 import type { ProspectJournalEntry } from "./prospectJournalTypes";
@@ -284,10 +284,16 @@ export async function deleteCompany(
   // Tasks first and the company last, so a failure part way leaves the company
   // in place to try again, never tasks pointing at a company that's gone.
   const unlink = ownTasks.map((t) => ({ t, p: { linkedClientId: undefined } as Partial<NewTask> }));
-  await commitInChunks(
-    db,
-    unlink.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-  );
+  try {
+    await commitInChunks(
+      db,
+      unlink.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
+    );
+  } catch (err) {
+    // Stopped part way: some tasks are internal work already, and the company is still there. Deleting again finishes it.
+    if (err instanceof PartlyCommitted) throw new PartlyChanged(err.done.length, err.left.length, null, err.cause);
+    throw err;
+  }
   try {
     await commitInChunks(clientsDb, [
       ...ownNotes.map((n): BatchOp => (b) =>

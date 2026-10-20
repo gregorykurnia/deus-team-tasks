@@ -5,6 +5,7 @@
 import { onSnapshot, type CollectionReference, type Query, type QueryDocumentSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { forgetSource, reportSnapshot, watchSource, type Source } from "./connection";
+import { noteChanges } from "./liveChanges";
 
 export interface LiveRows<T> {
   rows: T[];
@@ -13,6 +14,7 @@ export interface LiveRows<T> {
   fromCache: boolean; // the device's copy, not yet (or no longer) confirmed by the server
 }
 
+const AUTOSAVED = new Set<Source>(["notes", "flows"]);
 const LOADING: LiveRows<never> = { rows: [], loading: true, error: null, fromCache: true };
 
 // makeQuery and toRows must be stable (module-level), so the subscription opens once.
@@ -25,11 +27,29 @@ export function useLiveQuery<T>(
 
   useEffect(() => {
     watchSource(source);
+    // The first snapshot is what's already there. A colleague's changes count only once a server snapshot has been
+    // seen, so what the device's copy was missing when it opened isn't announced as new.
+    let seenFirst = false;
+    let seenServer = false;
     const unsubscribe = onSnapshot(
       makeQuery(),
       { includeMetadataChanges: true },
       (snap) => {
         reportSnapshot(source, snap.metadata.fromCache);
+        if (seenFirst) {
+          // Metadata-only changes aren't in docChanges(), so our own write being confirmed isn't a change.
+          const live = { own: [] as string[], added: [] as string[], changed: [] as string[] };
+          for (const c of snap.docChanges()) {
+            if (c.type === "removed") continue;
+            // Notes and flows save as you type, with a save line of their own: editing one isn't lit up each time.
+            if (c.doc.metadata.hasPendingWrites) {
+              if (c.type === "added" || !AUTOSAVED.has(source)) live.own.push(c.doc.id);
+            } else if (seenServer && !snap.metadata.fromCache) (c.type === "added" ? live.added : live.changed).push(c.doc.id);
+          }
+          noteChanges(source, live);
+        }
+        seenFirst = true;
+        if (!snap.metadata.fromCache) seenServer = true;
         setState({ rows: toRows(snap.docs), loading: false, error: null, fromCache: snap.metadata.fromCache });
       },
       (error) => {

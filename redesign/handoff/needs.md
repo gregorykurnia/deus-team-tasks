@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15, N16
 
 # Needs
 
@@ -21,3 +21,4 @@ Design gaps found after the design was approved, written as job stories.
 | N13 | When something I changed couldn't be saved, or was only partly saved (some of many tasks, or some of the companies that use a renamed choice), or is waiting for the connection to come back, I want to be told what wasn't saved yet and to be able to try again, with what I wrote still there, so that I never believe something is saved when it isn't. | Phase 3 review | open |
 | N14 | When I open a link to a task while I have no connection, and that task isn't on my device yet, I want to be told it will open once I'm back online, and have it open by itself then, so that I don't think the task is gone. | Phase 3 review | open |
 | N15 | When I say a task is about a company but haven't said which company yet, I want to be asked for it before the task is saved, so that the task doesn't quietly end up as internal work. | Phase 3 review | open |
+| N16 | When I try to put the app on my device from a browser that can't install it, I want to be told what to do instead, so that I'm not left at a dead end. | Step 7, task 4.1 | open |

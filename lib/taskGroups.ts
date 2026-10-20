@@ -1,10 +1,10 @@
 // Task groups. Tasks refer to their group by name, so renaming or deleting a
 // group updates its tasks in the same batches.
 import { addDoc, collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { commitInChunks, type BatchOp } from "./batches";
+import { commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
-import { TASKS, toTaskUpdate } from "./taskWrites";
+import { PartlyChanged, TASKS, toTaskUpdate } from "./taskWrites";
 import type { Task } from "./types";
 
 export const TASK_GROUPS = "taskGroups";
@@ -73,6 +73,30 @@ async function groupRecordIds(group: GroupRef): Promise<string[]> {
   return [...new Set([...(group.id ? [group.id] : []), ...snap.docs.map((d) => d.id)])];
 }
 
+// The group's tasks go first and its own record last, so a stop part way is said in tasks: how many followed the group and
+// how many didn't (N13). Doing the same change again finishes it.
+async function commitGroupOps(ops: BatchOp[], tasks: number): Promise<void> {
+  try {
+    await commitInChunks(db, ops);
+  } catch (err) {
+    if (!(err instanceof PartlyCommitted)) throw err;
+    const done = Math.min(err.done.length, tasks);
+    throw new PartlyChanged(done, tasks - done, null, err.cause);
+  }
+}
+
+const num = (n: number) => n.toLocaleString("en-GB");
+
+// What a rename or delete that stopped part way says (N13), as the task screens word a bulk change that only partly saved:
+// how far it got, what didn't, and that the same action again finishes it.
+export function partlyGroupChange(verb: "rename" | "delete", err: PartlyChanged): string {
+  const total = err.changed + err.left;
+  const tasks = `${num(total)} ${total === 1 ? "task" : "tasks"}`;
+  const done = verb === "rename" ? "renamed the group" : "removed from the group";
+  if (err.left === 0) return `The group’s ${tasks} ${verb === "rename" ? "follow its new name" : "are now ungrouped"}, but the group itself wasn’t ${verb === "rename" ? "renamed" : "deleted"}. Check your connection and try again to finish.`;
+  return `${num(err.changed)} of ${tasks} ${done}. Couldn’t ${verb === "rename" ? "rename" : "remove"} the other ${num(err.left)}. Check your connection and try again to finish.`;
+}
+
 // Renames the group and every task in it. Returns how many tasks moved with it.
 export async function renameTaskGroup(group: GroupRef, newName: string, groups: GroupRef[], tasks: Task[]): Promise<number> {
   const problem = groupNameProblem(newName, groups, group.id);
@@ -83,7 +107,7 @@ export async function renameTaskGroup(group: GroupRef, newName: string, groups: 
   // The group's own record goes last, so a failure part way leaves it to retry.
   const ops: BatchOp[] = members.map((t) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: name })));
   for (const id of await groupRecordIds(group)) ops.push((b) => b.update(doc(db, TASK_GROUPS, id), { name }));
-  await commitInChunks(db, ops);
+  await commitGroupOps(ops, members.length);
   return members.length;
 }
 
@@ -94,6 +118,6 @@ export async function deleteTaskGroup(group: GroupRef, tasks: Task[]): Promise<n
   const members = tasksIn(group, tasks);
   const ops: BatchOp[] = members.map((t) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: undefined })));
   for (const id of await groupRecordIds(group)) ops.push((b) => b.delete(doc(db, TASK_GROUPS, id)));
-  await commitInChunks(db, ops);
+  await commitGroupOps(ops, members.length);
   return members.length;
 }

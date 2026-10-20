@@ -58,6 +58,17 @@
   font-weight: var(--w-semibold);
 }
 
+.alsoFound {
+  margin: 12px 6px 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.alsoFound .linkButton {
+  margin-left: 6px;
+}
+
 .result b {
   color: var(--ink-2);
 }

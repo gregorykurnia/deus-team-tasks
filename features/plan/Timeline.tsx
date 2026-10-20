@@ -10,6 +10,7 @@ import { groupHref } from "@/desk/areas";
 import { dayLabel, parseIso, plural, shortDate, weekdayDate } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
 import { linkedCompany } from "@/lib/kinds";
+import { useArrival } from "@/lib/liveChanges";
 import { LANE_CAP, timelineOf, type Bar, type Lane } from "@/lib/planTimeline";
 import { TIMELINE_DAYS, weekStart, type PlanState } from "@/lib/planView";
 import { eventOnDay, eventTimes } from "@/lib/today";
@@ -523,6 +524,7 @@ function LaneRow({ lane, open, onToggle, state, today, companies, taskHref }: La
 
 function BarLink({ bar, person, today, companies, href }: { bar: Bar; person: string | null; today: string; companies: CompaniesById; href: string }) {
   const { task } = bar;
+  const arrival = useArrival("tasks", task.id);
   const where = linkedCompany(task, companies)?.company ?? task.taskGroup ?? "Internal";
   const dates = [
     task.startDate && `starts ${shortDate(task.startDate, today)}`,
@@ -553,6 +555,7 @@ function BarLink({ bar, person, today, companies, href }: { bar: Bar; person: st
       data-diamond={bar.diamond || undefined}
       data-late={bar.late || undefined}
       data-informed={bar.informed || undefined}
+      data-new={arrival !== "none" || undefined}
     >
       <span className={styles.fill} style={{ width: bar.inside ? "100%" : `${(bar.columns / bar.span) * 100}%` }}>
         {bar.inside && <span className={styles.words}>{task.task}</span>}

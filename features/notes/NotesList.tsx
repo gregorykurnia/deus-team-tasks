@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { COMPANY_GROUP_LABELS } from "@/lib/companies";
 import type { CompaniesById } from "@/lib/kinds";
+import { isTagged, useArrival } from "@/lib/liveChanges";
 import { LIKELIHOODS, likelihoodSpread, likelihoodStep } from "@/lib/notes";
 import {
   editedLine,
@@ -34,7 +35,7 @@ import FilterButton, { FilterAction } from "@/ui/FilterButton";
 import Highlight from "@/ui/Highlight";
 import Menu, { MenuChoice, MenuHeading } from "@/ui/Menu";
 import { LikelihoodMeter, type Rating } from "@/ui/Meter";
-import { GroupTag, OutsideTag } from "@/ui/Tag";
+import { GroupTag, LiveTag, OutsideTag } from "@/ui/Tag";
 import styles from "./Notes.module.css";
 
 interface NotesListProps {
@@ -168,8 +169,9 @@ function Item({ row, companies, query, current, today, href, replace, onPick }: 
   const group = groupOfNotes(row.entry, companies);
   const snip = snippetOf(row);
   const step = likelihoodStep(row.entry);
+  const arrival = useArrival("notes", row.entry.id);
   return (
-    <Link className={styles.item} href={href} replace={replace} aria-current={current || undefined} scroll={false} onClick={() => onPick(row.entry.id)}>
+    <Link className={styles.item} href={href} replace={replace} aria-current={current || undefined} scroll={false} data-new={arrival !== "none" || undefined} onClick={() => onPick(row.entry.id)}>
       <span className={`${styles.mono} ${group ? styles[group] : styles.monoUntracked}`} aria-hidden="true">
         {initials(row.name)}
       </span>
@@ -180,6 +182,7 @@ function Item({ row, companies, query, current, today, href, replace, onPick }: 
         <p className={styles.itemSub}>
           {group ? <GroupTag group={group}>{COMPANY_GROUP_LABELS[group]}</GroupTag> : <OutsideTag>Not tracked yet</OutsideTag>}
           <span>{editedLine(row.entry.updatedAt, today)}</span>
+          {isTagged(arrival) && <LiveTag />}
         </p>
         {snip && (
           <p className={styles.snippet}>

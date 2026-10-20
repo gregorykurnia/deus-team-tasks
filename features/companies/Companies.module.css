@@ -344,6 +344,26 @@
   box-shadow: var(--shadow-hover);
 }
 
+/* New or changed, yours or a colleague's: the blue arrive glow for 1.8s. */
+.row[data-new] {
+  animation: arrive var(--dur-arrive) ease;
+}
+
+@keyframes arrive {
+  0% {
+    background: var(--surface);
+    box-shadow: 0 0 0 2px var(--blue), 0 10px 30px -10px rgba(47, 107, 234, 0.6);
+  }
+  100% {
+    box-shadow: var(--shadow-row);
+  }
+}
+
+.liveGap {
+  display: inline-block;
+  margin-left: 8px;
+}
+
 .name {
   display: flex;
   align-items: center;

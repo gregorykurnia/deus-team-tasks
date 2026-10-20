@@ -565,6 +565,17 @@ button.insight:hover {
   font-weight: var(--w-bold);
 }
 
+/* New or changed: the blue arrive glow for 1.8s, around the bar. */
+.bar[data-new] .fill {
+  animation: barArrive var(--dur-arrive) ease;
+}
+
+@keyframes barArrive {
+  0% {
+    box-shadow: 0 0 0 2px var(--blue), 0 10px 30px -10px rgba(47, 107, 234, 0.6);
+  }
+}
+
 .bar:hover .fill {
   filter: brightness(1.07) saturate(1.05);
   box-shadow: 0 8px 18px -8px var(--kind);

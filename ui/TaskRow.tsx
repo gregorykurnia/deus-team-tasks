@@ -7,6 +7,7 @@
 import Link from "next/link";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { shortDate } from "@/lib/dates";
+import { isTagged, useArrival } from "@/lib/liveChanges";
 import type { CompaniesById } from "@/lib/kinds";
 import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
@@ -33,7 +34,17 @@ interface RowProps {
   selected?: boolean;
   onSelect?: () => void;
   leaving?: boolean; // a task just marked done, on its way out of an open list
-  justChanged?: boolean; // a colleague's change: the arrive glow and "Just changed"
+  // Left out, the row reads the live changes itself: your change glows, a colleague's glows and says "Just changed".
+  // Set, it decides for itself (the gallery).
+  justChanged?: boolean;
+  arrive?: boolean; // the arrive glow alone
+}
+
+// What a row shows of the live changes (guide 5.8): its own entry only, so only the row that changed draws again.
+function useArrivalProps<P extends RowProps>(props: P): P {
+  const arrival = useArrival("tasks", props.justChanged === undefined ? props.task.id : null);
+  if (props.justChanged !== undefined) return props;
+  return { ...props, justChanged: isTagged(arrival), arrive: arrival !== "none" };
 }
 
 const PILL_TONES: Record<RowModel["deadline"]["tone"], PillTone> = { red: "red", amber: "amber", plain: "calm", none: "none", done: "done" };
@@ -101,13 +112,13 @@ function Meta({ row, justChanged, only }: { row: RowModel; justChanged?: boolean
 // The attributes every variant carries: the state hooks the stylesheet reads, the kind's colours, and the row's click.
 // A click that lands on the row but not on a control (the pill or the people, which sit above the title's link) opens the
 // task as the link would; while selecting, it toggles the checkbox.
-function rowProps(row: RowModel, { selected, leaving, justChanged, selecting, onSelect }: RowProps) {
+function rowProps(row: RowModel, { selected, leaving, justChanged, arrive, selecting, onSelect }: RowProps) {
   return {
     "data-kind": row.kind,
     "data-done": row.done || undefined,
     "data-selected": selected || undefined,
     "data-leaving": leaving || undefined,
-    "data-new": justChanged || undefined,
+    "data-new": justChanged || arrive || undefined,
     "data-selecting": selecting || undefined,
     style: kindStyle(row.kind),
     onClick(e: MouseEvent<HTMLElement>) {
@@ -118,7 +129,8 @@ function rowProps(row: RowModel, { selected, leaving, justChanged, selecting, on
   };
 }
 
-export function TaskCard(props: RowProps) {
+export function TaskCard(input: RowProps) {
+  const props = useArrivalProps(input);
   const row = taskRowModel(props.task, props.companies, props.today);
   return (
     <article {...rowProps(row, props)} className={`${styles.row} ${styles.card}`}>
@@ -226,7 +238,8 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   );
 }
 
-export function TaskListRow(props: ListRowProps) {
+export function TaskListRow(input: ListRowProps) {
+  const props = useArrivalProps(input);
   const { task, columns = DEFAULT_COLUMNS, groupLooks, inGroup, today } = props;
   const row = taskRowModel(task, props.companies, today);
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
@@ -257,7 +270,8 @@ interface DayRowProps extends RowProps {
   person?: string; // on a person's page: the person being looked at
 }
 
-export function TaskDayRow(props: DayRowProps) {
+export function TaskDayRow(input: DayRowProps) {
+  const props = useArrivalProps(input);
   const { task, person } = props;
   const row = taskRowModel(task, props.companies, props.today);
   const informedNote = person ? task.informed.find((p) => p.name === person) : undefined;
@@ -318,7 +332,8 @@ export function TaskDayRow(props: DayRowProps) {
   );
 }
 
-export function TaskRecordRow(props: RowProps) {
+export function TaskRecordRow(input: RowProps) {
+  const props = useArrivalProps(input);
   const row = taskRowModel(props.task, props.companies, props.today);
   return (
     <article {...rowProps(row, props)} className={`${styles.row} ${styles.record}`}>

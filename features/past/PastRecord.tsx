@@ -28,6 +28,7 @@ import {
 } from "@/lib/pastView";
 import type { HistoricalClient } from "@/lib/pastClients";
 import { cleanSector, isCounted } from "@/lib/pastClients";
+import { isTagged, useArrivals, type Arrival } from "@/lib/liveChanges";
 import { initials } from "@/lib/people";
 import type { SectorCount } from "@/lib/sectors";
 import Button from "@/ui/Button";
@@ -36,6 +37,7 @@ import FilterButton, { FilterAction, FilterToggle } from "@/ui/FilterButton";
 import Highlight from "@/ui/Highlight";
 import Icon from "@/ui/Icon";
 import Menu, { MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuSeparator } from "@/ui/Menu";
+import { LiveTag } from "@/ui/Tag";
 import { RenameEditor, SectorEditor } from "./PastEditors";
 import type { PastActions } from "./usePastActions";
 import styles from "./Past.module.css";
@@ -364,6 +366,11 @@ interface ParentCardProps {
   onStopAdding: () => void;
 }
 
+// A colleague's change, by the name: "Just added" or "Just changed" (guide 5.8).
+function ArrivalTag({ arrival }: { arrival: Arrival }) {
+  return isTagged(arrival) ? <LiveTag>{arrival === "added" ? "Just added" : "Just changed"}</LiveTag> : null;
+}
+
 function ParentCard(props: ParentCardProps) {
   const { entry, open, query, labelOf, glowing, onToggle, onEdit, onCount } = props;
   const { parent: p, subs } = entry;
@@ -374,8 +381,9 @@ function ParentCard(props: ParentCardProps) {
   const fromCard = (e: React.MouseEvent<HTMLElement>) => {
     if (n && e.target instanceof Element && !e.target.closest("button, a, input")) onToggle();
   };
+  const arrival = useArrivals("pastClients").get(p.id) ?? "none";
   return (
-    <article className={[styles.group, open && styles.open, glowing.has(p.id) && styles.arrive].filter(Boolean).join(" ")} aria-label={p.name} data-parent={p.id}>
+    <article className={[styles.group, open && styles.open, (glowing.has(p.id) || arrival !== "none") && styles.arrive].filter(Boolean).join(" ")} aria-label={p.name} data-parent={p.id}>
       {/* The card's own click is a mouse shortcut for the chevron, which is the keyboard way in. */}
       <div className={[styles.parent, !counted && styles.uncounted].filter(Boolean).join(" ")} onClick={fromCard} data-row={p.id}>
         <button
@@ -393,6 +401,7 @@ function ParentCard(props: ParentCardProps) {
             {initials(p.name)}
           </span>
           <NameButton c={p} query={query} onEdit={onEdit} />
+          <ArrivalTag arrival={arrival} />
           {!counted && (
             <button type="button" className={styles.tag} title="Not counted in the totals. Press to count it again." onClick={onCount}>
               Not counted
@@ -421,6 +430,7 @@ function SubsBlock({ entry, query, labelOf, glowing, counted, onlyHits, subLimit
   const { parent: p, subs, hits } = entry;
   const list = onlyHits && hits ? hits : subs;
   const shown = list.slice(0, subLimit);
+  const arrivals = useArrivals("pastClients");
   return (
     <div className={styles.subs} role="group" aria-label={`Subsidiaries of ${p.name}`}>
       {!counted && (
@@ -431,10 +441,11 @@ function SubsBlock({ entry, query, labelOf, glowing, counted, onlyHits, subLimit
       )}
       {shown.map((s, i) => {
         const sector = labelOf(s);
+        const arrival = arrivals.get(s.id) ?? "none";
         return (
           <div
             key={s.id}
-            className={[styles.sub, i === shown.length - 1 && styles.last, glowing.has(s.id) && styles.arrive].filter(Boolean).join(" ")}
+            className={[styles.sub, i === shown.length - 1 && styles.last, (glowing.has(s.id) || arrival !== "none") && styles.arrive].filter(Boolean).join(" ")}
             role="group"
             aria-label={s.name}
             data-row={s.id}
@@ -442,6 +453,7 @@ function SubsBlock({ entry, query, labelOf, glowing, counted, onlyHits, subLimit
             <span className={styles.branch} aria-hidden="true" />
             <div className={styles.name}>
               <NameButton c={s} query={query} onEdit={onEdit} />
+              <ArrivalTag arrival={arrival} />
             </div>
             <SectorButton c={s} sector={sector} query={query} onEdit={onEdit} />
             <span className={styles.subGap} />

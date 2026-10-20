@@ -110,7 +110,8 @@ export default function TodayScreen() {
     }
   }
 
-  // Companies and notes have no results designed yet (N3): the search goes to All tasks with the words.
+  // Companies and notes have no results designed yet (N3, provisional): the search goes to All tasks with the words, which
+  // says how many companies and notes mention them too, with a link to each.
   const searchBox = (
     <form
       role="search"

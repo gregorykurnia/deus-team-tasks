@@ -16,6 +16,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { failureMessage } from "@/lib/connection";
 import { applyChange, contentOf, replayable, textAt, withText, type FlowChange, type FlowTextKey } from "@/lib/flows";
 import { changeFlow } from "@/lib/flowWrites";
+import { nextOfferOrder, offerTyping, supersede } from "@/lib/staleOffers";
 import type { Flow } from "@/lib/types";
 import { useToast } from "@/ui/Toaster";
 import { rememberOwnWrite } from "./flowChanges";
@@ -105,6 +106,7 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
   const write = useCallback(
     (anyChange: FlowChange, typed: FlowTextKey[], mutate: FlowChange | undefined, replaces?: Failure) => {
       const flowId = flowRef.current.id;
+      const startedAt = nextOfferOrder(); // offers made before this write started are older than its typing
       const change = replayable(anyChange);
       const { flow: next, patch } = applyChange(base(), change);
       if (Object.keys(patch).length === 0) {
@@ -124,6 +126,7 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
       };
       changeFlow(flowId, change)
         .then((at) => {
+          supersede(flowId, typed, startedAt);
           setFailures((list) => list.filter((f) => f !== replaces && !(f.typedOnly && f.after < mine)));
           // The data has this write once a version at least as new arrives (it may have already).
           if (!latest()) return;
@@ -155,7 +158,8 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
             },
           };
           setFailures((list) => [...list, failure]);
-          toast(failureMessage(err, FAILED), { error: true, keep: true, action: "Try again", onAction: failure.retry });
+          const id = toast(failureMessage(err, FAILED), { error: true, keep: true, action: "Try again", onAction: failure.retry });
+          if (typed.length) offerTyping(flowId, typed, () => toast.dismiss(id));
         })
         .finally(() => setInFlight((n) => n - 1));
     },

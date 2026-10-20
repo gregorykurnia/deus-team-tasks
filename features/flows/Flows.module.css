@@ -82,6 +82,18 @@
   box-shadow: 0 0 0 1.5px rgba(47, 107, 234, .45), 0 10px 24px -14px rgba(40, 46, 110, .35);
 }
 
+/* New or changed, yours or a colleague's: the blue arrive glow for 1.8s. */
+.item[data-new] {
+  animation: arrive var(--dur-arrive) ease;
+}
+
+@keyframes arrive {
+  0% {
+    background: var(--surface);
+    box-shadow: 0 0 0 2px var(--blue), 0 10px 30px -10px rgba(47, 107, 234, 0.6);
+  }
+}
+
 .badge {
   display: grid;
   place-items: center;

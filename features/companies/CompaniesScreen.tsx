@@ -13,7 +13,8 @@ import { over } from "@/desk/areas";
 import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { deleteBlocked, deleteWording, hasField, isKeptInStep, RENAME_MISSING } from "@/lib/companyEdit";
+import { PartlyChanged } from "@/lib/taskWrites";
+import { deleteBlocked, deleteWording, hasField, isKeptInStep, partlyDeleteWording, RENAME_MISSING } from "@/lib/companyEdit";
 import {
   COMPANY_GROUP_LABELS,
   COMPANY_GROUPS,
@@ -233,7 +234,12 @@ export default function CompaniesScreen() {
       setDeleting(null);
     } catch (err) {
       deletedHere.current = null; // the confirmation stays, to try again
-      toast(failureMessage(err, "The company couldn't be deleted. Check your connection and try again."), { error: true });
+      toast(
+        err instanceof PartlyChanged
+          ? partlyDeleteWording(deleting.company, err.changed, err.left)
+          : failureMessage(err, "The company couldn't be deleted. Check your connection and try again."),
+        { error: true }
+      );
     } finally {
       setDeleteBusy(false);
     }

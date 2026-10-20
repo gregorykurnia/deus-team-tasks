@@ -4,7 +4,7 @@
 // tools (up, down, add after, remove), roles as a label with suggestions and a people picker, the decision after the last
 // step with its outcomes (good or bad, and what happens next), and add lines. Removing a step, a role, an outcome or the
 // decision offers Undo; a step that an outcome went back to takes that loop with it, and the outcome ends the flow.
-import { useEffect, useRef, type ChangeEvent, type FocusEvent } from "react";
+import { createContext, useContext, useEffect, useRef, type ChangeEvent, type FocusEvent } from "react";
 import {
   addDecision,
   addOutcome,
@@ -41,7 +41,7 @@ import { SelectInput } from "@/ui/Inputs";
 import PeoplePicker from "@/ui/PeoplePicker";
 import Segmented from "@/ui/Segmented";
 import { LiveTag } from "@/ui/Tag";
-import { useToast } from "@/ui/Toaster";
+import { useScopedToast, type ToastApi } from "@/ui/Toaster";
 import type { FlowEditing } from "./useFlowEditing";
 import styles from "./Flows.module.css";
 
@@ -54,8 +54,26 @@ interface FlowEditorProps {
   changed: Set<string>;
 }
 
-export default function FlowEditor({ editing, labels, names, changed }: FlowEditorProps) {
-  const toast = useToast();
+// The editor's toasts go when it does (4.2): an Undo for a removed step or role can't be pressed once editing is done.
+const EditorToastContext = createContext<ToastApi | null>(null);
+
+function useEditorToast(): ToastApi {
+  const toast = useContext(EditorToastContext);
+  if (!toast) throw new Error("useEditorToast needs a FlowEditor above it.");
+  return toast;
+}
+
+export default function FlowEditor(props: FlowEditorProps) {
+  const toast = useScopedToast();
+  return (
+    <EditorToastContext.Provider value={toast}>
+      <Editor {...props} />
+    </EditorToastContext.Provider>
+  );
+}
+
+function Editor({ editing, labels, names, changed }: FlowEditorProps) {
+  const toast = useEditorToast();
   const f = editing.shown;
 
   // Something just added takes the focus once it's on screen.
@@ -248,7 +266,7 @@ interface OutcomeEditorProps {
 }
 
 function OutcomeEditor({ flow, outcome: o, n, editing, labels, names, changed: live, then }: OutcomeEditorProps) {
-  const toast = useToast();
+  const toast = useEditorToast();
   const text = (k: FlowTextKey) => textProps(editing, k);
   const good = o.tone === "good";
   const thenId = `${fieldId(flow.id, o.id)}-then`;
@@ -336,7 +354,7 @@ interface RolesEditorProps {
 // Each role is named by its ref, not its place, so what's typed in it stays with it when a colleague adds, moves or
 // removes another.
 function RolesEditor({ part, partName, editing, labels, names, then }: RolesEditorProps) {
-  const toast = useToast();
+  const toast = useEditorToast();
   const flowId = editing.shown.id;
 
   return (

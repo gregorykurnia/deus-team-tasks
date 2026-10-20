@@ -15,7 +15,7 @@ import { assertOnline, failureMessage, useConnection } from "@/lib/connection";
 import { plural } from "@/lib/dates";
 import { groupNavItems, navCounts } from "@/lib/deskNav";
 import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
-import { deleteTaskGroup, setGroupStarred } from "@/lib/taskGroups";
+import { deleteTaskGroup, partlyGroupChange, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
 import type { TaskSortKey } from "@/lib/taskQueries";
 import { chosenIds, headState, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
@@ -34,6 +34,7 @@ import { useMediaQuery } from "@/ui/useMediaQuery";
 import { hasAnyLayer } from "@/ui/overlayStack";
 import { useToday } from "@/ui/useToday";
 import { useOverParam } from "@/desk/useOverParam";
+import AlsoFound from "./AlsoFound";
 import GroupChips from "./GroupChips";
 import GroupDialog from "./GroupDialog";
 import GroupTools from "./GroupTools";
@@ -365,7 +366,9 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
       toast(`Group “${group.name}” deleted. Its tasks are now ungrouped.`);
     } catch (err) {
       setDialog(null);
-      toast(failureMessage(err, "The group couldn't be deleted. Check your connection and try again."), { error: true });
+      // Part way: the tasks done are ungrouped already, and deleting again finishes the rest (N13).
+      if (err instanceof PartlyChanged) toast(partlyGroupChange("delete", err), { error: true, action: "Try again", onAction: () => void removeGroup() });
+      else toast(failureMessage(err, "The group couldn't be deleted. Check your connection and try again."), { error: true });
     } finally {
       setDeleting(false);
     }
@@ -538,6 +541,7 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
           ]}
         />
       </div>
+      {!inGroup && state.q.trim() && <AlsoFound query={state.q} />}
       <section className={styles.panel} aria-label={group?.name ?? "Tasks"}>
         {ready && (
           <TaskFilters

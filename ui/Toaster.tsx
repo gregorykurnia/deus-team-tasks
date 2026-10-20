@@ -3,7 +3,7 @@
 // Toasts (guide 4.14): a dark navy pill at the bottom centre, above the tab bar on phones, with a tick, one line, and an
 // optional action. They stack upwards and are gone after 5.2 seconds. An error toast is dark red. The time stops while
 // the pointer is over them or focus is inside them, so an action can still be reached (WCAG 2.2.1).
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Icon from "./Icon";
 import styles from "./Toaster.module.css";
 
@@ -22,9 +22,19 @@ interface Toast extends ToastOptions {
   message: string;
 }
 
-type Show = (message: string, options?: ToastOptions) => void;
+// Showing a toast gives back its id, so whoever made it can take it back (dismiss) once it no longer applies.
+export interface ToastApi {
+  (message: string, options?: ToastOptions): number;
+  dismiss: (id: number) => void;
+}
 
-const ToastContext = createContext<Show | null>(null);
+type Show = (message: string, options?: ToastOptions) => number;
+
+const ToastContext = createContext<{ show: Show; dismiss: (id: number) => void } | null>(null);
+
+function toastApi(show: Show, dismiss: (id: number) => void): ToastApi {
+  return Object.assign((message: string, options?: ToastOptions) => show(message, options), { dismiss });
+}
 
 interface Timer {
   left: number; // ms still to show
@@ -62,9 +72,11 @@ export function ToasterProvider({ children }: { children: ReactNode }) {
       const timer: Timer = { left: options.keep ? KEEP_MS : LIFE_MS, since: 0, handle: null };
       timers.current.set(id, timer);
       if (!holds.current.hover && !holds.current.focus) start(id, timer);
+      return id;
     },
     [start]
   );
+  const api = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 
   // Stops every toast's clock while held, and starts them again with the time they had left.
   const hold = useCallback(
@@ -93,7 +105,7 @@ export function ToasterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ToastContext.Provider value={show}>
+    <ToastContext.Provider value={api}>
       {children}
       <div
         className={styles.toasts}
@@ -129,8 +141,26 @@ export function ToasterProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast(): Show {
-  const show = useContext(ToastContext);
-  if (!show) throw new Error("useToast needs a ToasterProvider above it.");
-  return show;
+export function useToast(): ToastApi {
+  const context = useContext(ToastContext);
+  if (!context) throw new Error("useToast needs a ToasterProvider above it.");
+  const { show, dismiss } = context;
+  return useMemo(() => toastApi(show, dismiss), [show, dismiss]);
+}
+
+// Toasts that belong to one screen or editor: when it goes, the ones still showing go with it, so an Undo or a Try again
+// can't be pressed after what it applied to has closed.
+export function useScopedToast(): ToastApi {
+  const toast = useToast();
+  const [ids] = useState(() => new Set<number>());
+  useEffect(() => () => ids.forEach((id) => toast.dismiss(id)), [toast, ids]);
+  return useMemo(
+    () =>
+      toastApi((message, options) => {
+        const id = toast(message, options);
+        ids.add(id);
+        return id;
+      }, toast.dismiss),
+    [toast, ids]
+  );
 }

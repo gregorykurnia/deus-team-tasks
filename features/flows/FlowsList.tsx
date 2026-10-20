@@ -4,11 +4,13 @@
 // has a badge with its step count, the name, "5 steps · a decision" and when it was last edited.
 import Link from "next/link";
 import { flowEdited, flowName, flowSummary } from "@/lib/flows";
+import { isTagged, useArrivals } from "@/lib/liveChanges";
 import { plural } from "@/lib/dates";
 import type { Flow } from "@/lib/types";
 import EmptyState from "@/ui/EmptyState";
 import Icon from "@/ui/Icon";
 import { SearchField } from "@/ui/Inputs";
+import { LiveTag } from "@/ui/Tag";
 import styles from "./Flows.module.css";
 
 interface FlowsListProps {
@@ -25,6 +27,7 @@ interface FlowsListProps {
 
 export default function FlowsList({ all, shown, query, current, today, hrefFor, replace, onQuery, onPick }: FlowsListProps) {
   const q = query.trim();
+  const arrivals = useArrivals("flows");
   return (
     <section className={styles.panel} aria-label="Flows">
       <div className={styles.find}>
@@ -46,8 +49,9 @@ export default function FlowsList({ all, shown, query, current, today, hrefFor, 
         <div className={styles.list}>
           {shown.map((f) => {
             const edited = flowEdited(f.updatedAt, today);
+            const arrival = arrivals.get(f.id) ?? "none";
             return (
-              <Link key={f.id} href={hrefFor(f.id)} replace={replace} scroll={false} className={styles.item} aria-current={current === f.id ? "true" : undefined} onClick={onPick}>
+              <Link key={f.id} href={hrefFor(f.id)} replace={replace} scroll={false} className={styles.item} aria-current={current === f.id ? "true" : undefined} data-new={arrival !== "none" || undefined} onClick={onPick}>
                 <span className={styles.badge} aria-hidden="true">
                   {f.steps.length ? <b>{f.steps.length.toLocaleString("en-US")}</b> : <Icon name="flow" size={18} />}
                 </span>
@@ -56,6 +60,7 @@ export default function FlowsList({ all, shown, query, current, today, hrefFor, 
                   <span className={styles.itemSub}>
                     <span>{flowSummary(f)}</span>
                     {edited && <span>{edited}</span>}
+                    {isTagged(arrival) && <LiveTag />}
                   </span>
                 </span>
               </Link>

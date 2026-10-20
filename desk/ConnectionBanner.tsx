@@ -2,8 +2,10 @@
 
 // No connection (A3, guide 5.8): the banner under the page header, and the
 // toast when the connection comes back.
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { getConnection, subscribeConnection, useConnection } from "@/lib/connection";
+import { offlineBannerWords } from "@/lib/offlineWords";
 import Icon from "@/ui/Icon";
 import { useToast } from "@/ui/Toaster";
 import styles from "./ConnectionBanner.module.css";
@@ -18,6 +20,7 @@ function loadedWhen(loadedAt: number, now = new Date()): string {
 
 export function ConnectionBanner() {
   const { status, loadedAt } = useConnection();
+  const pathname = usePathname();
   // The status region stays in the page, so the banner is announced when it appears.
   return (
     <div role="status">
@@ -26,9 +29,7 @@ export function ConnectionBanner() {
           <Icon name="wifi" />
           <p>
             <b>No connection.</b>{" "}
-            {loadedAt
-              ? `You are seeing what was loaded ${loadedWhen(loadedAt)}. Changes can't be saved until you are back online.`
-              : "Nothing has loaded yet. Everything will appear once you are back online."}
+            {offlineBannerWords(pathname, loadedAt ? loadedWhen(loadedAt) : null)}
           </p>
         </div>
       )}

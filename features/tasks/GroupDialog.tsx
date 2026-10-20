@@ -3,7 +3,8 @@
 // New task group, and Rename (guide 6.2, 5.5): one name field. The name is required and can't be one already taken, ignoring
 // case. A group can be marked important when it's made. When saving fails the dialog stays, with what was typed.
 import { useState } from "react";
-import { createTaskGroup, GroupNameError, groupNameProblem, renameTaskGroup, type GroupNameProblem, type GroupRef } from "@/lib/taskGroups";
+import { PartlyChanged } from "@/lib/taskWrites";
+import { createTaskGroup, GroupNameError, groupNameProblem, partlyGroupChange, renameTaskGroup, type GroupNameProblem, type GroupRef } from "@/lib/taskGroups";
 import type { Task } from "@/lib/types";
 import Button from "@/ui/Button";
 import { Chip } from "@/ui/ChipGroup";
@@ -27,6 +28,7 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
   const [important, setImportant] = useState(false);
   const [problem, setProblem] = useState<GroupNameProblem | null>(null);
   const [failed, setFailed] = useState(false);
+  const [partly, setPartly] = useState<string | null>(null); // a rename that only partly saved, in words
   const [busy, setBusy] = useState(false);
   const [tries, setTries] = useState(0);
   const verb = group ? "rename" : "create";
@@ -35,6 +37,7 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
     if (busy) return;
     setTries((n) => n + 1);
     setFailed(false);
+    setPartly(null);
     const found = groupNameProblem(name, groups, group?.id);
     setProblem(found);
     if (found) return;
@@ -44,7 +47,10 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
       else onCreated?.(await createTaskGroup(name, groups, important), name.trim());
     } catch (err) {
       if (err instanceof GroupNameError) setProblem(err.problem);
-      else setFailed(true);
+      else if (err instanceof PartlyChanged) {
+        setPartly(partlyGroupChange("rename", err));
+        setFailed(true);
+      } else setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -74,8 +80,8 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
       <p className={styles.dialogText}>{group ? "Its tasks stay where they are." : "Keep related internal work together, like “Hiring” or “Office move”."}</p>
       {failed && (
         <div className={styles.dialogNotice}>
-          <Notice tone="error" title={`Couldn't ${verb} the group.`}>
-            Check your connection and try again. Nothing was lost.
+          <Notice tone="error" title={partly ? "The group was only partly renamed." : `Couldn't ${verb} the group.`}>
+            {partly ?? "Check your connection and try again. Nothing was lost."}
           </Notice>
         </div>
       )}
