@@ -1,7 +1,8 @@
 // A filter button (guide 4.3): a 36px white pill with an icon, a label and a down arrow. When it is on it turns
 // blue-soft with a blue ring, shows its value, and gets a round × to clear it. Pass its ref to the Menu it opens.
 // FilterToggle is the same pill as an on/off switch with no menu, such as Select ("Selecting" while on). FilterAction
-// is the pill opening a sheet or dialog, such as Companies' Fields and Export.
+// is the pill opening a sheet or dialog, such as Companies' Fields and Export; with no `opens` it just does something
+// ("Show all subsidiaries").
 import type { Ref } from "react";
 import Icon, { type IconName } from "./Icon";
 import styles from "./FilterButton.module.css";
@@ -49,7 +50,7 @@ export function FilterToggle({ label, icon, pressed, onClick, ref }: { label: st
   );
 }
 
-export function FilterAction({ label, icon, opens, onClick, ref }: { label: string; icon?: IconName; opens: "dialog"; onClick: () => void; ref?: Ref<HTMLButtonElement> }) {
+export function FilterAction({ label, icon, opens, onClick, ref }: { label: string; icon?: IconName; opens?: "dialog"; onClick: () => void; ref?: Ref<HTMLButtonElement> }) {
   return (
     <span className={styles.filter}>
       <button ref={ref} type="button" className={styles.main} aria-haspopup={opens} onClick={onClick}>

@@ -169,7 +169,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 3.9 | Companies: editing in place, record, new, move, follow-up task, delete | Opus 5.5 High | 2026-10-20 · this commit (New company is `?newCompany=1`; Edit options and Edit fields wait for 3.10; the notes links go to `/notes/<id>` or `/notes?company=<id>` for 3.11; gap N8 provisional) |
 | 3.10 | Companies: fields sheet, options dialog, export | Opus 5.5 High | 2026-10-20 · this commit (Fields is `?fields=<group>`; High, Not now and No locked like the statuses, gap N9 provisional; menus opened in a dialog sit above it) |
 | 3.11 | Qualification notes (autosave, offline writing, live, link, export) | Opus 5.5 High | 2026-10-20 · this commit (New notes is `?newNotes=1`; starting, linking and deleting need the connection; gap N10 provisional) |
-| 3.12 | Past clients: totals, by sector, tree, search, order | Sonnet 5.5 High | |
+| 3.12 | Past clients: totals, by sector, tree, search, order | Sonnet 5.5 High | 2026-10-20 · this commit (read only: no Add a past client, Export, ⋯ menus or add lines until 3.13; the "Just added" live tag waits for 4.2; a matching parent shows the subsidiaries that match, with "Show its other n") |
 | 3.13 | Past clients: add, subsidiary, rename, sector, move, not counted, delete, failures, export | Opus 5.5 High | |
 | 3.14 | Flows: read and edit (autosave, steps, roles, decision, outcomes, loop back) | Opus 5.5 High | |
 | R3 | **Phase 3 review** | Opus 5.5 High | |

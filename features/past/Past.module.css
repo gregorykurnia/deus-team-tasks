@@ -1,0 +1,826 @@
+/* Past clients (guide 4.16, 6.7). Values are the prototype's (assets/app.css, "Past clients"), taken from the tokens.
+   Words sit on the -ink tones; the sector bars and the total card use the base blues. */
+
+.phoneSearch {
+  margin-top: 12px;
+}
+
+.note {
+  margin: 4px 6px 8px;
+}
+
+/* ---------- The totals (R3, R4) ---------- */
+.track {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+  gap: 34px;
+  align-items: center;
+  margin-top: 22px;
+  padding: 26px 28px 26px 32px;
+  border-radius: var(--r-xl);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: var(--shadow-hero);
+}
+
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: var(--w-bold);
+}
+
+/* The one number to quote: a blue-to-teal gradient. */
+.number {
+  margin: 4px 0 0;
+  padding-bottom: 4px;
+  font-size: var(--t-display);
+  line-height: var(--lh-display);
+  font-weight: 800;
+  letter-spacing: var(--ls-display);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(120deg, var(--blue-ink) 10%, var(--blue-2) 60%, #21a9b8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sentence {
+  max-width: 44ch;
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.main > button {
+  margin-top: 16px;
+}
+
+.sum {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr);
+  gap: 10px 8px;
+  min-width: 0;
+}
+
+.fig {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 16px 15px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 8px 20px -14px rgba(40, 46, 110, 0.4);
+  text-align: left;
+}
+
+.fig b {
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.fig > span {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.total {
+  background: linear-gradient(135deg, var(--blue), var(--blue-2));
+  color: #fff;
+  box-shadow: 0 14px 30px -14px rgba(47, 107, 234, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.total > span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.op {
+  align-self: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: var(--w-bold);
+}
+
+/* The dashed tile: umbrella companies kept on record, not counted. A button that shows only them. */
+.notCounted {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 16px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: none;
+  border: 1.5px dashed #c2c8d6;
+}
+
+.notCounted b {
+  min-width: 1.2ch;
+  color: var(--int-ink);
+  font-size: 22px;
+}
+
+.notCounted > span {
+  font-weight: var(--w-bold);
+}
+
+.notCounted small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: 500;
+}
+
+.notCounted:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.notCounted[aria-pressed="true"] {
+  background: #fff;
+  border: 1.5px solid var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.notCounted:disabled {
+  cursor: default;
+}
+
+/* ---------- The record and By sector, side by side ---------- */
+.view {
+  display: none;
+  margin-top: 16px;
+}
+
+.wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 22px;
+  align-items: start;
+  margin-top: 22px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 8px 8px 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-l);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 12px;
+}
+
+.filters .spacer {
+  flex: 1;
+}
+
+.result {
+  margin: 0;
+  padding: 0 14px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.result b {
+  color: var(--ink-2);
+}
+
+.linkButton {
+  margin-left: 10px;
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+  padding: 0 6px;
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+/* ---------- Parent companies and their trees (4.16) ---------- */
+.head,
+.parent,
+.sub {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(0, 180px) 140px;
+  gap: 12px;
+  align-items: center;
+}
+
+.head {
+  margin: 0 6px;
+  padding: 0 10px 8px;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+}
+
+.group {
+  margin: 0 6px;
+  border-radius: var(--r-m);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-row);
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+.group:hover {
+  background: #fff;
+}
+
+.group.open {
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(47, 107, 234, 0.16), 0 12px 28px -18px rgba(40, 46, 110, 0.4);
+}
+
+.parent {
+  min-height: 60px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.chev {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-xs);
+  color: var(--ink-2);
+}
+
+.chev:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.chev:disabled {
+  cursor: default;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-s);
+  background: linear-gradient(135deg, #e8efff, #def3f1);
+  color: #2a4f9c;
+  font-size: var(--t-label);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+}
+
+.parent.uncounted .mono {
+  background: #fff;
+  border: 1.5px dashed #b9c0d0;
+  color: var(--muted);
+}
+
+.title {
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: var(--w-bold);
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sub .title {
+  font-size: 14px;
+  font-weight: var(--w-semibold);
+}
+
+.tag {
+  flex: none;
+  padding: 2px 9px;
+  border: 1.5px dashed #b9c0d0;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.sector {
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pill {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: var(--t-label);
+  font-weight: var(--w-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.none {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  margin-left: -10px;
+  border-radius: var(--r-xs);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+button.count:hover {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.count svg {
+  color: var(--muted);
+}
+
+.subs {
+  padding: 0 10px 12px;
+}
+
+.subsNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px 44px;
+  padding: 8px 12px;
+  border-radius: var(--r-s);
+  background: var(--int-soft);
+  color: #3d4a63;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.subsNote svg {
+  flex: none;
+  color: var(--int-ink);
+}
+
+.sub {
+  min-height: 46px;
+  padding: 2px 0;
+  border-radius: var(--r-s);
+}
+
+.sub:hover {
+  background: rgba(47, 107, 234, 0.035);
+}
+
+/* The branch: a 2px grey line down the parent's side, with a short elbow into each row. */
+.branch {
+  position: relative;
+  align-self: stretch;
+}
+
+.branch::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  border-radius: 2px;
+  background: #dbe2f0;
+}
+
+.branch::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: #dbe2f0;
+}
+
+.sub.last .branch::before {
+  bottom: 50%;
+}
+
+.sub .name {
+  padding-left: 4px;
+}
+
+.subMore,
+.subAll {
+  margin: 6px 0 0 48px;
+  font-size: 13px;
+}
+
+.subMore {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-weight: var(--w-semibold);
+}
+
+.subAll {
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.subAll:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- By sector (R5) ---------- */
+.secPanel {
+  position: sticky;
+  top: 20px;
+  padding: 18px 12px 14px;
+}
+
+.secHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 8px 8px;
+}
+
+.secHead h2 {
+  margin: 0;
+  font-size: var(--t-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-h3);
+}
+
+.secHead span {
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.secRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 40px;
+  gap: 6px 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 8px 10px 9px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.secRow:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.secRow[aria-pressed="true"] {
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--blue);
+}
+
+.secLabel {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secNum {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.secPct {
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  display: block;
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  min-width: 5px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--blue), var(--blue-2));
+}
+
+.secNone .secLabel {
+  color: var(--ink-2);
+}
+
+.secNone .bar i {
+  background: repeating-linear-gradient(-45deg, #c3c9d6 0 3px, #e5e8ef 3px 6px);
+}
+
+.secAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 10px 2px;
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: var(--w-bold);
+}
+
+.secAll:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.noSector {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--hair);
+}
+
+.secTotal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: baseline;
+  margin: 10px 0 0;
+  padding: 12px 10px 0;
+  border-top: 1px solid var(--hair);
+}
+
+.secTotal span {
+  font-weight: var(--w-bold);
+}
+
+.secTotal b {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.secTotal small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hint {
+  margin: 10px 10px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- Narrower screens ---------- */
+@media (max-width: 1240px) {
+  .track {
+    gap: 24px;
+    padding: 24px 24px 24px 26px;
+  }
+  .number {
+    font-size: 68px;
+  }
+  .fig {
+    padding: 14px 13px 13px;
+  }
+  .fig b {
+    font-size: 26px;
+  }
+  .wrap {
+    grid-template-columns: minmax(0, 1fr) 290px;
+  }
+  .head,
+  .parent,
+  .sub {
+    grid-template-columns: 32px minmax(0, 1fr) minmax(0, 150px) 126px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .track {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .view {
+    display: block;
+  }
+  .wrap {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 12px;
+  }
+  .wrap[data-view="list"] .secPanel,
+  .wrap[data-view="sectors"] .listPanel {
+    display: none;
+  }
+  .secPanel {
+    position: static;
+  }
+  .hint {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  /* The filters scroll sideways in one row, as Companies' do. */
+  .filters {
+    flex-wrap: nowrap;
+    margin: 0 -4px;
+    padding: 4px 10px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+  .head {
+    display: none;
+  }
+  .parent {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    min-height: 0;
+    padding: 12px 12px 12px 50px;
+  }
+  .parent .chev {
+    position: absolute;
+    left: 10px;
+    top: 14px;
+  }
+  .parent .name {
+    flex: 1 0 100%;
+    gap: 10px;
+  }
+  .parent .mono {
+    display: none;
+  }
+  .count {
+    height: 28px;
+    font-size: 12.5px;
+  }
+  .count .none {
+    display: none;
+  }
+  .subs {
+    padding: 0 6px 10px;
+  }
+  .subsNote {
+    margin-left: 8px;
+  }
+  .sub {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 10px;
+    padding: 8px 12px 8px 40px;
+  }
+  .sub .branch {
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+  }
+  .sub .name {
+    flex: 1 0 100%;
+    padding-left: 0;
+  }
+  .subMore,
+  .subAll {
+    margin-left: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .track {
+    gap: 16px;
+    margin-top: 16px;
+    padding: 20px 16px 16px;
+    border-radius: 26px;
+  }
+  .number {
+    font-size: 58px;
+  }
+  .sentence {
+    font-size: 13.5px;
+  }
+  .main > button {
+    margin-top: 12px;
+  }
+  .sum {
+    grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr) 12px minmax(0, 1fr);
+    gap: 8px 4px;
+  }
+  .fig {
+    padding: 11px 10px 10px;
+    border-radius: 16px;
+  }
+  .fig b {
+    font-size: 21px;
+  }
+  .fig > span {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+  .notCounted {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .notCounted b {
+    font-size: 19px;
+  }
+  .notCounted small {
+    font-size: 11.5px;
+  }
+  .op {
+    font-size: 16px;
+  }
+  .secPanel {
+    padding: 14px 6px 12px;
+  }
+}
