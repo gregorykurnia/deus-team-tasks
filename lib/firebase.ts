@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { connectToEmulatorIfTesting } from "./emulator";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCeCMcmOoIsg6TeRpskORfxQF45aUyVmVE",
@@ -12,3 +13,4 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+connectToEmulatorIfTesting(db);

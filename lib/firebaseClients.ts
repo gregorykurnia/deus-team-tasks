@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { connectToEmulatorIfTesting } from "./emulator";
 
 // Separate Firebase project used only by the Clients pipeline tracker.
 const firebaseConfig = {
@@ -13,3 +14,4 @@ const firebaseConfig = {
 
 const app = getApps().find((a) => a.name === "clients") ? getApp("clients") : initializeApp(firebaseConfig, "clients");
 export const clientsDb = getFirestore(app);
+connectToEmulatorIfTesting(clientsDb);
