@@ -11,6 +11,7 @@ A reusable process for redesigning any project's UI from scratch, as if it were 
 ## Project settings: deus-team-tasks (filled in Step 0)
 
 - **Folders:** codebase `/Users/gregorykurnia/projects/deus-team-tasks` · studio `../deus-team-tasks-studio`. `<project>` = `deus-team-tasks`, `<base>` = `main`.
+- **Second machine, Linux server (2026-10-20):** codebase `/home/ubuntu/deus-team-tasks` (Ubuntu 24.04, arm64) · studio `/home/ubuntu/deus-team-tasks-studio`. The studio's deny rules list this path, Claude Code's cache folder for it (`~/.cache/claude-cli-nodejs/-home-ubuntu-deus-team-tasks`), codebase sessions' temp folder (`/tmp/claude-1001/-home-ubuntu-deus-team-tasks`) and `~/.bash_history`, on top of the Mac's. The sandbox needs `bubblewrap`, `socat` and an AppArmor profile for `/usr/bin/bwrap`. `shoot` uses Playwright's Chromium with `--no-sandbox` and prints the PNG paths instead of opening them. Step 0b must pass here before any `enter`.
 - **Light mode only (brief, 2026-10-19):** no dark mode anywhere. Step 4b prototypes and the rebuild skip it, even where this playbook says "light and dark".
 - **Lean rebuild (decided 2026-10-19):** Steps 6–7 are cut down for a project this size: one `redesign` branch, one terminal, four phases, no lanes. Steps 0–5 (the design half) follow the playbook unchanged.
 - **Repo:** `https://github.com/gregorykurnia/deus-team-tasks`. **Live site:** `https://deus-team-tasks.vercel.app` (assumed from the project name, not yet checked; confirm before Step 0b).
@@ -44,6 +45,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 **Setup**
 - [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run — **Haiku 5.5 Max** · Claude on `<base>`
 - [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56) — **Haiku 5.5 High** · fresh studio session
+- [ ] Step 0b on the Linux server: every channel *blocked*, with `<ABS_PROJECT_PATH>` = `/home/ubuntu/deus-team-tasks` — **Haiku 5.5 High** · fresh studio session
 
 **Discovery (sees the old app)**
 - [x] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`

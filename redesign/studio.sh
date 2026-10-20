@@ -83,6 +83,14 @@ cd "$(dirname "$0")"
 STUDIO="$PWD"
 DESIGN="$STUDIO/redesign/design"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+NOSANDBOX=""
+if [ "$(uname)" = Linux ]; then
+  # Linux server (arm64, no Google Chrome build): Playwright's Chromium, same lockdown flags.
+  # Chrome's own sandbox can't start under Ubuntu's user-namespace restriction; the proxy and
+  # local-only server still confine the page.
+  CHROME="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | tail -1)"
+  NOSANDBOX="--no-sandbox"
+fi
 FONTS="fonts.googleapis.com;fonts.gstatic.com"
 
 if [ -n "$(find "$DESIGN" -type l -print -quit)" ]; then
@@ -100,7 +108,7 @@ for _ in $(seq 50); do curl -s -o /dev/null "http://127.0.0.1:$PORT/" && break; 
 
 shot() {  # $1 = url, $2 = width,height, $3 = output png
   if [ -x "$CHROME" ]; then
-    "$CHROME" --headless=new --hide-scrollbars --user-data-dir="$STUDIO/.tmp/chrome" \
+    "$CHROME" --headless=new $NOSANDBOX --hide-scrollbars --user-data-dir="$STUDIO/.tmp/chrome" \
       --proxy-server="127.0.0.1:9" --proxy-bypass-list="$FONTS" \
       --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE fonts.googleapis.com, EXCLUDE fonts.gstatic.com, EXCLUDE 127.0.0.1" \
       --virtual-time-budget=5000 --window-size="$2" --screenshot="$3" "$1" >/dev/null 2>&1
@@ -123,7 +131,9 @@ for d in "${dirs[@]}"; do
   pngs+=("$d/desktop.png" "$d/phone.png")
   echo "📸 ${d#"$DESIGN"/}"
 done
-if [ "${#pngs[@]}" -gt 0 ] && [ -z "${SHOOT_NO_OPEN:-}" ]; then open "${pngs[@]}"; fi
+if [ "${#pngs[@]}" -gt 0 ] && [ -z "${SHOOT_NO_OPEN:-}" ]; then
+  if [ "$(uname)" = Darwin ]; then open "${pngs[@]}"; else printf '🖼  %s\n' "${pngs[@]}"; fi
+fi
 SHOOT
   chmod +x "$STUDIO/start" "$STUDIO/shoot"
 }
