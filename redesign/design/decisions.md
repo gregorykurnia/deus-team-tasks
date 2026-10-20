@@ -14,5 +14,7 @@ Round 2 (D Glass, E Tide, F Bento) was shown. The owner asked for the designer's
 Owner: agreed ("Sure"), adding that **D's purple is "way too striking"**. Owner picked a **calm blue** accent (#2F6BEA) over a pale sky-and-aqua backdrop, with the hero turned into a light frosted card.
 Mix built as `directions/g-glass-blue/`. This is the one extra screenshot round a mix gets; the next step is the owner's approval of G.
 
-## D-004 — Approval of the mix
-_Waiting for the owner._
+## D-004 — Mix G approved (2026-10-20)
+Owner: "Perfect! Approved." **G, Glass in calm blue** (`directions/g-glass-blue/`) is the direction for the prototype.
+Note: the `desktop.png` and `phone.png` in that folder were taken before a layout fix (a clashing class name pushed the content below the fold). The approval is recorded as given; a fresh `./shoot` of G would bring the screenshots up to date.
+Still open: D-001 (whether "Today" is the #1 daily job). The prototype covers every job, so this only affects which screen comes first.
