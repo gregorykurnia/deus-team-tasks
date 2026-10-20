@@ -66,6 +66,12 @@
     hash: '<path d="M9 4 7.5 20M16.5 4 15 20M4.5 9h16M3.5 15h16"/>',
     choice: '<circle cx="7" cy="8" r="2"/><circle cx="7" cy="16" r="2"/><path d="M12 8h8M12 16h8"/>',
     tree: '<path d="M6 4v12a2 2 0 0 0 2 2h4M6 9h6"/><rect x="13" y="6" width="7" height="6" rx="2"/><rect x="13" y="15" width="7" height="6" rx="2"/>',
+    diamond: '<path d="M12 3.5 20.5 12 12 20.5 3.5 12z"/>',
+    install: '<rect x="6.5" y="2.5" width="11" height="19" rx="3"/><path d="M12 7.5v7M9 11.5l3 3 3-3M10.5 18.5h3"/>',
+    share: '<path d="M12 3.5v11M8 7l4-4 4 4"/><path d="M8 10.5H6.5A1.5 1.5 0 0 0 5 12v7a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-7a1.5 1.5 0 0 0-1.5-1.5H16"/>',
+    addsq: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/>',
+    up2: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    down2: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     para: '<path d="M4 6h16M4 10h16M4 14h16M4 18h10"/>',
   };
   P.ic = (name, cls) => `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -111,13 +117,13 @@
   /* ---------- Data ---------- */
   P.db = P.stress ? PROTO_DATA.stress() : PROTO_DATA.normal();
   // Changes made while clicking through carry across pages in this tab (normal state only). ?reset starts over.
-  const SAVE_KEY = 'proto.db.v6.' + (P.stress ? 'stress' : 'normal');
+  const SAVE_KEY = 'proto.db.v7.' + (P.stress ? 'stress' : 'normal');
   try {
     if (qs.has('reset')) sessionStorage.removeItem(SAVE_KEY);
     else if (!P.state && sessionStorage.getItem(SAVE_KEY)) P.db = JSON.parse(sessionStorage.getItem(SAVE_KEY));
   } catch (e) { /* storage unavailable */ }
   P.save = () => { if (P.state) return; try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(P.db)); } catch (e) { /* full or unavailable */ } };
-  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; P.db.notes = []; P.db.past = []; }
+  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; P.db.notes = []; P.db.past = []; P.db.flows = []; }
   if (P.state === 'no-clients') P.db.tasks = P.db.tasks.filter((t) => { const c = t.co && P.db.companies.find((x) => x.id === t.co); return !(c && c.stage === 'done'); });
   if (P.state === 'quiet') P.db.tasks = P.db.tasks.filter((t) => t.done || (t.end && P.diff(t.end) > 3));
   P.loading = P.state === 'loading' || P.state === 'offline-empty';
@@ -205,7 +211,7 @@
     { id: 'companies', label: 'Companies', icon: 'building', href: 'companies.html' },
     { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'notes.html' },
     { id: 'past', label: 'Past clients', icon: 'archive', href: 'past.html' },
-    { id: 'flows', label: 'Flows', icon: 'flow', href: 'soon.html?area=flows' },
+    { id: 'flows', label: 'Flows', icon: 'flow', href: 'flows.html' },
   ];
   P.NAV = NAV;
   P.keep = (href) => {
@@ -224,7 +230,7 @@
     return `<div class="brand"><span class="logo" role="img" aria-label="Company logo"></span>Team desk</div>
       <nav class="nav" aria-label="Areas">${nav}</nav>
       <div class="side-groups"><h2 class="side-h">Task groups<button class="add" data-act="group-new" aria-label="New task group" title="New task group">${ic('plus')}</button></h2><div class="groups">${groups}</div></div>
-      ${liveHTML()}`;
+      ${P.installed ? '' : `<button class="side-install" data-act="install">${ic('install')}Install the app</button>`}${liveHTML()}`;
   }
   function liveHTML() {
     return P.offline
@@ -574,11 +580,39 @@
     const sh = el(`<section class="sheet short" role="dialog" aria-modal="true" aria-labelledby="mo-h"><span class="grab" aria-hidden="true"></span>
       <div class="sheet-head"><h2 id="mo-h">More</h2><span class="sp"></span><button class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div>
       <div class="sheet-body"><div class="more-list">${NAV.filter((n) => ['plan', 'notes', 'past', 'flows'].includes(n.id)).map((n) => `<a href="${P.keep(n.href)}">${ic(n.icon)}<span>${n.label}<small>${{ plan: 'Deadlines, events and who carries what', notes: 'Qualify prospects', past: 'Every company we have served', flows: 'How work moves between people' }[n.id]}</small></span></a>`).join('')}</div>
+      ${P.installed ? '' : `<button class="more-inst" data-inst>${ic('install')}<span>Install on this phone<small>Opens from your home screen, even with no connection</small></span>${ic('right')}</button>`}
       <div style="margin-top:16px">${liveHTML()}</div></div></section>`);
+    const inst = sh.querySelector('[data-inst]'); if (inst) inst.addEventListener('click', () => { P.closeTop(); P.openInstall(); });
     scrim.addEventListener('click', () => P.closeTop());
     sh.querySelector('[data-x]').addEventListener('click', () => P.closeTop());
     P.layer([scrim, sh]);
     sh.querySelector('a').focus();
+  };
+
+  /* ---------- Installing the app (A2) ---------- */
+  // Which way installing works depends on the device: a button where the browser offers it, steps in Safari on iPhone.
+  P.installed = P.state === 'installed' || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  P.openInstall = (kind) => {
+    kind = kind || (P.installed ? 'installed' : (/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'prompt'));
+    const scrim = el('<div class="scrim"></div>');
+    const sh = el('<section class="sheet short inst-sheet" role="dialog" aria-modal="true" aria-labelledby="in-h"></section>');
+    const perks = [['install', 'Opens from your home screen or your apps, full screen, like any other app'], ['wifi', 'Opens even with no connection, showing what was loaded last'], ['sync', 'Always the latest version. Nothing to update by hand']];
+    const how = {
+      prompt: `<div class="sheet-foot"><span class="sp"></span><button class="btn" data-x>Not now</button><button class="cta" data-ok>${ic('download')}Install</button></div>`,
+      ios: `<ol class="inst-steps"><li><span class="n">1</span><span>In Safari, tap <b>Share</b></span><span class="key">${ic('share')}</span></li><li><span class="n">2</span><span>Scroll down and tap <b>Add to Home Screen</b></span><span class="key">${ic('addsq')}</span></li><li><span class="n">3</span><span>Tap <b>Add</b> in the top corner</span></li></ol><p class="help inst-help">On iPhone and iPad, apps are added from Safari. In other browsers, open this page in Safari first.</p>`,
+      installed: `<div class="notice inst-ok">${ic('done')}<div><p><b>Installed on this device.</b></p><p>Open Team desk from your home screen or your apps.</p></div></div>`,
+    }[kind];
+    sh.innerHTML = `<span class="grab" aria-hidden="true"></span><div class="sheet-head"><h2 id="in-h">${kind === 'installed' ? 'Team desk is installed' : 'Install Team desk'}</h2><span class="sp"></span><button class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div>
+      <div class="sheet-body"><div class="inst-hero"><span class="appicon" aria-hidden="true"><span class="logo"></span></span><div><b>Team desk</b><small>For phones and computers. Everything stays in step on each.</small></div></div>
+      ${kind === 'installed' ? '' : `<ul class="inst-perks">${perks.map(([i, t]) => `<li>${ic(i)}<span>${t}</span></li>`).join('')}</ul>`}
+      ${kind === 'prompt' ? '' : how}</div>${kind === 'prompt' ? how : ''}`;
+    scrim.addEventListener('click', () => P.closeTop());
+    sh.addEventListener('click', (e) => {
+      if (e.target.closest('[data-x]')) P.closeTop();
+      if (e.target.closest('[data-ok]')) { P.closeTop(); P.installed = true; P.render(); P.toast('Installed. Team desk is now with your apps.'); }
+    });
+    P.layer([scrim, sh]);
+    (sh.querySelector('[data-ok]') || sh.querySelector('[data-x]')).focus();
   };
 
   /* ---------- Prototype controls (not part of the design) ---------- */
@@ -603,7 +637,10 @@
 
   /* ---------- Boot ---------- */
   P.boot = (cfg) => {
-    P.page = cfg.page; P.groupId = cfg.groupId || null; P.states = cfg.states; P.opens = cfg.opens;
+    // Opening with no connection and coming back (A3), and installing (A2), apply to every page.
+    P.page = cfg.page; P.groupId = cfg.groupId || null;
+    P.states = (cfg.states || []).concat([['back-online', 'Back online after no connection'], ['installed', 'Opened as an installed app']]);
+    P.opens = (cfg.opens || []).filter((x) => x[0] !== 'more').concat([['more', 'Phone: More'], ['install', 'Install (a browser that offers it)'], ['install-ios', 'Install on iPhone (Safari steps)'], ['install-done', 'Install: already installed']]);
     P.renderPage = cfg.render;
     const app = P.$('#app');
     app.innerHTML = `<aside class="side glass" aria-label="Main navigation"></aside><main id="main"></main>`;
@@ -620,6 +657,7 @@
       if (act === 'task-new') { e.preventDefault(); P.openTask(null, { group: P.groupId, full: false }); }
       if (act === 'group-new') { e.preventDefault(); P.openGroup(null); }
       if (act === 'more') { e.preventDefault(); P.openMore(); }
+      if (act === 'install') { e.preventDefault(); P.openInstall(); }
     });
     P.render();
     if (cfg.afterBoot) cfg.afterBoot();
@@ -641,6 +679,10 @@
     if (o === 'group-rename') P.openGroup(P.db.groups[2] ? P.db.groups[2].id : null);
     if (o === 'group-delete' && P.db.groups[2]) P.deleteGroup(P.db.groups[2].id);
     if (o === 'more') P.openMore();
+    if (o === 'install') P.openInstall('prompt');
+    if (o === 'install-ios') P.openInstall('ios');
+    if (o === 'install-done') P.openInstall('installed');
+    if (P.state === 'back-online') setTimeout(() => P.toast('Back online. Everything is up to date.'), 700);
     if (cfg.onOpen) cfg.onOpen(o);
   };
   P.render = () => {

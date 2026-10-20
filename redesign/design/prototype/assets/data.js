@@ -242,7 +242,55 @@
       PC('p20', 'Kopi Senja', 'Food and beverage', true, [['Kopi Senja Roastery', 'Food and beverage']]),
       PC('p21', 'Bintaro Dental', 'Healthcare'),
     );
-    return { people, companies, groups, tasks, events, notes, past, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+    // Flows (M1 to M4): ordered steps, each with roles (a label and the names in it), and at most one decision
+    // at the end, whose outcomes are good or bad and may send the work back to an earlier step.
+    let fid = 0;
+    const R = (label, ...names) => ({ id: 'r' + (++fid), label, names });
+    const ST = (id, title, desc, roles) => ({ id, title, desc, roles: roles || [] });
+    const OUT = (good, title, desc, roles, back) => ({ id: 'o' + (++fid), good, title, desc, roles: roles || [], back: back || null });
+    const flows = [
+      { id: 'f1', name: 'New client onboarding', desc: 'From a signed deal to a client who uses the product every day. Starts the day the contract is signed.', edited: d(-2), steps: [
+        ST('f1s1', 'Hand the deal over', 'The salesperson walks the account team through what was promised: products, prices, dates and any special terms.', [R('Responsible', 'Rina Hartono'), R('Informed', 'Aditya Wijaya', 'Sarah Lim')]),
+        ST('f1s2', 'Set up the accounts', 'Create the client’s workspace, users and data import. Use the onboarding checklist.', [R('Responsible', 'Sarah Lim'), R('Consulted', 'Dimas Prasetyo')]),
+        ST('f1s3', 'Kick-off meeting', 'Agree the go-live date, who the client’s champion is, and how we’ll keep in touch.', [R('Responsible', 'Aditya Wijaya'), R('Informed', 'Kevin Tan')]),
+        ST('f1s4', 'Train the client’s team', 'Two sessions: one for admins, one for everyday users. Record both.', [R('Responsible', 'Sarah Lim'), R('Backup', 'Maya Chen')]),
+        ST('f1s5', 'Go-live check', 'Two weeks after go-live, review usage and open questions with the champion.', [R('Responsible', 'Aditya Wijaya'), R('Consulted', 'Sarah Lim')]),
+      ], decision: { q: 'Is the client live and happy?', desc: 'Judge from usage and the go-live check.', outcomes: [
+        OUT(true, 'Hand over to account management', 'Set the first quarterly review and mark the onboarding done.', [R('Responsible', 'Aditya Wijaya')]),
+        OUT(false, 'Fix the open issues', 'List what’s blocking them, fix it, then retrain where needed.', [R('Responsible', 'Sarah Lim'), R('Informed', 'Rina Hartono')], 'f1s2'),
+      ] } },
+      { id: 'f2', name: 'Proposal approval', desc: 'How a proposal goes out, and what happens when the client answers.', edited: d(-6), steps: [
+        ST('f2s1', 'Draft the proposal', 'Start from the latest template. Include the products, the price and the timeline.', [R('Responsible', 'Kevin Tan', 'Aditya Wijaya')]),
+        ST('f2s2', 'Check the pricing', 'Any discount above 10% needs approval.', [R('Approves discounts', 'Rina Hartono'), R('Consulted', 'Dimas Prasetyo')]),
+        ST('f2s3', 'Send it to the client', 'Send as a PDF, and book a call to walk them through it.', [R('Responsible', 'Kevin Tan'), R('Informed', 'Rina Hartono')]),
+      ], decision: { q: 'Does the client accept?', desc: '', outcomes: [
+        OUT(true, 'Prepare the contract', 'Use the accepted proposal as the contract’s schedule.', [R('Responsible', 'Rina Hartono')]),
+        OUT(false, 'Revise the proposal', 'Note what they asked to change, then draft again.', [R('Responsible', 'Kevin Tan')], 'f2s1'),
+        OUT(false, 'Move the company to No or not now', 'Write down the reason so the team can learn from it.', [R('Responsible', 'Kevin Tan')]),
+      ] } },
+      { id: 'f3', name: 'Expense claims', desc: 'Getting money back for anything paid on the company’s behalf.', edited: d(-20), steps: [
+        ST('f3s1', 'Submit the claim', 'Photo of the receipt, the amount, and what it was for. By the 25th of the month.', [R('Responsible', 'Whoever paid')]),
+        ST('f3s2', 'Approve', 'Check it against the budget.', [R('Responsible', 'Maya Chen')]),
+        ST('f3s3', 'Pay it back', 'Paid with the next salary run.', [R('Responsible', 'Dimas Prasetyo'), R('Informed', 'Whoever paid')]),
+      ], decision: null },
+      { id: 'f4', name: 'Hiring a new team member', desc: 'From an open role to someone’s first day.', edited: d(-9), steps: [
+        ST('f4s1', 'Write the role', 'What they’ll do, who they report to, the salary range.', [R('Responsible', 'Maya Chen'), R('Approves', 'Rina Hartono')]),
+        ST('f4s2', 'Post the job ad', '', [R('Responsible', 'Maya Chen')]),
+        ST('f4s3', 'Shortlist', 'Pick up to five candidates for interviews.', [R('Responsible', 'Maya Chen', 'Rina Hartono')]),
+        ST('f4s4', 'Interviews', 'Two rounds. The second one includes a short case.', [R('Responsible', 'Rina Hartono'), R('Consulted', 'Kevin Tan', 'Sarah Lim')]),
+        ST('f4s5', 'Make an offer', '', [R('Responsible', 'Rina Hartono'), R('Informed', 'Dimas Prasetyo')]),
+      ], decision: { q: 'Is the offer accepted?', desc: '', outcomes: [
+        OUT(true, 'Prepare the first day', 'Laptop, accounts, desk, and a buddy for the first month.', [R('Responsible', 'Dimas Prasetyo'), R('Buddy', 'Sarah Lim')]),
+        OUT(false, 'Go back to the shortlist', '', [R('Responsible', 'Maya Chen')], 'f4s3'),
+      ] } },
+      { id: 'f5', name: 'Trade fair follow-up', desc: '', edited: d(-1), steps: [
+        ST('f5s1', 'Add every lead to To approach', 'Same day, while it’s fresh. Note where we met them.', [R('Responsible', 'Everyone at the booth')]),
+        ST('f5s2', 'First email within three days', '', []),
+        ST('f5s3', 'Book calls with the warm ones', '', [R('Responsible', 'Kevin Tan')]),
+      ], decision: null },
+      { id: 'f6', name: 'Office move', desc: 'Moving to the new floor in January.', edited: d(0), steps: [], decision: null },
+    ];
+    return { people, companies, groups, tasks, events, notes, past, flows, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   /* ---------- Stress data ---------- */
@@ -402,7 +450,24 @@
           name: j === 0 && i === 1 ? 'Anakperusahaanpengolahanmakanandanminumanwilayahindonesiatimurdanbaratsertasekitarnya' : (j === 1 && i === 1 ? '新加坡子公司 ' + j : p2(['PT ', '']) + p2(['Sinar', 'Maju', 'Jaya', 'Abadi', 'Mega']) + ' ' + p2(['Cabang', 'Unit', 'Branch', 'Distribusi', 'Retail']) + ' ' + (j + 1)) });
       }
     }
-    return { people, companies, groups, tasks, events, notes, past, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+    // Flows: 60 of them, one with 40 steps, a step with 12 roles and 30 names, a decision with 6 outcomes, other scripts.
+    let sf = 0;
+    const flows = [];
+    const longDesc = 'Everything that has to happen before the work can move on, written out in full so nobody has to ask: who prepares the documents, which of them need a signature, where they are filed, and what to do when one of the people involved is away for more than a week.';
+    for (let i = 0; i < 60; i++) {
+      const nSteps = i === 0 ? 40 : (i === 1 ? 0 : b2(1, 9));
+      const steps = Array.from({ length: nSteps }, (_, j) => ({ id: 'sf' + i + 's' + j,
+        title: j === 0 && i === 0 ? 'Pengumpulandanverifikasidokumenpendukunguntukpengajuananggaranregional' : p2(['Prepare', 'Review', 'Approve', 'Send', 'Check', '確認する', 'مراجعة']) + ' ' + p2(['the documents', 'the budget', 'the contract', 'the plan', 'everything with the regional office and the partner network']),
+        desc: r2() < 0.3 ? '' : (r2() < 0.3 ? longDesc : 'Do it within two working days.'),
+        roles: j === 1 && i === 0 ? Array.from({ length: 12 }, (_, k) => ({ id: 'sr' + (++sf), label: k === 0 ? 'Responsible for coordinating every regional office' : p2(['Responsible', 'Consulted', 'Informed', 'Approves', 'Backup', '担当']), names: k === 0 ? people.slice(0, 30) : people.slice(k, k + 2) }))
+          : Array.from({ length: r2() < 0.2 ? 0 : b2(1, 3) }, () => ({ id: 'sr' + (++sf), label: p2(['Responsible', 'Consulted', 'Informed']), names: Array.from(new Set(Array.from({ length: b2(1, 3) }, () => p2(people)))) })) }));
+      const hasDec = i === 0 || (nSteps > 1 && r2() < 0.5);
+      const decision = !hasDec ? null : { q: i === 0 ? 'Has the regional procurement committee approved the budget, including every exception that was raised in the second round of review?' : 'Approved?', desc: i === 0 ? longDesc : '',
+        outcomes: Array.from({ length: i === 0 ? 6 : 2 }, (_, k) => ({ id: 'so' + (++sf), good: k === 0, title: k === 0 ? 'Go ahead' : p2(['Send it back', 'Ask for more detail', 'Stop here', 'إعادة', '差し戻し']), desc: k === 0 ? '' : (r2() < 0.5 ? longDesc : ''), roles: [{ id: 'sr' + (++sf), label: 'Responsible', names: [p2(people)] }], back: k > 0 && nSteps && r2() < 0.7 ? 'sf' + i + 's' + b2(0, nSteps - 1) : null })) };
+      flows.push({ id: 'sf' + i, name: i === 0 ? 'Prosedurpengadaanbarangdanjasauntukseluruhkantorcabangdiwilayahindonesiatimur' : (i === 2 ? '新しいお客様の受け入れ' : (i === 3 ? 'إجراءات الموافقة' : 'Process ' + (i + 1) + ' ' + p2(['onboarding', 'approvals', 'month-end close', 'partner referral', 'returns and refunds for every outlet']))),
+        desc: r2() < 0.4 ? '' : longDesc, edited: d(-b2(0, 200)), steps, decision });
+    }
+    return { people, companies, groups, tasks, events, notes, past, flows, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   window.PROTO_DATA = { TODAY, d, normal, stress };

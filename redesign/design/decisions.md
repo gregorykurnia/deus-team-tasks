@@ -129,3 +129,27 @@ Past clients has its own page (`prototype/past.html`), from the side bar and, on
 1. **Subsidiaries have their own sector,** filled in from the parent's when added. The alternative is that a subsidiary always takes its parent's sector.
 2. **"Parent company" for every company not under another,** even one with no subsidiaries, matching how R4 counts. The alternative is calling those just "companies" and keeping "parent company" for the ones with subsidiaries.
 3. **Not built, for later if wanted:** an "Add to past clients" action on a Deal done company's record, so finished clients reach this record in one step. The inventory keeps the two areas separate, so it's left out.
+
+## D-017 — Go-ahead for group 6 (2026-10-20)
+Owner: "Go ahead w that", in reply to "Next is group 6". Group 6 started in the same session. Group 5 (past clients, D-016) hasn't been reviewed yet, and its three questions are still open. The design follows the proposed answers until the owner decides.
+
+## D-018 — Group 6: flows, installing, opening with no connection (2026-10-20)
+Flows have their own page (`prototype/flows.html`), from the side bar and, on phones, from More. The installed app's icon and launch screen, and every offline state, are on one board (`prototype/install.html`).
+- **Layout (M4):** on large screens, the flows are listed A to Z on the left, with a search that also covers steps, outcomes, roles and people. One flow opens on the right. On phones, the list comes first and a flow opens full screen, with "All flows" to go back.
+- **Reading a flow (M1, M2):** the steps run down a numbered path. Each step shows its title, description and roles: a label ("Responsible", "Consulted", or anything the team writes) with the people in it.
+- **The decision (M3):** the path ends in a diamond, with the decision as a question and its outcomes side by side. A green top edge marks a good outcome and a red one a bad outcome. Each outcome says "The flow ends here" or "Back to step 2: Set up the accounts". Tapping that jumps to the step, which also says which outcome comes back to it.
+- **Editing (M1 to M4):** a flow opens to read, and "Edit flow" turns the same layout into fields. Every change saves on its own, with a quiet "Saving…" then "Saved", and "Done" goes back to reading. In editing, steps move up or down, get added after any step or at the end, and get removed (with Undo). Roles get added, reordered with arrows and removed. Role labels and names offer what's already in use, and new names can be added, as for task people (W4). The decision is added once, after the last step, and starts with one good and one bad outcome. Outcomes switch between good and bad, get added and removed, and choose what happens next: the flow ends, or it goes back to an earlier step.
+- **Removing a step that an outcome goes back to:** that outcome then ends the flow, and the message says so. Undo restores both.
+- **New flow, delete (M4):** a new flow needs a name, then opens in editing with its first step ready. Deleting a flow asks first.
+- **Live (A1):** a step a colleague changed shows "Changed just now".
+- **No connection:** flows stay readable, and editing waits for the connection. This differs from qualification notes, which keep writing offline (D-014).
+- **Installing (A2):** "Install the app" sits at the foot of the side bar, and "Install on this phone" in More. Both are hidden once the app is installed. The install sheet shows the app's icon and what installing gives. Then it shows either an Install button, where the browser offers one, or the three steps in Safari on iPhone and iPad. An installed app says so.
+- **Icon and launch screen (A2):** the company logo on a light tile (white to pale blue and aqua), kept inside the circle that devices may crop to. The launch screen is the app's own backdrop with the icon and the name, then Today. "Team desk" is still a placeholder name.
+- **Opening with no connection (A3):** the app always opens. With data from before, it shows that data, says when it was loaded, and says changes can't be saved yet. The exception is qualification notes, which keep what's typed on the device. Opened offline for the first time, each area says it will fill in once the connection is back. When the connection returns, a short message says everything is up to date again.
+- **Mock data:** 6 flows. Two have a bad outcome that loops back, one has three outcomes, two have no decision, and one has no steps. Stress data has 60 flows, one with 40 steps, a step with 12 roles and 30 names, a decision with 6 outcomes, other scripts, and long names with no spaces.
+- **Also fixed:** on phones, the row of task-group chips on All tasks reached 2px past the screen edge, so the page could shift sideways.
+
+**Owner to confirm** (proposals, not adopted silently):
+1. **The decision comes after the last step.** M3 talks about going back to an *earlier* step, so the decision is placed at the end. The alternative is letting it sit after any step, with the steps after it continuing from the good outcome.
+2. **Flows open to read, with "Edit flow" to change them.** Every change still saves at once (M4). The alternative is always-editable pages, as in qualification notes. Read first keeps a process easy to follow for the people who only use it.
+3. **Removing a step or an outcome uses Undo instead of a confirmation.** The inventory asks for a confirmation only when a whole flow is deleted.
