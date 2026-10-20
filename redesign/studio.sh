@@ -66,6 +66,14 @@ for a in "$@"; do
     echo "✋ Always start a brand-new session." >&2; exit 1;;
   esac
 done
+# tmux: the studio runs on its own tmux server (-L studio), never one shared with codebase sessions,
+# whose panes could otherwise be read or typed into from here.
+if [ -n "${TMUX:-}" ] && [ "$(basename "${TMUX%%,*}")" != studio ]; then
+  echo "✋ This tmux server is shared with other sessions. From a new terminal window, run:" >&2
+  echo "   tmux -L studio new -A -s studio -c \"$PWD\"   then ./start inside it" >&2
+  exit 1
+fi
+unset TMUX TMUX_PANE
 export ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 CLAUDE_CODE_DISABLE_ARTIFACT=1
 # No editor link: an IDE connection can push the open file or selection (possibly the codebase) into the session.
 export CLAUDE_CODE_AUTO_CONNECT_IDE=false CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1
@@ -185,6 +193,9 @@ case "${1:-}" in
 
 Open a NEW terminal window and run:
   cd "$STUDIO" && ./start
+On tmux, give the studio its own tmux server instead (./start refuses a shared one):
+  tmux -L studio new -A -s studio -c "$STUDIO"     then ./start inside it
+  (detach: Ctrl-b d · come back: tmux -L studio attach -t studio)
 
 (Always ./start: a brand-new session with no connectors. To take screenshots,
  type  ! ./shoot  inside that session.)

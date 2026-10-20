@@ -63,6 +63,7 @@
         "/home/ubuntu/deus-team-tasks",
         "~/.cache/claude-cli-nodejs/-home-ubuntu-deus-team-tasks",
         "/tmp/claude-1001/-home-ubuntu-deus-team-tasks",
+        "/tmp/tmux-1001",
         "~/.bash_history",
         "~/.claude/history.jsonl",
         "~/.claude/projects",
