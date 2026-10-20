@@ -1,0 +1,439 @@
+/* Task rows (guide 4.6): separate rounded cards, 84% white. Hover turns white and lifts. The whole row opens the task through
+   its title; the done circle sits above that. Values are the prototype's, from the tokens. */
+.row {
+  position: relative;
+  border-radius: var(--r-m);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-row);
+  transition: box-shadow var(--dur-hover), background var(--dur-hover);
+}
+
+.row:hover {
+  background: var(--surface);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Focus: a blue ring round the whole row, drawn from the title link inside it. */
+.row:has(.open:focus-visible) {
+  outline: var(--focus);
+  outline-offset: 2px;
+}
+
+.open {
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+
+/* The title's link stretches over the row, so a click anywhere on it opens the task. */
+.open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-m);
+}
+
+.lead {
+  position: relative;
+  z-index: 1;
+  display: flex;
+}
+
+/* Done: the title struck through in muted, the badge greyed. */
+.row[data-done] .title {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: rgba(27, 31, 59, 0.3);
+}
+
+.row[data-done] .badge {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+/* Selected, when selecting several: #f2f6ff with a blue ring. */
+.row[data-selected] {
+  background: #f2f6ff;
+  box-shadow: var(--ring-selected);
+}
+
+/* Leaving an open list: after .35s the row slides 14px right and fades, over .5s (guide 2.7). */
+.row[data-leaving] {
+  animation: leave var(--dur-leave) ease 0.35s forwards;
+}
+
+/* New or changed: the blue arrive glow for 1.8s. */
+.row[data-new] {
+  animation: arrive var(--dur-arrive) ease;
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+@keyframes arrive {
+  0% {
+    background: var(--surface);
+    box-shadow: 0 0 0 2px var(--blue), 0 10px 30px -10px rgba(47, 107, 234, 0.6);
+  }
+  100% {
+    box-shadow: var(--shadow-row);
+  }
+}
+
+.title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--t-h4);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-h4);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.main {
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  min-width: 0;
+  margin: 3px 0 0;
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+  color: var(--muted);
+}
+
+.meta > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place {
+  color: var(--ink-2);
+  font-weight: var(--w-semibold);
+}
+
+/* The last action's tone: words in the -ink colours (guide 8). */
+.amber {
+  color: var(--amber-ink);
+  font-weight: var(--w-bold);
+}
+
+.red {
+  color: var(--red-ink);
+  font-weight: var(--w-bold);
+}
+
+.badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--kind-soft);
+  color: var(--kind-ink);
+  font-size: 14px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+}
+
+.none {
+  color: var(--muted);
+  font-weight: var(--w-semibold);
+}
+
+/* ---------- Card (Today) ---------- */
+.card {
+  display: grid;
+  grid-template-columns: 26px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 640px and under (--bp-phone): the badge goes; the pill and the people stack on the right. */
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .card .badge {
+    display: none;
+  }
+
+  .right {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+}
+
+/* ---------- List (All tasks) ---------- */
+.list {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1.6fr) minmax(0, 1fr) 150px 96px;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 11px 14px;
+}
+
+.cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
+
+.label {
+  display: none;
+}
+
+/* 760px and under (--bp-list): the row becomes a card: the circle on the left, the title across, the details wrapping
+   underneath with small labels, and the deadline top right. */
+@media (max-width: 760px) {
+  .list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 13px 14px 13px 50px;
+  }
+
+  .list .lead {
+    position: absolute;
+    top: 13px;
+    left: 14px;
+  }
+
+  .list .main {
+    flex: 1 0 100%;
+    padding-right: 96px;
+  }
+
+  .list .cell {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    font-size: var(--t-label);
+  }
+
+  .list .label {
+    display: inline;
+    font-weight: var(--w-semibold);
+    color: var(--muted);
+  }
+
+  .list .deadline {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
+}
+
+/* ---------- Day (Plan's Day view, a person's page) ---------- */
+.day {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 14px;
+}
+
+.day .lead {
+  margin-top: 1px;
+}
+
+.dayMain {
+  min-width: 0;
+}
+
+.dayTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dayTitle {
+  min-width: 0;
+  flex: 1;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 9px;
+}
+
+.lineLabel {
+  flex: none;
+  width: 84px;
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 10px 0 2px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.person > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person .tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 9.5px;
+}
+
+.me {
+  color: var(--blue-ink);
+}
+
+.person.me {
+  background: var(--blue-soft);
+}
+
+.informed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+  color: var(--ink-2);
+}
+
+.informed em {
+  font-style: normal;
+  font-weight: var(--w-medium);
+  color: var(--muted);
+}
+
+.informed em::before {
+  content: " · ";
+}
+
+.key {
+  display: -webkit-box;
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  overflow: hidden;
+  border-radius: var(--r-s);
+  background: var(--fill);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* On a person's page: their part, in a blue strip. */
+.theirPart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 7px 12px;
+  border-radius: var(--r-s);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+}
+
+.theirPart svg {
+  flex: none;
+  color: var(--blue);
+}
+
+@media (max-width: 640px) {
+  .day {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .dayTop {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .line {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .lineLabel {
+    width: auto;
+  }
+}
+
+/* ---------- Record (inside a company record) ---------- */
+.record {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.record:hover {
+  box-shadow: 0 0 0 1px rgba(47, 107, 234, 0.3), 0 8px 20px -14px rgba(40, 46, 110, 0.35);
+}
+
+.record .title {
+  font-size: 14px;
+}

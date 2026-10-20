@@ -1,0 +1,35 @@
+.circle {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--kind);
+  border-radius: 50%;
+  color: #fff;
+}
+
+/* The hit area reaches 44px: 10px beyond the ring, which is measured from inside its 2px border. */
+.circle::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+
+.circle svg {
+  opacity: 0;
+}
+
+.circle:hover {
+  background: color-mix(in srgb, var(--kind) 12%, transparent);
+}
+
+/* Done: filled with the kind's colour and a white tick. */
+.circle[data-done] {
+  background: var(--kind);
+}
+
+.circle[data-done] svg {
+  opacity: 1;
+}

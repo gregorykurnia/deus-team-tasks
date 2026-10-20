@@ -1,0 +1,38 @@
+.box {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px rgba(27, 31, 59, 0.28);
+  color: #fff;
+}
+
+/* The hit area reaches 42px. */
+.box::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+
+.box:hover {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+
+.box svg {
+  opacity: 0;
+}
+
+.box[aria-checked="true"],
+.box[aria-checked="mixed"] {
+  background: var(--blue);
+  box-shadow: none;
+}
+
+.box[aria-checked="true"] svg,
+.box[aria-checked="mixed"] svg {
+  opacity: 1;
+}

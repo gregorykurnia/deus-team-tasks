@@ -16,6 +16,7 @@ import { Suspense } from "react";
 import { ToasterProvider } from "@/ui/Toaster";
 import FieldDemos from "./FieldDemos";
 import OverlayDemos from "./OverlayDemos";
+import TaskRowDemos from "./TaskRowDemos";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
@@ -303,6 +304,14 @@ export function Fields() {
   return (
     <Section id="fields" title="Fields (4.2, 4.3, 4.13, 5.11)">
       <FieldDemos />
+    </Section>
+  );
+}
+
+export function TaskRows() {
+  return (
+    <Section id="task-rows" title="Task rows (4.6, 4.7, 5.1)">
+      <TaskRowDemos />
     </Section>
   );
 }

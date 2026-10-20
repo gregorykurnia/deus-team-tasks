@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Icon, { ICON_NAMES, type IconSize } from "@/ui/Icon";
-import { Buttons, Empty, Fields, Meters, Notices, OptionChips, Overlays, People, Pills, Tags } from "./sections";
+import { Buttons, Empty, Fields, Meters, Notices, OptionChips, Overlays, People, Pills, Tags, TaskRows } from "./sections";
 
 // Dev-only page for checking the design's components against the prototype. Production answers 404.
 const SIZES: IconSize[] = [13, 14, 15, 16, 17, 18, 19, 20, 21];
@@ -43,6 +43,7 @@ export default function Gallery() {
       <Notices />
       <Empty />
       <Meters />
+      <TaskRows />
       <Fields />
       <Overlays />
     </main>
