@@ -1,10 +1,12 @@
 // Task and task group writes, against the Firestore emulator.
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { companiesById } from "@/lib/kinds";
 import { addTask, moveTasksToGroup, setTasksDone, updateTask } from "@/lib/taskWrites";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
+import { addFlow, updateFlow } from "@/lib/flowWrites";
+import { OfflineError } from "@/lib/connection";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import type { NewTask, Task } from "@/lib/types";
 import { clearProject, readAll, readFields, seed } from "../support/emulator";
@@ -118,5 +120,50 @@ describe("task group writes before the groups have loaded", () => {
     expect(await deleteTaskGroup({ name: "Office move" }, tasks)).toBe(1);
     expect(await readAll("tasks", "taskGroups")).toEqual([]);
     expect(await readFields("tasks", "tasks/a")).not.toHaveProperty("taskGroup");
+  });
+});
+
+describe("when tasks and flows were finished or edited (1.6)", () => {
+  it("records when a task is marked done, keeps it on later saves, and clears it when reopened", async () => {
+    await seedTasks([asTask("t")]);
+    const before = Date.now();
+    await updateTask("t", { completed: true }, asTask("t"));
+    const doneAt = (await readFields("tasks", "tasks/t"))?.completedAt as number;
+    expect(doneAt).toBeGreaterThanOrEqual(before);
+
+    await updateTask("t", { completed: true, keyPoints: "edited" }, { ...asTask("t"), completed: true, completedAt: doneAt });
+    expect(await readFields("tasks", "tasks/t")).toMatchObject({ completedAt: doneAt, keyPoints: "edited" });
+
+    await updateTask("t", { completed: false }, { ...asTask("t"), completed: true, completedAt: doneAt });
+    expect(await readFields("tasks", "tasks/t")).not.toHaveProperty("completedAt");
+  });
+
+  it("puts the finished date back on Undo", async () => {
+    const t = { ...asTask("t"), completed: true, completedAt: 1234 };
+    await seedTasks([t]);
+    const undo = await setTasksDone([t], false);
+    expect(await readFields("tasks", "tasks/t")).not.toHaveProperty("completedAt");
+    await undo();
+    expect(await readFields("tasks", "tasks/t")).toMatchObject({ completed: true, completedAt: 1234 });
+  });
+
+  it("records when a flow was last edited", async () => {
+    const before = Date.now();
+    const id = await addFlow({ name: "Onboarding", description: "", order: 1, steps: [] });
+    await updateFlow(id, { name: "Client onboarding" });
+    const stored = await readFields("tasks", `flows/${id}`);
+    expect(stored).toMatchObject({ name: "Client onboarding" });
+    expect(stored?.updatedAt as number).toBeGreaterThanOrEqual(before);
+  });
+
+  it("refuses to write with no connection", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    try {
+      await expect(addTask(newTask())).rejects.toThrow("No connection. The task wasn't added.");
+      await expect(updateFlow("x", { name: "y" })).rejects.toBeInstanceOf(OfflineError);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(await readAll("tasks", "tasks")).toEqual([]);
   });
 });

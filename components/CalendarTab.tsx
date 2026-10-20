@@ -282,7 +282,7 @@ export function CalendarTab({
                 {selectedEvents.map((e) => (
                   <a
                     key={e.id}
-                    href={e.htmlLink}
+                    href={e.link}
                     target="_blank"
                     rel="noreferrer"
                     className="block rounded-lg border border-teal-200 bg-teal-50/50 p-2.5 hover:bg-teal-50 transition-colors"

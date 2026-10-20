@@ -16,6 +16,7 @@ export interface PipelineEntry {
   target?: string;
   reach?: string;
   reason?: string;
+  answer?: string; // No or not now only: "Not now" (on hold) or "No" (rejected)
   _raw?: boolean;
   _hold?: boolean;
   // custom columns (key like "cx_<timestamp>") hold arbitrary scalar values

@@ -2,6 +2,7 @@
 // group updates its tasks in the same batches.
 import { addDoc, collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { commitInChunks, type BatchOp } from "./batches";
+import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { TASKS, toTaskUpdate } from "./taskWrites";
 import type { Task } from "./types";
@@ -51,11 +52,13 @@ export function groupNamesInUse(groups: GroupRef[], tasks: Pick<Task, "taskGroup
 export async function createTaskGroup(name: string, groups: GroupRef[]): Promise<string> {
   const problem = groupNameProblem(name, groups);
   if (problem) throw new GroupNameError(problem);
+  assertOnline("No connection. The task group wasn't created.");
   const ref = await addDoc(collection(db, TASK_GROUPS), { name: name.trim(), order: Date.now(), starred: false });
   return ref.id;
 }
 
 export async function setGroupStarred(groupId: string, starred: boolean): Promise<void> {
+  assertOnline("No connection. The task group wasn't changed.");
   await updateDoc(doc(db, TASK_GROUPS, groupId), { starred });
 }
 
@@ -75,6 +78,7 @@ async function groupRecordIds(group: GroupRef): Promise<string[]> {
 export async function renameTaskGroup(group: GroupRef, newName: string, groups: GroupRef[], tasks: Task[]): Promise<number> {
   const problem = groupNameProblem(newName, groups, group.id);
   if (problem) throw new GroupNameError(problem);
+  assertOnline("No connection. The task group wasn't renamed.");
   const name = newName.trim();
   const members = tasksIn(group, tasks);
   // The group's own record goes last, so a failure part way leaves it to retry.
@@ -87,6 +91,7 @@ export async function renameTaskGroup(group: GroupRef, newName: string, groups: 
 // Deletes the group; its tasks stay and become ungrouped (W11). Returns how
 // many tasks that was.
 export async function deleteTaskGroup(group: GroupRef, tasks: Task[]): Promise<number> {
+  assertOnline("No connection. The task group wasn't deleted.");
   const members = tasksIn(group, tasks);
   const ops: BatchOp[] = members.map((t) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: undefined })));
   for (const id of await groupRecordIds(group)) ops.push((b) => b.delete(doc(db, TASK_GROUPS, id)));

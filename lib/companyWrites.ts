@@ -3,11 +3,12 @@
 // is cleared, and new ids are never reused.
 import { deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitInChunks, type BatchOp } from "./batches";
+import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
 import { NOTES } from "./noteWrites";
-import { TASKS, toTaskUpdate, type Undo } from "./taskWrites";
+import { TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
 import type { CompaniesById } from "./kinds";
 import type { PipelineEntry } from "./clientTypes";
 import type { ProspectJournalEntry } from "./prospectJournalTypes";
@@ -61,6 +62,7 @@ async function retireCompanyId(id: number): Promise<void> {
 // Adds a company with a fresh id. If that id is somehow taken (the old app on
 // main still counts from the highest id), it takes the next one.
 export async function addCompany(fields: CompanyPatch, knownMaxId: number): Promise<number> {
+  assertOnline("No connection. The company wasn't added.");
   let floor = knownMaxId;
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = await allocateCompanyId(floor);
@@ -80,9 +82,11 @@ export async function addCompany(fields: CompanyPatch, knownMaxId: number): Prom
 /* ---------- Changing a company ---------- */
 
 export async function updateCompany(current: PipelineEntry, patch: CompanyPatch): Promise<Undo> {
+  assertOnline("No connection. The change wasn't saved.");
   const before = previousValues(current, patch);
   await updateDoc(companyRef(current.id), toCompanyUpdate(patch));
   return async () => {
+    assertOnline("No connection. The change wasn't undone.");
     await updateDoc(companyRef(current.id), toCompanyUpdate(before));
   };
 }
@@ -137,9 +141,10 @@ export async function saveTaskKeptInStep(
   companies: CompaniesById,
   tasks: Task[]
 ): Promise<{ companyChanged: boolean; tasksChanged: number }> {
+  assertOnline("No connection. The task wasn't saved.");
   const next = { ...task, ...patch };
   const company = next.linkedClientId != null ? companies.get(next.linkedClientId) : undefined;
-  const ops: BatchOp[] = [(b) => b.update(doc(db, TASKS, task.id), toTaskUpdate(patch))];
+  const ops: BatchOp[] = [(b) => b.update(doc(db, TASKS, task.id), toTaskUpdate(withCompletedAt(patch, task)))];
   let companyPatch: CompanyPatch | null = null;
   let siblings = 0;
   if (company && !next.completed) {
@@ -189,6 +194,7 @@ export async function moveCompany(
 // option), or clears it when `to` is undefined (a removed option). Returns how
 // many companies changed.
 export async function replaceFieldValue(companies: PipelineEntry[], field: string, from: string, to: string | undefined): Promise<number> {
+  assertOnline("No connection. The companies weren't changed.");
   const using = companies.filter((c) => c[field] === from);
   await commitInChunks(
     clientsDb,
@@ -206,6 +212,7 @@ export async function deleteCompany(
   tasks: Task[],
   notes: ProspectJournalEntry[]
 ): Promise<{ tasks: number; notes: number }> {
+  assertOnline("No connection. The company wasn't deleted.");
   const ownNotes = notes.filter((n) => n.pipelineEntryId === c.id);
   const ownTasks = tasks.filter((t) => t.linkedClientId === c.id);
   await retireCompanyId(c.id);

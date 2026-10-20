@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
 import { sortGroups, TASK_GROUPS, type TaskGroup } from "./taskGroups";
+import { reportSnapshot } from "./connection";
 
 export type { TaskGroup } from "./taskGroups";
 
@@ -13,7 +14,8 @@ export function useTaskGroups() {
 
   useEffect(() => {
     const q = query(collection(db, TASK_GROUPS), orderBy("order", "asc"));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+      reportSnapshot("taskGroups", snap.metadata.fromCache);
       setGroupDocs(
         snap.docs.map((d) => {
           const data = d.data() as { name: string; starred?: boolean };

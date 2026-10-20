@@ -5,6 +5,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { HistoricalClient } from "./historicalClientTypes";
 import { PAST_CLIENTS } from "./pastClientWrites";
+import { reportSnapshot } from "./connection";
 
 export function useHistoricalClients() {
   const [clients, setClients] = useState<HistoricalClient[]>([]);
@@ -13,7 +14,9 @@ export function useHistoricalClients() {
   useEffect(() => {
     return onSnapshot(
       collection(clientsDb, PAST_CLIENTS),
+      { includeMetadataChanges: true },
       (snapshot) => {
+        reportSnapshot("pastClients", snapshot.metadata.fromCache);
         setClients(snapshot.docs.map((item) => ({ ...(item.data() as HistoricalClient), id: item.id })));
         setLoading(false);
       },

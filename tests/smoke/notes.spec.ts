@@ -117,3 +117,20 @@ test("U8: delete notes after confirming", async ({ page }) => {
 
   await expect.poll(() => stored("clients", "prospectJournal")).toEqual([]);
 });
+
+test("U4 A3: notes written with no connection are saved once it's back", async ({ page, context }) => {
+  await seedNotes([notes("n1", { prospectName: "Pelita Foods" })]);
+  await openNotes(page);
+  const need = page.getByRole("textbox", { name: "Client Need for Pelita Foods" });
+  await expect(need).toBeVisible();
+  await context.setOffline(true);
+  await need.fill("Written on the train");
+  await need.blur();
+  await page.waitForTimeout(1500);
+  expect((await storedById("clients", "prospectJournal", "n1"))?.clientNeed).toBe("");
+
+  await context.setOffline(false);
+  await expect
+    .poll(async () => (await storedById("clients", "prospectJournal", "n1"))?.clientNeed, { timeout: 30_000 })
+    .toBe("Written on the train");
+});

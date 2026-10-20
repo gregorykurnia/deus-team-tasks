@@ -1,5 +1,6 @@
 // Past clients writes. Changes made in place return Undo (guide 5.4).
 import { deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
+import { assertOnline } from "./connection";
 import { clientsDb } from "./firebaseClients";
 import { canonicalSector, type HistoricalClient } from "./historicalClientTypes";
 import type { Undo } from "./taskWrites";
@@ -13,14 +14,17 @@ function ref(id: string) {
 type Editable = Partial<Omit<HistoricalClient, "id" | "createdAt">>;
 
 async function change(c: HistoricalClient, patch: Editable): Promise<Undo> {
+  assertOnline("No connection. The change wasn't saved.");
   const before = Object.fromEntries(Object.keys(patch).map((k) => [k, c[k as keyof HistoricalClient]])) as Editable;
   await updateDoc(ref(c.id), patch);
   return async () => {
+    assertOnline("No connection. The change wasn't undone.");
     await updateDoc(ref(c.id), before);
   };
 }
 
 export async function addPastClient(input: Omit<HistoricalClient, "id" | "createdAt">): Promise<string> {
+  assertOnline("No connection. The client wasn't added.");
   const client: HistoricalClient = { ...input, name: input.name.trim(), id: crypto.randomUUID(), createdAt: Date.now() };
   await setDoc(ref(client.id), client);
   return client.id;
@@ -53,5 +57,6 @@ export class HasSubsidiariesError extends Error {
 export async function deletePastClient(c: HistoricalClient, clients: HistoricalClient[]): Promise<void> {
   const subs = clients.filter((x) => x.parentId === c.id).length;
   if (subs > 0) throw new HasSubsidiariesError(subs);
+  assertOnline("No connection. It wasn't deleted.");
   await deleteDoc(ref(c.id));
 }

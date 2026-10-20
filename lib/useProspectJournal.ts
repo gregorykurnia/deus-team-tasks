@@ -5,6 +5,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { ProspectJournalEntry } from "./prospectJournalTypes";
 import { NOTES } from "./noteWrites";
+import { reportSnapshot } from "./connection";
 
 export function useProspectJournal() {
   const [entries, setEntries] = useState<ProspectJournalEntry[]>([]);
@@ -13,7 +14,9 @@ export function useProspectJournal() {
   useEffect(() => {
     return onSnapshot(
       collection(clientsDb, NOTES),
+      { includeMetadataChanges: true },
       (snapshot) => {
+        reportSnapshot("notes", snapshot.metadata.fromCache);
         const rows = snapshot.docs
           .map((item) => {
             const entry = item.data() as ProspectJournalEntry;

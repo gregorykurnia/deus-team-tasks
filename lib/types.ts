@@ -34,6 +34,7 @@ export interface Task {
   linkedClientId?: number; // links to a PipelineEntry.id in the client pipeline
   taskGroup?: string; // name of the Task Group this task is organized under (Operational view)
   lastActionDate?: string; // yyyy-mm-dd
+  completedAt?: number; // ms; when it was marked done (tasks finished before this was recorded have none, N1)
 }
 
 export type NewTask = Omit<Task, "id">;
@@ -72,6 +73,7 @@ export interface Flow {
   order: number;
   steps: FlowStep[];
   decision?: FlowDecision | null;
+  updatedAt?: number; // ms; flows edited before this was recorded have none (N1)
 }
 
 export type NewFlow = Omit<Flow, "id">;

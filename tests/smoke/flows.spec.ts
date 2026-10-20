@@ -42,8 +42,12 @@ test("M3: add a decision with an outcome that loops back to a step", async ({ pa
   await page.getByRole("button", { name: "+ Add decision point" }).click();
   await page.getByRole("button", { name: "+ Add branch" }).click();
   const outcome = page.locator('[id^="branch-"]');
+  const branch = async () => ((await storedById("tasks", "flows", "baseline"))?.decision as { branches: Record<string, unknown>[] })?.branches?.[0];
+  // The old screen builds each change on the last saved one, so each step waits for the save.
   await outcome.locator("select").first().selectOption("bad");
+  await expect.poll(async () => (await branch())?.tone).toBe("bad");
   await outcome.locator('input[value="New Outcome"]').fill("Trial failed");
+  await expect.poll(async () => (await branch())?.title).toBe("Trial failed");
   await outcome.locator("select").last().selectOption({ label: "First step" });
 
   await expect

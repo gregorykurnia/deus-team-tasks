@@ -2,7 +2,7 @@
 import { test, expect } from "./fixtures";
 import { acceptDialogs, company, isoDay, seedBaseline, seedCompanies, seedTasks, storedById, stored, task } from "./data";
 import { addPerson, field, openArea, taskModal, taskRow } from "./old-ui";
-import { readFields } from "../support/emulator";
+import { clearAll, readFields } from "../support/emulator";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
 
@@ -165,4 +165,28 @@ test("W7: clearing a task's type clears it", async ({ page }) => {
   await modal.getByRole("button", { name: "Save" }).click();
 
   await expect.poll(async () => readFields("tasks", "tasks/t1")).not.toHaveProperty("taskType");
+});
+
+test.describe("on empty data", () => {
+  test("Q7: the app opens without adding sample data", async ({ page }) => {
+    await clearAll();
+    await page.goto("/");
+    await expect(page.getByText("No tasks yet. Add your first one.")).toBeVisible();
+    await page.waitForTimeout(1500); // the old app added its samples as soon as it saw nothing
+    expect(await stored("tasks", "tasks")).toEqual([]);
+    expect(await stored("clients", "pipeline")).toEqual([]);
+  });
+});
+
+test("A3: with no connection a new task is refused, and nothing is stored", async ({ page, context }) => {
+  await page.goto("/");
+  await expect(taskRow(page, "Baseline task")).toBeVisible();
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "+ Add task", exact: true }).click();
+  const modal = taskModal(page, "New Task");
+  await modal.getByPlaceholder("Describe the task…").fill("Written offline");
+  await modal.getByRole("button", { name: "Save" }).click();
+  await context.setOffline(false);
+  await page.waitForTimeout(2000);
+  expect((await stored("tasks", "tasks")).map((t) => t.task)).toEqual(["Baseline task"]);
 });

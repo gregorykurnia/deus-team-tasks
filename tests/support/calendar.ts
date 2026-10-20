@@ -18,7 +18,7 @@ export async function mockCalendar(page: Page, mode: CalendarMode, events: MockE
   await page.route("**/api/calendar?**", (route) => {
     const body =
       mode === "ok"
-        ? { status: "ok", events: events.map((e) => ({ ...e, htmlLink: e.link })) }
+        ? { status: "ok", events }
         : mode === "off"
           ? { status: "off", events: [], error: "Google Calendar not configured" }
           : { status: "failed", events: [], error: "Failed to fetch Google Calendar events" };

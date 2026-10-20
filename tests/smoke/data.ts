@@ -49,8 +49,7 @@ export const seedFlows = (docs: ReturnType<typeof flow>[]) => seed("tasks", "flo
 export const seedCompanies = (docs: ReturnType<typeof company>[]) =>
   seed("clients", "pipeline", docs, { keepIdField: true });
 
-// Until task 1.6, the old app fills an empty tasks, flows or pipeline collection
-// with sample data. Seeding one record in each keeps tests on their own data.
+// One record in each of tasks, companies and flows, which some specs count on.
 export async function seedBaseline() {
   await Promise.all([
     seedTasks([task("baseline", { task: "Baseline task" })]),
