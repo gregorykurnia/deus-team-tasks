@@ -68,9 +68,15 @@ for a in "$@"; do
 done
 # tmux: the studio runs on its own tmux server (-L studio), never one shared with codebase sessions,
 # whose panes could otherwise be read or typed into from here.
+# Outside tmux, relaunch inside a new session on that server (skip with STUDIO_NO_TMUX=1).
+if [ -z "${TMUX:-}${STUDIO_NO_TMUX:-}" ] && [ -t 0 ] && [ -t 1 ] && command -v tmux >/dev/null; then
+  name=claude; n=1
+  while tmux -L studio has-session -t "=$name" 2>/dev/null; do n=$((n+1)); name="claude-$n"; done
+  exec tmux -L studio new-session -s "$name" -c "$PWD" -- "$PWD/start" "$@"
+fi
 if [ -n "${TMUX:-}" ] && [ "$(basename "${TMUX%%,*}")" != studio ]; then
-  echo "✋ This tmux server is shared with other sessions. From a new terminal window, run:" >&2
-  echo "   tmux -L studio new -A -s studio -c \"$PWD\"   then ./start inside it" >&2
+  echo "✋ This tmux server is shared with other sessions. From a new terminal window outside tmux, run:" >&2
+  echo "   cd \"$PWD\" && ./start     (it opens the studio's own tmux server)" >&2
   exit 1
 fi
 unset TMUX TMUX_PANE
@@ -195,9 +201,8 @@ case "${1:-}" in
 
 Open a NEW terminal window and run:
   cd "$STUDIO" && ./start
-On tmux, give the studio its own tmux server instead (./start refuses a shared one):
-  tmux -L studio new -A -s studio -c "$STUDIO"     then ./start inside it
-  (detach: Ctrl-b d · come back: tmux -L studio attach -t studio)
+./start opens its own session on the studio's tmux server (it refuses a shared one):
+  (detach: Ctrl-b d · list: tmux -L studio ls · come back: tmux -L studio attach -t claude)
   (in VS Code: pick the "studio" terminal profile from the + menu, then ./start)
 
 (Always ./start: a brand-new session with no connectors. To take screenshots,
