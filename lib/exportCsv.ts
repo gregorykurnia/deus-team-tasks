@@ -1,5 +1,7 @@
-function escapeCsvValue(value: unknown): string {
-  const text = value == null ? "" : String(value);
+export function escapeCsvValue(value: unknown): string {
+  let text = value == null ? "" : String(value);
+  // Text that a spreadsheet would run as a formula is kept as plain text.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return `"${text.replace(/"/g, '""')}"`;
 }
 

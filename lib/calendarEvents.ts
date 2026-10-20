@@ -32,32 +32,36 @@ export interface GoogleEvent {
   end?: { date?: string | null; dateTime?: string | null; timeZone?: string | null } | null;
 }
 
-export const DEFAULT_TIME_ZONE = "Asia/Jakarta";
+// The route asks Google for times in the team's zone.
+export const TEAM_TIME_ZONE = "Asia/Jakarta";
 
-function time24(dateTime: string, timeZone: string): string {
-  return new Date(dateTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone });
+// Google writes times as "2026-10-20T14:30:00+07:00", in the zone asked for.
+// The date and time are both read from that text, so they always agree.
+function time24(dateTime: string): string {
+  return dateTime.slice(11, 16);
 }
 
-export function toCalendarEvent(e: GoogleEvent, timeZone = DEFAULT_TIME_ZONE): CalendarEvent {
+export function toCalendarEvent(e: GoogleEvent): CalendarEvent {
   const allDay = !!e.start?.date;
   const start = (e.start?.date ?? e.start?.dateTime ?? "").slice(0, 10);
   let end = (e.end?.date ?? e.end?.dateTime ?? "").slice(0, 10) || start;
   // All-day end dates from Google are exclusive; the app's are inclusive.
   if (allDay && e.end?.date) end = addDays(e.end.date, -1);
+  // An event ending at midnight ends on the day before.
+  if (!allDay && e.end?.dateTime && time24(e.end.dateTime) === "00:00" && end > start) end = addDays(end, -1);
   if (end < start) end = start;
-  const zone = e.start?.timeZone ?? timeZone;
   return {
     id: e.id ?? "",
     title: e.summary ?? "(no title)",
     start,
     end,
     allDay,
-    startTime: !allDay && e.start?.dateTime ? time24(e.start.dateTime, zone) : undefined,
-    endTime: !allDay && e.end?.dateTime ? time24(e.end.dateTime, e.end.timeZone ?? zone) : undefined,
+    startTime: !allDay && e.start?.dateTime ? time24(e.start.dateTime) : undefined,
+    endTime: !allDay && e.end?.dateTime ? time24(e.end.dateTime) : undefined,
     link: e.htmlLink ?? undefined,
   };
 }
 
-export function toCalendarEvents(items: GoogleEvent[], timeZone = DEFAULT_TIME_ZONE): CalendarEvent[] {
-  return items.filter((e) => e.status !== "cancelled").map((e) => toCalendarEvent(e, timeZone));
+export function toCalendarEvents(items: GoogleEvent[]): CalendarEvent[] {
+  return items.filter((e) => e.status !== "cancelled").map(toCalendarEvent);
 }

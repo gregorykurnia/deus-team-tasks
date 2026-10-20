@@ -5,7 +5,7 @@ import { db } from "@/lib/firebase";
 import { companiesById } from "@/lib/kinds";
 import { addTask, moveTasksToGroup, setTasksDone, updateTask } from "@/lib/taskWrites";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
-import { addFlow, updateFlow } from "@/lib/flowWrites";
+import { addFlow, updateFlow, withoutUnset } from "@/lib/flowWrites";
 import { OfflineError } from "@/lib/connection";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import type { NewTask, Task } from "@/lib/types";
@@ -91,7 +91,7 @@ describe("task group writes", () => {
     const stored = await readAll("tasks", "tasks");
     expect(stored.filter((t) => "taskGroup" in t).map((t) => t.id)).toEqual(["other"]);
     expect(stored).toHaveLength(461);
-  });
+  }, 20_000); // 460 writes take a few seconds on a busy machine
 
   it("renames a group and every task in it", async () => {
     await seed("tasks", "taskGroups", [
@@ -120,6 +120,27 @@ describe("task group writes before the groups have loaded", () => {
     expect(await deleteTaskGroup({ name: "Office move" }, tasks)).toBe(1);
     expect(await readAll("tasks", "taskGroups")).toEqual([]);
     expect(await readFields("tasks", "tasks/a")).not.toHaveProperty("taskGroup");
+  });
+
+  it("deletes every record of the group's name, as older data may hold two", async () => {
+    await seed("tasks", "taskGroups", [
+      { id: "g1", name: "Office move", order: 1 },
+      { id: "g2", name: "Office move", order: 2 },
+    ]);
+    expect(await deleteTaskGroup({ id: "g1", name: "Office move" }, [])).toBe(0);
+    expect(await readAll("tasks", "taskGroups")).toEqual([]);
+  });
+});
+
+describe("flow steps", () => {
+  it("saves a decision branch that loops back to nothing", async () => {
+    const id = await addFlow({ name: "Onboarding", description: "", order: 1, steps: [] });
+    const steps = [{ id: "s1", title: "Qualify", decision: { question: "Fit?", branches: [{ id: "b1", label: "No", loopTo: undefined }] } }];
+    await updateFlow(id, { steps } as never);
+    expect(await readFields("tasks", `flows/${id}`)).toMatchObject({
+      steps: [{ id: "s1", decision: { branches: [{ id: "b1", label: "No" }] } }],
+    });
+    expect(withoutUnset({ a: [{ b: undefined, c: 1 }], d: null })).toEqual({ a: [{ c: 1 }], d: null });
   });
 });
 

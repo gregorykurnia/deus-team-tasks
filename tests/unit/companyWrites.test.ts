@@ -159,6 +159,23 @@ describe("deleting a company (B14, D-012)", () => {
 });
 
 describe("qualification notes", () => {
+  it("never writes over notes already stored under a company's usual id", async () => {
+    // Kept from a deleted company with the same id, and not on this screen.
+    const kept = { ...createEmptyProspectJournalEntry("pipeline-1"), prospectName: "Old Pelita", clientNeed: "Keep me" };
+    await seed("clients", "prospectJournal", [kept], { keepIdField: true });
+    const id = await startNotesForCompany(co(1, { company: "Pelita Foods" }), []);
+    expect(id).not.toBe("pipeline-1");
+    expect(await readFields("clients", "prospectJournal/pipeline-1")).toMatchObject({ clientNeed: "Keep me" });
+    expect(await readFields("clients", `prospectJournal/${id}`)).toMatchObject({ pipelineEntryId: 1, prospectName: "Pelita Foods" });
+  });
+
+  it("opens a company's notes that this screen hasn't loaded yet, instead of starting new ones", async () => {
+    const own = { ...createEmptyProspectJournalEntry("pipeline-1"), pipelineEntryId: 1, prospectName: "Pelita", clientNeed: "Keep me" };
+    await seed("clients", "prospectJournal", [own], { keepIdField: true });
+    expect(await startNotesForCompany(co(1), [])).toBe("pipeline-1");
+    expect(await readFields("clients", "prospectJournal/pipeline-1")).toMatchObject({ clientNeed: "Keep me" });
+  });
+
   it("starts a company's notes once, and saves only what changed", async () => {
     const c = co(1, { company: "Pelita Foods" });
     const id = await startNotesForCompany(c, []);
@@ -203,5 +220,14 @@ describe("past clients", () => {
     expect(await readFields("clients", "historicalClients/p")).toMatchObject({ countHead: false });
     await undo();
     expect(await readFields("clients", "historicalClients/p")).toMatchObject({ countHead: true });
+  });
+
+  it("undoes a sector on an older client that had none stored", async () => {
+    const { sector: _sector, ...older } = pc("p");
+    void _sector;
+    await seed("clients", "historicalClients", [older], { keepIdField: true });
+    const undo = await setPastClientSector(older as HistoricalClient, "Retail", new Map());
+    await undo();
+    expect(await readFields("clients", "historicalClients/p")).not.toHaveProperty("sector");
   });
 });

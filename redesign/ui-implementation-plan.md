@@ -145,7 +145,8 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 1.5 | Move logic out of components into `lib/` (companies, notes, past clients); safe writes | Opus 5.5 High | 2026-10-20 · `d7e3504` (kept in step is one write per Firebase project, not one batch; ids from `settings/companyIds`, rule published in 1.7) |
 | 1.6 | Data additions, connection state, offline cache, calendar route | Opus 5.5 High | 2026-10-20 · `be15701` (old flows screen drops keys when typed fast, before and after; for R1) |
 | 1.7 | Shared company settings in Firestore (read path + defaults) | Opus 5.5 High | 2026-10-20 · `217c06a` (rules published 2026-10-20) |
-| R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | |
+| R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-1.md`; later items added to 2.3, 3.10, 3.14, 4.3) |
+| R1.1 | Phase 1 review fixes (listed in `redesign/reviews/phase-1.md`) | Opus 5.5 High | 2026-10-20 (same commit as R1) |
 | **2** | **Phase 2: foundations** | | |
 | 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | |
 | 2.2 | Icon set | Haiku 5.5 Max | |
@@ -205,7 +206,7 @@ Done cells: date and commit, plus a short phrase only if something changed from 
 
 **2.2 Icons.** `ui/Icon.tsx` with every icon in the prototype's `ICONS` map plus guide 2.6's table; sizes 13–21. **Done when** the dev gallery shows them all.
 
-**2.3 App shell.** Route groups and pages (empty screens with titles), `DeskData` provider and readers, SideNav (brand per Q9: the DEUS mark and "DEUS Team Space"; areas with counts, task groups with star and open count, install entry, live dot), TabBar with the raised + (opens `?task=new`), More sheet, PageHeader (title, subtitle, search, main action; phone placement), ConnectionBanner and back-online toast. Refs: guide 3, 5.8; prototype `index.html` shell, `?open=more`, `?state=offline`. **Done when** every area is reachable in one step on desktop and two on a 390px phone, `aria-current` is set, and the offline banner appears with the emulator stopped.
+**2.3 App shell.** Route groups and pages (empty screens with titles), `DeskData` provider and readers, SideNav (brand per Q9: the DEUS mark and "DEUS Team Space"; areas with counts, task groups with star and open count, install entry, live dot), TabBar with the raised + (opens `?task=new`), More sheet, PageHeader (title, subtitle, search, main action; phone placement), ConnectionBanner and back-online toast. Refs: guide 3, 5.8; prototype `index.html` shell, `?open=more`, `?state=offline`. **Done when** every area is reachable in one step on desktop and two on a 390px phone, `aria-current` is set, and the offline banner appears with the emulator stopped. From R1: `lib/connection.ts` forgets a source when its subscription closes, so a closed one can't keep the app counted as online.
 
 **2.4 Display components.** Buttons (all variants, busy, disabled), pills, tags, option chips, avatars and stacks, person chip, notices, empty states, skeletons, load and likelihood meters. Port from the prototype's CSS with the guide's changed values. A dev-only `/gallery` route (not built in production) shows each with its states. Refs: 4.1, 4.4, 4.5, 4.14, 4.15. **Done when** the gallery matches the prototype in a side-by-side screenshot.
 
@@ -237,7 +238,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **3.9 Companies editing.** Cell quick editors (choice, date with quick picks, text) saving with Undo, row menu, company record sheet (no Save, urgency notice, fields in place, tasks with kept-in-step note), new company (name required), move dialog (carried over, asks for the new group's fields, says when tasks change kind), Deal done via status, follow-up task (Open, or Try again), delete confirm with what stays. Prototype `companies.html?open=…`. Guide 6.5, 5.3, 5.4, 5.10.
 
-**3.10 Fields, options, export.** Fields sheet per group (shown switch, rename, own fields add/remove, types), options dialog (colour palette, rename with count, remove with count, locked statuses), export dialog for companies (what's in the file, nothing to export). Prototype `?open=fields`, `field-new`, `field-remove`, `options`, `option-remove`, `export`. Guide 6.5, 5.12.
+**3.10 Fields, options, export.** Fields sheet per group (shown switch, rename, own fields add/remove, types), options dialog (colour palette, rename with count, remove with count, locked statuses), export dialog for companies (what's in the file, nothing to export). From R1: priority "High" and the "No" / "Not now" answers drive where to act and follow-up logic in `lib/companies.ts`, so renaming or removing them must not break it (a role like the locked statuses, or a need if the guide says otherwise). Prototype `?open=fields`, `field-new`, `field-remove`, `options`, `option-remove`, `export`. Guide 6.5, 5.12.
 
 **3.11 Qualification notes.** How likely spread and filters, list with snippets, document with nine headings, likelihood picker, headings written, remarks folding, save line (Saving…, Saved, kept on this device), never replacing text being typed when a colleague's change arrives ("Changed just now"), new notes (tracked with picker marking companies that have notes, or not tracked yet), link to a tracked company, delete, export. Phones: list then document with "All notes". Prototype `notes.html`. Guide 6.6, 5.3, 5.8.
 
@@ -245,7 +246,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **3.13 Past clients: changing.** Add sheet (parent with "Count it in the totals" or subsidiary of a parent), quick add in a parent, rename and sector editors with Undo, move with searchable parents (none to move to), not counted with Undo, delete blocked / subsidiary / company (says how the total changes), busy states, failures with Try again, export of the full record. Guide 6.7, R9.
 
-**3.14 Flows.** List A to Z with search over steps, outcomes, roles and people; flow document with path and decision, loop back jumps and highlights; Edit flow: in-place fields, steps up/down/add/remove with Undo (an outcome looping to a removed step ends the flow), roles with label and name suggestions, decision after the last step with outcomes good/bad, add/remove; autosave 0.8s with save line; "Editing needs a connection" offline; new flow (name required), delete confirm. Prototype `flows.html`. Guide 6.8, 4.16.
+**3.14 Flows.** List A to Z with search over steps, outcomes, roles and people; flow document with path and decision, loop back jumps and highlights; Edit flow: in-place fields, steps up/down/add/remove with Undo (an outcome looping to a removed step ends the flow), roles with label and name suggestions, decision after the last step with outcomes good/bad, add/remove; autosave 0.8s with save line (text fields keep a local draft, so a snapshot never drops keys typed fast: the old screen did, R1); "Editing needs a connection" offline; new flow (name required), delete confirm. Prototype `flows.html`. Guide 6.8, 4.16.
 
 ### Phase 4: edge surfaces and launch
 
@@ -253,7 +254,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.2 Live and leftovers.** Arrive glow and "Just changed" on every screen, the many-changes toast (N2), back online message, anything still open on the §4 checklist, and N1 / N3 once designed.
 
-**4.3 Smoke tests for the new UI.** Rewrite every 1.2/1.3 spec's steps and selectors (roles and labels from the design) keeping the same behaviours; add selecting several, quick capture, options rename, notes offline writing. **Done when** the full suite passes twice in a row on a free machine.
+**4.3 Smoke tests for the new UI.** Rewrite every 1.2/1.3 spec's steps and selectors (roles and labels from the design) keeping the same behaviours; add selecting several, quick capture, options rename, notes offline writing, and the company delete cascade (tasks become internal, notes not tracked; R1). **Done when** the full suite passes twice in a row on a free machine.
 
 **4.4 Screenshots.** A Playwright script shoots each `map.html` state from the prototype and the matching new route at 1440 and 390, side by side, into `redesign/compare/` (git-ignored). Fix differences or log deliberate ones (guide "Changed from the prototype"). Coverage G-2: check phones state by state.
 

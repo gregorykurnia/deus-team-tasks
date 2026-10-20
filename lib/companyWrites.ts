@@ -95,6 +95,30 @@ function openTasksOf(companyId: number, tasks: Task[]) {
   return tasks.filter((t) => t.linkedClientId === companyId && !t.completed);
 }
 
+// Puts back the fields each task had before `patch` was written to it.
+function restoreTasks(changes: { t: Task; p: Partial<NewTask> }[]): Promise<void> {
+  return commitInChunks(
+    db,
+    changes.map(({ t, p }) => (b) =>
+      b.update(
+        doc(db, TASKS, t.id),
+        toTaskUpdate(Object.fromEntries(Object.keys(p).map((k) => [k, t[k as keyof Task]])) as Partial<NewTask>)
+      )
+    )
+  );
+}
+
+// The second of two writes (one per Firebase project) failed: undo the first
+// as far as possible, so a failure leaves nothing half saved, then report it.
+async function rollBack(err: unknown, undoFirst: () => Promise<void>): Promise<never> {
+  try {
+    await undoFirst();
+  } catch (undoErr) {
+    console.error("Couldn't undo the first half of a failed change", undoErr);
+  }
+  throw err;
+}
+
 // Changes a company and keeps its open tasks in step with its last action and
 // target dates (B12). The company and its tasks live in two Firebase projects,
 // so this is one write for the company and one batch for the tasks.
@@ -112,23 +136,19 @@ export async function updateCompanyKeptInStep(
         return p ? [{ t, p }] : [];
       })
     : [];
-  await commitInChunks(
-    db,
-    changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-  );
+  try {
+    await commitInChunks(
+      db,
+      changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
+    );
+  } catch (err) {
+    return rollBack(err, undoCompany);
+  }
   return {
     tasksChanged: changes.length,
     undo: async () => {
       await undoCompany();
-      await commitInChunks(
-        db,
-        changes.map(({ t, p }) => (b) =>
-          b.update(
-            doc(db, TASKS, t.id),
-            toTaskUpdate(Object.fromEntries(Object.keys(p).map((k) => [k, t[k as keyof Task]])) as Partial<NewTask>)
-          )
-        )
-      );
+      await restoreTasks(changes);
     },
   };
 }
@@ -144,9 +164,9 @@ export async function saveTaskKeptInStep(
   assertOnline("No connection. The task wasn't saved.");
   const next = { ...task, ...patch };
   const company = next.linkedClientId != null ? companies.get(next.linkedClientId) : undefined;
-  const ops: BatchOp[] = [(b) => b.update(doc(db, TASKS, task.id), toTaskUpdate(withCompletedAt(patch, task)))];
+  const ownPatch = withCompletedAt(patch, task);
+  const changes: { t: Task; p: Partial<NewTask> }[] = [{ t: task, p: ownPatch }];
   let companyPatch: CompanyPatch | null = null;
-  let siblings = 0;
   if (company && !next.completed) {
     const date = next.lastActionDate ?? company.date;
     const target = next.endDate || company.target;
@@ -156,15 +176,22 @@ export async function saveTaskKeptInStep(
       for (const other of openTasksOf(company.id, tasks)) {
         if (other.id === task.id) continue;
         const p = taskDatesFromCompany(companyNext, other);
-        if (!p) continue;
-        siblings++;
-        ops.push((b) => b.update(doc(db, TASKS, other.id), toTaskUpdate(p)));
+        if (p) changes.push({ t: other, p });
       }
     }
   }
-  await commitInChunks(db, ops);
-  if (company && companyPatch) await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
-  return { companyChanged: !!companyPatch, tasksChanged: siblings };
+  await commitInChunks(
+    db,
+    changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
+  );
+  if (company && companyPatch) {
+    try {
+      await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
+    } catch (err) {
+      return rollBack(err, () => restoreTasks(changes));
+    }
+  }
+  return { companyChanged: !!companyPatch, tasksChanged: changes.length - 1 };
 }
 
 /* ---------- Moving between groups (B5) ---------- */
@@ -216,15 +243,22 @@ export async function deleteCompany(
   const ownNotes = notes.filter((n) => n.pipelineEntryId === c.id);
   const ownTasks = tasks.filter((t) => t.linkedClientId === c.id);
   await retireCompanyId(c.id);
-  await commitInChunks(clientsDb, [
-    ...ownNotes.map((n): BatchOp => (b) =>
-      b.update(doc(clientsDb, NOTES, n.id), { pipelineEntryId: deleteField(), prospectName: c.company })
-    ),
-    (b) => b.delete(companyRef(c.id)),
-  ]);
+  // Tasks first and the company last, so a failure part way leaves the company
+  // in place to try again, never tasks pointing at a company that's gone.
+  const unlink = ownTasks.map((t) => ({ t, p: { linkedClientId: undefined } as Partial<NewTask> }));
   await commitInChunks(
     db,
-    ownTasks.map((t) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate({ linkedClientId: undefined })))
+    unlink.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
   );
+  try {
+    await commitInChunks(clientsDb, [
+      ...ownNotes.map((n): BatchOp => (b) =>
+        b.update(doc(clientsDb, NOTES, n.id), { pipelineEntryId: deleteField(), prospectName: c.company })
+      ),
+      (b) => b.delete(companyRef(c.id)),
+    ]);
+  } catch (err) {
+    return rollBack(err, () => restoreTasks(unlink));
+  }
   return { tasks: ownTasks.length, notes: ownNotes.length };
 }

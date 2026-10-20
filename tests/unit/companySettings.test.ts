@@ -82,6 +82,17 @@ describe("options (C3)", () => {
     expect((await readAll("clients", "pipeline")).map((c) => c.status)).toEqual(["Meeting booked", "Meeting booked", "Drop"]);
   });
 
+  it("finishes the companies when a rename or removal is run again after they failed to follow", async () => {
+    const companies = [co(1, { status: "Meeting Soon" }), co(2, { type: "Partner" })];
+    await seed("clients", "pipeline", companies, { keepIdField: true });
+    await renameOption("status", "Meeting Soon", "Meeting booked", []); // the companies didn't follow
+    await removeOption("type", "Partner", []);
+    expect(await renameOption("status", "Meeting Soon", "Meeting booked", companies)).toBe(1);
+    expect(await removeOption("type", "Partner", companies)).toBe(1);
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ status: "Meeting booked" });
+    expect(await readFields("clients", "pipeline/2")).not.toHaveProperty("type");
+  });
+
   it("refuses a name that's missing or already used, ignoring case", async () => {
     await expect(renameOption("status", "Drop", "meeting soon", [])).rejects.toMatchObject({ problem: "taken" });
     await expect(addOption("priority", "  ", "red")).rejects.toMatchObject({ problem: "missing" });

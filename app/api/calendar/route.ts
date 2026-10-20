@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
-import { toCalendarEvents, type CalendarEvent, type CalendarResponse } from "@/lib/calendarEvents";
+import { TEAM_TIME_ZONE, toCalendarEvents, type CalendarEvent, type CalendarResponse } from "@/lib/calendarEvents";
 
 // The old calendar screen reads this name. Phase 4 (task 4.7) removes it.
 export type GCalEvent = CalendarEvent;
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
       calendarId,
       timeMin,
       timeMax,
+      timeZone: TEAM_TIME_ZONE,
       singleEvents: true,
       orderBy: "startTime",
       maxResults: 250,

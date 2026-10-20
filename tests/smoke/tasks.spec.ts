@@ -185,8 +185,12 @@ test("A3: with no connection a new task is refused, and nothing is stored", asyn
   await page.getByRole("button", { name: "+ Add task", exact: true }).click();
   const modal = taskModal(page, "New Task");
   await modal.getByPlaceholder("Describe the task…").fill("Written offline");
+  const refusal = page.waitForEvent("dialog");
   await modal.getByRole("button", { name: "Save" }).click();
+  const dialog = await refusal;
+  expect(dialog.message()).toBe("No connection. The task wasn't added.");
+  await dialog.dismiss();
+  // Refused before reaching Firestore, so nothing is queued to arrive later.
   await context.setOffline(false);
-  await page.waitForTimeout(2000);
   expect((await stored("tasks", "tasks")).map((t) => t.task)).toEqual(["Baseline task"]);
 });

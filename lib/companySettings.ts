@@ -236,10 +236,16 @@ export async function recolourOption(fieldKey: string, name: string, colour: Opt
 }
 
 // Renames an option and every company using it follows. Returns how many
-// companies changed.
+// companies changed. If the companies failed to follow last time, running it
+// again finishes them.
 export async function renameOption(fieldKey: string, from: string, to: string, companies: PipelineEntry[]): Promise<number> {
   let newName = to;
   await changeSettings("No connection. The option wasn't renamed.", (s) => {
+    const renamed = !optionsOf(s, fieldKey).some((x) => x.name === from) && optionsOf(s, fieldKey).find((x) => x.name === to.trim());
+    if (renamed) {
+      newName = renamed.name;
+      return;
+    }
     const o = findOption(s, fieldKey, from);
     if (o.role) throw new SettingsError("locked", lockedMessage(o));
     newName = checkName(s, fieldKey, to, from);
@@ -249,10 +255,12 @@ export async function renameOption(fieldKey: string, from: string, to: string, c
 }
 
 // Removes an option and clears it from every company that uses it. Returns how
-// many companies changed.
+// many companies changed. If the companies failed to follow last time, running
+// it again finishes them.
 export async function removeOption(fieldKey: string, name: string, companies: PipelineEntry[]): Promise<number> {
   await changeSettings("No connection. The option wasn't removed.", (s) => {
-    const o = findOption(s, fieldKey, name);
+    const o = optionsOf(s, fieldKey).find((x) => x.name === name);
+    if (!o) return; // already removed
     if (o.role) throw new SettingsError("locked", lockedMessage(o));
     s.options[fieldKey] = optionsOf(s, fieldKey).filter((x) => x !== o);
   });

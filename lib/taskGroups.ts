@@ -66,12 +66,11 @@ function tasksIn(group: GroupRef, tasks: Task[]) {
   return tasks.filter((t) => t.taskGroup === group.name);
 }
 
-// The group's own records: by id, or by name when the screen hasn't loaded
-// them yet (tasks can arrive before groups).
+// The group's own records: its id, and every record with its name (tasks can
+// arrive before groups, and older data may hold two records of one name).
 async function groupRecordIds(group: GroupRef): Promise<string[]> {
-  if (group.id) return [group.id];
   const snap = await getDocs(query(collection(db, TASK_GROUPS), where("name", "==", group.name)));
-  return snap.docs.map((d) => d.id);
+  return [...new Set([...(group.id ? [group.id] : []), ...snap.docs.map((d) => d.id)])];
 }
 
 // Renames the group and every task in it. Returns how many tasks moved with it.

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTasks } from "@/lib/useTasks";
 import { KNOWN_NAMES } from "@/lib/types";
 import { namesInUse } from "@/lib/people";
+import { OfflineError } from "@/lib/connection";
 import { Sidebar, TabId } from "./Sidebar";
 import { TasksTab } from "./TasksTab";
 import { GanttTab } from "./GanttTab";
@@ -29,6 +30,19 @@ export default function App() {
   );
 
   const allNames = useMemo(() => namesInUse(tasks, KNOWN_NAMES), [tasks]);
+
+  // The old screens don't wait for their writes, so a refused or failed one
+  // would vanish without a word. Say so until the new screens replace them.
+  useEffect(() => {
+    function onRejection(e: PromiseRejectionEvent) {
+      const err = e.reason;
+      if (!(err instanceof OfflineError) && err?.name !== "FirebaseError") return;
+      e.preventDefault();
+      window.alert(err instanceof OfflineError ? err.message : `The change wasn't saved: ${err.message}`);
+    }
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => window.removeEventListener("unhandledrejection", onRejection);
+  }, []);
 
   return (
     <div className="flex-1 flex">

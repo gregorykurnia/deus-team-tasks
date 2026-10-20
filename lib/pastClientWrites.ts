@@ -1,5 +1,5 @@
 // Past clients writes. Changes made in place return Undo (guide 5.4).
-import { deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
+import { deleteDoc, deleteField, doc, setDoc, updateDoc } from "firebase/firestore";
 import { assertOnline } from "./connection";
 import { clientsDb } from "./firebaseClients";
 import { canonicalSector, type HistoricalClient } from "./historicalClientTypes";
@@ -15,7 +15,10 @@ type Editable = Partial<Omit<HistoricalClient, "id" | "createdAt">>;
 
 async function change(c: HistoricalClient, patch: Editable): Promise<Undo> {
   assertOnline("No connection. The change wasn't saved.");
-  const before = Object.fromEntries(Object.keys(patch).map((k) => [k, c[k as keyof HistoricalClient]])) as Editable;
+  // A field the client didn't have is cleared again on Undo.
+  const before = Object.fromEntries(
+    Object.keys(patch).map((k) => [k, c[k as keyof HistoricalClient] ?? deleteField()])
+  );
   await updateDoc(ref(c.id), patch);
   return async () => {
     assertOnline("No connection. The change wasn't undone.");
