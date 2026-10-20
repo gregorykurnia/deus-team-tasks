@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .wrap { max-width: 980px; margin: 0 auto; padding: 36px 20px 80px; }
+  h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+  .intro { color: var(--ink-2); font-weight: 500; max-width: 68ch; }
+  .panel { margin-top: 22px; padding: 18px 22px 20px; }
+  h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
+  .ids { color: var(--muted); font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 7px 8px; border-top: 1px solid var(--hair); vertical-align: top; }
+  td:first-child { width: 42%; font-weight: 600; }
+  td a { color: var(--blue); font-weight: 600; text-decoration: none; margin-right: 12px; white-space: nowrap; }
+  td a:hover { text-decoration: underline; }
+  .later { color: var(--muted); }
+  @media (max-width: 640px) { td:first-child { width: auto; } tr { display: grid; } td { border-top: 0; padding: 3px 0; } tr { border-top: 1px solid var(--hair); padding: 8px 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Prototype map</h1>
+  <p class="intro">Every screen and state built so far, with the job stories it serves. Each link opens on its own; add <b>stress</b> to see the stress data set. Light mode only, as the brief asks. The dashed “Prototype” control on each page switches data and states and is not part of the design.</p>
+
+  <section class="panel glass"><h2>Today</h2><p class="ids">W1, W5, W12, W13, D2, D3, D4 (today only), D7 (summary), D9, D10, D11, A1, A4</p>
+  <table>
+    <tr><td>Normal</td><td><a href="index.html">Normal</a><a href="index.html?stress">Stress</a></td></tr>
+    <tr><td>One kind of work (prospects, clients, internal)</td><td><a href="index.html?kind=pro">Prospects</a><a href="index.html?kind=cli">Clients</a><a href="index.html?kind=int">Internal</a></td></tr>
+    <tr><td>No work of one kind</td><td><a href="index.html?state=no-clients&kind=cli">No client work</a></td></tr>
+    <tr><td>Nothing due in the next three days</td><td><a href="index.html?state=quiet">Normal</a><a href="index.html?state=quiet&stress">Stress</a></td></tr>
+    <tr><td>Nothing yet (no tasks at all)</td><td><a href="index.html?state=empty">Open</a></td></tr>
+    <tr><td>Loading (tasks and events load separately)</td><td><a href="index.html?state=loading">Everything</a><a href="index.html?state=events-loading">Events only</a></td></tr>
+    <tr><td>Calendar not set up / couldn't load</td><td><a href="index.html?state=events-off">Not set up</a><a href="index.html?state=events-fail">Failed</a></td></tr>
+    <tr><td>No connection</td><td><a href="index.html?state=offline">With last loaded data</a><a href="index.html?state=offline-empty">Nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="index.html?state=live">Open (changes after a second)</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>All tasks</h2><p class="ids">W5, W6, W12, W13, W14, W15, D2, D3, D11, A1</p>
+  <table>
+    <tr><td>Open tasks</td><td><a href="tasks.html">Normal</a><a href="tasks.html?stress">Stress (2,400 tasks)</a></td></tr>
+    <tr><td>By kind of work</td><td><a href="tasks.html?kind=pro">Prospects</a><a href="tasks.html?kind=cli">Clients</a><a href="tasks.html?kind=int">Internal</a></td></tr>
+    <tr><td>Prospect work with no action for 14+ days</td><td><a href="tasks.html?kind=pro&idle=14">Open</a><a href="tasks.html?kind=pro&idle=60">None match</a></td></tr>
+    <tr><td>Overdue, due soon, no dates</td><td><a href="tasks.html?due=overdue">Overdue</a><a href="tasks.html?due=soon">Next 3 days</a><a href="tasks.html?due=nodate">No dates</a></td></tr>
+    <tr><td>Finished tasks</td><td><a href="tasks.html?view=done">Last 7 days</a><a href="tasks.html?view=done&range=all">Any time</a><a href="tasks.html?view=done&stress">Stress</a></td></tr>
+    <tr><td>No results</td><td><a href="tasks.html?q=zebra">Search</a><a href="tasks.html?kind=cli&due=nodate">Filters</a></td></tr>
+    <tr><td>No tasks of one kind</td><td><a href="tasks.html?state=no-clients&kind=cli">No client work</a><a href="tasks.html?state=empty">Nothing yet</a></td></tr>
+    <tr><td>Details shown, sort, no-action filter</td><td><a href="tasks.html?open=columns">Details shown</a><a href="tasks.html?open=sort">Sort</a><a href="tasks.html?open=idle">No action for</a></td></tr>
+    <tr><td>Loading, no connection</td><td><a href="tasks.html?state=loading">Loading</a><a href="tasks.html?state=offline">Offline</a><a href="tasks.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="tasks.html?state=live">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Selecting several tasks</h2><p class="ids">D-008 (owner decision, 2026-10-20)</p>
+  <table>
+    <tr><td>Selecting, none chosen yet</td><td><a href="tasks.html?open=select-none">Open</a></td></tr>
+    <tr><td>Some selected, all matching selected</td><td><a href="tasks.html?open=select">Some</a><a href="tasks.html?open=select-all">All</a><a href="tasks.html?open=select&stress">Stress (select all 1,579)</a></td></tr>
+    <tr><td>Move to a group (company tasks stay put)</td><td><a href="tasks.html?open=select-move">Open</a></td></tr>
+    <tr><td>Delete selected</td><td><a href="tasks.html?open=select-delete">Confirm</a></td></tr>
+    <tr><td>Finished tasks: mark not done</td><td><a href="tasks.html?view=done&open=select">Open</a></td></tr>
+    <tr><td>No connection</td><td><a href="tasks.html?state=offline&open=select">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Task groups</h2><p class="ids">W8, W9, W10, W11</p>
+  <table>
+    <tr><td>One group's work</td><td><a href="tasks.html?group=q4">Q4 planning</a><a href="tasks.html?group=g0&stress">Stress, long name</a><a href="tasks.html?group=g5&stress">Empty group</a></td></tr>
+    <tr><td>New group</td><td><a href="tasks.html?open=group-new">Open</a><a href="tasks.html?open=group-empty">Name missing</a><a href="tasks.html?open=group-dup">Name taken</a><a href="tasks.html?state=group-fail&open=group-fail">Couldn't create</a></td></tr>
+    <tr><td>Rename, delete (tasks become ungrouped)</td><td><a href="tasks.html?group=office&open=group-rename">Rename</a><a href="tasks.html?group=office&open=group-delete">Delete</a></td></tr>
+    <tr><td>Nothing yet (no groups)</td><td><a href="tasks.html?state=empty">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Task details</h2><p class="ids">W1, W2, W3, W4, W7, B12 (note), B13 (link), D11</p>
+  <table>
+    <tr><td>New task, quick and with all details</td><td><a href="tasks.html?open=task-new">Quick</a><a href="tasks.html?open=task-new-full">All details</a></td></tr>
+    <tr><td>Description missing</td><td><a href="tasks.html?open=task-required">Open</a></td></tr>
+    <tr><td>Edit a company task, an internal task, a finished task</td><td><a href="tasks.html?open=task-edit">Company</a><a href="tasks.html?open=task-edit-int">Internal</a><a href="tasks.html?open=task-done">Finished</a><a href="tasks.html?open=task-edit&stress">Stress</a></td></tr>
+    <tr><td>Names already in use, adding a new name</td><td><a href="tasks.html?open=task-names">Suggestions</a><a href="tasks.html?open=task-names-new">New name</a></td></tr>
+    <tr><td>Delete a task</td><td><a href="tasks.html?open=task-delete">Confirm</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: timeline</h2><p class="ids">D1, D2, D3 (count of undated tasks), D7, D8, D9, D10, D11, A1</p>
+  <table>
+    <tr><td>Four weeks, one row per person, crunch days marked</td><td><a href="plan.html">Normal</a><a href="plan.html?stress">Stress (30 people, rows folded)</a></td></tr>
+    <tr><td>One row per kind of work</td><td><a href="plan.html?rows=kind">Open</a></td></tr>
+    <tr><td>One person: owned solid, kept informed outlined</td><td><a href="plan.html?person=Maya%20Chen">Maya Chen</a><a href="plan.html?person=Kevin%20Tan&stress">Stress</a></td></tr>
+    <tr><td>One slice of the work</td><td><a href="plan.html?work=cli">Clients</a><a href="plan.html?work=int">Internal</a><a href="plan.html?work=g:q4">Q4 planning group</a></td></tr>
+    <tr><td>Tasks only, events only</td><td><a href="plan.html?show=tasks">Tasks</a><a href="plan.html?show=events">Events</a><a href="plan.html?show=events&stress">Events, stress</a></td></tr>
+    <tr><td>Nothing in these four weeks, nothing yet</td><td><a href="plan.html?from=2031-03-03">No tasks in range</a><a href="plan.html?state=empty">Nothing yet</a></td></tr>
+    <tr><td>Rows, person and work menus</td><td><a href="plan.html?open=rows">Rows</a><a href="plan.html?open=person">Person</a><a href="plan.html?open=work">Work</a></td></tr>
+    <tr><td>Loading, events loading</td><td><a href="plan.html?state=loading">Everything</a><a href="plan.html?state=events-loading">Events only</a></td></tr>
+    <tr><td>Calendar not set up / couldn't load</td><td><a href="plan.html?state=events-off">Not set up</a><a href="plan.html?state=events-fail">Failed</a><a href="plan.html?state=events-fail&show=events">Failed, events only</a></td></tr>
+    <tr><td>No connection, live change from a colleague</td><td><a href="plan.html?state=offline">Offline</a><a href="plan.html?state=offline-empty">Offline, nothing loaded</a><a href="plan.html?state=live">Live change</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: month</h2><p class="ids">D5, D7, D8, D9, D10, D11</p>
+  <table>
+    <tr><td>This month (on phones: dots, and the chosen day listed below)</td><td><a href="plan.html?view=month">Normal</a><a href="plan.html?view=month&stress">Stress</a></td></tr>
+    <tr><td>Tasks only, events only</td><td><a href="plan.html?view=month&show=tasks">Tasks</a><a href="plan.html?view=month&show=events">Events</a></td></tr>
+    <tr><td>Nothing in a month</td><td><a href="plan.html?view=month&month=2031-03">Open</a><a href="plan.html?view=month&state=empty">Nothing yet</a></td></tr>
+    <tr><td>Loading, calendar failed, no connection</td><td><a href="plan.html?view=month&state=loading">Loading</a><a href="plan.html?view=month&state=events-fail">Calendar failed</a><a href="plan.html?view=month&state=offline">Offline</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: one day</h2><p class="ids">D4, D5, D9, D10, D11</p>
+  <table>
+    <tr><td>First look: today, with due, starting and under way</td><td><a href="plan.html?view=day">Normal</a><a href="plan.html?view=day&stress">Stress (60 tasks, 25 events)</a></td></tr>
+    <tr><td>Nothing today: lands on the next day with something</td><td><a href="plan.html?view=day&state=free-today">Open</a></td></tr>
+    <tr><td>Nothing on a chosen day</td><td><a href="plan.html?view=day&date=2031-03-04">Open</a><a href="plan.html?view=day&state=empty">Nothing yet</a></td></tr>
+    <tr><td>One person's day, events only</td><td><a href="plan.html?view=day&person=Sarah%20Lim">Sarah Lim</a><a href="plan.html?view=day&show=events">Events only</a></td></tr>
+    <tr><td>Loading, calendar not set up or failed, no connection</td><td><a href="plan.html?view=day&state=loading">Loading</a><a href="plan.html?view=day&state=events-off">Not set up</a><a href="plan.html?view=day&state=events-fail">Failed</a><a href="plan.html?view=day&state=offline">Offline</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="plan.html?view=day&state=live">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Plan: people</h2><p class="ids">D1 (who carries what), D6, D11</p>
+  <table>
+    <tr><td>Everyone: owned and informed, deadlines ahead</td><td><a href="plan.html?view=people">Normal</a><a href="plan.html?view=people&stress">Stress (30 people, search)</a></td></tr>
+    <tr><td>One person: responsible for, kept informed on (with their part)</td><td><a href="plan.html?view=people&person=Kevin%20Tan">Kevin Tan</a><a href="plan.html?view=people&person=Maya%20Chen">Maya Chen</a><a href="plan.html?view=people&person=Rina%20Hartono&stress">Stress</a></td></tr>
+    <tr><td>A person with no tasks</td><td><a href="plan.html?view=people&person=Joko%20Susanto">Open</a></td></tr>
+    <tr><td>One kind of work</td><td><a href="plan.html?view=people&work=pro">Prospects</a></td></tr>
+    <tr><td>Loading, nothing yet</td><td><a href="plan.html?view=people&state=loading">Loading</a><a href="plan.html?view=people&state=empty">Nothing yet</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Companies: the four groups</h2><p class="ids">B2, B3, B4, B6, B7, B8, B9, A1, A4</p>
+  <table>
+    <tr><td>Active prospects, with where to act</td><td><a href="companies.html">Normal</a><a href="companies.html?stress">Stress (3,200 companies, 22 fields shown)</a></td></tr>
+    <tr><td>To approach, deal done, no or not now</td><td><a href="companies.html?g=lead">To approach</a><a href="companies.html?g=done">Deal done</a><a href="companies.html?g=hold">No or not now</a><a href="companies.html?g=hold&stress">Stress</a></td></tr>
+    <tr><td>Gone cold, waiting on us, high priority, target close or missed</td><td><a href="companies.html?act=cold">Gone cold</a><a href="companies.html?act=fu">Waiting on us</a><a href="companies.html?act=high">High priority</a><a href="companies.html?act=due">Target date</a></td></tr>
+    <tr><td>Search and filters, no results</td><td><a href="companies.html?q=fleet">Search</a><a href="companies.html?q=jas">Only in another group</a><a href="companies.html?q=zebra">No results</a><a href="companies.html?g=lead&prio=high">Priority filter</a></td></tr>
+    <tr><td>Order by any detail</td><td><a href="companies.html?open=sort">Sort menu</a><a href="companies.html?sort=target&dir=asc">By target date</a><a href="companies.html?sort=name&dir=asc">By name</a></td></tr>
+    <tr><td>Nothing yet, one group empty</td><td><a href="companies.html?state=empty">No companies</a><a href="companies.html?state=empty-group&g=hold">No or not now is empty</a></td></tr>
+    <tr><td>Loading, no connection</td><td><a href="companies.html?state=loading">Loading</a><a href="companies.html?state=offline">Offline</a><a href="companies.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="companies.html?state=live">Open (changes after a second)</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Companies: one detail, one step</h2><p class="ids">B10, B12, C3 (clearing a choice)</p>
+  <table>
+    <tr><td>Change a choice, a date, a text from the list</td><td><a href="companies.html?open=edit-status">Status</a><a href="companies.html?open=edit-date">Target date</a><a href="companies.html?open=edit-text">Next actions</a></td></tr>
+    <tr><td>Row menu: follow-up task, last action today, move, notes, delete</td><td><a href="companies.html?open=row-menu">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Company record</h2><p class="ids">B1, B3, B4, B10, B11, B12, B13, B14, U5 (link only)</p>
+  <table>
+    <tr><td>Active prospect, with its tasks kept in step</td><td><a href="companies.html?co=hal">Halcyon Logistics</a><a href="companies.html?open=record-cold">Gone cold, target missed</a><a href="companies.html?co=c1&stress">Stress</a></td></tr>
+    <tr><td>To approach, no or not now</td><td><a href="companies.html?open=record-lead">To approach</a><a href="companies.html?open=record-hold">No or not now</a><a href="companies.html?open=record-hold&stress">Stress</a></td></tr>
+    <tr><td>From a task straight to its company</td><td><a href="tasks.html?open=task-edit">Task, then “Open company”</a></td></tr>
+    <tr><td>Follow-up task created, or couldn't be created</td><td><a href="companies.html?open=followup">Created</a><a href="companies.html?state=task-fail&open=followup">Failed</a></td></tr>
+    <tr><td>Delete a company</td><td><a href="companies.html?open=delete">Confirm</a></td></tr>
+    <tr><td>Offline: read only until back online</td><td><a href="companies.html?state=offline&co=hal">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>New company, moving between groups</h2><p class="ids">B1, B3, B4, B5</p>
+  <table>
+    <tr><td>New company (only the name is required)</td><td><a href="companies.html?open=new">Open</a><a href="companies.html?open=new-required">Name missing</a></td></tr>
+    <tr><td>Move, with what's known carried over</td><td><a href="companies.html?open=move">To approach → Active</a><a href="companies.html?open=move-hold">Active → No or not now</a></td></tr>
+    <tr><td>Status set to Deal done moves it to Deal done</td><td><a href="companies.html?open=edit-status">Choose “Deal done”</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Fields and options</h2><p class="ids">C1, C2, C3</p>
+  <table>
+    <tr><td>Fields per group: show in the list, rename, remove own fields</td><td><a href="companies.html?open=fields">Active</a><a href="companies.html?g=hold&open=fields">No or not now</a><a href="companies.html?open=fields&stress">Stress</a></td></tr>
+    <tr><td>Add a field (short text, long text, number, date, choice)</td><td><a href="companies.html?open=field-new">Open</a></td></tr>
+    <tr><td>Remove an own field (values stay stored)</td><td><a href="companies.html?open=field-remove">Confirm</a></td></tr>
+    <tr><td>Options with colours; locked statuses</td><td><a href="companies.html?open=options">Status options</a><a href="companies.html?open=options&stress">Stress (23 options)</a><a href="companies.html?open=option-remove">Remove an option</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Export</h2><p class="ids">E1 (companies; notes and past clients come with their groups)</p>
+  <table>
+    <tr><td>Companies shown now, with the fields shown</td><td><a href="companies.html?open=export">Open</a><a href="companies.html?act=cold&open=export">Filtered</a><a href="companies.html?q=zebra&open=export">Nothing to export</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Qualification notes</h2><p class="ids">U1, U2, U3, U4, U5, U6, U7, U8, E1, A1</p>
+  <table>
+    <tr><td>Prospects and how likely, with one prospect's notes open</td><td><a href="notes.html">Normal</a><a href="notes.html?stress">Stress (1,500 prospects)</a><a href="notes.html?n=sn1&stress">Every heading empty</a></td></tr>
+    <tr><td>Long remarks folded away, and unfolded</td><td><a href="notes.html?n=n1">Folded</a><a href="notes.html?open=remarks">Unfolded</a><a href="notes.html?n=sn0&stress">Stress (very long)</a></td></tr>
+    <tr><td>Saving as you write, and offline</td><td><a href="notes.html?state=saving">Saving</a><a href="notes.html?state=offline">Offline: keeps writing</a></td></tr>
+    <tr><td>From a company, in one action (opens or starts its notes)</td><td><a href="notes.html?co=hal">Has notes</a><a href="notes.html?co=ksp">Starts notes</a><a href="companies.html?co=ksp">From the record</a></td></tr>
+    <tr><td>Not tracked yet, and linking to a company later</td><td><a href="notes.html?n=n9">Not tracked yet</a><a href="notes.html?open=link">Link</a><a href="notes.html?track=no">Only not tracked</a></td></tr>
+    <tr><td>New notes</td><td><a href="notes.html?open=new">For a tracked company</a><a href="notes.html?open=new-untracked">Not tracked yet</a><a href="notes.html?open=new-required">Name missing</a></td></tr>
+    <tr><td>Search everything written, patterns across prospects</td><td><a href="notes.html?q=budget">“budget”</a><a href="notes.html?q=IT%20policy">“IT policy”</a><a href="notes.html?q=budget&stress">Stress</a><a href="notes.html?q=zebra">No results</a></td></tr>
+    <tr><td>One likelihood, by likelihood, not rated</td><td><a href="notes.html?lk=high">High</a><a href="notes.html?sort=likely">Highest first</a><a href="notes.html?lk=-">Not rated</a></td></tr>
+    <tr><td>Delete, export</td><td><a href="notes.html?open=delete">Delete</a><a href="notes.html?open=export">Export</a><a href="notes.html?q=budget&open=export">Export a search</a></td></tr>
+    <tr><td>Nothing yet, loading, no connection</td><td><a href="notes.html?state=empty">Nothing yet</a><a href="notes.html?state=loading">Loading</a><a href="notes.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="notes.html?n=n3&state=live">Open</a></td></tr>
+    <tr><td>Phones: the list, then one prospect full screen</td><td><a href="notes.html?none">List</a><a href="notes.html?n=n1">One prospect</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Past clients</h2><p class="ids">R1, R2, R3, R4, R5, R6, R7, R8, R9, E1, A1</p>
+  <table>
+    <tr><td>Totals, the record and the breakdown by sector</td><td><a href="past.html">Normal</a><a href="past.html?stress">Stress (1,200 parents, 4,369 subsidiaries)</a><a href="past.html?view=sectors">Phones: by sector</a></td></tr>
+    <tr><td>Subsidiaries under a parent company, a long list of them</td><td><a href="past.html?x=p8">One open</a><a href="past.html?sort=subs-desc&x=sp1&stress">Stress (340 under one parent)</a></td></tr>
+    <tr><td>Not counted: umbrella companies, and only those</td><td><a href="past.html?nc">Only not counted</a><a href="past.html?state=umbrella-only">Nothing counted yet</a></td></tr>
+    <tr><td>Search across parents, subsidiaries and sectors</td><td><a href="past.html?q=nusa">“nusa”</a><a href="past.html?q=retail">“retail”</a><a href="past.html?q=sinar&stress">Stress</a><a href="past.html?q=zebra">No results</a></td></tr>
+    <tr><td>One sector, no sector, order</td><td><a href="past.html?sec=retail">Retail</a><a href="past.html?sec=-">No sector</a><a href="past.html?sort=subs-desc">Most subsidiaries first</a><a href="past.html?open=sort">Order menu</a></td></tr>
+    <tr><td>Adding a past client, or a subsidiary</td><td><a href="past.html?open=add">Add</a><a href="past.html?open=add-sub">A subsidiary of…</a><a href="past.html?open=add-required">Name missing</a><a href="past.html?x=p1">Quick add in a group</a></td></tr>
+    <tr><td>Sector spellings merged</td><td><a href="past.html?open=add-sector">Typed another way</a><a href="past.html?open=sector">Sector editor</a></td></tr>
+    <tr><td>Rename, move a subsidiary, menus</td><td><a href="past.html?open=rename">Rename</a><a href="past.html?open=move">Move</a><a href="past.html?state=one-parent&open=move">No other parent</a><a href="past.html?open=menu">Parent menu</a></td></tr>
+    <tr><td>Delete</td><td><a href="past.html?open=delete-blocked">A parent with subsidiaries (blocked)</a><a href="past.html?open=delete-sub">A subsidiary</a><a href="past.html?open=delete">A company</a></td></tr>
+    <tr><td>Adding or moving in progress, saving fails</td><td><a href="past.html?state=saving">In progress</a><a href="past.html?state=save-fail">Fails, then try again</a><a href="past.html?state=save-fail&open=rename">Rename fails</a></td></tr>
+    <tr><td>Export the full record</td><td><a href="past.html?open=export">Open</a></td></tr>
+    <tr><td>Nothing yet, loading, no connection</td><td><a href="past.html?state=empty">Nothing yet</a><a href="past.html?state=loading">Loading</a><a href="past.html?state=offline">Offline</a><a href="past.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="past.html?state=live">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Flows</h2><p class="ids">M1, M2, M3, M4, A1</p>
+  <table>
+    <tr><td>A flow: steps, roles, and a decision that loops back</td><td><a href="flows.html?f=f1">Onboarding</a><a href="flows.html?f=f2">Three outcomes</a><a href="flows.html?f=f3">No decision</a><a href="flows.html?open=no-steps">No steps yet</a></td></tr>
+    <tr><td>Stress: 40 steps, 12 roles on a step, 30 names, 6 outcomes</td><td><a href="flows.html?f=sf0&amp;stress">Read</a><a href="flows.html?f=sf0&amp;stress&amp;edit">Edit</a><a href="flows.html?stress">60 flows</a></td></tr>
+    <tr><td>Editing: everything saves as you go</td><td><a href="flows.html?open=edit">Edit a flow</a><a href="flows.html?state=saving">Saving</a><a href="flows.html?open=names">Name suggestions</a><a href="flows.html?open=decision-new">Adding a decision</a></td></tr>
+    <tr><td>New flow, menu, delete</td><td><a href="flows.html?open=new">New flow</a><a href="flows.html?open=new-required">Name missing</a><a href="flows.html?open=menu">Menu</a><a href="flows.html?open=delete">Delete</a></td></tr>
+    <tr><td>Nothing yet, loading, no connection</td><td><a href="flows.html?state=empty">Nothing yet</a><a href="flows.html?state=loading">Loading</a><a href="flows.html?state=offline&amp;f=f1">Offline (read only)</a><a href="flows.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="flows.html?state=live&amp;f=f1">Open</a></td></tr>
+    <tr><td>Phones: the list, then one flow full screen</td><td><a href="flows.html?none">List</a><a href="flows.html?f=f1">One flow</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Installing, and opening with no connection</h2><p class="ids">A2, A3</p>
+  <table>
+    <tr><td>Home screen icon, launch screen, and every offline state</td><td><a href="install.html">Open the board</a></td></tr>
+    <tr><td>Install sheet</td><td><a href="index.html?open=install">Browser offers it</a><a href="index.html?open=install-ios">iPhone</a><a href="index.html?open=install-done">Installed</a></td></tr>
+    <tr><td>Opened offline, back online</td><td><a href="index.html?state=offline">Offline</a><a href="index.html?state=offline-empty">Nothing loaded</a><a href="index.html?state=back-online">Back online</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Moving around on phones</h2><p class="ids">A2, A4</p>
+  <table>
+    <tr><td>Tab bar, raised add button, More</td><td><a href="index.html?open=more">More sheet</a></td></tr>
+    <tr><td>Task groups on phones (chips under the title)</td><td><a href="tasks.html">Open at phone width</a></td></tr>
+  </table></section>
+
+</div>
+</body>
+</html>

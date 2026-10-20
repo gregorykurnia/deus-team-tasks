@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installed app · Team desk prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* A board for the parts of the installed app that live outside its screens (A2, A3). */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 36px 20px 80px; }
+  h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+  .intro { color: var(--ink-2); font-weight: 500; max-width: 70ch; }
+  .board { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 22px; }
+  .card { border-radius: var(--r-l); padding: 22px; }
+  .card h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
+  .card > p { margin: 0 0 16px; color: var(--ink-2); font-weight: 500; font-size: 14px; }
+  .ids { color: var(--muted); font-size: 13px; font-weight: 600; }
+  /* Home screen */
+  .home { position: relative; margin: 0 auto; width: 260px; height: 420px; border-radius: 40px; padding: 46px 22px; background: linear-gradient(160deg, #6f8fd8, #9ec5e6 55%, #b9e3dc); box-shadow: 0 0 0 8px #1d2742, 0 30px 60px -20px rgba(20,30,70,.5); display: grid; grid-template-columns: repeat(4, 48px); justify-content: space-between; gap: 22px 8px; align-content: start; }
+  .home .app { min-width: 0; white-space: nowrap; }
+  .home .app { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .home .tile { width: 48px; height: 48px; border-radius: 13px; background: rgba(255,255,255,.35); }
+  .home .appicon { width: 48px; height: 48px; border-radius: 13px; box-shadow: 0 6px 14px -6px rgba(20,30,70,.4); }
+  .home .appicon .logo { width: 28px; height: 28px; border-radius: 8px; }
+  .sizes { display: flex; align-items: flex-end; gap: 18px; margin-top: 22px; justify-content: center; }
+  .sizes .appicon:nth-child(1) { width: 120px; height: 120px; border-radius: 30px; }
+  .sizes .appicon:nth-child(1) .logo { width: 68px; height: 68px; border-radius: 18px; }
+  .sizes .appicon:nth-child(1)::after { content: ""; position: absolute; inset: 12px; border-radius: 50%; border: 1.5px dashed rgba(47,107,234,.4); }
+  .sizes .appicon { position: relative; }
+  .sizes .appicon:nth-child(3) { width: 40px; height: 40px; border-radius: 11px; }
+  .sizes .appicon:nth-child(3) .logo { width: 22px; height: 22px; border-radius: 6px; }
+  .cap { margin-top: 12px; text-align: center; color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  /* Launch screen */
+  .launch { margin: 0 auto; width: 240px; height: 480px; border-radius: 36px; box-shadow: 0 0 0 8px #1d2742, 0 30px 60px -20px rgba(20,30,70,.5); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: radial-gradient(300px 260px at 10% 0%, #d3e2ff, transparent 70%), radial-gradient(300px 300px at 100% 50%, #d6f2f0, transparent 70%), #f0f4fa; }
+  .launch .appicon { width: 84px; height: 84px; border-radius: 24px; }
+  .launch .appicon .logo { width: 48px; height: 48px; border-radius: 13px; }
+  .launch b { font-size: 17px; font-weight: 800; letter-spacing: -0.015em; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 8px; border-top: 1px solid var(--hair); vertical-align: top; }
+  td:first-child { width: 40%; font-weight: 600; color: var(--ink-2); }
+  td a { color: var(--blue); font-weight: 600; text-decoration: none; margin-right: 12px; white-space: nowrap; }
+  td a:hover { text-decoration: underline; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; box-shadow: inset 0 0 0 1px var(--hair); }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 760px) { .board { grid-template-columns: 1fr; } td:first-child { width: auto; } tr { display: grid; } td { border-top: 0; padding: 3px 0; } tr { border-top: 1px solid var(--hair); padding: 8px 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The installed app</h1>
+  <p class="intro">What people see around the app once it’s installed: the icon on a home screen, the launch screen, and how it opens with no connection. The striped square stands in for the company logo, which goes in at the rebuild. “Team desk” is a placeholder name. <a class="link" href="map.html">Back to the map</a></p>
+
+  <div class="board">
+    <section class="card glass"><h2>Home screen icon</h2><p class="ids">A2</p>
+      <div class="home" aria-label="A phone home screen with the app among others">
+        <span class="app"><span class="tile"></span>Mail</span><span class="app"><span class="tile"></span>Calendar</span><span class="app"><span class="tile"></span>Photos</span><span class="app"><span class="tile"></span>Maps</span>
+        <span class="app"><span class="tile"></span>Notes</span><span class="app"><span class="appicon"><span class="logo"></span></span>Team desk</span><span class="app"><span class="tile"></span>Clock</span><span class="app"><span class="tile"></span>Files</span>
+      </div>
+      <div class="sizes" aria-hidden="true"><span class="appicon"><span class="logo"></span></span><span class="appicon"><span class="logo"></span></span><span class="appicon"><span class="logo"></span></span></div>
+      <p class="cap">The logo sits on a light tile, from white to pale blue and aqua, inside the dashed circle so no device crops it.</p>
+    </section>
+
+    <section class="card glass"><h2>Launch screen</h2><p class="ids">A2, A3</p>
+      <div class="launch" aria-label="The launch screen"><span class="appicon"><span class="logo"></span></span><b>Team desk</b></div>
+      <p class="cap">Shown for a moment while the app opens: the backdrop of every screen, the icon and the name. Then Today.</p>
+    </section>
+
+    <section class="card glass wide"><h2>Installing</h2><p class="ids">A2</p>
+      <table>
+        <tr><td>Where it’s offered</td><td>“Install the app” at the foot of the side bar on large screens, and “Install on this phone” in More on phones. Neither shows once the app is installed.</td></tr>
+        <tr><td>The install sheet</td><td><a href="index.html?open=install">A browser that offers installing</a><a href="index.html?open=install-ios">iPhone (steps in Safari)</a><a href="index.html?open=install-done">Already installed</a><a href="index.html?open=more">Phone: from More</a></td></tr>
+        <tr><td>Opened as an installed app</td><td><a href="index.html?state=installed">Today</a>No browser bar, and no install entry.</td></tr>
+        <tr><td>Name on the device</td><td>Team desk (placeholder until the app is named)</td></tr>
+        <tr><td>Opens on</td><td>Today, full screen, in any orientation</td></tr>
+        <tr><td>Colours around the app</td><td><span class="sw" style="background:#eef3fb"></span>#eef3fb, the status bar and title bar<br><span class="sw" style="background:#f0f4fa"></span>#f0f4fa, behind the launch screen</td></tr>
+      </table>
+    </section>
+
+    <section class="card glass wide"><h2>Opening with no connection</h2><p class="ids">A3</p>
+      <p>The app always opens. It shows what was loaded last, says when that was, and says what can’t be done until the connection is back.</p>
+      <table>
+        <tr><td>Opened offline, with data from before</td><td><a href="index.html?state=offline">Today</a><a href="tasks.html?state=offline">All tasks</a><a href="plan.html?state=offline">Plan</a><a href="companies.html?state=offline">Companies</a><a href="past.html?state=offline">Past clients</a></td></tr>
+        <tr><td>Writing carries on (kept on the device)</td><td><a href="notes.html?state=offline&amp;n=n1">Qualification notes</a></td></tr>
+        <tr><td>Read only until back online</td><td><a href="flows.html?state=offline&amp;f=f1">Flows</a></td></tr>
+        <tr><td>Opened offline for the first time, nothing loaded yet</td><td><a href="index.html?state=offline-empty">Today</a><a href="companies.html?state=offline-empty">Companies</a><a href="flows.html?state=offline-empty">Flows</a></td></tr>
+        <tr><td>Back online</td><td><a href="index.html?state=back-online">Today</a>A short message says everything is up to date again.</td></tr>
+      </table>
+    </section>
+  </div>
+</div>
+</body>
+</html>

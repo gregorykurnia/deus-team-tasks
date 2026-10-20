@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuesday 20 — Direction C, Day strip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f7fa;
+    --ink: #1a1d29;
+    --ink-2: #4b5063;
+    --muted: #868b9c;
+    --line: #e8eaf0;
+    --pro: #6a4bf4;   --pro-tint: #f2efff;   --pro-mid: #cfc4ff;
+    --cli: #0f8a5f;   --cli-tint: #e7f6ee;   --cli-mid: #a9e0c6;
+    --int: #1672c4;   --int-tint: #e8f2fb;   --int-mid: #b1d3f2;
+    --ev: #868b9c;    --ev-tint: #f1f2f5;
+    --red: #cf3a2f;
+    --orange: #b86200;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Albert Sans", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.45; color: var(--ink); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--pro); outline-offset: 2px; border-radius: 6px; }
+  svg { display: block; }
+  .num { font-family: "Sora", sans-serif; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+
+  /* ---------- Header ---------- */
+  .top { display: flex; align-items: center; gap: 14px; padding: 22px 0 0; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; background: repeating-linear-gradient(45deg, #e0e2ea 0 4px, #eef0f4 4px 8px); border: 1px solid #d8dbe4; }
+  .top .sp { flex: 1; }
+  .search { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 13px; border-radius: 99px; background: var(--surface); color: var(--muted); width: 300px; }
+  .search svg { width: 16px; height: 16px; }
+  .live { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--cli); }
+
+  /* ---------- Date hero + strip ---------- */
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 56px; align-items: end; padding: 40px 0 0; }
+  .bigdate { display: flex; align-items: baseline; gap: 16px; }
+  .bigdate .d { font-family: "Sora", sans-serif; font-weight: 300; font-size: 104px; line-height: .86; letter-spacing: -0.05em; }
+  .bigdate .wd { display: flex; flex-direction: column; gap: 2px; }
+  .bigdate .wd b { font-family: "Sora", sans-serif; font-weight: 500; font-size: 22px; letter-spacing: -0.02em; }
+  .bigdate .wd span { color: var(--muted); font-size: 15px; }
+
+  .strip { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 10px; border-radius: 14px; }
+  .day small { font-size: 12px; color: var(--muted); }
+  .day .n { font-family: "Sora", sans-serif; font-size: 15px; font-weight: 500; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; }
+  .day.we .n, .day.we small { color: #b3b7c4; }
+  .day.sel { background: var(--surface); }
+  .day.sel .n { background: var(--ink); color: #fff; }
+  .day.past .n { color: var(--muted); }
+  .load { display: flex; flex-direction: column-reverse; gap: 2px; height: 34px; width: 18px; justify-content: flex-start; }
+  .load i { display: block; height: 4px; border-radius: 2px; }
+  .load .p { background: var(--pro-mid); } .load .c { background: var(--cli-mid); } .load .t { background: var(--int-mid); } .load .e { background: #d6d9e1; }
+  .day.crunch .load i { opacity: 1; }
+  .day .flag { font-size: 11px; color: var(--red); font-weight: 600; height: 15px; }
+  .strip-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); padding: 4px 6px 0; }
+
+  /* ---------- Filters ---------- */
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 30px 0 0; }
+  .f { padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); font-weight: 500; font-size: 14px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; }
+  .f i { width: 8px; height: 8px; border-radius: 50%; }
+  .f[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filters .gap { width: 14px; }
+  .toggle { display: inline-flex; padding: 3px; border-radius: 99px; background: var(--surface); margin-left: auto; }
+  .toggle button { padding: 5px 12px; border-radius: 99px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+  .toggle button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(26,29,41,.1); }
+
+  /* ---------- Day board ---------- */
+  .board { display: grid; grid-template-columns: 300px 1fr 260px; gap: 48px; padding: 30px 0 140px; }
+  .board h2 { font-family: "Sora", sans-serif; font-weight: 500; font-size: 15px; letter-spacing: -0.01em; margin: 0 0 14px; display: flex; align-items: baseline; gap: 8px; }
+  .board h2 .c { color: var(--muted); font-family: "Albert Sans", sans-serif; font-weight: 400; font-size: 14px; }
+
+  /* Events timeline */
+  .timeline { position: relative; display: flex; flex-direction: column; gap: 4px; }
+  .slot { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: start; }
+  .slot time { font-family: "Sora", sans-serif; font-size: 13px; color: var(--muted); padding-top: 11px; font-variant-numeric: tabular-nums; }
+  .ev { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--ev-tint); }
+  .ev p { margin: 0; font-weight: 500; font-size: 14.5px; }
+  .ev small { display: block; color: var(--muted); font-size: 13px; }
+  .ev svg { width: 14px; height: 14px; color: var(--muted); margin: 3px 0 0 auto; flex: none; }
+  .now { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; margin: 4px 0; }
+  .now span { font-size: 12px; font-weight: 600; color: var(--red); font-family: "Sora", sans-serif; }
+  .now i { height: 2px; background: var(--red); border-radius: 2px; position: relative; }
+  .now i::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+
+  /* Tasks */
+  .tgroup + .tgroup { margin-top: 30px; }
+  .tgroup h3 { font-size: 13.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; display: flex; gap: 8px; }
+  .tgroup h3 span { color: var(--muted); font-weight: 400; }
+  .tile { display: grid; grid-template-columns: 22px 1fr auto; gap: 14px; padding: 16px 18px; border-radius: 16px; align-items: start; }
+  .tile + .tile { margin-top: 8px; }
+  .tile.pro { background: var(--pro-tint); } .tile.cli { background: var(--cli-tint); } .tile.int { background: var(--int-tint); }
+  .tick { width: 20px; height: 20px; border-radius: 50%; border: 1.6px solid currentColor; margin-top: 1px; opacity: .7; }
+  .tile.pro .tick { color: var(--pro); } .tile.cli .tick { color: var(--cli); } .tile.int .tick { color: var(--int); }
+  .tile p { margin: 0; }
+  .tile .tt { font-weight: 600; font-size: 15.5px; letter-spacing: -0.005em; }
+  .tile .meta { display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 4px; font-size: 13.5px; color: var(--ink-2); }
+  .kind { font-weight: 600; }
+  .pro .kind { color: var(--pro); } .cli .kind { color: var(--cli); } .int .kind { color: var(--int); }
+  .warn { color: var(--red); font-weight: 600; }
+  .soon { color: var(--orange); font-weight: 600; }
+  .points { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); max-width: 60ch; }
+
+  .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 14px; padding: 13px 4px; border-bottom: 1px solid var(--line); align-items: start; }
+  .row .tick { color: #a8adbb; }
+  .row .tt { font-weight: 500; }
+  .row .meta { display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 2px; font-size: 13.5px; color: var(--muted); }
+  .row .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  .avs { display: flex; padding-top: 1px; }
+  .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; border: 2px solid #fff; margin-left: -7px; background: #fff; }
+  .av:first-child { margin-left: 0; }
+  .av.inf { border: 1.5px dashed #b9bdca; color: var(--muted); }
+  .a1 { background: #ffe8d9; color: #91461a; } .a2 { background: #e3e8ff; color: #3846a6; } .a3 { background: #dcf3e9; color: #17694a; }
+  .a4 { background: #f5e3f3; color: #8a3a80; } .a5 { background: #e0eef9; color: #255f8c; } .a6 { background: #fff1c9; color: #7a5a00; }
+
+  .undated { margin-top: 30px; padding: 14px 16px; border-radius: 14px; border: 1.5px dashed var(--line); display: flex; align-items: center; gap: 12px; color: var(--ink-2); font-size: 14px; }
+  .undated b { font-weight: 600; color: var(--ink); }
+  .undated button { margin-left: auto; font-weight: 600; color: var(--pro); }
+
+  /* People */
+  .person { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: center; padding: 10px 0; }
+  .person .av { width: 32px; height: 32px; font-size: 11.5px; }
+  .person p { margin: 0; font-weight: 500; }
+  .person small { color: var(--muted); font-size: 13px; }
+  .person small b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---------- Floating nav ---------- */
+  .dock { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; z-index: 5; }
+  .dock nav { display: flex; gap: 2px; padding: 6px; border-radius: 99px; background: rgba(255,255,255,.92); backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(26,29,41,.12), 0 0 0 1px rgba(26,29,41,.06); }
+  .dock a { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 99px; text-decoration: none; color: var(--ink-2); font-weight: 500; font-size: 14.5px; }
+  .dock a svg { width: 18px; height: 18px; }
+  .dock a[aria-current] { background: var(--ink); color: #fff; }
+  .dock .add { width: 52px; height: 52px; border-radius: 50%; background: var(--pro); color: #fff; display: grid; place-items: center; box-shadow: 0 10px 26px rgba(106,75,244,.38); }
+  .dock .add svg { width: 22px; height: 22px; }
+
+  .phone-search { display: none; }
+
+  @media (max-width: 1200px) {
+    .board { grid-template-columns: 280px 1fr; }
+    .people { display: none; }
+  }
+  @media (max-width: 1000px) {
+    .hero { grid-template-columns: 1fr; gap: 24px; }
+  }
+
+  /* ---------- Phone ---------- */
+  @media (max-width: 720px) {
+    .wrap { padding: 0 18px; }
+    .top { padding-top: 14px; }
+    .search, .live span { display: none; }
+    .phone-search { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); color: var(--ink-2); }
+    .phone-search svg { width: 17px; height: 17px; }
+    .hero { padding-top: 18px; gap: 18px; }
+    .bigdate .d { font-size: 72px; }
+    .bigdate .wd b { font-size: 19px; }
+    .strip { grid-template-columns: repeat(14, 46px); overflow-x: auto; margin: 0 -18px; padding: 0 18px; scrollbar-width: none; gap: 2px; }
+    .strip-foot { display: none; }
+    .filters { flex-wrap: nowrap; overflow-x: auto; margin: 0 -18px; padding: 18px 18px 0; scrollbar-width: none; }
+    .f { flex: none; }
+    .toggle { display: none; }
+    .board { grid-template-columns: 1fr; gap: 30px; padding-top: 22px; }
+    .events { order: 2; }
+    .tile { padding: 14px 14px; gap: 12px; border-radius: 14px; }
+    .row { gap: 12px; padding: 12px 0; }
+    .dock { left: 12px; right: 12px; transform: none; bottom: 22px; }
+    .dock nav { flex: 1; justify-content: space-between; }
+    .dock a { flex-direction: column; gap: 2px; padding: 7px 0; font-size: 11px; flex: 1; border-radius: 22px; }
+    .dock .add { width: 56px; height: 56px; flex: none; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></symbol>
+  <symbol id="i-day" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 7 2 2 3.5-3.5M4 15.5l2 2 3.5-3.5M13 7.5h7M13 16h7"/></symbol>
+  <symbol id="i-co" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14.5M15 10h3a2 2 0 0 1 2 2v8.5M2.5 20.5h19M8 8h3M8 12h3M8 16h3"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <span class="logo" aria-label="Company logo"></span>
+    <span class="sp"></span>
+    <span class="live"><i></i><span>Everyone's changes appear live</span></span>
+    <div class="search"><svg><use href="#i-search"/></svg>Search tasks, companies, notes</div>
+    <button class="phone-search" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+  </header>
+
+  <section class="hero" aria-label="Choose a day">
+    <div class="bigdate">
+      <span class="d" aria-hidden="true">20</span>
+      <div class="wd"><b>Tuesday</b><span>October 2026, today</span></div>
+    </div>
+
+    <div class="strip" role="list">
+      <div class="day past" role="listitem"><small>Mon</small><span class="n">19</span><span class="load"><i class="p"></i><i class="t"></i></span><span class="flag">1</span></div>
+      <div class="day sel" role="listitem" aria-current="date"><small>Tue</small><span class="n">20</span><span class="load"><i class="p"></i><i class="p"></i><i class="c"></i><i class="t"></i><i class="e"></i><i class="e"></i></span><span class="flag">2</span></div>
+      <div class="day" role="listitem"><small>Wed</small><span class="n">21</span><span class="load"><i class="t"></i><i class="e"></i></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Thu</small><span class="n">22</span><span class="load"><i class="p"></i><i class="t"></i><i class="e"></i></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Fri</small><span class="n">23</span><span class="load"><i class="p"></i><i class="p"></i><i class="c"></i><i class="c"></i><i class="t"></i><i class="t"></i><i class="e"></i></span><span class="flag" style="color:var(--orange)">Busy</span></div>
+      <div class="day we" role="listitem"><small>Sat</small><span class="n">24</span><span class="load"></span><span class="flag"></span></div>
+      <div class="day we" role="listitem"><small>Sun</small><span class="n">25</span><span class="load"></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Mon</small><span class="n">26</span><span class="load"><i class="t"></i></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Tue</small><span class="n">27</span><span class="load"></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Wed</small><span class="n">28</span><span class="load"><i class="c"></i><i class="e"></i></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Thu</small><span class="n">29</span><span class="load"><i class="t"></i><i class="e"></i></span><span class="flag"></span></div>
+      <div class="day" role="listitem"><small>Fri</small><span class="n">30</span><span class="load"><i class="p"></i><i class="p"></i><i class="t"></i></span><span class="flag"></span></div>
+      <div class="day we" role="listitem"><small>Sat</small><span class="n">31</span><span class="load"></span><span class="flag"></span></div>
+      <div class="day we" role="listitem"><small>Sun</small><span class="n">1</span><span class="load"></span><span class="flag"></span></div>
+      <div class="strip-foot"><span>This week</span><span>Next week</span></div>
+    </div>
+  </section>
+
+  <div class="filters" role="group" aria-label="Narrow the day">
+    <button class="f" aria-pressed="true">All work</button>
+    <button class="f" aria-pressed="false"><i style="background:var(--pro)"></i>Prospects</button>
+    <button class="f" aria-pressed="false"><i style="background:var(--cli)"></i>Clients</button>
+    <button class="f" aria-pressed="false"><i style="background:var(--int)"></i>Internal</button>
+    <button class="f" aria-pressed="false">Task group</button>
+    <button class="f" aria-pressed="false">Person</button>
+    <div class="toggle" role="group" aria-label="Show">
+      <button aria-pressed="true">Tasks and events</button>
+      <button aria-pressed="false">Tasks</button>
+      <button aria-pressed="false">Events</button>
+    </div>
+  </div>
+
+  <div class="board">
+    <section class="events" aria-labelledby="ev-h">
+      <h2 id="ev-h">Calendar<span class="c">4 events</span></h2>
+      <div class="timeline">
+        <div class="slot"><time>All day</time><div class="ev"><div><p>Sarah out of office</p></div><svg><use href="#i-ext"/></svg></div></div>
+        <div class="slot"><time>09:30</time><div class="ev"><div><p>Weekly pipeline sync</p><small>Until 10:15</small></div><svg><use href="#i-ext"/></svg></div></div>
+        <div class="now"><span>11:02</span><i></i></div>
+        <div class="slot"><time>12:30</time><div class="ev"><div><p>Lunch with Pelita Foods</p><small>Until 14:00</small></div><svg><use href="#i-ext"/></svg></div></div>
+        <div class="slot"><time>16:00</time><div class="ev"><div><p>Interview, sales associate</p><small>Until 17:00</small></div><svg><use href="#i-ext"/></svg></div></div>
+      </div>
+    </section>
+
+    <section class="tasks" aria-labelledby="t-h">
+      <h2 id="t-h">On this day<span class="c">7 tasks</span></h2>
+
+      <div class="tgroup">
+        <h3>Due today or overdue <span>3</span></h3>
+        <div class="tile pro">
+          <button class="tick" aria-label="Mark done"></button>
+          <div>
+            <p class="tt">Book a demo with their finance lead</p>
+            <p class="meta"><span class="kind">Northwind Clinics</span><span class="warn">No action for 15 days</span><span>Call</span></p>
+            <p class="points">Ask for the finance lead's availability next week; they asked about multi-site pricing.</p>
+          </div>
+          <div class="avs"><span class="av a1">KT</span></div>
+        </div>
+        <div class="tile pro">
+          <button class="tick" aria-label="Mark done"></button>
+          <div>
+            <p class="tt">Send the revised proposal with volume pricing</p>
+            <p class="meta"><span class="kind">Halcyon Logistics</span><span class="warn">1 day overdue</span><span>Last action 6 days ago</span></p>
+          </div>
+          <div class="avs"><span class="av a2">RH</span><span class="av inf" title="Informed: backup">DP</span></div>
+        </div>
+        <div class="tile int">
+          <button class="tick" aria-label="Mark done"></button>
+          <div>
+            <p class="tt">Draft the Q4 sales targets</p>
+            <p class="meta"><span class="kind">Q4 planning</span><span class="warn">2 days overdue</span></p>
+          </div>
+          <div class="avs"><span class="av a2">RH</span><span class="av a1">KT</span></div>
+        </div>
+      </div>
+
+      <div class="tgroup">
+        <h3>Starts today <span>1</span></h3>
+        <div class="tile cli">
+          <button class="tick" aria-label="Mark done"></button>
+          <div>
+            <p class="tt">Prepare the quarterly review deck</p>
+            <p class="meta"><span class="kind">Meridian Bank</span><span class="soon">Due Friday</span><span>Last action 2 days ago</span></p>
+          </div>
+          <div class="avs"><span class="av a5">AW</span><span class="av inf" title="Informed: reviewer">RH</span></div>
+        </div>
+      </div>
+
+      <div class="tgroup">
+        <h3>Still running <span>3</span></h3>
+        <div class="row">
+          <button class="tick" aria-label="Mark done"></button>
+          <div><p class="tt">Confirm the trial accounts are active</p><p class="meta"><span><i class="dot" style="background:var(--pro)"></i>Pelita Foods</span><span class="soon">Due Thursday</span></p></div>
+          <div class="avs"><span class="av a4">SL</span></div>
+        </div>
+        <div class="row">
+          <button class="tick" aria-label="Mark done"></button>
+          <div><p class="tt">Update the onboarding checklist for new hires</p><p class="meta"><span><i class="dot" style="background:var(--int)"></i>Hiring</span><span class="soon">Due tomorrow</span></p></div>
+          <div class="avs"><span class="av a6">MC</span></div>
+        </div>
+        <div class="row">
+          <button class="tick" aria-label="Mark done"></button>
+          <div><p class="tt">Share the retail rollout case study</p><p class="meta"><span><i class="dot" style="background:var(--pro)"></i>Arcadia Retail Group</span><span>Due 30 Oct</span></p></div>
+          <div class="avs"><span class="av a3">DP</span></div>
+        </div>
+      </div>
+
+      <div class="undated"><span><b>2 tasks have no dates</b>, so they don't show on any day.</span><button>Add dates</button></div>
+    </section>
+
+    <aside class="people" aria-labelledby="p-h">
+      <h2 id="p-h">People today</h2>
+      <div class="person"><span class="av a2">RH</span><div><p>Rina Hartono</p><small><b>2</b> owned, informed on 2</small></div></div>
+      <div class="person"><span class="av a1">KT</span><div><p>Kevin Tan</p><small><b>2</b> owned</small></div></div>
+      <div class="person"><span class="av a5">AW</span><div><p>Aditya Wijaya</p><small><b>1</b> owned</small></div></div>
+      <div class="person"><span class="av a4">SL</span><div><p>Sarah Lim</p><small><b>1</b> owned, out of office</small></div></div>
+      <div class="person"><span class="av a6">MC</span><div><p>Mei Chen</p><small><b>1</b> owned</small></div></div>
+      <div class="person"><span class="av a3">DP</span><div><p>Dimas Prasetyo</p><small><b>1</b> owned, informed on 1</small></div></div>
+    </aside>
+  </div>
+</div>
+
+<div class="dock">
+  <nav aria-label="Main navigation">
+    <a href="#" aria-current="page"><svg><use href="#i-day"/></svg>Day</a>
+    <a href="#"><svg><use href="#i-tasks"/></svg>Tasks</a>
+    <a href="#"><svg><use href="#i-co"/></svg>Companies</a>
+    <a href="#"><svg><use href="#i-note"/></svg>Notes</a>
+    <a href="#"><svg><use href="#i-more"/></svg>More</a>
+  </nav>
+  <button class="add" aria-label="Add a task"><svg><use href="#i-plus"/></svg></button>
+</div>
+</body>
+</html>

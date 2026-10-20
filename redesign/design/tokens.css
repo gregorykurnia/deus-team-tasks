@@ -1,0 +1,191 @@
+/* Design tokens. Direction G, "Glass in calm blue".
+   Light mode only (brief): there is no dark theme and no dark token set.
+   The guide (design-guide.md) says where each token is used. The prototype's own
+   values are noted where the guide changes them for contrast (D-020). */
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  /* ---------- Type ---------- */
+  --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --w-regular: 400;
+  --w-medium: 500;     /* body text */
+  --w-semibold: 600;   /* labels, quiet buttons, meta that matters */
+  --w-bold: 700;       /* row titles, buttons, panel titles */
+  --w-heavy: 800;      /* page titles, big numbers, section titles */
+
+  /* Size / line height / tracking. Phone values (640px and under) in brackets in the guide. */
+  --t-display: 80px;   --lh-display: .95;  --ls-display: -0.05em;   /* the one number to quote (past clients) */
+  --t-title: 34px;     --lh-title: 1.1;    --ls-title: -0.03em;     /* page title, h1 */
+  --t-hero: 26px;      --lh-hero: 1.22;    --ls-hero: -0.025em;     /* hero sentence, person, document title (28) */
+  --t-h2: 19px;        --lh-h2: 1.25;      --ls-h2: -0.02em;        /* sheet and dialog titles */
+  --t-h3: 17px;        --lh-h3: 1.3;       --ls-h3: -0.01em;        /* panel titles */
+  --t-h4: 15px;        --lh-h4: 1.35;      --ls-h4: -0.01em;        /* section titles, row titles */
+  --t-body: 14.5px;    --lh-body: 1.45;                              /* (14px on phones) */
+  --t-write: 15px;     --lh-write: 1.6;                              /* long writing: notes, flow descriptions */
+  --t-small: 13px;     --lh-small: 1.45;                             /* meta, notices, menus */
+  --t-label: 12.5px;                                                 /* column heads, field labels, pills */
+  --t-micro: 11px;                                                   /* tab bar labels, day letters */
+  --num: tabular-nums;                                               /* every number that sits in a column or changes */
+
+  /* ---------- Colour: backdrop and surfaces ---------- */
+  --page: #f0f4fa;                       /* base under the backdrop washes */
+  --wash-1: #d3e2ff;                     /* top left */
+  --wash-2: #dce8ff;                     /* top centre */
+  --wash-3: #d6f2f0;                     /* right */
+  --wash-4: #ddf3f7;                     /* bottom left */
+  --backdrop:
+    radial-gradient(900px 600px at 8% -10%, var(--wash-1) 0%, transparent 60%),
+    radial-gradient(800px 600px at 55% 0%, var(--wash-2) 0%, transparent 60%),
+    radial-gradient(900px 700px at 100% 30%, var(--wash-3) 0%, transparent 60%),
+    radial-gradient(900px 700px at 20% 100%, var(--wash-4) 0%, transparent 60%),
+    var(--page);
+  --theme-color: #eef3fb;                /* browser and installed-app bars */
+
+  --glass: rgba(255, 255, 255, .62);     /* side bar, panels, tab bar */
+  --glass-strong: rgba(255, 255, 255, .84); /* rows and cards on a panel */
+  --glass-line: rgba(255, 255, 255, .85);   /* the light edge of glass */
+  --glass-blur: blur(24px) saturate(1.4);
+  --surface: #ffffff;                    /* hover, selected, fields, menus */
+  --surface-sheet: rgba(250, 252, 255, .94);
+  --surface-dialog: rgba(252, 253, 255, .97);
+  --scrim: rgba(28, 40, 72, .22);        /* with blur(3px) */
+
+  --hair: rgba(27, 31, 59, .08);         /* dividers, quiet outlines */
+  --fill: rgba(27, 31, 59, .05);         /* quiet filled controls, chips */
+  --fill-hover: rgba(27, 31, 59, .08);
+  --line-field: #8e95a4;                 /* form field outline, 1.5px inset, 3:1 (D-021). Fields in sheets, dialogs and menus. Prototype: ink at 12% */
+  --line-field-hover: #616a7d;
+  --line-quiet: rgba(27, 31, 59, .12);   /* light outline kept where the edge isn't the only cue: chips, filter pills, cards on white */
+
+  /* ---------- Colour: text ---------- */
+  --ink: #162036;      /* 16.2:1 on white. Titles, values */
+  --ink-2: #46506a;    /* 8.0:1. Body, labels */
+  --muted: #616a7d;    /* 5.4:1 on white, 4.9:1 on --page. Meta, hints, placeholders. Prototype: #6f7a90 (4.3:1) */
+  --faint: #8e95a4;    /* 3.0:1. Never for words: only the "–" for an empty value, weekend dates, disabled icons. Prototype: #a3abbd */
+
+  /* ---------- Colour: accent ---------- */
+  --blue: #2f6bea;     /* the accent. Fills, focus, current place, links on white (4.8:1) */
+  --blue-2: #4a8af4;   /* the light end of gradients behind no text, and chart marks */
+  --blue-ink: #2b62d7; /* blue words on --blue-soft (4.7:1) */
+  --blue-soft: #e4edff;
+  --cta: linear-gradient(135deg, #2f6bea, #3f75cf); /* main button. Prototype ended on #4a8af4, which gives white text 3.4:1 */
+  --cta-glow: 0 10px 24px -8px rgba(47, 107, 234, .5), inset 0 1px 0 rgba(255, 255, 255, .25);
+
+  /* ---------- Colour: kinds of work (W12). Base for marks, -ink for words ---------- */
+  --pro: #2f6bea;  --pro-soft: #e4edff;  --pro-ink: #2b62d7;  --pro-chart: #2f6bea;   /* Prospects */
+  --cli: #0f9a6c;  --cli-soft: #dcf5ea;  --cli-ink: #0c7a55;  --cli-chart: #27b07f;   /* Clients (deal done) */
+  --int: #5a6a85;  --int-soft: #e8ecf3;  --int-ink: #5a6a85;  --int-chart: #8d9ab1;   /* Internal */
+  --event-chart: #cbd8ec;  --event-mark: #b7c3d8;  --event-soft: #e6ecf5;  --event-ink: #3a4a66; /* team calendar */
+
+  /* ---------- Colour: company groups (B2) ---------- */
+  --g-lead: #0b7c74;  --g-lead-soft: #d9f3f1;  --g-lead-ink: #0b776f;  /* To approach */
+  /* Active = --pro, Deal done = --cli, No or not now = --int */
+
+  /* ---------- Colour: urgency and status ---------- */
+  --red: #d92f43;    --red-soft: #ffe5e8;    --red-ink: #c52b3d;    /* missed, too long without action, bad outcome, delete */
+  --amber: #b25f00;  --amber-soft: #fff0d9;  --amber-ink: #a65800;  /* within 3 days, getting late, crunch, offline */
+  --green: #0f9a6c;  --green-soft: #dcf5ea;  --green-ink: #0c7a55;  /* done, saved, live, good outcome */
+  --violet: #6a3fbd; --violet-soft: #efe6ff;                       /* high priority (where to act only) */
+  --crunch: #ffd99a;                                               /* busiest days on the timeline and month */
+  --banner-bg: rgba(255, 246, 232, .9);  --banner-line: #f6dcb4;  --banner-ink: #6b4300;
+  --toast: #1d2742;  --toast-err: #8f1f2e;  --toast-ok-icon: #8fe0bf;  --toast-err-icon: #ffc2ca;
+  --star: #f0a71b;                                                  /* important task group */
+  --mark: #fff1b8;                                                  /* search match highlight */
+
+  /* ---------- Colour: likelihood (U2). Calm blues, strongest = most likely ---------- */
+  --lk-vhigh: #1f4fd1;  --lk-high: #3d7cf0;  --lk-med: #74a2f5;  --lk-mlow: #a9c4f6;  --lk-low: #cfdcf6;
+  --lk-none: repeating-linear-gradient(-45deg, #dfe3ec 0 3px, #f2f4f8 3px 6px); /* not rated */
+
+  /* ---------- Colour: choice options (C3). [background, words] ---------- */
+  --opt-blue-bg: #e4edff;    --opt-blue: #2456c9;
+  --opt-sky-bg: #dcf0fb;     --opt-sky: #13689a;
+  --opt-teal-bg: #d9f3f1;    --opt-teal: #0b7068;
+  --opt-green-bg: #dcf5ea;   --opt-green: #0c7a55;   /* prototype #0c7d55 (4.48:1) */
+  --opt-amber-bg: #fff0d9;   --opt-amber: #9a5200;
+  --opt-red-bg: #ffe5e8;     --opt-red: #c22437;
+  --opt-violet-bg: #efe6ff;  --opt-violet: #6a3fbd;
+  --opt-pink-bg: #ffe4f0;    --opt-pink: #ad2f69;
+  --opt-slate-bg: #e8ecf3;   --opt-slate: #4a5872;
+
+  /* ---------- Colour: task group badges (6 hues, by creation order) ---------- */
+  --grp-0-bg: #e4edff; --grp-0: #2f6bea;
+  --grp-1-bg: #dcf5ec; --grp-1: #0d8a6b;
+  --grp-2-bg: #ffe6dc; --grp-2: #b8501f;
+  --grp-3-bg: #e8ecf3; --grp-3: #5a6a85;
+  --grp-4-bg: #f1e6ff; --grp-4: #7a43c9;
+  --grp-5-bg: #fff0d0; --grp-5: #9a6400;
+
+  /* ---------- Colour: people (6 hues, picked from the name so a person keeps theirs) ---------- */
+  --av-0: linear-gradient(135deg, #c9d6ff, #d9c7ff);  --av-0-ink: #3b3b9c;
+  --av-1: linear-gradient(135deg, #ffd6c2, #ffb8d0);  --av-1-ink: #8a2f4a;
+  --av-2: linear-gradient(135deg, #bff0dd, #c8ecff);  --av-2-ink: #0f6650;
+  --av-3: linear-gradient(135deg, #cbe8ff, #c9f3f0);  --av-3-ink: #1e5a86;
+  --av-4: linear-gradient(135deg, #ffe7a8, #ffd0b0);  --av-4-ink: #7c4b00;
+  --av-5: linear-gradient(135deg, #d6e4ff, #d2f1f6);  --av-5-ink: #2a4f8a;
+  --outside-line: #b9c0d0; /* dashed outline: informed people, not counted, not tracked yet */
+
+  /* ---------- Space (4px base, with half steps where rows need them) ---------- */
+  --sp-1: 2px;  --sp-2: 4px;  --sp-3: 6px;  --sp-4: 8px;  --sp-5: 10px;  --sp-6: 12px;
+  --sp-7: 14px; --sp-8: 16px; --sp-9: 18px; --sp-10: 20px; --sp-11: 22px; --sp-12: 24px;
+  --sp-14: 28px; --sp-16: 34px;
+  --gap-section: 22px;   /* between page sections (16px on phones) */
+  --gap-row: 6px;        /* between rows in a list */
+
+  /* ---------- Layout ---------- */
+  --page-max: 1480px;
+  --page-pad: 20px 28px 48px 20px;     /* 16px at 900px and under, 14px at 640px; bottom 130px for the tab bar */
+  --side-w: 252px;
+  --rail-w: 340px;                     /* Today's right column */
+  --sheet-w: 540px;                    /* task details; company record 620px; install 460px */
+  --dialog-w: 440px;                   /* wide dialog 560px */
+  --bp-wide: 1240px;   /* under: Today's rail and heroes go to one column */
+  --bp-mid: 1100px;    /* under: lists drop their least useful columns */
+  --bp-tablet: 900px;  /* under: side bar becomes the tab bar, sheets rise from the bottom */
+  --bp-list: 760px;    /* under: tables become cards */
+  --bp-phone: 640px;   /* under: phone type sizes */
+
+  /* ---------- Radius ---------- */
+  --r-xl: 30px;   /* side bar, hero, sheets, documents (26px on phones) */
+  --r-l: 22px;    /* panels, tiles, banners */
+  --r-m: 16px;    /* rows, cards, notices */
+  --r-s: 12px;    /* small cards, inner boxes, menu items */
+  --r-field: 14px;
+  --r-xs: 10px;   /* in-place editable cells, small icon buttons */
+  --r-dialog: 26px;
+  --r-menu: 18px;
+  --r-pill: 99px; /* buttons, chips, pills, segmented controls, search */
+
+  /* ---------- Elevation ---------- */
+  --shadow: 0 1px 2px rgba(40, 46, 110, .05), 0 18px 48px -12px rgba(40, 46, 110, .18);  /* glass */
+  --shadow-row: 0 1px 2px rgba(40, 46, 110, .04);
+  --shadow-hover: 0 8px 22px -12px rgba(40, 46, 110, .35);
+  --shadow-current: 0 6px 18px -6px rgba(40, 46, 110, .25);    /* current place in nav, pressed segment */
+  --shadow-hero: 0 1px 2px rgba(30, 60, 130, .05), 0 30px 60px -28px rgba(30, 70, 160, .32);
+  --shadow-pop: 0 2px 6px rgba(40, 46, 110, .08), 0 30px 70px -18px rgba(30, 50, 120, .38); /* sheets, dialogs, menus */
+  --shadow-toast: 0 18px 40px -14px rgba(20, 30, 70, .6);
+  --ring-selected: 0 0 0 1.5px rgba(47, 107, 234, .45);
+  --focus: 2.5px solid var(--blue);   /* outline, offset 2px */
+  --focus-field: inset 0 0 0 2px var(--blue), 0 0 0 4px rgba(47, 107, 234, .12);
+
+  /* ---------- Layers ---------- */
+  --z-tabbar: 20;  --z-selbar: 25;  --z-scrim: 30;  --z-sheet: 31;  --z-menu: 40;  --z-dialog: 41;  --z-dialog-over-sheet: 42;  --z-toast: 50;
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --dur-hover: .15s;     /* background and shadow on hover */
+  --dur-pop: .14s;       /* menus */
+  --dur-fade: .18s;      /* scrims, dialogs, selection bar */
+  --dur-sheet: .22s;     /* drawer in from the right; bottom sheet .25s */
+  --dur-toast: .22s;
+  --toast-life: 5.2s;
+  --dur-leave: .5s;      /* a finished task slides out, after a .35s pause */
+  --dur-arrive: 1.8s;    /* the blue glow on something new or just changed */
+  --dur-save-wait: .8s;  /* notes and flows save this long after typing stops */
+
+  /* ---------- Icons ---------- */
+  --icon: 18px;          /* 24 grid, stroke 2.1, round caps and joins, currentColor */
+  --icon-nav: 19px;      /* side bar; 21px in the tab bar */
+  --icon-sm: 15px;       /* in buttons, chips and pills: 13 to 16px */
+  --target: 40px;        /* smallest tap target; done circles and checkboxes reach it with an invisible 10px margin */
+}

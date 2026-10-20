@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today — Direction B, Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #18202f;
+    --ink-2: #485166;
+    --muted: #7d8597;
+    --line: #e4e7ed;
+    --line-2: #eef0f4;
+    --accent: #2f54eb;
+    --accent-soft: #edf1fe;
+    --green: #13865d;
+    --green-soft: #e7f6ef;
+    --slate: #5b6476;
+    --slate-soft: #eef0f3;
+    --red: #d12f3c;
+    --red-soft: #fdecee;
+    --amber: #a35a00;
+    --amber-soft: #fff3e0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Geist", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.45;
+    color: var(--ink); background: var(--canvas);
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  svg { display: block; }
+
+  /* ---------- Top bar ---------- */
+  .top {
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .top-in { max-width: 1360px; margin: 0 auto; padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14.5px; flex: none; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: repeating-linear-gradient(45deg, #dde1e8 0 4px, #eceef2 4px 8px); border: 1px solid #d3d8e0; }
+  .tabs { display: flex; gap: 2px; height: 100%; }
+  .tabs a {
+    display: flex; align-items: center; padding: 0 12px; height: 100%;
+    color: var(--ink-2); text-decoration: none; font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  }
+  .tabs a[aria-current] { color: var(--accent); border-bottom-color: var(--accent); }
+  .top-tools { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .search {
+    width: 280px; display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px; background: var(--canvas);
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .search svg { width: 15px; height: 15px; }
+  .search kbd { margin-left: auto; font-family: inherit; font-size: 12px; border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 0 5px; }
+  .primary {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent); color: #fff; font-weight: 500;
+    padding: 8px 14px 8px 11px; border-radius: 8px;
+    box-shadow: 0 1px 0 rgba(20, 40, 120, .25), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  .primary svg { width: 15px; height: 15px; }
+  .search-icon { display: none; }
+
+  /* ---------- Page ---------- */
+  .page { max-width: 1360px; margin: 0 auto; padding: 32px 32px 64px; display: grid; grid-template-columns: 1fr 320px; gap: 28px; align-items: start; }
+  .page-head { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .seg { margin-left: auto; display: inline-flex; background: #eceef2; border-radius: 9px; padding: 3px; }
+  .seg button { padding: 6px 12px; border-radius: 7px; color: var(--ink-2); font-weight: 500; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .seg button span { color: var(--muted); font-weight: 400; }
+  .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(24,32,47,.08), 0 0 0 1px rgba(24,32,47,.04); }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+
+  /* Urgency strip */
+  .pulse { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .pulse button { text-align: left; padding: 16px 20px 15px; border-left: 1px solid var(--line-2); }
+  .pulse button:first-child { border-left: 0; }
+  .pulse .lab { display: flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 13px; }
+  .pulse .lab i { width: 8px; height: 8px; border-radius: 2px; }
+  .pulse .num { display: block; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; line-height: 1.1; }
+  .pulse .of { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 0; margin-left: 4px; }
+
+  /* Table */
+  .work { margin-top: 20px; overflow: hidden; }
+  .work-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .work-bar h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .work-bar .n { color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink-2); font-weight: 500; font-size: 13px; }
+  .chip svg { width: 14px; height: 14px; color: var(--muted); }
+  .work-bar .chip:first-of-type { margin-left: auto; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; font-size: 12.5px; color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); background: #fbfbfc; white-space: nowrap; }
+  th.sorted { color: var(--ink); }
+  th.sorted svg { display: inline; width: 11px; height: 11px; vertical-align: -1px; margin-left: 3px; }
+  td { padding: 12px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  td.c-check, th.c-check { width: 44px; padding-left: 18px; padding-right: 0; }
+  .box { width: 17px; height: 17px; border: 1.5px solid #bcc2ce; border-radius: 5px; display: block; }
+  .title { font-weight: 500; color: var(--ink); }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 1px 7px 1px 6px; border-radius: 5px; margin-top: 3px; }
+  .tag i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t-pro { color: var(--accent); background: var(--accent-soft); }
+  .t-cli { color: var(--green); background: var(--green-soft); }
+  .t-int { color: var(--slate); background: var(--slate-soft); }
+  .co { color: var(--ink-2); }
+  .co a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); }
+  .muted { color: var(--muted); }
+  .when { display: flex; flex-direction: column; gap: 2px; }
+  .pill { display: inline-flex; width: max-content; align-items: center; gap: 5px; font-weight: 500; font-size: 12.5px; padding: 2px 8px; border-radius: 99px; }
+  .p-red { color: var(--red); background: var(--red-soft); }
+  .p-amber { color: var(--amber); background: var(--amber-soft); }
+  .p-plain { color: var(--ink-2); background: var(--slate-soft); }
+  .since { display: flex; align-items: center; gap: 8px; }
+  .meter { width: 48px; height: 4px; border-radius: 4px; background: var(--line-2); overflow: hidden; }
+  .meter b { display: block; height: 100%; border-radius: 4px; background: #9aa3b5; }
+  .meter.amber b { background: #e39a2d; }
+  .meter.red b { background: var(--red); }
+  .since .d { min-width: 26px; }
+  .since.red .d { color: var(--red); font-weight: 600; }
+  .since.amber .d { color: var(--amber); font-weight: 600; }
+  .avs { display: flex; }
+  .av { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 600; border: 2px solid #fff; margin-left: -6px; }
+  .av:first-child { margin-left: 0; }
+  .av.inf { background: #fff !important; border: 1.5px dashed #b7bfcc; color: var(--muted); }
+  .c1 { background: #dfe7fd; color: #2c47b5; }
+  .c2 { background: #dff3ea; color: #136347; }
+  .c3 { background: #fbe6dc; color: #8d4320; }
+  .c4 { background: #ece3f8; color: #5d3d8f; }
+  .c5 { background: #e3eef5; color: #2b5875; }
+  .prio { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; }
+  .bars i { width: 3px; border-radius: 1px; background: #d3d8e1; }
+  .bars i:nth-child(1) { height: 6px; } .bars i:nth-child(2) { height: 9px; } .bars i:nth-child(3) { height: 12px; }
+  .bars.h i { background: var(--ink); } .bars.m i:nth-child(-n+2) { background: var(--ink); } .bars.l i:nth-child(1) { background: var(--ink); }
+
+  .table-foot { padding: 11px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; }
+
+  /* Right rail */
+  .rail { display: flex; flex-direction: column; gap: 20px; }
+  .rail .panel { padding: 16px 18px 6px; }
+  .rail h2 { font-size: 14px; font-weight: 600; margin: 0 0 6px; display: flex; align-items: center; }
+  .rail h2 .r { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .ev { display: grid; grid-template-columns: 58px 1fr 16px; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line-2); }
+  .ev:first-of-type { border-top: 0; }
+  .ev time { font-weight: 600; font-size: 13px; padding-top: 1px; }
+  .ev p { margin: 0; font-weight: 500; }
+  .ev small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+  .ev svg { width: 14px; height: 14px; color: var(--muted); margin-top: 3px; }
+  .ev.task-ev p { color: var(--ink-2); }
+  .ev.task-ev time { color: var(--red); }
+  .who { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line-2); }
+  .who:first-of-type { border-top: 0; }
+  .who .nm { font-weight: 500; }
+  .who .own, .who .inf-n { font-size: 13px; text-align: right; }
+  .who .own b { font-weight: 600; }
+  .who .inf-n { color: var(--muted); min-width: 64px; }
+  .legend { display: flex; justify-content: flex-end; gap: 12px; color: var(--muted); font-size: 12px; padding: 0 0 2px; }
+
+  .phone-new { display: none; }
+  .phone-only { display: none; }
+
+  @media (max-width: 1180px) {
+    .tabs a { padding: 0 9px; }
+    .search { width: 200px; }
+    .page { grid-template-columns: 1fr; }
+    .rail { display: grid; grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 980px) {
+    .top-in { gap: 16px; }
+    .tabs { display: none; }
+  }
+
+  /* ---------- Phone ---------- */
+  @media (max-width: 720px) {
+    body { font-size: 14.5px; }
+    .top-in { padding: 0 16px; height: 54px; }
+    .search, .top-tools .primary { display: none; }
+    .search-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink-2); }
+    .search-icon svg { width: 17px; height: 17px; }
+    .phone-only { display: block; }
+    .tabs-phone { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
+    .tabs-phone a { flex: none; padding: 6px 12px; border-radius: 99px; color: var(--ink-2); text-decoration: none; font-weight: 500; background: var(--canvas); }
+    .tabs-phone a[aria-current] { background: var(--ink); color: #fff; }
+
+    .page { padding: 20px 16px 110px; gap: 16px; }
+    .page-head { gap: 14px; }
+    h1 { font-size: 26px; }
+    .seg { margin-left: 0; width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .seg button { padding: 6px 10px; flex: 1; justify-content: center; }
+    .pulse { grid-template-columns: 1fr 1fr; }
+    .pulse button { padding: 13px 14px 12px; }
+    .pulse button:nth-child(3) { border-left: 0; }
+    .pulse button:nth-child(n+3) { border-top: 1px solid var(--line-2); }
+    .pulse .num { font-size: 22px; }
+    .work { margin-top: 16px; }
+    .work-bar .chip:not(:first-of-type) { display: none; }
+
+    table, tbody { display: block; }
+    thead { display: none; }
+    tr { display: grid; grid-template-columns: 30px 1fr auto; column-gap: 10px; row-gap: 6px; padding: 14px 14px 14px 14px; border-bottom: 1px solid var(--line-2); }
+    tr:last-child { border-bottom: 0; }
+    td { padding: 0; border: 0; }
+    td.c-check { width: auto; padding: 1px 0 0; grid-row: 1 / span 3; }
+    td.c-task { grid-column: 2; }
+    td.c-co { grid-column: 2; font-size: 13.5px; }
+    td.c-due { grid-column: 3; grid-row: 1; justify-self: end; }
+    td.c-due .muted { display: none; }
+    td.c-since { grid-column: 2; font-size: 13px; }
+    td.c-own { grid-column: 3; grid-row: 2 / span 2; justify-self: end; align-self: end; }
+    td.c-prio { display: none; }
+    .title { display: block; }
+    .tag { margin-top: 5px; }
+    .since .meter { width: 36px; }
+
+    .rail { grid-template-columns: 1fr; }
+    .phone-new {
+      display: inline-flex; position: fixed; right: 16px; bottom: 28px; z-index: 3;
+      padding: 13px 18px 13px 15px; border-radius: 99px; font-size: 15px;
+      box-shadow: 0 8px 24px rgba(47, 84, 235, .32), 0 1px 0 rgba(20,40,120,.25);
+    }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-cols" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.5 4.5v15M14.5 4.5v15"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="logo" aria-label="Company logo"></span>Sales and ops</div>
+    <nav class="tabs" aria-label="Main navigation">
+      <a href="#" aria-current="page">Today</a>
+      <a href="#">Tasks</a>
+      <a href="#">Plan</a>
+      <a href="#">Companies</a>
+      <a href="#">Notes</a>
+      <a href="#">Past clients</a>
+      <a href="#">Flows</a>
+    </nav>
+    <div class="top-tools">
+      <div class="search"><svg><use href="#i-search"/></svg>Search companies, tasks, notes<kbd>/</kbd></div>
+      <button class="search-icon" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+      <button class="primary"><svg><use href="#i-plus"/></svg>New task</button>
+    </div>
+  </div>
+  <nav class="phone-only tabs-phone" aria-label="Main navigation">
+    <a href="#" aria-current="page">Today</a>
+    <a href="#">Tasks</a>
+    <a href="#">Plan</a>
+    <a href="#">Companies</a>
+    <a href="#">Notes</a>
+    <a href="#">Past clients</a>
+    <a href="#">Flows</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Today</h1>
+      <p class="sub">Tuesday 20 October, 9 open tasks need attention this week</p>
+    </div>
+    <div class="seg" role="group" aria-label="Kind of work">
+      <button aria-pressed="true">All <span>9</span></button>
+      <button aria-pressed="false">Prospects <span>4</span></button>
+      <button aria-pressed="false">Clients <span>2</span></button>
+      <button aria-pressed="false">Internal <span>3</span></button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="panel pulse">
+      <button><span class="lab"><i style="background:var(--red)"></i>Overdue</span><span class="num">2<span class="of">of 47 open</span></span></button>
+      <button><span class="lab"><i style="background:#e39a2d"></i>Due within 3 days</span><span class="num">4</span></button>
+      <button><span class="lab"><i style="background:#9aa3b5"></i>No action for 14+ days</span><span class="num">2</span></button>
+      <button><span class="lab"><i style="background:#d3d8e1"></i>No dates yet</span><span class="num">1</span></button>
+    </div>
+
+    <section class="panel work" aria-labelledby="work-h">
+      <div class="work-bar">
+        <h2 id="work-h">Needs attention</h2><span class="n">9</span>
+        <button class="chip"><svg><use href="#i-filter"/></svg>No action for 7+ days</button>
+        <button class="chip"><svg><use href="#i-cols"/></svg>Columns</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="c-check"><span class="box" aria-hidden="true"></span></th>
+            <th>Task</th>
+            <th>Company or group</th>
+            <th class="sorted">Deadline<svg><use href="#i-down"/></svg></th>
+            <th>Last action</th>
+            <th>People</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Draft the Q4 sales targets</span><br><span class="tag t-int"><i></i>Internal</span></td>
+            <td class="c-co">Q4 planning</td>
+            <td class="c-due"><div class="when"><span class="pill p-red">2 days overdue</span><span class="muted">18 Oct</span></div></td>
+            <td class="c-since"><span class="muted">Not tracked</span></td>
+            <td class="c-own"><div class="avs"><span class="av c1">RH</span><span class="av c3">KT</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars h"><i></i><i></i><i></i></span>High</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Send the revised proposal with volume pricing</span><br><span class="tag t-pro"><i></i>Prospect</span></td>
+            <td class="c-co"><a href="#">Halcyon Logistics</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-red">1 day overdue</span><span class="muted">19 Oct</span></div></td>
+            <td class="c-since"><div class="since"><span class="d">6 d</span><span class="meter"><b style="width:40%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c1">RH</span><span class="av inf" title="Informed: backup">DP</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars h"><i></i><i></i><i></i></span>High</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Book a demo with their finance lead</span><br><span class="tag t-pro"><i></i>Prospect</span></td>
+            <td class="c-co"><a href="#">Northwind Clinics</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-amber">Today</span><span class="muted">20 Oct</span></div></td>
+            <td class="c-since"><div class="since red"><span class="d">15 d</span><span class="meter red"><b style="width:100%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c3">KT</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars h"><i></i><i></i><i></i></span>High</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Update the onboarding checklist for new hires</span><br><span class="tag t-int"><i></i>Internal</span></td>
+            <td class="c-co">Hiring</td>
+            <td class="c-due"><div class="when"><span class="pill p-amber">Tomorrow</span><span class="muted">21 Oct</span></div></td>
+            <td class="c-since"><span class="muted">Not tracked</span></td>
+            <td class="c-own"><div class="avs"><span class="av c4">MC</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars m"><i></i><i></i><i></i></span>Medium</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Confirm the trial accounts are active</span><br><span class="tag t-pro"><i></i>Prospect</span></td>
+            <td class="c-co"><a href="#">Pelita Foods</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-amber">In 2 days</span><span class="muted">22 Oct</span></div></td>
+            <td class="c-since"><div class="since"><span class="d">3 d</span><span class="meter"><b style="width:20%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c4">SL</span><span class="av inf">RH</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars m"><i></i><i></i><i></i></span>Medium</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Prepare the quarterly review deck</span><br><span class="tag t-cli"><i></i>Client</span></td>
+            <td class="c-co"><a href="#">Meridian Bank</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-amber">In 3 days</span><span class="muted">23 Oct</span></div></td>
+            <td class="c-since"><div class="since"><span class="d">2 d</span><span class="meter"><b style="width:14%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c5">AW</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars m"><i></i><i></i><i></i></span>Medium</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Share the retail rollout case study</span><br><span class="tag t-pro"><i></i>Prospect</span></td>
+            <td class="c-co"><a href="#">Arcadia Retail Group</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-plain">In 10 days</span><span class="muted">30 Oct</span></div></td>
+            <td class="c-since"><div class="since amber"><span class="d">9 d</span><span class="meter amber"><b style="width:64%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c2">DP</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars l"><i></i><i></i><i></i></span>Low</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Send the renewal reminder</span><br><span class="tag t-cli"><i></i>Client</span></td>
+            <td class="c-co"><a href="#">Solace Hotels</a></td>
+            <td class="c-due"><div class="when"><span class="pill p-plain">In 15 days</span><span class="muted">4 Nov</span></div></td>
+            <td class="c-since"><div class="since red"><span class="d">21 d</span><span class="meter red"><b style="width:100%"></b></span></div></td>
+            <td class="c-own"><div class="avs"><span class="av c3">KT</span><span class="av inf">AW</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars m"><i></i><i></i><i></i></span>Medium</span></td>
+          </tr>
+          <tr>
+            <td class="c-check"><button class="box" aria-label="Mark done"></button></td>
+            <td class="c-task"><span class="title">Tidy the shared drive folders</span><br><span class="tag t-int"><i></i>Internal</span></td>
+            <td class="c-co">Ops housekeeping</td>
+            <td class="c-due"><div class="when"><span class="pill p-plain">Add a date</span></div></td>
+            <td class="c-since"><span class="muted">Not tracked</span></td>
+            <td class="c-own"><div class="avs"><span class="av c2">DP</span></div></td>
+            <td class="c-prio"><span class="prio"><span class="bars l"><i></i><i></i><i></i></span>Low</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-foot"><span>Sorted by deadline, earliest first</span><span>5 done this week</span></div>
+    </section>
+  </div>
+
+  <aside class="rail">
+    <section class="panel" aria-labelledby="cal-h">
+      <h2 id="cal-h">Calendar today<span class="r">From the team calendar</span></h2>
+      <div class="ev"><time>All day</time><div><p>Sarah out of office</p></div><svg><use href="#i-ext"/></svg></div>
+      <div class="ev"><time>09:30</time><div><p>Weekly pipeline sync</p><small>45 min</small></div><svg><use href="#i-ext"/></svg></div>
+      <div class="ev task-ev"><time>Due</time><div><p>Book a demo with their finance lead</p><small>Northwind Clinics</small></div><span></span></div>
+      <div class="ev"><time>12:30</time><div><p>Lunch with Pelita Foods</p><small>1 h 30 min</small></div><svg><use href="#i-ext"/></svg></div>
+      <div class="ev"><time>16:00</time><div><p>Interview, sales associate</p><small>1 h</small></div><svg><use href="#i-ext"/></svg></div>
+    </section>
+    <section class="panel" aria-labelledby="who-h">
+      <h2 id="who-h">Who's on it this week</h2>
+      <div class="legend"><span>Owns</span><span>Informed</span></div>
+      <div class="who"><span class="av c1">RH</span><span class="nm">Rina Hartono</span><span class="own"><b>12</b></span><span class="inf-n">5</span></div>
+      <div class="who"><span class="av c3">KT</span><span class="nm">Kevin Tan</span><span class="own"><b>9</b></span><span class="inf-n">2</span></div>
+      <div class="who"><span class="av c2">DP</span><span class="nm">Dimas Prasetyo</span><span class="own"><b>8</b></span><span class="inf-n">7</span></div>
+      <div class="who"><span class="av c4">SL</span><span class="nm">Sarah Lim</span><span class="own"><b>6</b></span><span class="inf-n">1</span></div>
+      <div class="who"><span class="av c5">AW</span><span class="nm">Aditya Wijaya</span><span class="own"><b>7</b></span><span class="inf-n">3</span></div>
+      <div class="who"><span class="av c4">MC</span><span class="nm">Mei Chen</span><span class="own"><b>5</b></span><span class="inf-n">0</span></div>
+    </section>
+  </aside>
+</div>
+
+<button class="primary phone-new"><svg><use href="#i-plus"/></svg>New task</button>
+</body>
+</html>
