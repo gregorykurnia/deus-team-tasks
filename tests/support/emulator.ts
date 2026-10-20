@@ -2,7 +2,7 @@
 // Shared by the smoke tests (Playwright) and the unit tests (Vitest).
 // Requests carry "Bearer owner", so they skip security rules.
 
-export const EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8080";
+export const EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8180";
 const BASE = `http://${EMULATOR_HOST}`;
 
 export const PROJECTS = {

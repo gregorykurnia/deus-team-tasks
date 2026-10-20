@@ -1,0 +1,162 @@
+/* Task details (guide 6.3, 4.11, 4.13). Fields sit 20px apart. */
+.form > * + * {
+  margin-top: 20px;
+}
+
+.form > :first-child {
+  margin-top: 4px;
+}
+
+.loading {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.aboutBox {
+  margin-top: 10px;
+}
+
+/* The company a task is about: its initials in its kind's colours, its name, and what it is. */
+.company {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-field);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+}
+
+.mono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--kind-soft);
+  color: var(--kind-ink);
+  font-size: 12.5px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+}
+
+.companyText {
+  flex: 1;
+  min-width: 0;
+}
+
+.companyName {
+  display: block;
+  overflow: hidden;
+  font-weight: var(--w-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.companyText small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+}
+
+.open {
+  flex: none;
+  color: var(--blue);
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.open:hover {
+  text-decoration: underline;
+}
+
+/* "Add details" on the quick sheet. */
+.form > .moreDetails {
+  margin-top: 18px;
+}
+
+.moreDetails {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--r-field);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-weight: var(--w-bold);
+  text-align: left;
+}
+
+.moreDetails:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+.moreDetails small {
+  color: var(--muted);
+  font-weight: var(--w-medium);
+}
+
+.row2,
+.row3 {
+  display: grid;
+  gap: 12px;
+}
+
+.row2 {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.row3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Kept in step (B12): a blue-soft box with the sync icon. */
+.form > .keptInStep {
+  margin-top: 12px;
+}
+
+.keptInStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 11px 13px;
+  border-radius: var(--r-field);
+  background: var(--pro-soft);
+  color: var(--blue-ink);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+}
+
+.keptInStep svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--blue);
+}
+
+.meta {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+}
+
+.form > .meta {
+  margin-top: 22px;
+}
+
+/* 640px and under (--bp-phone): the three dates become two plus one. */
+@media (max-width: 640px) {
+  .row3 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .row3 > :last-child {
+    grid-column: 1 / -1;
+  }
+}

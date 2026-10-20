@@ -71,15 +71,17 @@ export async function setTasksDone(tasks: Task[], done: boolean): Promise<Undo> 
     db,
     changed.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate(withCompletedAt({ completed: done }, t, now))))
   );
-  return async () => {
-    assertOnline("No connection. The change wasn't undone.");
-    await commitInChunks(
-      db,
-      changed.map((t) => (batch) =>
-        batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt }))
-      )
-    );
-  };
+  return () => putBackDone(changed);
+}
+
+// Undo for marking done or not done: each task back to done or not as it was
+// (pass them as they were), with its finished date.
+export async function putBackDone(tasks: Task[]): Promise<void> {
+  assertOnline("No connection. The change wasn't undone.");
+  await commitInChunks(
+    db,
+    tasks.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt })))
+  );
 }
 
 // Moving to a task group applies to internal work only (D-008): company tasks

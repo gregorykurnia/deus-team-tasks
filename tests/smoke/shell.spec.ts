@@ -164,7 +164,7 @@ test("A3: with no connection a banner says so, and a toast says when it's back",
 
 test("A3: opened with the server unreachable, the app says it's connecting, then that there's no connection", async ({ page, isMobile }) => {
   // context.setOffline only flips the browser's own flag: block the emulator itself, before the page loads.
-  await page.route(/127\.0\.0\.1:8080/, (route) => route.abort());
+  await page.route(/127\.0\.0\.1:8180/, (route) => route.abort());
   await page.goto("/tasks");
   await expect(title(page)).toHaveText("Tasks");
   if (!isMobile) await expect(mainNav(page).getByText("Connecting…")).toBeVisible(); // the live status in the side bar

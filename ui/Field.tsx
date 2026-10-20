@@ -14,14 +14,16 @@ export interface FieldControl {
 
 interface FieldProps {
   label: string;
-  optional?: boolean;
+  hideLabel?: boolean; // read by screen readers only, as for the task description
+  optional?: boolean | string; // "optional", or a note in its place: "one or more"
+  group?: boolean; // the control is a group of buttons that names itself, so the label isn't a <label>
   hint?: string;
   error?: string; // what to do, as a sentence: "Add a short description so the team knows what this is."
   focusKey?: number; // the form's submit count: each new try with an error moves focus to the control
   children: (control: FieldControl) => ReactNode;
 }
 
-export default function Field({ label, optional, hint, error, focusKey, children }: FieldProps) {
+export default function Field({ label, hideLabel, optional, group, hint, error, focusKey, children }: FieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
@@ -36,10 +38,17 @@ export default function Field({ label, optional, hint, error, focusKey, children
 
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>
-        {label}
-        {optional && <span className={styles.optional}>optional</span>}
-      </label>
+      {group ? (
+        <span className={hideLabel ? "sr-only" : styles.label} aria-hidden="true">
+          {label}
+          {optional && <span className={styles.optional}>{optional === true ? "optional" : optional}</span>}
+        </span>
+      ) : (
+        <label htmlFor={id} className={hideLabel ? "sr-only" : styles.label}>
+          {label}
+          {optional && <span className={styles.optional}>{optional === true ? "optional" : optional}</span>}
+        </label>
+      )}
       {children({
         id,
         "aria-invalid": error ? true : undefined,

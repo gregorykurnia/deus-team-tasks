@@ -1,14 +1,14 @@
 // Every company write goes through here. Updates merge only the fields that
 // change (so a company's own fields are never lost), a field set to undefined
 // is cleared, and new ids are never reused.
-import { deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
+import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitInChunks, type BatchOp } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
 import { NOTES } from "./noteWrites";
-import { TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
+import { addTask, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
 import type { CompaniesById } from "./kinds";
 import type { PipelineEntry } from "./clientTypes";
 import type { ProspectJournalEntry } from "./prospectJournalTypes";
@@ -153,8 +153,27 @@ export async function updateCompanyKeptInStep(
   };
 }
 
+// What a company takes from one of its open tasks whose dates changed (B12): the
+// task's last action, and its deadline as the target. Null when nothing moves.
+function companyPatchFrom(company: PipelineEntry, task: Pick<Task, "lastActionDate" | "endDate">): CompanyPatch | null {
+  const date = task.lastActionDate ?? company.date;
+  const target = task.endDate || company.target;
+  return date !== company.date || target !== company.target ? { date, target } : null;
+}
+
+// The company's other open tasks, brought in step with the company's new dates.
+function otherTasksInStep(company: PipelineEntry, companyPatch: CompanyPatch, exceptId: string, tasks: Task[]) {
+  const companyNext = { ...company, ...companyPatch };
+  return openTasksOf(company.id, tasks).flatMap((other) => {
+    if (other.id === exceptId) return [];
+    const p = taskDatesFromCompany(companyNext, other);
+    return p ? [{ t: other, p: p as Partial<NewTask> }] : [];
+  });
+}
+
 // Saves a company task. When its last action or deadline changes, the company
-// follows, and through it the company's other open tasks (B12).
+// follows, and through it the company's other open tasks (B12). Pass only the
+// fields that change: a save that leaves the dates alone never moves the company.
 export async function saveTaskKeptInStep(
   task: Task,
   patch: Partial<NewTask>,
@@ -166,20 +185,9 @@ export async function saveTaskKeptInStep(
   const company = next.linkedClientId != null ? companies.get(next.linkedClientId) : undefined;
   const ownPatch = withCompletedAt(patch, task);
   const changes: { t: Task; p: Partial<NewTask> }[] = [{ t: task, p: ownPatch }];
-  let companyPatch: CompanyPatch | null = null;
-  if (company && !next.completed) {
-    const date = next.lastActionDate ?? company.date;
-    const target = next.endDate || company.target;
-    if (date !== company.date || target !== company.target) {
-      companyPatch = { date, target };
-      const companyNext = { ...company, ...companyPatch };
-      for (const other of openTasksOf(company.id, tasks)) {
-        if (other.id === task.id) continue;
-        const p = taskDatesFromCompany(companyNext, other);
-        if (p) changes.push({ t: other, p });
-      }
-    }
-  }
+  const datesChanged = "lastActionDate" in patch || "endDate" in patch;
+  const companyPatch = company && !next.completed && datesChanged ? companyPatchFrom(company, next) : null;
+  if (company && companyPatch) changes.push(...otherTasksInStep(company, companyPatch, task.id, tasks));
   await commitInChunks(
     db,
     changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
@@ -192,6 +200,35 @@ export async function saveTaskKeptInStep(
     }
   }
   return { companyChanged: !!companyPatch, tasksChanged: changes.length - 1 };
+}
+
+// Adds a task. A new company task with a last action or deadline brings its
+// company, and the company's other open tasks, in step (B12). If that fails,
+// the new task goes again, so trying once more can't make two.
+export async function addTaskKeptInStep(
+  task: NewTask,
+  companies: CompaniesById,
+  tasks: Task[]
+): Promise<{ id: string; companyChanged: boolean; tasksChanged: number }> {
+  const id = await addTask(task);
+  const company = task.linkedClientId != null ? companies.get(task.linkedClientId) : undefined;
+  const dated = !!task.lastActionDate || !!task.endDate;
+  const companyPatch = company && !task.completed && dated ? companyPatchFrom(company, task) : null;
+  if (!company || !companyPatch) return { id, companyChanged: false, tasksChanged: 0 };
+  const changes = otherTasksInStep(company, companyPatch, id, tasks);
+  try {
+    await commitInChunks(
+      db,
+      changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
+    );
+    await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
+  } catch (err) {
+    return rollBack(err, async () => {
+      await restoreTasks(changes);
+      await deleteDoc(doc(db, TASKS, id));
+    });
+  }
+  return { id, companyChanged: true, tasksChanged: changes.length };
 }
 
 /* ---------- Moving between groups (B5) ---------- */

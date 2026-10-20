@@ -8,5 +8,5 @@ export const USE_EMULATOR = process.env.NODE_ENV !== "production" && process.env
 // so a test run can never carry on against live data.
 export function connectToEmulatorIfTesting(db: Firestore) {
   if (!USE_EMULATOR) return;
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectFirestoreEmulator(db, "127.0.0.1", 8180);
 }

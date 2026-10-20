@@ -29,6 +29,10 @@
   padding: 8px 10px;
 }
 
+.large .option {
+  font-size: 13.5px;
+}
+
 .option:hover {
   color: var(--ink);
 }

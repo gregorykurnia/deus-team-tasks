@@ -27,7 +27,7 @@ export default defineConfig({
   webServer: [
     {
       command: "npx firebase emulators:start --only firestore --project demo-deus",
-      url: "http://127.0.0.1:8080",
+      url: "http://127.0.0.1:8180",
       reuseExistingServer: false,
       timeout: 120_000,
       gracefulShutdown: { signal: "SIGINT", timeout: 15_000 },

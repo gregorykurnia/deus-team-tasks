@@ -66,13 +66,13 @@
 }
 
 .dateInput {
-  padding-right: 40px;
+  padding-right: 34px;
 }
 
 .clear {
   position: absolute;
   top: 9px;
-  right: 8px;
+  right: 6px;
   display: grid;
   place-items: center;
   width: 28px;
