@@ -1342,7 +1342,7 @@ a.insight:hover, button.insight:hover { background: #fff; box-shadow: 0 0 0 1px 
 .track.is-new .tr-n { animation: arrive 1.8s ease; }
 
 /* Phones: the list or the sectors */
-.pview { display: none; }
+.seg.pview { display: none; }
 .pwrap { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; margin-top: 22px; align-items: start; }
 
 /* By sector (R5) */
@@ -1454,7 +1454,7 @@ a.insight:hover, button.insight:hover { background: #fff; box-shadow: 0 0 0 1px 
   .track { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 }
 @media (max-width: 900px) {
-  .pview { display: flex; margin-top: 16px; }
+  .seg.pview { display: flex; margin-top: 16px; }
   .pwrap { grid-template-columns: minmax(0, 1fr); margin-top: 12px; }
   .pwrap[data-mview="list"] .secpanel, .pwrap[data-mview="sectors"] .plist { display: none; }
   .secpanel { position: static; }
