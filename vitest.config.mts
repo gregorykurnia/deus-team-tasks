@@ -8,7 +8,7 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL(".", import.meta.url)) },
   },
   test: {
-    include: ["tests/unit/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.{ts,tsx}"],
     environment: "node",
     globalSetup: ["tests/unit/global-setup.ts"],
     env: { NEXT_PUBLIC_USE_EMULATOR: "1" },

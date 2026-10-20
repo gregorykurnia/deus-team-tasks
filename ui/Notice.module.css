@@ -1,0 +1,74 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: var(--r-m);
+  font-size: 13.5px;
+  font-weight: var(--w-medium);
+}
+
+.body {
+  min-width: 0;
+}
+
+.body p {
+  margin: 0;
+}
+
+.body b {
+  color: var(--ink);
+}
+
+.body > * + * {
+  margin-top: 8px;
+}
+
+.info {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--ink-2);
+}
+
+.info > svg {
+  color: var(--muted);
+}
+
+.warning {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+
+.warning > svg {
+  color: var(--amber);
+}
+
+.error {
+  background: var(--red-soft);
+  color: var(--red-ink);
+}
+
+.error > svg {
+  color: var(--red);
+}
+
+.success {
+  background: var(--green-soft);
+  color: var(--green-ink);
+}
+
+.success > svg {
+  color: var(--green);
+}
+
+/* A blue strip for an inline note: "Their part", a sector spelling. */
+.inline {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+/* The grey version: an umbrella company whose subsidiaries still count. */
+.inlineMuted {
+  background: var(--fill);
+  color: var(--ink-2);
+}

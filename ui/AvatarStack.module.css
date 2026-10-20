@@ -1,0 +1,23 @@
+.stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.stack > * + * {
+  margin-left: -9px;
+}
+
+.more {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  margin-left: -9px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: var(--w-heavy);
+}

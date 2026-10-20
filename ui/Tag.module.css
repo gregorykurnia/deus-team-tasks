@@ -1,0 +1,104 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.pro {
+  background: var(--pro-soft);
+  color: var(--pro-ink);
+}
+
+.cli {
+  background: var(--cli-soft);
+  color: var(--cli-ink);
+}
+
+.int {
+  background: var(--int-soft);
+  color: var(--int-ink);
+}
+
+/* Company groups (guide B2): To approach is teal; the others take the kind colours. */
+.gtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 7px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.toApproach {
+  background: var(--g-lead-soft);
+  color: var(--g-lead-ink);
+}
+
+.active {
+  background: var(--pro-soft);
+  color: var(--pro-ink);
+}
+
+.dealDone {
+  background: var(--cli-soft);
+  color: var(--cli-ink);
+}
+
+.noOrNotNow {
+  background: var(--int-soft);
+  color: var(--int-ink);
+}
+
+.outside {
+  display: inline-flex;
+  padding: 2px 9px;
+  border: 1.5px dashed var(--outside-line);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: var(--w-bold);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.readOnly {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.sector {
+  display: inline-flex;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  font-size: 12px;
+  font-weight: var(--w-bold);
+  color: var(--ink-2);
+  white-space: nowrap;
+}

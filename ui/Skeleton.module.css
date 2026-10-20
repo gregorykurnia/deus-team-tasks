@@ -1,0 +1,82 @@
+.block {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(27, 31, 59, 0.06) 0%,
+    rgba(27, 31, 59, 0.1) 40%,
+    rgba(27, 31, 59, 0.06) 80%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 26px 40px 1fr 70px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--r-m);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.row > span,
+.lines span {
+  display: block;
+  border-radius: 8px;
+  background: rgba(27, 31, 59, 0.08);
+  animation: shimmer 1.4s linear infinite;
+  background-size: 300% 100%;
+}
+
+.circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+
+.lines {
+  display: grid;
+  gap: 8px;
+}
+
+.lineLong {
+  width: 70%;
+  height: 13px;
+}
+
+.lineShort {
+  width: 40%;
+  height: 10px;
+}
+
+.pill {
+  height: 24px;
+  border-radius: var(--r-pill);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}

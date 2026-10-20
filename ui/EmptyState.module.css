@@ -1,0 +1,62 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 24px 30px;
+  text-align: center;
+}
+
+.small {
+  padding: 18px 16px;
+}
+
+/* A white-to-blue square with a blue icon (guide 4.15). */
+.art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fff, var(--blue-soft));
+  box-shadow: 0 12px 30px -14px rgba(47, 107, 234, 0.5), inset 0 0 0 1px #fff;
+  color: var(--blue);
+}
+
+.small .art {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 15px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.015em;
+}
+
+.small .title {
+  font-size: 15px;
+}
+
+.text {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-weight: var(--w-medium);
+}
+
+.small .text {
+  font-size: 13.5px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}

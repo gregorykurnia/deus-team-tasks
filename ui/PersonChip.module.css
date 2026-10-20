@@ -1,0 +1,40 @@
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  height: 34px;
+  padding: 0 6px 0 3px;
+  border-radius: var(--r-pill);
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+}
+
+.current {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.remove:hover {
+  background: var(--fill);
+  color: var(--ink);
+}

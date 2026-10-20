@@ -34,4 +34,14 @@ describe("Icon", () => {
     expect(markup).toContain('width="21"');
     expect(markup).toContain('height="21"');
   });
+
+  it("draws every icon with shapes, at the design's 2.1px round stroke", () => {
+    for (const name of ICON_NAMES) {
+      const markup = renderToStaticMarkup(createElement(Icon, { name }));
+      expect(markup).toMatch(/<(path|circle|rect)\b/);
+      expect(markup).toContain('stroke-width="2.1"');
+      expect(markup).toContain('stroke-linecap="round"');
+      expect(markup).toContain('stroke-linejoin="round"');
+    }
+  });
 });

@@ -1,0 +1,28 @@
+.chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: var(--w-bold);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.blue { background: var(--opt-blue-bg); color: var(--opt-blue); }
+.sky { background: var(--opt-sky-bg); color: var(--opt-sky); }
+.teal { background: var(--opt-teal-bg); color: var(--opt-teal); }
+.green { background: var(--opt-green-bg); color: var(--opt-green); }
+.amber { background: var(--opt-amber-bg); color: var(--opt-amber); }
+.red { background: var(--opt-red-bg); color: var(--opt-red); }
+.violet { background: var(--opt-violet-bg); color: var(--opt-violet); }
+.pink { background: var(--opt-pink-bg); color: var(--opt-pink); }
+.slate { background: var(--opt-slate-bg); color: var(--opt-slate); }
+
+.more {
+  background: var(--fill);
+  color: var(--ink-2);
+}

@@ -1,0 +1,51 @@
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+  box-shadow: 0 2px 6px rgba(40, 46, 110, 0.12);
+}
+
+.plan {
+  width: 34px;
+  height: 34px;
+}
+
+/* Inside a chip: no edge and no shadow. */
+.chip {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  font-size: 10.5px;
+  box-shadow: none;
+}
+
+/* A person's own page. */
+.page {
+  width: 72px;
+  height: 72px;
+  border-width: 4px;
+  font-size: 24px;
+}
+
+/* The six hues, picked from the name so a person keeps theirs (guide 2.1). */
+.a0 { background: var(--av-0); color: var(--av-0-ink); }
+.a1 { background: var(--av-1); color: var(--av-1-ink); }
+.a2 { background: var(--av-2); color: var(--av-2-ink); }
+.a3 { background: var(--av-3); color: var(--av-3-ink); }
+.a4 { background: var(--av-4); color: var(--av-4-ink); }
+.a5 { background: var(--av-5); color: var(--av-5-ink); }
+
+/* Informed: white, dashed outline, grey initials. */
+.informed {
+  border: 1.5px dashed var(--outside-line);
+  background: #fff;
+  color: var(--muted);
+  box-shadow: none;
+}

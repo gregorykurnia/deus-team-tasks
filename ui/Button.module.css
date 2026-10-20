@@ -1,0 +1,140 @@
+/* Buttons (guide 4.1). Values are the prototype's, from the tokens. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  font-weight: var(--w-semibold);
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 1px var(--hair);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Main: one per view at most. */
+.main {
+  height: 44px;
+  padding: 0 20px 0 16px;
+  color: #fff;
+  font-weight: var(--w-bold);
+  background: var(--cta);
+  box-shadow: var(--cta-glow);
+}
+
+.main:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+/* Danger: only the confirm button in a delete dialog. */
+.danger {
+  height: 44px;
+  padding: 0 20px;
+  color: #fff;
+  font-weight: var(--w-bold);
+  background: var(--red);
+  box-shadow: 0 10px 24px -10px rgba(217, 47, 67, 0.55);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.quiet {
+  background: none;
+  box-shadow: none;
+}
+
+.quiet:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.quietRed {
+  background: none;
+  box-shadow: none;
+  color: var(--red);
+}
+
+.quietRed:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--red);
+}
+
+/* 34px: inside rows, panel footers and empty states. */
+.small {
+  height: 34px;
+  padding: 0 13px;
+  font-size: 13.5px;
+}
+
+.main.small {
+  padding: 0 14px;
+  box-shadow: 0 8px 18px -8px rgba(47, 107, 234, 0.5);
+}
+
+/* Icon: a 40px circle (44px glass). */
+.icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--ink-2);
+  background: none;
+  box-shadow: none;
+}
+
+.icon:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+/* The glass version: a frosted circle, as the side bar and page panels are. */
+.glass {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+/* Link: blue words, underlined on hover. */
+.link {
+  height: auto;
+  padding: 0;
+  color: var(--blue);
+  font-weight: var(--w-bold);
+  background: none;
+  box-shadow: none;
+}
+
+.link:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Add line: a dashed blue outline, blue words, white on hover. */
+.addLine {
+  border: 1.5px dashed var(--blue);
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+  background: transparent;
+  box-shadow: none;
+}
+
+.addLine:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--blue-ink);
+}

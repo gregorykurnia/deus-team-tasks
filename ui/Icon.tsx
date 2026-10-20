@@ -294,8 +294,9 @@ export type IconName = keyof typeof ICONS;
 
 export const ICON_NAMES = Object.keys(ICONS) as IconName[];
 
-// 13 to 16px inside buttons, chips and pills; 18px by default; 19px in the side bar; 21px in the tab bar.
-export type IconSize = 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21;
+// 11 to 12px in rows and person chips; 13 to 16px inside buttons, chips and pills; 18px by default;
+// 19px in the side bar; 21 to 22px in the tab bar; 28px for empty-state art (the prototype's sizes).
+export type IconSize = 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 28;
 
 interface IconProps {
   name: IconName;
