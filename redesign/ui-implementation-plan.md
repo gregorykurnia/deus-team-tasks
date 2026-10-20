@@ -166,7 +166,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 3.6 | Plan: Month and Day | Sonnet 5.5 High | 2026-10-20 · this commit (Month and Day share one ten-week run of events; Day lands in Plan, so Today and the stepper agree; People still says it isn't built until 3.7) |
 | 3.7 | Plan: People and one person | Sonnet 5.5 High | 2026-10-20 · this commit (the ranking counts everyone named on any task, Work narrows it; Plan's four views are all built) |
 | 3.8 | Companies: tiles, where to act, filters, sort, search, list | Sonnet 5.5 High | 2026-10-20 · this commit (cells are read only and the header has no New company, Fields or Export until 3.9 and 3.10; the settings now load once in DeskData) |
-| 3.9 | Companies: editing in place, record, new, move, follow-up task, delete | Opus 5.5 High | |
+| 3.9 | Companies: editing in place, record, new, move, follow-up task, delete | Opus 5.5 High | 2026-10-20 · this commit (New company is `?newCompany=1`; Edit options and Edit fields wait for 3.10; the notes links go to `/notes/<id>` or `/notes?company=<id>` for 3.11; gap N8 provisional) |
 | 3.10 | Companies: fields sheet, options dialog, export | Opus 5.5 High | |
 | 3.11 | Qualification notes (autosave, offline writing, live, link, export) | Opus 5.5 High | |
 | 3.12 | Past clients: totals, by sector, tree, search, order | Sonnet 5.5 High | |
@@ -284,6 +284,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N5 | A source that fails to load while online (R2.1): only the calendar's failure is designed. Provisional: the side bar hides its counts, and the groups say "Couldn't load task groups." in red ink. | each screen's error state (3.x reuse the provisional) |
 | N6 | A task that's gone (3.1): opened from a link after it was deleted, or deleted by a colleague while open. Provisional: the first gives an error toast ("This task isn't there any more. Someone may have deleted it.") and the sheet doesn't open; the second keeps the sheet with what was typed, a warning notice ("This task was deleted.") and only Close. | nothing (provisional built) |
 | N7 | A task group that's gone (3.3): opened from a link after it was deleted, or deleted by a colleague while open. Provisional: an empty state "This task group isn't there any more" with an All tasks button, and "Its tasks are under Internal." | nothing (provisional built) |
+| N8 | A company that's gone (3.9): opened from a link after it was deleted, or deleted by a colleague while its record is open. Provisional, as N6: an error toast ("This company isn't there any more. Someone may have deleted it.") and the record closes; nothing typed is lost, as each change saves itself. | nothing (provisional built) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

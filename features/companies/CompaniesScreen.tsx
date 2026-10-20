@@ -2,14 +2,20 @@
 
 // Companies (guide 6.5): the four groups as tiles, where to act on Active, filters, sort, search and the list. The view
 // (group, search, filters, sort) lives in the address, so a link lands on the right list and a reload keeps it. Every source
-// loads on its own. Search covers the group you are in and says where else it found something. The cells, the record, New
-// company, Fields and Export come with tasks 3.9 and 3.10.
-import { usePathname, useSearchParams } from "next/navigation";
+// loads on its own. Search covers the group you are in and says where else it found something. Every cell opens its quick
+// editor, ⋯ opens the row menu, and a company opens its record over the list (?company=, so a reload keeps it). New
+// company is ?newCompany=1. Fields and Export come with task 3.10.
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useCompanies, useCompanyOptions } from "@/desk/DeskData";
+import { useCompanies, useCompaniesById, useCompanyOptions, useNotes, useTasks } from "@/desk/DeskData";
+import { over } from "@/desk/areas";
 import PageHeader from "@/desk/PageHeader";
-import { useConnection } from "@/lib/connection";
-import { companiesInGroup, groupSizes, productOptions, whereToActCounts, type CompanyGroup } from "@/lib/companies";
+import { useOverParam } from "@/desk/useOverParam";
+import type { PipelineEntry } from "@/lib/clientTypes";
+import { deleteWording, hasField, isKeptInStep, RENAME_MISSING } from "@/lib/companyEdit";
+import { COMPANY_GROUP_LABELS, companiesInGroup, companyGroup, groupSizes, productOptions, whereToActCounts, type CompanyGroup } from "@/lib/companies";
+import type { CompanyField } from "@/lib/companySettings";
+import { failureMessage, useConnection } from "@/lib/connection";
 import {
   clearedFilters,
   countNoun,
@@ -32,26 +38,44 @@ import {
 import { plural } from "@/lib/dates";
 import EmptyState from "@/ui/EmptyState";
 import Button from "@/ui/Button";
+import { Confirm } from "@/ui/Dialog";
+import Sheet from "@/ui/Sheet";
+import { useToast } from "@/ui/Toaster";
 import { SearchField } from "@/ui/Inputs";
 import Notice from "@/ui/Notice";
-import { LoadingLine, SkeletonRow } from "@/ui/Skeleton";
+import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
 import { useMediaQuery } from "@/ui/useMediaQuery";
 import { useToday } from "@/ui/useToday";
+import CellEditor from "./CellEditor";
 import CompanyFilters from "./CompanyFilters";
 import CompanyList from "./CompanyList";
+import CompanyRecord from "./CompanyRecord";
 import GroupTiles from "./GroupTiles";
+import MoveDialog from "./MoveDialog";
+import NewCompanySheet from "./NewCompanySheet";
+import RowMenu from "./RowMenu";
+import { notesLink, useCompanyActions } from "./useCompanyActions";
 import WhereToAct from "./WhereToAct";
 import styles from "./Companies.module.css";
 
 const TABLET_AND_SMALLER = "(max-width: 900px)";
 const SEARCH_DELAY_MS = 180;
 
+type EditField = Pick<CompanyField, "key" | "label" | "type">;
+const NAME_FIELD: EditField = { key: "company", label: "Company name", type: "text" };
+
 export default function CompaniesScreen() {
   const pathname = usePathname();
+  const router = useRouter();
   const search = useSearchParams();
   const today = useToday();
-  const { status } = useConnection();
+  const { status, online } = useConnection();
   const companies = useCompanies();
+  const byId = useCompaniesById();
+  const tasks = useTasks();
+  const notes = useNotes();
+  const toast = useToast();
+  const actions = useCompanyActions();
   const { settings, loading: settingsLoading } = useCompanyOptions();
   const phone = useMediaQuery(TABLET_AND_SMALLER); // the tab bar layout: the search goes under the title
 
@@ -89,6 +113,95 @@ export default function CompaniesScreen() {
 
   // A group's own filters and order don't carry over to another group; the search does.
   const pickGroup = (group: CompanyGroup) => update((now) => ({ ...now, group, status: null, priority: null, product: null, act: null, sort: null, dir: null }));
+
+  /* ---------- Changing companies (task 3.9) ---------- */
+
+  // What's open over the list. Each holds the company as it was when opened, so a dialog doesn't vanish mid-way if the
+  // company changes or goes; editors read the live company.
+  const editAnchor = useRef<HTMLElement | null>(null);
+  const menuAnchor = useRef<HTMLElement | null>(null);
+  const [editing, setEditing] = useState<{ company: PipelineEntry; field: EditField } | null>(null);
+  const [rowMenu, setRowMenu] = useState<PipelineEntry | null>(null);
+  const [moving, setMoving] = useState<{ company: PipelineEntry; to?: CompanyGroup } | null>(null);
+  const [deleting, setDeleting] = useState<PipelineEntry | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const live = (c: PipelineEntry) => byId.get(c.id) ?? c;
+  const openTasksOf = (id: number) => tasks.rows.filter((t) => t.linkedClientId === id && !t.completed).length;
+
+  function edit(anchor: HTMLElement, c: PipelineEntry, field: EditField) {
+    editAnchor.current = anchor;
+    setEditing({ company: c, field });
+  }
+  function openRowMenu(anchor: HTMLElement, c: PipelineEntry) {
+    menuAnchor.current = anchor;
+    setRowMenu(c);
+  }
+
+  // The record: ?company=<id>. It waits for the companies to load, and says so when the company isn't there.
+  const record = useOverParam("company");
+  const recordParam = search.get("company");
+  const recordCompany = recordParam ? byId.get(Number(recordParam)) : undefined;
+  // The device's copy can be older than the server's: a company is only missing once the server has answered, or once
+  // there's no connection and the copy is all there is.
+  const settled = !companies.loading && (!companies.fromCache || status === "offline");
+  const recordMissing = record.open && settled && !recordCompany;
+  const deletedHere = useRef<number | null>(null); // deleted from here: the record closes without a second message
+  const told = useRef<string | null>(null);
+  const closeRecord = record.close;
+  useEffect(() => {
+    if (!recordMissing || told.current === recordParam) return;
+    told.current = recordParam;
+    if (deletedHere.current !== Number(recordParam)) {
+      const message = companies.error
+        ? "Companies couldn't be loaded, so this company can't open. Try again in a moment."
+        : online
+          ? "This company isn't there any more. Someone may have deleted it."
+          : "No connection. This company opens once the connection is back.";
+      toast(message, { error: true });
+    }
+    closeRecord();
+  }, [recordMissing, recordParam, companies.error, online, toast, closeRecord]);
+  useEffect(() => {
+    if (!record.open) told.current = null;
+  }, [record.open]);
+
+  // A link straight to a company (from a task, say) shows the list of the group it's in.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current || !settled) return;
+    landed.current = true;
+    if (!recordCompany || new URLSearchParams(window.location.search).has("group")) return;
+    const group = companyGroup(recordCompany);
+    if (group !== state.group) update((now) => ({ ...clearedFilters(now), group, act: null, sort: null, dir: null }));
+    // Only as the companies first arrive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
+
+  const newCompany = useOverParam("newCompany");
+  function added(id: number, name: string, group: CompanyGroup) {
+    // The sheet goes, and the list shows the group it went into with nothing hiding it.
+    const params = new URLSearchParams(window.location.search);
+    params.delete("newCompany");
+    const view = viewParams({ ...clearedFilters(parseCompanyView(params)), group, act: null }, params).toString();
+    router.replace(view ? `${pathname}?${view}` : pathname, { scroll: false });
+    toast(`${name} added to ${COMPANY_GROUP_LABELS[group]}`, { action: "Open", onAction: () => actions.openOver(`company=${id}`) });
+  }
+
+  async function confirmDelete() {
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
+    deletedHere.current = deleting.id;
+    try {
+      await actions.remove(deleting);
+      setDeleting(null);
+    } catch (err) {
+      deletedHere.current = null;
+      setDeleting(null);
+      toast(failureMessage(err, "The company couldn't be deleted. Check your connection and try again."), { error: true });
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
 
   // The 100 shown grow with "Show 100 more" and start over whenever the view changes.
   const viewKey = viewParams(state).toString();
@@ -217,6 +330,9 @@ export default function CompaniesScreen() {
           sort={sort}
           onSort={(key) => update((now) => sortedByHead(now, fields, key))}
           onMore={() => setExtra({ key: viewKey, rows: (extra.key === viewKey ? extra.rows : 0) + PAGE_SIZE })}
+          recordHref={(id) => over(pathname, search, `company=${id}`)}
+          onEdit={edit}
+          onRowMenu={openRowMenu}
         />
       </>
     );
@@ -224,7 +340,12 @@ export default function CompaniesScreen() {
 
   return (
     <>
-      <PageHeader title="Companies" subtitle={sizes ? plural(total, "company", "companies") : undefined} search={phone ? undefined : searchField} />
+      <PageHeader
+        title="Companies"
+        subtitle={sizes ? plural(total, "company", "companies") : undefined}
+        search={phone ? undefined : searchField}
+        action={{ label: "New company", href: over(pathname, search, "newCompany=1") }}
+      />
       {phone && <div className={styles.phoneSearch}>{searchField}</div>}
       <GroupTiles counts={sizes} current={state.group} onPick={pickGroup} />
       {ready && state.group === "active" && active.length > 0 && today && (
@@ -234,6 +355,101 @@ export default function CompaniesScreen() {
         {ready && <CompanyFilters state={state} fields={fields} options={settings.options} products={products} onState={(next) => update(() => next)} />}
         {body}
       </section>
+
+      {record.open && !recordCompany && !recordMissing && (
+        <Sheet open onClose={record.close} title="Company" size="wide">
+          <div className={styles.recordNotices}>
+            <LoadingLine>Loading the company</LoadingLine>
+            <Skeleton height={72} />
+            <Skeleton height={40} />
+            <Skeleton height={46} />
+          </div>
+        </Sheet>
+      )}
+      {recordCompany && today && (
+        <CompanyRecord
+          key={`record:${recordCompany.id}`}
+          company={recordCompany}
+          settings={settings}
+          today={today}
+          online={online}
+          actions={actions}
+          onClose={record.close}
+          onEdit={edit}
+          onRename={(anchor, c) => edit(anchor, c, NAME_FIELD)}
+          onMove={(c) => setMoving({ company: c })}
+          onDelete={setDeleting}
+        />
+      )}
+      {newCompany.open && <NewCompanySheet group={state.group} settings={settings} onClose={newCompany.close} onAdded={added} />}
+
+      {editing && today && (() => {
+        const c = live(editing.company);
+        const { field } = editing;
+        const group = companyGroup(c);
+        const dealDone = settings.options.status?.find((o) => o.role === "dealDone")?.name;
+        const optionNotes = group === "active" && field.key === "status" && dealDone ? { [dealDone]: "Moves it to Deal done" } : undefined;
+        return (
+          <CellEditor
+            key={`edit:${c.id}:${field.key}`}
+            anchorRef={editAnchor}
+            onClose={() => setEditing(null)}
+            field={field}
+            value={c[field.key]}
+            options={settings.options[field.key]}
+            optionNotes={optionNotes}
+            synced={isKeptInStep(field.key) && openTasksOf(c.id) > 0}
+            required={field.key === "company" ? RENAME_MISSING : undefined}
+            today={today}
+            onSave={(value) => void (field.key === "company" && typeof value === "string" ? actions.rename(c, value) : actions.setValue(c, field, value))}
+          />
+        );
+      })()}
+      {rowMenu && today && (
+        <RowMenu
+          company={rowMenu}
+          anchorRef={menuAnchor}
+          hasLastAction={hasField(settings.fields[companyGroup(live(rowMenu))], "date")}
+          notes={notesLink(rowMenu, notes.rows)}
+          onClose={() => setRowMenu(null)}
+          onOpen={() => actions.openOver(`company=${rowMenu.id}`)}
+          onFollowUp={() => void actions.followUp(live(rowMenu), today)}
+          onToday={() => void actions.logToday(live(rowMenu), today)}
+          onMove={() => setMoving({ company: live(rowMenu) })}
+          onDelete={() => setDeleting(live(rowMenu))}
+        />
+      )}
+      {moving && today && (
+        <MoveDialog
+          key={`move:${moving.company.id}`}
+          company={moving.company}
+          to={moving.to}
+          settings={settings}
+          openTasks={openTasksOf(moving.company.id)}
+          today={today}
+          onClose={() => setMoving(null)}
+          onMove={(to, values) => actions.move(live(moving.company), to, values)}
+        />
+      )}
+      <Confirm
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => void confirmDelete()}
+        title="Delete this company?"
+        quote={deleting?.company}
+        confirmLabel="Delete company"
+        busyLabel="Deleting…"
+        busy={deleteBusy}
+      >
+        {deleting &&
+          deleteWording(
+            {
+              total: tasks.rows.filter((t) => t.linkedClientId === deleting.id).length,
+              open: openTasksOf(deleting.id),
+            },
+            notes.rows.some((n) => n.pipelineEntryId === deleting.id)
+          )}
+      </Confirm>
     </>
   );
 }

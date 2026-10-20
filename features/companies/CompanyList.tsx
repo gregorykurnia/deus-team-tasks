@@ -2,9 +2,10 @@
 
 // The list (guide 4.9, 5.7): the head sorts, then one row per company, 100 at a time. The first column (a badge in the
 // group's colour, the name, and the contact or industry under it) stays pinned when the list scrolls sideways. Every shown
-// field is a cell. On phones the head goes and each row becomes a card with labelled details. Cells are read only until
-// task 3.9 makes them editable.
-import type { CSSProperties } from "react";
+// field is a cell, and every cell is a button that opens its quick editor. The name opens the record, and so does a click
+// anywhere else on the row; ⋯ opens the row menu. On phones the head goes and each row becomes a card with labelled details.
+import Link from "next/link";
+import type { CSSProperties, MouseEvent } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { searchedFields, type CompanyGroup, type CompanySortDir } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
@@ -31,9 +32,18 @@ interface CompanyListProps {
   sort: { key: string; dir: CompanySortDir };
   onSort: (key: string) => void;
   onMore: () => void;
+  recordHref: (id: number) => string; // opens the company record over the list
+  onEdit: (anchor: HTMLElement, company: PipelineEntry, field: CompanyField) => void;
+  onRowMenu: (anchor: HTMLElement, company: PipelineEntry) => void;
 }
 
-function CellValue({ cell, query, searched }: { cell: Cell; query: string; searched: boolean }) {
+// A click on the row that isn't on a cell, the menu or the name opens the record, as the name's link would.
+function openFromRow(e: MouseEvent<HTMLElement>) {
+  if (!(e.target instanceof Element) || e.target.closest("a, button, input")) return;
+  e.currentTarget.querySelector<HTMLAnchorElement>("a[data-row-link]")?.click();
+}
+
+export function CellValue({ cell, query, searched }: { cell: Cell; query: string; searched: boolean }) {
   switch (cell.kind) {
     case "empty":
       return null;
@@ -63,7 +73,8 @@ function CellValue({ cell, query, searched }: { cell: Cell; query: string; searc
   }
 }
 
-export default function CompanyList({ companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore }: CompanyListProps) {
+export default function CompanyList(props: CompanyListProps) {
+  const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu } = props;
   const grid = gridOf(fields);
   const searchedKeys = new Set(searchedFields(group));
   const head = (label: string, key: string) => {
@@ -93,14 +104,16 @@ export default function CompanyList({ companies, hidden, pageSize, group, fields
             {companies.map((c) => {
               const sub = subline(c, group);
               return (
-                <article key={c.id} className={styles.row} aria-label={c.company}>
+                <article key={c.id} className={styles.row} aria-label={c.company} onClick={openFromRow}>
                   <div className={styles.name}>
                     <span className={`${styles.mono} ${styles[group]}`} aria-hidden="true">
                       {initials(c.company)}
                     </span>
                     <div className={styles.who}>
                       <p className={styles.title}>
-                        <Highlight text={c.company} query={query} />
+                        <Link href={recordHref(c.id)} scroll={false} className={styles.nameLink} data-row-link>
+                          <Highlight text={c.company} query={query} />
+                        </Link>
                       </p>
                       {sub && (
                         <p className={styles.meta}>
@@ -113,20 +126,35 @@ export default function CompanyList({ companies, hidden, pageSize, group, fields
                     const cell = cellOf(c, f, group, settings, today);
                     const classes = [styles.cell, f.type === "long" && styles.long, f.type === "choice" && styles.choice, cell.kind === "date" && cell.pill && styles.pillCell, cell.kind === "empty" && styles.emptyCell];
                     return (
-                      <div key={f.key} className={classes.filter(Boolean).join(" ")}>
-                        <span className={styles.lbl}>{f.label}</span>
+                      <button
+                        key={f.key}
+                        type="button"
+                        className={classes.filter(Boolean).join(" ")}
+                        aria-label={`${f.label}: ${cellWords(cell)}. Change`}
+                        onClick={(e) => onEdit(e.currentTarget, c, f)}
+                      >
+                        <span className={styles.lbl} aria-hidden="true">
+                          {f.label}
+                        </span>
                         {cell.kind === "empty" ? (
-                          <span className={styles.none}>
-                            <span aria-hidden="true">–</span>
-                            <span className="sr-only">{cellWords(cell)}</span>
+                          <span className={styles.none} aria-hidden="true">
+                            –
                           </span>
                         ) : (
                           <CellValue cell={cell} query={query} searched={searchedKeys.has(f.key)} />
                         )}
-                      </div>
+                      </button>
                     );
                   })}
-                  <span />
+                  <button
+                    type="button"
+                    className={styles.rowMenu}
+                    aria-label={`More for ${c.company}`}
+                    aria-haspopup="menu"
+                    onClick={(e) => onRowMenu(e.currentTarget, c)}
+                  >
+                    <Icon name="more" />
+                  </button>
                 </article>
               );
             })}

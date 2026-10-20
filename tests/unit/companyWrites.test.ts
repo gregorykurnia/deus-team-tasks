@@ -142,6 +142,9 @@ describe("changing a company", () => {
     const toDone = await moveCompany({ ...c, _hold: true }, "dealDone", {}, tasks);
     expect(toDone.tasksSwitchKind).toBe(1);
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ status: DEAL_DONE_STATUS, _hold: false });
+    // Leaving Deal done for any group lets go of its status.
+    await moveCompany({ ...c, status: DEAL_DONE_STATUS }, "noOrNotNow", {}, tasks);
+    expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("status");
   });
 
   it("renames or clears an option's value on every company using it", async () => {

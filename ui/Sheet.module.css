@@ -53,6 +53,43 @@
   flex: 1;
 }
 
+/* The company record's head (prototype .rhead): a 50px badge, the name at 22px, and a line under it. */
+.withLead {
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 12px 12px 24px;
+}
+
+.withLead .title {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.titles {
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 6px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 24px 16px;
+  border-bottom: 1px solid var(--hair);
+}
+
 .body {
   flex: 1;
   overflow-y: auto;
@@ -99,6 +136,14 @@
 
   .head {
     padding: 8px 12px 6px 20px;
+  }
+
+  .withLead {
+    padding: 10px 8px 10px 20px;
+  }
+
+  .bar {
+    padding: 2px 20px 14px;
   }
 
   .body {

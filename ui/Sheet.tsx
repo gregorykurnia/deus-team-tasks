@@ -19,6 +19,10 @@ interface SheetProps {
   onClose: () => void;
   title: string;
   tag?: ReactNode; // a kind or group tag beside the title
+  lead?: ReactNode; // before the title: the company record's badge
+  meta?: ReactNode; // a line under the title: the record's group tag and contact
+  tools?: ReactNode; // before the close button: the record's ⋯
+  bar?: ReactNode; // a row of actions under the head that stays put while the body scrolls
   size?: SheetSize;
   short?: boolean; // fits its content: quick capture, More, Install
   phoneOnly?: boolean; // only exists at 900px and under
@@ -50,7 +54,7 @@ export function SheetSpacer() {
   return <span className={styles.spacer} />;
 }
 
-function SheetPanel({ onClose, title, tag, size = "default", short, phoneOnly, footer, initialFocus, children }: SheetProps) {
+function SheetPanel({ onClose, title, tag, lead, meta, tools, bar, size = "default", short, phoneOnly, footer, initialFocus, children }: SheetProps) {
   const panel = useRef<HTMLElement>(null);
   const titleId = useId();
   useOverlay({ kind: "sheet", onClose, panel, initialFocus });
@@ -61,16 +65,28 @@ function SheetPanel({ onClose, title, tag, size = "default", short, phoneOnly, f
       <Scrim onClick={onClose} phoneOnly={phoneOnly} />
       <section ref={panel} className={classes} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <span className={styles.grab} aria-hidden="true" />
-        <div className={styles.head}>
-          <h2 id={titleId} className={styles.title}>
-            {title}
-          </h2>
+        <div className={lead ? `${styles.head} ${styles.withLead}` : styles.head}>
+          {lead}
+          {meta ? (
+            <div className={styles.titles}>
+              <h2 id={titleId} className={styles.title}>
+                {title}
+              </h2>
+              <div className={styles.meta}>{meta}</div>
+            </div>
+          ) : (
+            <h2 id={titleId} className={styles.title}>
+              {title}
+            </h2>
+          )}
           {tag}
           <span className={styles.spacer} />
+          {tools}
           <Button variant="icon" aria-label="Close" onClick={onClose}>
             <Icon name="x" />
           </Button>
         </div>
+        {bar && <div className={styles.bar}>{bar}</div>}
         <div className={styles.body}>{children}</div>
         {footer && <div className={styles.foot}>{footer}</div>}
       </section>

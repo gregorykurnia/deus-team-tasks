@@ -21,6 +21,11 @@
   animation: pop var(--dur-pop) ease-out;
 }
 
+/* A quick editor (prototype .qe-menu): always 340px, or the window less 24px. */
+.form {
+  width: min(340px, calc(100vw - 24px));
+}
+
 /* Fades in, rises 4px and scales from 98% (guide 2.7). */
 @keyframes pop {
   from {

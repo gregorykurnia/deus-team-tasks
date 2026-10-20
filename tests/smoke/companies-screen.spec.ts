@@ -1,5 +1,6 @@
 // Companies (task 3.8, guide 6.5, 4.9, 4.10): the four group tiles, where to act on Active, filters, sort, search with
-// "found in other groups", and the list with its empty and loading states. Nothing here writes data; editing comes with 3.9.
+// "found in other groups", and the list with its empty and loading states. Nothing here writes data; editing is in
+// companies-editing.spec.ts.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies } from "./data";
@@ -143,8 +144,8 @@ test("B3: the cells say what they are: a chip, a date in words, a missed target 
   await expect(pelita.getByText("To Follow Up")).toBeVisible();
   await expect(pelita.getByText("20 days ago")).toBeVisible();
   await expect(pelita.getByText("Missed by 2 days")).toBeVisible();
-  await expect(pelita.getByText("Status", { exact: true })).toBeAttached(); // the label, for screen readers
-  await expect(row(page, "Citra Mart").getByText("empty").first()).toBeAttached(); // an empty value is a dash
+  await expect(pelita.getByRole("button", { name: "Status: To Follow Up. Change" })).toBeVisible(); // each value names its field
+  await expect(row(page, "Citra Mart").getByRole("button", { name: "Priority: empty. Change", includeHidden: true })).toBeAttached(); // an empty value is a dash
 });
 
 test("B2: a group with nobody in it, and no companies at all, say so", async ({ page }) => {

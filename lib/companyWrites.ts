@@ -244,7 +244,8 @@ export async function moveCompany(
 ): Promise<{ undo: Undo; tasksSwitchKind: number; tasksChanged: number }> {
   const patch: CompanyPatch = { ...fields, ...groupFlags(to) };
   if (to === "dealDone") patch.status = DEAL_DONE_STATUS;
-  if (to === "active" && (patch.status ?? current.status) === DEAL_DONE_STATUS) patch.status = undefined;
+  // Leaving Deal done lets go of its status, so the company never reads as a client again by mistake.
+  if (to !== "dealDone" && ("status" in patch ? patch.status : current.status) === DEAL_DONE_STATUS) patch.status = undefined;
   const from = companyGroup(current);
   const crossesDealDone = (from === "dealDone") !== (to === "dealDone");
   const tasksSwitchKind = crossesDealDone ? openTasksOf(current.id, tasks).length : 0;

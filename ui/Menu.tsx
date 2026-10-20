@@ -19,6 +19,8 @@ interface MenuProps {
   onClose: () => void;
   label: string; // what the menu is for, as a screen reader hears it: "Due"
   alignRight?: boolean;
+  form?: boolean; // a quick editor: Tab moves between its field and buttons instead of closing it, and it is 340px wide
+  initialFocus?: string[]; // selectors for what gets focus, in place of the chosen item, the first item or the field
   children: ReactNode;
 }
 
@@ -38,9 +40,9 @@ export default function Menu(props: MenuProps) {
 
 const ITEMS = '[role^="menuitem"]:not(:disabled)';
 
-function MenuPanel({ anchorRef, onClose, label, alignRight, children }: MenuProps) {
+function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, children }: MenuProps) {
   const panel = useRef<HTMLDivElement>(null);
-  useOverlay({ kind: "menu", onClose, panel, restore: anchorRef, initialFocus: ['[aria-checked="true"]', ITEMS, "input"] });
+  useOverlay({ kind: "menu", onClose, panel, restore: anchorRef, trap: form, initialFocus: initialFocus ?? ['[aria-checked="true"]', ITEMS, "input"] });
 
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -82,10 +84,11 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, children }: MenuProp
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === "Tab") {
-      onClose();
+      if (!form) onClose();
       return;
     }
-    if (document.activeElement instanceof HTMLInputElement) return; // a number field keeps its arrow keys
+    // A field keeps its own arrow keys.
+    if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return;
     const items = [...panel.current!.querySelectorAll<HTMLElement>(ITEMS)];
     const at = items.indexOf(document.activeElement as HTMLElement);
     const go = (i: number) => {
@@ -101,7 +104,7 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, children }: MenuProp
   return (
     <MenuContext.Provider value={{ close: onClose }}>
       <div className={styles.catcher} onClick={onClose} aria-hidden="true" />
-      <div ref={panel} className={styles.menu} role="menu" aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
+      <div ref={panel} className={form ? `${styles.menu} ${styles.form}` : styles.menu} role="menu" aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
         {children}
       </div>
     </MenuContext.Provider>
