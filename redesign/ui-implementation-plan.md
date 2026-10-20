@@ -171,7 +171,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 3.11 | Qualification notes (autosave, offline writing, live, link, export) | Opus 5.5 High | 2026-10-20 · this commit (New notes is `?newNotes=1`; starting, linking and deleting need the connection; gap N10 provisional) |
 | 3.12 | Past clients: totals, by sector, tree, search, order | Sonnet 5.5 High | 2026-10-20 · this commit (read only: no Add a past client, Export, ⋯ menus or add lines until 3.13; the "Just added" live tag waits for 4.2; a matching parent shows the subsidiaries that match, with "Show its other n") |
 | 3.13 | Past clients: add, subsidiary, rename, sector, move, not counted, delete, failures, export | Opus 5.5 High | 2026-10-20 · this commit (add is a dialog and Export sits in the record's toolbar, as in the prototype; a delete also offers Undo; gap N11) |
-| 3.14 | Flows: read and edit (autosave, steps, roles, decision, outcomes, loop back) | Opus 5.5 High | |
+| 3.14 | Flows: read and edit (autosave, steps, roles, decision, outcomes, loop back) | Opus 5.5 High | 2026-10-20 · this commit (editing is `?edit=1`, New flow `?newFlow=1`; the decision gains a stored `description`; gap N12 provisional) |
 | R3 | **Phase 3 review** | Opus 5.5 High | |
 | **4** | **Phase 4: edge surfaces and launch** | | |
 | 4.1 | Install and PWA: install sheet, manifest, icons, launch screen, service worker, offline first open | Sonnet 5.5 High | |
@@ -277,7 +277,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 
 | Need | Gap | Blocks |
 |---|---|---|
-| N1 | Finished tasks and flows changed before this version have no recorded date. The design always shows one ("Done 3 days ago", "Finished: last 7 days", "edited …"). Provisional in 3.3: such a task's pill says "Done", and Finished "last 7 / 30 days" leaves it out ("Any time" shows it). | 3.3, 3.14 (dates), 4.2 |
+| N1 | Finished tasks and flows changed before this version have no recorded date. The design always shows one ("Done 3 days ago", "Finished: last 7 days", "edited …"). Provisional in 3.3: such a task's pill says "Done", and Finished "last 7 / 30 days" leaves it out ("Any time" shows it). In 3.14 such a flow leaves "Edited …" out of its list item and meta line. | 3.3, 3.14 (dates), 4.2 |
 | N2 | The many-changes toast names the colleague ("Kevin Tan’s changes just came in"), but nobody signs in, so the app can't know who changed something. | 4.2 |
 | N3 | Today's search says it covers tasks, companies and notes, but no results for companies and notes are designed (the prototype sends the query to All tasks only). | 3.2 (search only) |
 | N4 | The app opening before any source reaches the server (R2.1): the guide has Live and No connection only. Provisional: a grey dot and "Connecting…", no banner, writes refused; No connection after 8s. | nothing (provisional built) |
@@ -288,6 +288,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N9 | Locked choices beyond the guide's two (3.10, from R1): Where to act counts priority "High", a follow-up task takes its priority from it, and the answers "Not now" / "No" tell on hold from rejected. Provisional: these three are locked like Deal done and Follow-up due (a lock and the reason, recolour only, named in the options dialog's notice). | nothing (provisional built) |
 | N10 | Qualification notes that are gone (3.11): opened from a link after they were deleted, or deleted by a colleague while open. Provisional, as N8: an error toast ("These notes aren’t there any more. Someone may have deleted them.") and the list shows; what was typed in the last moment before is not saved, so deleted notes never come back half empty. | nothing (provisional built) |
 | N11 | Adding the first subsidiary to a parent company with none (3.13): the quick add line sits inside an opened parent, but a parent with no subsidiaries can't be opened, so "Add a subsidiary" in its ⋯ menu has nowhere to go. Provisional: it opens the parent with only its add line, which closes again when left empty. | nothing (provisional built) |
+| N12 | A flow that's gone (3.14): opened from a link after it was deleted, or deleted by a colleague while open or being edited. Provisional, as N8: an error toast ("This flow isn’t there any more. Someone may have deleted it.") and the list shows; a change typed in the last moment before isn't saved. | nothing (provisional built) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

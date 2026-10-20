@@ -1,5 +1,4 @@
-import PageHeader from "@/desk/PageHeader";
-
+// The flows layout draws the screen; /flows has no flow open.
 export default function Page() {
-  return <PageHeader title="Flows" />;
+  return null;
 }

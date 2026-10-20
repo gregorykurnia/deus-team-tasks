@@ -62,7 +62,8 @@ export interface FlowBranch {
 }
 
 export interface FlowDecision {
-  label: string;
+  label: string; // the question
+  description?: string; // how to decide (added in 3.14)
   branches: FlowBranch[];
 }
 
