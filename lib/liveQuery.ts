@@ -33,6 +33,7 @@ export function useLiveQuery<T>(
       },
       (error) => {
         console.error(`Unable to load ${source}`, error);
+        forgetSource(source); // Firestore closes a listener that reports an error
         setState((s) => ({ ...s, loading: false, error }));
       }
     );

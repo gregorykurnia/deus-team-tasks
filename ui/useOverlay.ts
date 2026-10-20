@@ -22,6 +22,9 @@ function bindEscape() {
   if (escapeBound) return;
   escapeBound = true;
   document.addEventListener("keydown", (e) => {
+    // React listens on the same node, so a picker's stopPropagation can't stop this: it marks the key
+    // handled with preventDefault instead (Esc closes its list, not the sheet around it).
+    if (e.defaultPrevented || e.isComposing) return;
     if (e.key === "Escape" && closeTopLayer()) {
       e.preventDefault();
       e.stopPropagation();

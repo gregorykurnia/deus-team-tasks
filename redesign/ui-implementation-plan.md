@@ -154,8 +154,9 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 2.4 | Display components: buttons, pills, tags, chips, avatars, notices, empty, skeleton, meters + dev gallery | Haiku 5.5 Max | 2026-10-20 · `036597b` (gallery side by side with the prototype) |
 | 2.5 | Overlays: menu, sheet, bottom sheet, dialog, confirm, toaster | Sonnet 5.5 High | 2026-10-20 · `1aa1ae3` (More and the back-online toast now use Sheet and Toaster) |
 | 2.6 | Fields: all field variants, segmented, filter button, people picker, sector picker, in-place field | Sonnet 5.5 High | 2026-10-20 · `bb34cc2` (choice chips built here; picker matching lives in lib/people and lib/sectors) |
-| 2.7 | Task row family, done circle, urgency rules wired in, selecting checkboxes | Sonnet 5.5 High | 2026-10-20 · this commit (row content comes from lib/taskRow; the list row has fixed cells until 3.3's column chooser) |
-| R2 | **Phase 2 review** | Opus 5.5 High | |
+| 2.7 | Task row family, done circle, urgency rules wired in, selecting checkboxes | Sonnet 5.5 High | 2026-10-20 · `d8adb43` (row content comes from lib/taskRow; the list row has fixed cells until 3.3's column chooser) |
+| R2 | **Phase 2 review** | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-2.md`; title rename added to 4.1) |
+| R2.1 | Phase 2 review fixes (listed in `redesign/reviews/phase-2.md`), before Phase 3; then tick Phase 2 in `redesign/redesign-plan.md` | Opus 5.5 High | |
 | **3** | **Phase 3: screens (all states, phone and desktop)** | | |
 | 3.1 | Task details sheet (quick, full, kept in step, delete, offline) | Opus 5.5 High | |
 | 3.2 | Today | Sonnet 5.5 High | |
@@ -250,7 +251,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 ### Phase 4: edge surfaces and launch
 
-**4.1 Install and PWA.** Install sheet (browser prompt, iPhone steps, installed notice), install entries hidden once installed, `manifest.ts` (name "DEUS Team Space", short name per what fits under an icon, theme `#eef3fb`, icons from `redesign/brand/deus-logo.jpeg` as supplied per Q9, the maskable one with the logo inside the safe zone on the same navy), launch screen, service worker with a per-build cache name, production-only registration, offline first-open empty states per area. Prototype `install.html`. Guide 6.9.
+**4.1 Install and PWA.** Install sheet (browser prompt, iPhone steps, installed notice), install entries hidden once installed, `manifest.ts` (name "DEUS Team Space", short name per what fits under an icon, theme `#eef3fb`, icons from `redesign/brand/deus-logo.jpeg` as supplied per Q9, the maskable one with the logo inside the safe zone on the same navy), launch screen, service worker with a per-build cache name, production-only registration, offline first-open empty states per area. From R2: the page title and description in `app/layout.tsx` still say "DEUS Platform"; rename them to match. Prototype `install.html`. Guide 6.9.
 
 **4.2 Live and leftovers.** Arrive glow and "Just changed" on every screen, the many-changes toast (N2), back online message, anything still open on the §4 checklist, and N1 / N3 once designed.
 

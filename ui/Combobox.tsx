@@ -53,6 +53,7 @@ export default function Combobox({
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return; // Enter or Esc that ends typing in another script
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!shown) {

@@ -97,6 +97,19 @@ test.describe("sheets and dialogs", () => {
     expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
   });
 
+  test("Esc in a name picker inside a sheet closes the names, not the sheet", async ({ page }) => {
+    await opener(page, "Sheet").click();
+    const sheet = page.getByRole("dialog", { name: "New task" });
+    const picker = sheet.getByRole("combobox", { name: "Responsible" });
+    await picker.fill("na");
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toBeHidden();
+    await expect(sheet).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+  });
+
   test("a click on the scrim closes a sheet", async ({ page }) => {
     await opener(page, "Short sheet").click();
     const sheet = page.getByRole("dialog", { name: "Quick capture" });

@@ -9,6 +9,7 @@ import Dialog, { Confirm } from "@/ui/Dialog";
 import Icon from "@/ui/Icon";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuNumber, MenuPalette, MenuSeparator } from "@/ui/Menu";
 import type { OptionTone } from "@/ui/OptionChip";
+import PeoplePicker from "@/ui/PeoplePicker";
 import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
 
@@ -17,6 +18,10 @@ type Overlay = "sheet" | "short" | "dialog" | "confirm" | "details" | null;
 
 const TONES: OptionTone[] = ["blue", "sky", "teal", "green", "amber", "red", "violet", "pink", "slate"];
 const PRODUCTS = ["POS", "Loyalty", "Analytics", "Payments"];
+const OWNERS = [
+  { name: "Maya Chen", open: 5 },
+  { name: "Nadia Pratama", open: 3 },
+];
 const OVERLAYS = ["sheet", "short", "dialog", "details"];
 
 export default function OverlayDemos() {
@@ -28,6 +33,7 @@ export default function OverlayDemos() {
   const [note, setNote] = useState("");
   const [due, setDue] = useState("Within 3 days");
   const [products, setProducts] = useState<string[]>(["POS"]);
+  const [owners, setOwners] = useState<string[]>([]);
   const [tone, setTone] = useState<OptionTone>("teal");
 
   const oneRef = useRef<HTMLButtonElement>(null);
@@ -133,6 +139,12 @@ export default function OverlayDemos() {
           Description
           <textarea className="mt-2 block min-h-24 w-full rounded-field bg-surface p-3 shadow-[inset_0_0_0_1.5px_var(--line-field)]" />
         </label>
+        <div className="mt-4 text-[13px] font-bold text-ink-2">
+          Responsible
+          <div className="mt-2">
+            <PeoplePicker aria-label="Responsible" value={owners} onChange={setOwners} suggestions={OWNERS} placeholder="Add a name" />
+          </div>
+        </div>
         <label className="mt-4 block text-[13px] font-bold text-ink-2">
           Key points
           <input className="mt-2 block h-[46px] w-full rounded-field bg-surface px-3 shadow-[inset_0_0_0_1.5px_var(--line-field)]" />
