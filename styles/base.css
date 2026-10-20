@@ -1,0 +1,91 @@
+/* Base styles: backdrop, type, focus and motion. Values come from tokens.css (design guide 2.1, 2.2, 2.7, 8). */
+
+/* next/font loads Plus Jakarta Sans as --font-plus-jakarta (app/layout.tsx). Its own family name is hashed,
+   so --font points at that variable instead of the family name in tokens.css. */
+:root {
+  --font: var(--font-plus-jakarta), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+html {
+  background: var(--page);
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
+  line-height: var(--lh-body);
+  font-variant-numeric: var(--num);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+/* The backdrop is one fixed layer behind every screen. background-attachment: fixed (the prototype's way)
+   is ignored on iOS, so the washes sit on a fixed layer instead. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--backdrop);
+  pointer-events: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: var(--focus);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Reduce motion cuts every animation and transition to an instant (guide 2.7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+  }
+}

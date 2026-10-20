@@ -148,7 +148,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-1.md`; later items added to 2.3, 3.10, 3.14, 4.3) |
 | R1.1 | Phase 1 review fixes (listed in `redesign/reviews/phase-1.md`) | Opus 5.5 High | 2026-10-20 (same commit as R1) |
 | **2** | **Phase 2: foundations** | | |
-| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | |
+| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | 2026-10-20 · this commit (r-xl and r-xs registered as rounded-sheet and rounded-cell) |
 | 2.2 | Icon set | Haiku 5.5 Max | |
 | 2.3 | App shell: routes, DeskData, side bar, tab bar, More, page header, banner, live dot | Opus 5.5 High | |
 | 2.4 | Display components: buttons, pills, tags, chips, avatars, notices, empty, skeleton, meters + dev gallery | Haiku 5.5 Max | |
