@@ -160,7 +160,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | **3** | **Phase 3: screens (all states, phone and desktop)** | | |
 | 3.1 | Task details sheet (quick, full, kept in step, delete, offline) | Opus 5.5 High | 2026-10-20 · this commit (a new dated company task also brings its company in step; gap N6 provisional; test emulator moved to port 8180) |
 | 3.2 | Today | Sonnet 5.5 High | 2026-10-20 · this commit (links into All tasks use `?due=`, `?kind=prospect\|client\|internal`, `?idle=14`, `?q=`, `?focus=search` for 3.3 to read; search still waits on N3) |
-| 3.3 | All tasks and task groups (filters, sort, details shown, group create/rename/delete) | Sonnet 5.5 High | |
+| 3.3 | All tasks and task groups (filters, sort, details shown, group create/rename/delete) | Sonnet 5.5 High | 2026-10-20 · this commit (the view lives in the address; Select waits for 3.4; gap N7 provisional) |
 | 3.4 | Selecting several tasks (select all, bulk done/move/delete, Undo) | Opus 5.5 High | |
 | 3.5 | Plan: bar, filters, stepper, Timeline | Sonnet 5.5 High | |
 | 3.6 | Plan: Month and Day | Sonnet 5.5 High | |
@@ -277,12 +277,13 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 
 | Need | Gap | Blocks |
 |---|---|---|
-| N1 | Finished tasks and flows changed before this version have no recorded date. The design always shows one ("Done 3 days ago", "Finished: last 7 days", "edited …"). | 3.3, 3.14 (dates), 4.2 |
+| N1 | Finished tasks and flows changed before this version have no recorded date. The design always shows one ("Done 3 days ago", "Finished: last 7 days", "edited …"). Provisional in 3.3: such a task's pill says "Done", and Finished "last 7 / 30 days" leaves it out ("Any time" shows it). | 3.3, 3.14 (dates), 4.2 |
 | N2 | The many-changes toast names the colleague ("Kevin Tan’s changes just came in"), but nobody signs in, so the app can't know who changed something. | 4.2 |
 | N3 | Today's search says it covers tasks, companies and notes, but no results for companies and notes are designed (the prototype sends the query to All tasks only). | 3.2 (search only) |
 | N4 | The app opening before any source reaches the server (R2.1): the guide has Live and No connection only. Provisional: a grey dot and "Connecting…", no banner, writes refused; No connection after 8s. | nothing (provisional built) |
 | N5 | A source that fails to load while online (R2.1): only the calendar's failure is designed. Provisional: the side bar hides its counts, and the groups say "Couldn't load task groups." in red ink. | each screen's error state (3.x reuse the provisional) |
 | N6 | A task that's gone (3.1): opened from a link after it was deleted, or deleted by a colleague while open. Provisional: the first gives an error toast ("This task isn't there any more. Someone may have deleted it.") and the sheet doesn't open; the second keeps the sheet with what was typed, a warning notice ("This task was deleted.") and only Close. | nothing (provisional built) |
+| N7 | A task group that's gone (3.3): opened from a link after it was deleted, or deleted by a colleague while open. Provisional: an empty state "This task group isn't there any more" with an All tasks button, and "Its tasks are under Internal." | nothing (provisional built) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

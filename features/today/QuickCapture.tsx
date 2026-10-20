@@ -9,10 +9,11 @@ import styles from "./Today.module.css";
 interface QuickCaptureProps {
   id: string;
   label: string; // the field's name for a screen reader
+  placeholder?: string;
   onAdd: (text: string) => Promise<boolean>; // true when added
 }
 
-export default function QuickCapture({ id, label, onAdd }: QuickCaptureProps) {
+export default function QuickCapture({ id, label, placeholder = "Add a task, like “Call Pelita Foods about the trial”", onAdd }: QuickCaptureProps) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +37,7 @@ export default function QuickCapture({ id, label, onAdd }: QuickCaptureProps) {
       <input
         id={id}
         value={text}
-        placeholder="Add a task, like “Call Pelita Foods about the trial”"
+        placeholder={placeholder}
         autoComplete="off"
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

@@ -20,13 +20,16 @@ interface PageHeaderProps {
   subtitle?: ReactNode;
   search?: ReactNode;
   phoneSearchHref?: string; // on phones the search field becomes a round search button that goes here (Today, guide 6.1)
+  lead?: ReactNode; // before the title: a task group's badge
+  tools?: ReactNode; // between the search and the action: a task group's star and menu
   action?: PageAction;
 }
 
-export default function PageHeader({ title, subtitle, search, phoneSearchHref, action }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, search, phoneSearchHref, lead, tools, action }: PageHeaderProps) {
   return (
     <header>
       <div className={styles.bar}>
+        {lead}
         <div className={styles.titles}>
           <h1 className={styles.title}>{title}</h1>
           {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
@@ -38,6 +41,7 @@ export default function PageHeader({ title, subtitle, search, phoneSearchHref, a
             <Icon name="search" />
           </Link>
         )}
+        {tools}
         {action && (
           <>
             <Link className={styles.action} href={action.href} scroll={false}>

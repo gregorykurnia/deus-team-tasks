@@ -1,6 +1,6 @@
 // The basic controls (guide 4.13): single line, text box, select, number, date with clear and quick picks, switch,
 // search, and the field that edits in place. They sit in a Field, which gives them their id and aria wiring.
-import type { ComponentPropsWithRef, ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef, ComponentPropsWithoutRef, Ref } from "react";
 import { addDays, todayIso } from "@/lib/dates";
 import { Chip } from "./ChipGroup";
 import Icon from "./Icon";
@@ -77,14 +77,15 @@ interface SearchFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 // A glass pill with a search icon; 300px in a page header, full width on phones.
-export function SearchField({ label, value, onChange, placeholder, className }: SearchFieldProps) {
+export function SearchField({ label, value, onChange, placeholder, className, inputRef }: SearchFieldProps) {
   return (
     <label className={join(styles.search, className)}>
       <Icon name="search" />
-      <input type="search" aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <input ref={inputRef} type="search" aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }

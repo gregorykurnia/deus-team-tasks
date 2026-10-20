@@ -1,0 +1,261 @@
+/* All tasks and task groups (guide 4.3, 4.7, 6.2). Values are the prototype's (assets/app.css, "Tasks page" and "Task table"),
+   taken from the tokens. */
+
+.screenNote {
+  margin-top: 14px;
+}
+
+.panelNote {
+  margin: 4px 6px 8px;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+  padding: 0 6px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---------- Toolbar ---------- */
+.tbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* The panel: glass, with the filters first, then quick capture, then the list. */
+.panel {
+  min-width: 0;
+  margin-top: 14px;
+  padding: 8px 8px 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-l);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 12px;
+}
+
+.result {
+  margin: 0;
+  padding: 0 14px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.result b {
+  color: var(--ink-2);
+}
+
+.linkButton {
+  margin-left: 10px;
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- The list ---------- */
+.thead {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  gap: 14px;
+  margin: 0 6px;
+  padding: 4px 14px 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: var(--w-semibold);
+}
+
+.sortHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: inherit;
+  font-weight: inherit;
+  text-align: left;
+}
+
+.sortHead:hover,
+.sortHead[aria-current] {
+  color: var(--ink);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-row);
+  padding: 0 6px;
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+/* ---------- A task group's header ---------- */
+.star {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--faint);
+}
+
+.star:hover {
+  background: var(--fill);
+}
+
+.star[aria-pressed="true"] {
+  color: #f0a71b;
+}
+
+/* ---------- Task groups on phones ---------- */
+.chips {
+  display: flex;
+  gap: 8px;
+  margin: 14px -16px 0;
+  padding: 4px 16px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chips a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  height: 40px;
+  padding: 0 14px 0 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 4px 14px -8px rgba(40, 46, 110, 0.3);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+  text-decoration: none;
+}
+
+.chips a[aria-current] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1.5px var(--blue);
+}
+
+.chips a.chipNew {
+  padding: 0 14px;
+  color: var(--blue-ink);
+}
+
+.chipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipStar {
+  flex: none;
+  color: #f0a71b;
+}
+
+.chipCount {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: var(--num);
+}
+
+.phoneSearch {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .chips {
+    margin-right: -14px;
+    margin-left: -14px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .panel {
+    padding: 6px 4px 8px;
+  }
+}
+
+/* 760px and under (--bp-list): the head goes (the Sort menu stays), the filters scroll sideways in one row. */
+@media (max-width: 760px) {
+  .thead {
+    display: none;
+  }
+
+  .filters {
+    flex-wrap: nowrap;
+    margin: 0 -4px;
+    padding: 4px 10px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filters > .spacer {
+    display: none;
+  }
+
+  .rows {
+    padding: 0 4px;
+  }
+}
+
+/* ---------- Group dialog ---------- */
+.dialogText {
+  margin: 0 0 16px;
+}
+
+.dialogNotice {
+  margin: 0 0 16px;
+}
+
+.dialogField {
+  margin-top: 16px;
+}
+
+.help {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--t-label);
+}

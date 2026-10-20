@@ -1,13 +1,16 @@
 "use client";
 
-// One task group (guide 6.2). Task 3.3 fills in its tasks and its menu.
+// One task group (guide 6.2): the same screen as All tasks, narrowed to the group named in the address.
 import { useParams } from "next/navigation";
-import { useTaskGroups } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
+import { Suspense } from "react";
+import TasksScreen from "./TasksScreen";
 
 export default function GroupScreen() {
   const { groupId } = useParams<{ groupId: string }>();
-  const groups = useTaskGroups();
-  const group = groups.rows.find((g) => g.id === decodeURIComponent(groupId));
-  return <PageHeader title={group?.name ?? "Task group"} />;
+  return (
+    <Suspense fallback={<PageHeader title="Task group" />}>
+      <TasksScreen groupId={groupId} />
+    </Suspense>
+  );
 }

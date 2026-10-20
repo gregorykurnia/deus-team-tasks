@@ -59,6 +59,7 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
     if (view !== "done") {
       if (filter.due && dueBucket(t, today) !== filter.due) return false;
       if (filter.minIdleDays != null) {
+        if (!linkedCompany(t, ctx.companies)) return false;
         const idle = idleDays(t.lastActionDate, today);
         if (idle === null || idle < filter.minIdleDays) return false;
       }

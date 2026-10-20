@@ -11,6 +11,11 @@ export function KindTag({ kind }: { kind: Kind }) {
   return <span className={`${styles.tag} ${styles[KIND_TOKEN[kind]]}`}>{KIND_TAGS[kind]}</span>;
 }
 
+// A company's name, or "Internal", as a tag in its kind's colour: the About column of the task list.
+export function NameTag({ kind, children }: { kind: Kind; children: ReactNode }) {
+  return <span className={`${styles.tag} ${styles[KIND_TOKEN[kind]]} ${styles.name}`}>{children}</span>;
+}
+
 export type GroupTone = "toApproach" | "active" | "dealDone" | "noOrNotNow";
 const GROUP_ICONS: Record<GroupTone, IconName> = { toApproach: "flag", active: "bolt", dealDone: "done", noOrNotNow: "pause" };
 

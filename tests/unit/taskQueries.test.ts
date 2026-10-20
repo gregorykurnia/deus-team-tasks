@@ -65,6 +65,10 @@ describe("filters", () => {
     expect(ids(filterTasks(tasks, { view: "open", type: "Our Action" }, ctx))).toEqual(["open-int"]);
     expect(ids(filterTasks(tasks, { view: "open", type: "-" }, ctx))).toEqual(["pro", "cli"]);
   });
+  it("counts days without action for company tasks only, even when an internal task has a last action date", () => {
+    const withDate = [...tasks, { ...tasks.find((t) => t.id === "open-int")!, id: "int-dated", lastActionDate: "2020-01-01" }];
+    expect(ids(filterTasks(withDate, { view: "open", minIdleDays: 14 }, ctx))).toEqual(["pro"]);
+  });
   it("narrows finished tasks by when they were finished", () => {
     expect(ids(filterTasks(tasks, { view: "done", finishedWithinDays: 7 }, ctx))).toEqual(["done-int"]);
   });

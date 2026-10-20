@@ -9,6 +9,15 @@
   white-space: nowrap;
 }
 
+/* A name in a table cell can be long: it shortens instead of widening the column. */
+.name {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 .pro {
   background: var(--pro-soft);
   color: var(--pro-ink);

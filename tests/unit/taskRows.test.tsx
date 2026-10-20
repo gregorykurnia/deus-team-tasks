@@ -105,9 +105,40 @@ describe("list row (All tasks)", () => {
   it("shows the company, the deadline and the people, and opens the task", () => {
     const markup = html(<TaskListRow {...props} task={base} />);
     expect(markup).toContain('href="?task=t1"');
-    expect(markup).toMatch(/<span class="[^"]*label[^"]*">About<\/span>Pelita Foods<\/span>/);
+    expect(markup).toMatch(/data-col="about"><span class="[^"]*label[^"]*">Company<\/span><span[^>]*>Pelita Foods<\/span>/);
     expect(markup).toContain("2 days late");
     expect(markup).toContain("Responsible: Maya Chen");
+  });
+
+  it("shows the details chosen, in the catalogue's order, and says so when one is empty", () => {
+    const markup = html(<TaskListRow {...props} task={{ ...base, priority: "High", lastActionDate: "2026-10-11" }} columns={["end", "prio", "last", "touch"]} />);
+    const order = ["data-col=\"touch\"", "data-col=\"prio\"", "data-col=\"end\"", "data-col=\"last\""].map((c) => markup.indexOf(c));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(order.every((i) => i > -1)).toBe(true);
+    expect(markup).toContain("9 days ago"); // under the Last action head, not "Last action 9 days ago" twice
+    expect(markup).not.toContain('data-col="about"');
+    const empty = html(<TaskListRow {...props} task={base} columns={["type"]} />);
+    expect(empty).toContain("None");
+    expect(empty).toMatch(/_emptyCell_/);
+  });
+
+  it("puts what a hidden detail would say under the title, so hiding a column never hides the task's state", () => {
+    const markup = html(<TaskListRow {...props} task={base} columns={["type"]} />);
+    expect(markup).toMatch(/<p class="[^"]*meta[^"]*"><span class="[^"]*place[^"]*">Pelita Foods<\/span><span>2 days late<\/span><\/p>/);
+    expect(html(<TaskListRow {...props} task={base} columns={["type"]} inGroup />)).not.toContain("Pelita Foods");
+  });
+
+  it("calls the deadline column Finished on a finished task", () => {
+    const done = { ...base, completed: true, completedAt: new Date(2026, 9, 17, 12).getTime() };
+    expect(html(<TaskListRow {...props} task={done} columns={["end"]} />)).toContain(">Finished<");
+  });
+
+  it("shows a group's badge and name for internal work, and Internal for work with no group", () => {
+    const look = new Map([["Hiring", { badge: "HI", hue: 2 }]]);
+    const grouped = html(<TaskListRow {...props} task={{ ...base, linkedClientId: undefined, taskGroup: "Hiring" }} columns={["about"]} groupLooks={look} />);
+    expect(grouped).toContain("Hiring");
+    expect(grouped).toContain("HI");
+    expect(html(<TaskListRow {...props} task={{ ...base, linkedClientId: undefined }} columns={["about"]} />)).toContain("Internal");
   });
 
   it("shows only the live tag under the title while just changed, as the details have their own cells", () => {

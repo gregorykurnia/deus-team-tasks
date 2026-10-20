@@ -49,11 +49,11 @@ export function groupNamesInUse(groups: GroupRef[], tasks: Pick<Task, "taskGroup
   return names;
 }
 
-export async function createTaskGroup(name: string, groups: GroupRef[]): Promise<string> {
+export async function createTaskGroup(name: string, groups: GroupRef[], starred = false): Promise<string> {
   const problem = groupNameProblem(name, groups);
   if (problem) throw new GroupNameError(problem);
   assertOnline("No connection. The task group wasn't created.");
-  const ref = await addDoc(collection(db, TASK_GROUPS), { name: name.trim(), order: Date.now(), starred: false });
+  const ref = await addDoc(collection(db, TASK_GROUPS), { name: name.trim(), order: Date.now(), starred });
   return ref.id;
 }
 

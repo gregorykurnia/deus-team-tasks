@@ -5,8 +5,10 @@
 // a click anywhere on the row toggles its checkbox instead (guide 4.7). What a row says comes from taskRowModel, so every
 // variant agrees: Card (Today), List (All tasks), Day (Plan's Day view, a person's page), Record (a company).
 import Link from "next/link";
-import type { MouseEvent } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import { shortDate } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
+import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
 import type { Task } from "@/lib/types";
 import type { Tone } from "@/lib/urgency";
@@ -17,7 +19,8 @@ import Icon from "./Icon";
 import { kindStyle } from "./kindStyle";
 import Pill, { type PillTone } from "./Pill";
 import SelectBox from "./SelectBox";
-import { LiveTag } from "./Tag";
+import GroupBadge, { type GroupLook } from "./GroupBadge";
+import { LiveTag, NameTag } from "./Tag";
 import styles from "./TaskRow.module.css";
 
 interface RowProps {
@@ -135,30 +138,117 @@ export function TaskCard(props: RowProps) {
   );
 }
 
-export function TaskListRow(props: RowProps) {
-  const row = taskRowModel(props.task, props.companies, props.today);
+interface ListRowProps extends RowProps {
+  columns?: ColumnId[]; // the details shown, in the catalogue's order
+  groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the About column
+  inGroup?: boolean; // on a group's own page every task is in it, so it is not repeated
+}
+
+// One of the chosen details. Empty ones say so with a dash, and drop out of the phone's card.
+function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Task; row: RowModel; groupLooks?: ReadonlyMap<string, GroupLook>; today: string }) {
+  const column = COLUMNS.find((c) => c.id === id)!;
+  let content: ReactNode = null;
+  let wrap = false;
+  switch (id) {
+    case "about": {
+      const look = task.taskGroup ? groupLooks?.get(task.taskGroup) : undefined;
+      if (row.badge.kind === "company") content = <NameTag kind={row.kind}>{row.place}</NameTag>;
+      else if (task.taskGroup)
+        content = (
+          <span className={styles.group}>
+            {look && <GroupBadge {...look} />}
+            <span className={styles.groupName}>{task.taskGroup}</span>
+          </span>
+        );
+      else content = <NameTag kind="internal">Internal</NameTag>;
+      break;
+    }
+    case "type":
+      content = task.taskType;
+      break;
+    case "touch":
+      content = task.touchPoint;
+      break;
+    case "prio":
+      content = task.priority && <span className={task.priority === "High" ? styles.red : undefined}>{task.priority}</span>;
+      break;
+    case "start":
+      content = task.startDate && shortDate(task.startDate, today);
+      break;
+    case "end":
+      content = <DeadlinePill row={row} />;
+      break;
+    case "last": {
+      const last = row.lastAction;
+      // Under the "Last action" head, "Last action 9 days ago" says it twice: the words that follow are enough.
+      const words = last?.label.replace(/^Last action /, "");
+      content = last && words && (
+        <span className={TONE_CLASS[last.tone]} title={last.label}>
+          {words.charAt(0).toUpperCase() + words.slice(1)}
+        </span>
+      );
+      break;
+    }
+    case "resp":
+      content = task.responsible.length > 0 && (
+        <span className={styles.who}>
+          <AvatarStack responsible={task.responsible} />
+          {task.responsible.length === 1 && <span className={styles.whoName}>{task.responsible[0].split(" ")[0]}</span>}
+        </span>
+      );
+      break;
+    case "inf":
+      content = task.informed.map((p) => p.name.split(" ")[0] + (p.note ? ` (${p.note})` : "")).join(", ");
+      wrap = true;
+      break;
+    case "key":
+      content = task.keyPoints;
+      wrap = true;
+      break;
+  }
+  const empty = !content;
+  const classes = [styles.cell, id === "end" && styles.deadline, wrap && styles.wrap, empty && styles.emptyCell, id === "resp" && styles.lift].filter(Boolean);
+  const label = id === "about" ? (row.badge.kind === "company" ? "Company" : "Group") : columnLabel(column, row.done);
   return (
-    <article {...rowProps(row, props)} className={`${styles.row} ${styles.list}`}>
+    <span className={classes.join(" ")} data-col={id}>
+      <span className={styles.label}>{label}</span>
+      {empty ? (
+        <>
+          <span aria-hidden="true" className={styles.none}>
+            –
+          </span>
+          <span className="sr-only">None</span>
+        </>
+      ) : (
+        content
+      )}
+    </span>
+  );
+}
+
+export function TaskListRow(props: ListRowProps) {
+  const { task, columns = DEFAULT_COLUMNS, groupLooks, inGroup, today } = props;
+  const row = taskRowModel(task, props.companies, today);
+  // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
+  const meta = [
+    !columns.includes("about") && !inGroup && row.place && (
+      <span key="place" className={styles.place}>
+        {row.place}
+      </span>
+    ),
+    !columns.includes("end") && !row.done && row.deadline.tone !== "plain" && <span key="deadline">{row.deadline.label}</span>,
+    props.justChanged && <LiveTag key="live" />,
+  ].filter(Boolean);
+  return (
+    <article {...rowProps(row, props)} className={`${styles.row} ${styles.list}`} style={{ ...kindStyle(row.kind), "--cols": listGrid(columns) } as CSSProperties}>
       <Lead {...props} row={row} />
       <div className={styles.main}>
-        <Title task={props.task} href={props.href} selecting={props.selecting} />
-        {/* The details have their own cells: only the live tag goes under the title. */}
-        {props.justChanged && (
-          <p className={styles.meta}>
-            <LiveTag />
-          </p>
-        )}
+        <Title task={task} href={props.href} selecting={props.selecting} />
+        {meta.length > 0 && <p className={styles.meta}>{meta}</p>}
       </div>
-      <span className={`${styles.cell} ${styles.about}`}>
-        <span className={styles.label}>About</span>
-        {row.place ?? <span className={styles.none}>–</span>}
-      </span>
-      <span className={`${styles.cell} ${styles.deadline}`}>
-        <DeadlinePill row={row} />
-      </span>
-      <span className={`${styles.cell} ${styles.people} ${styles.lift}`}>
-        <AvatarStack responsible={props.task.responsible} informed={props.task.informed} />
-      </span>
+      {COLUMNS.filter((c) => columns.includes(c.id)).map((c) => (
+        <ListCell key={c.id} id={c.id} task={task} row={row} groupLooks={groupLooks} today={today} />
+      ))}
     </article>
   );
 }

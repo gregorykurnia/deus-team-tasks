@@ -1,5 +1,12 @@
+import { Suspense } from "react";
 import PageHeader from "@/desk/PageHeader";
+import TasksScreen from "@/features/tasks/TasksScreen";
 
+// The screen reads its view from the address, which only the browser knows: the server renders the title.
 export default function Page() {
-  return <PageHeader title="Tasks" action={{ label: "New task", href: "/tasks?task=new", newTask: true }} />;
+  return (
+    <Suspense fallback={<PageHeader title="Tasks" />}>
+      <TasksScreen />
+    </Suspense>
+  );
 }

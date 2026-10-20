@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6
+Open needs: N1, N2, N3, N4, N5, N6, N7
 
 # Needs
 
@@ -12,3 +12,4 @@ Design gaps found after the design was approved, written as job stories.
 | N4 | When I open the app and it hasn't heard back from the team's shared data yet, I want to know it is still connecting, rather than being told everyone is up to date or that I have no connection, so that I know whether what I see is current and whether my changes can be saved yet. | Phase 2 review | open |
 | N5 | When part of the team's data can't be loaded for a reason other than having no connection, I want to be told that part didn't load, rather than see zero totals or an invitation to start from nothing, so that I don't mistake missing data for no data. | Phase 2 review | open |
 | N6 | When I open a task from a link that no longer leads anywhere (someone deleted the task), or a colleague deletes the task while I have it open and am changing it, I want to be told the task is gone, and not lose sight of what I typed, so that I'm not left wondering whether my change was saved. | Task 3.1 | open |
+| N7 | When I open a task group from a link or a bookmark after someone deleted it, or a colleague deletes it while I am looking at it, I want to be told it is gone and be pointed back to my tasks, so that I am not left on an empty page wondering what happened. | Task 3.3 | open |
