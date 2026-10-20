@@ -45,7 +45,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 **Setup**
 - [x] Step 0: plan copied and blanks filled; studio templates, `studio.sh`, codebase `CLAUDE.md` rules; `studio.sh init` run — **Haiku 5.5 Max** · Claude on `<base>`
 - [x] Step 0b: firewall check: every channel *blocked* (2026-10-19; check 10 confirmed with the neutral-site curl, exit 56) — **Haiku 5.5 High** · fresh studio session
-- [ ] Step 0b on the Linux server: every channel *blocked*, with `<ABS_PROJECT_PATH>` = `/home/ubuntu/deus-team-tasks` — **Haiku 5.5 High** · fresh studio session
+- [x] Step 0b on the Linux server: every channel *blocked*, with `<ABS_PROJECT_PATH>` = `/home/ubuntu/deus-team-tasks` (2026-10-20, run 2; folder checks count entries, no IDE connection) — **Haiku 5.5 High** · fresh studio session
 
 **Discovery (sees the old app)**
 - [x] Step 1: `inventory.md` as job stories grouped by jobs; owner-only `inventory-notes.md`; starter `priorities.md`, `brief.md`, `needs.md` — **Opus 5.5 Medium** · Agent A on `<base>`
