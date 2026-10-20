@@ -7,7 +7,7 @@ import Segmented from "@/ui/Segmented";
 import { useMediaQuery } from "@/ui/useMediaQuery";
 import styles from "./Plan.module.css";
 
-const SMALL_SCREEN = "(max-width: 760px)";
+export const SMALL_SCREEN = "(max-width: 760px)";
 
 interface PlanBarProps {
   state: PlanState;

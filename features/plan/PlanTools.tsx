@@ -25,12 +25,13 @@ interface PlanToolsProps {
   today: string;
   groups: GroupNavItem[];
   people: PersonOption[];
+  day: string | null; // the day Day shows, when it landed on one the address doesn't name
   onState: (next: PlanState) => void;
   onStep: (dir: -1 | 1) => void;
   onToday: () => void;
 }
 
-export default function PlanTools({ state, today, groups, people, onState, onStep, onToday }: PlanToolsProps) {
+export default function PlanTools({ state, today, groups, people, day, onState, onStep, onToday }: PlanToolsProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const workRef = useRef<HTMLButtonElement>(null);
   const personRef = useRef<HTMLButtonElement>(null);
@@ -40,7 +41,8 @@ export default function PlanTools({ state, today, groups, people, onState, onSte
   const showsRows = state.view === "timeline" && !state.person && state.show !== "events";
   const steps = state.view !== "people";
   const unit = STEP_UNIT[state.view];
-  const atToday = isAtToday(state, today);
+  const here = day && state.view === "day" ? { ...state, date: day } : state;
+  const atToday = isAtToday(here, today);
 
   return (
     <div className={styles.filters} role="toolbar" aria-label="Narrow the plan">
@@ -74,7 +76,7 @@ export default function PlanTools({ state, today, groups, people, onState, onSte
             <Icon name="left" size={18} />
           </Button>
           <span className={styles.stepLabel} aria-live="polite">
-            {stepLabel(state, today)}
+            {stepLabel(here, today)}
           </span>
           <Button variant="icon" className={styles.stepButton} aria-label={`Next ${unit}`} title={`Next ${unit}`} onClick={() => onStep(1)}>
             <Icon name="right" size={18} />

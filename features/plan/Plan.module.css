@@ -729,3 +729,580 @@ button.insight:hover {
     height: 40px;
   }
 }
+
+/* ---------- Month (prototype "Month"). A cell's --kind marks its task lines. ---------- */
+.monthWrap {
+  padding: 0 8px;
+}
+
+.weekdays,
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.weekdays {
+  padding: 0 8px 6px;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-bold);
+}
+
+.monthCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  text-align: left;
+}
+
+.monthCell[data-weekend] {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.monthCell[data-busy] {
+  background: linear-gradient(180deg, rgba(255, 236, 204, 0.9), rgba(255, 243, 224, 0.7));
+}
+
+.monthCell[data-outside] {
+  opacity: 0.5;
+}
+
+.monthCell[data-today] {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px rgba(47, 107, 234, 0.55);
+}
+
+.dayNumber {
+  display: grid;
+  align-self: flex-start;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  font-size: var(--t-small);
+  font-weight: var(--w-bold);
+  font-variant-numeric: var(--num);
+  text-decoration: none;
+}
+
+a.dayNumber:hover {
+  background: var(--fill);
+}
+
+.monthCell[data-today] .dayNumber {
+  background: var(--blue);
+  color: #fff;
+}
+
+.cellItems {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cellEvent,
+.cellTask,
+.cellMore {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  overflow: hidden;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cellEvent {
+  background: var(--event-soft);
+  color: var(--event-ink);
+  font-weight: var(--w-medium);
+}
+
+.cellEvent b {
+  font-weight: var(--w-bold);
+  font-variant-numeric: var(--num);
+}
+
+.cellTask {
+  color: var(--ink);
+  font-weight: var(--w-semibold);
+}
+
+.cellTask:hover {
+  background: var(--surface);
+}
+
+.cellTask i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--kind);
+  vertical-align: 1px;
+}
+
+.cellTask[data-informed] i {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--kind);
+}
+
+.cellTask[data-late] {
+  color: var(--red-ink);
+}
+
+.cellMore {
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.cellMore:hover {
+  background: var(--blue-soft);
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 6px;
+}
+
+.dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--kind);
+}
+
+.dots i[data-event] {
+  background: var(--event-mark);
+}
+
+.dots b {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.monthLegend {
+  padding: 8px 14px 4px;
+}
+
+.monthEmpty {
+  margin: 4px 8px 12px;
+  border-radius: var(--r-m);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+/* Phones list the chosen day under the grid. */
+.agenda {
+  margin-top: 4px;
+}
+
+.agendaHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 4px 10px;
+}
+
+.agendaHead h2 {
+  margin: 0;
+  font-size: var(--t-h2);
+  font-weight: var(--w-heavy);
+  letter-spacing: var(--ls-h2);
+}
+
+.agendaPanels {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- One day (prototype "One day") ---------- */
+.dayHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 14px 14px;
+}
+
+.dayMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.dayMain h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.025em;
+}
+
+.dayMain p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+}
+
+.picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 1px var(--line-quiet);
+  color: var(--ink-2);
+}
+
+.picker input {
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--w-semibold);
+  font-variant-numeric: var(--num);
+}
+
+.picker:focus-within {
+  outline: 2.5px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 8px 6px;
+}
+
+.stripDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 2px 9px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+  font-variant-numeric: var(--num);
+}
+
+.stripDay:hover {
+  background: var(--surface);
+}
+
+.stripDay > span:first-child {
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.stripDay b {
+  font-size: var(--t-h2);
+  font-weight: var(--w-heavy);
+  letter-spacing: -0.02em;
+}
+
+.stripCounts {
+  display: flex;
+  gap: 4px;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.stripCounts i {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: var(--w-heavy);
+}
+
+.stripCounts i[data-kind="tasks"] {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+
+.stripCounts i[data-kind="events"] {
+  background: var(--event-soft);
+  color: var(--event-ink);
+}
+
+/* Today when it isn't the chosen day: a blue ring. */
+.stripDay[data-today]:not([data-selected]) {
+  box-shadow: inset 0 0 0 1.5px rgba(47, 107, 234, 0.45);
+}
+
+.stripDay[data-today]:not([data-selected]) b,
+.stripDay[data-today]:not([data-selected]) > span:first-child {
+  color: var(--blue-ink);
+}
+
+.stripDay[data-selected] {
+  background: var(--cta);
+  box-shadow: 0 12px 24px -12px rgba(47, 107, 234, 0.8);
+  color: #fff;
+}
+
+.stripDay[data-selected] > span:first-child {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stripDay[data-selected] .stripCounts i {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.landed {
+  margin-top: 14px;
+}
+
+.dayEmpty {
+  margin-top: 14px;
+  border-radius: var(--r-l);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+}
+
+/* The day's lists: tasks beside the team calendar. */
+.board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  align-items: start;
+  gap: var(--gap-section);
+  margin-top: var(--gap-section);
+}
+
+.board.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-section);
+  min-width: 0;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 6px;
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  font-weight: var(--w-bold);
+}
+
+.groupLabel i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.groupCount {
+  color: var(--muted);
+  font-weight: var(--w-semibold);
+}
+
+.event {
+  display: grid;
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin: 0 6px 6px;
+  padding: 12px 14px 12px 12px;
+  border-radius: var(--r-m);
+  background: var(--glass-strong);
+}
+
+.eventBar {
+  align-self: stretch;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--event-mark);
+}
+
+.eventText {
+  min-width: 0;
+}
+
+.eventText p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-weight: var(--w-bold);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.eventText small {
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+}
+
+.eventOpen {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-xs);
+  background: var(--fill);
+  color: var(--ink-2);
+}
+
+.eventOpen:hover {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.gap {
+  display: block;
+  height: 6px;
+}
+
+.panelNote {
+  padding: 2px 8px 6px;
+}
+
+@media (max-width: 1240px) {
+  .board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Phones: the month shows dots, and the strip and lists tighten (prototype 760 and 640). */
+@media (max-width: 760px) {
+  .monthWrap {
+    padding: 0 4px;
+  }
+
+  .weekdays,
+  .monthGrid {
+    gap: 4px;
+  }
+
+  .weekdays {
+    padding: 0 0 4px;
+    font-size: var(--t-micro);
+    text-align: center;
+  }
+
+  .monthCell {
+    align-items: center;
+    min-height: 56px;
+    padding: 4px 2px 6px;
+    border-radius: var(--r-s);
+    cursor: pointer;
+  }
+
+  .dayNumber {
+    align-self: center;
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .monthCell[data-selected] {
+    background: var(--surface);
+    box-shadow: inset 0 0 0 2px var(--blue);
+  }
+
+  .monthCell[data-selected]:not([data-today]) .dayNumber {
+    color: var(--blue-ink);
+  }
+}
+
+@media (max-width: 640px) {
+  .dayHead {
+    gap: 12px;
+    padding: 4px 10px 12px;
+  }
+
+  .dayMain h2 {
+    font-size: 20px;
+  }
+
+  .picker {
+    flex-basis: 100%;
+  }
+
+  .picker input {
+    flex: 1;
+  }
+
+  .strip {
+    gap: 4px;
+    padding: 0 4px 4px;
+  }
+
+  .stripDay {
+    padding: 8px 0 7px;
+    border-radius: 14px;
+  }
+
+  .stripDay > span:first-child {
+    font-size: var(--t-micro);
+  }
+
+  .stripDay b {
+    font-size: 16px;
+  }
+
+  .stripCounts {
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-height: 0;
+  }
+
+  .stripCounts i {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9.5px;
+  }
+}
