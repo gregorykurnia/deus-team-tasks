@@ -74,6 +74,8 @@ if [ -n "${TMUX:-}" ] && [ "$(basename "${TMUX%%,*}")" != studio ]; then
   exit 1
 fi
 unset TMUX TMUX_PANE
+# A terminal opened in the codebase's VS Code window carries its editor hooks; drop them.
+unset CLAUDE_CODE_SSE_PORT $(compgen -v VSCODE_)
 export ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 CLAUDE_CODE_DISABLE_ARTIFACT=1
 # No editor link: an IDE connection can push the open file or selection (possibly the codebase) into the session.
 export CLAUDE_CODE_AUTO_CONNECT_IDE=false CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1
@@ -196,6 +198,7 @@ Open a NEW terminal window and run:
 On tmux, give the studio its own tmux server instead (./start refuses a shared one):
   tmux -L studio new -A -s studio -c "$STUDIO"     then ./start inside it
   (detach: Ctrl-b d · come back: tmux -L studio attach -t studio)
+  (in VS Code: pick the "studio" terminal profile from the + menu, then ./start)
 
 (Always ./start: a brand-new session with no connectors. To take screenshots,
  type  ! ./shoot  inside that session.)
