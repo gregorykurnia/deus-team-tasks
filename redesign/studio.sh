@@ -67,6 +67,8 @@ for a in "$@"; do
   esac
 done
 export ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 CLAUDE_CODE_DISABLE_ARTIFACT=1
+# No editor link: an IDE connection can push the open file or selection (possibly the codebase) into the session.
+export CLAUDE_CODE_AUTO_CONNECT_IDE=false CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1
 # Your arguments go first: --mcp-config takes several values and would swallow anything after it.
 exec claude "$@" --strict-mcp-config --mcp-config '{"mcpServers":{}}'
 START
