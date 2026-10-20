@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useCompanies, useCompaniesById, useNotes } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
+import { ConnectionBanner } from "@/desk/ConnectionBanner";
 import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import type { PipelineEntry } from "@/lib/clientTypes";
@@ -387,6 +388,8 @@ export default function NotesScreen() {
 
   return (
     <>
+      {/* A prospect open full screen on a phone has no page header, but still says when there's no connection. */}
+      {hideHeader && <ConnectionBanner />}
       {!hideHeader && (
         <>
           <PageHeader
@@ -419,7 +422,7 @@ export default function NotesScreen() {
           onPick={(c) => void link(linking.entry, c)}
         />
       )}
-      {exporting && listing && today && (
+      {exporting && listing && today && (exporting !== "one" || entry) && (
         <NotesExportDialog
           entries={exporting === "one" ? (entry ? [entry] : []) : listing.rows.map((r) => r.entry)}
           companies={byId}

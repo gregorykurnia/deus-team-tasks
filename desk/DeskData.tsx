@@ -6,7 +6,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import type { HistoricalClient } from "@/lib/historicalClientTypes";
-import { useCompanySettings, type CompanySettings } from "@/lib/companySettings";
+import { useCompanySettings, type CompanySettingsState } from "@/lib/companySettings";
 import { companiesById, type CompaniesById } from "@/lib/kinds";
 import { useLiveQuery, type LiveRows } from "@/lib/liveQuery";
 import type { ProspectJournalEntry } from "@/lib/prospectJournalTypes";
@@ -24,7 +24,7 @@ interface Desk {
   groups: LiveRows<TaskGroup>; // in the order they were made
   companies: LiveRows<PipelineEntry>;
   companiesById: CompaniesById;
-  settings: { settings: CompanySettings; loading: boolean; stored: boolean }; // the team's company options and fields, or the defaults
+  settings: CompanySettingsState; // the team's company options and fields, or the defaults
   notes: LiveRows<ProspectJournalEntry>;
   pastClients: LiveRows<HistoricalClient>;
   flows: LiveRows<Flow>;

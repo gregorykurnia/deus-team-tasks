@@ -9,7 +9,7 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { monthTitle, plural } from "@/lib/dates";
 import { kindOf, linkedCompany, type CompaniesById } from "@/lib/kinds";
 import { dayHeading, dayListsOf, dayWithSomething, cellShown, monthModelOf, nextMonthWithSomething, relativeDay } from "@/lib/planCalendar";
-import { workLabel, type PlanState } from "@/lib/planView";
+import { whoWords, type PlanState } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 import type { EventsState } from "@/lib/useCalendarEvents";
 import Button from "@/ui/Button";
@@ -68,9 +68,11 @@ export default function MonthView(props: MonthViewProps) {
     });
   };
 
-  const empty = !loading && model.total === 0;
+  // Empty only once what's shown has answered: the tasks, and the team calendar when it's shown (Events only needs it).
+  const answered = !loading && !(showEvents && events.status === "loading") && (showTasks || events.status === "ok");
+  const empty = answered && model.total === 0;
   const nextMonth = empty ? nextMonthWithSomething(shownTasks, eventList, month) : null;
-  const who = state.person ? ` for ${state.person}` : state.kind || state.group ? ` in ${workLabel(state)!.toLowerCase()}${state.kind ? " work" : ""}` : "";
+  const who = whoWords(state);
 
   const agendaLists = useMemo(() => dayListsOf(shownTasks, eventList, selected), [shownTasks, eventList, selected]);
   const previous = useMemo(() => (phone ? dayWithSomething(shownTasks, eventList, selected, -1) : null), [phone, shownTasks, eventList, selected]);
@@ -117,7 +119,7 @@ export default function MonthView(props: MonthViewProps) {
                 </>
               }
             >
-              {`No deadlines${eventList ? " and no team events" : ""} this month${who}.`}
+              {showTasks ? `No deadlines${eventList ? " and no team events" : ""} this month${who}.` : "No team events this month."}
             </EmptyState>
           </div>
         )}

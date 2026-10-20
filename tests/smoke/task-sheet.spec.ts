@@ -150,3 +150,55 @@ test("a task that isn't there any more says so instead of opening", async ({ pag
   await expect(page.getByText("This task isn't there any more. Someone may have deleted it.")).toBeVisible();
   await expect(page).toHaveURL("/tasks");
 });
+
+test("A3: offline, a link to a task that isn't on this device waits for the connection instead of closing", async ({ page }) => {
+  // context.setOffline only flips the browser's own flag: block the emulator itself, before the page loads.
+  await page.route(/127\.0\.0\.1:8180/, (route) => route.abort());
+  await page.goto("/tasks?task=t1");
+  const s = sheet(page, "Task");
+  await expect(s.getByRole("heading", { name: "No connection" })).toBeVisible({ timeout: 15_000 });
+  await expect(s.getByText("It will open once you are back online.", { exact: false })).toBeVisible();
+  await expect(page).toHaveURL("/tasks?task=t1");
+  await expect(page.getByText("This task isn't there any more.", { exact: false })).toHaveCount(0);
+});
+
+test("5.5: “A company” needs one chosen, and switching to Internal work and back keeps it", async ({ page }) => {
+  await seedCompanies([company(1, { company: "Pelita Foods", status: "Active" })]);
+  await page.goto("/tasks?task=new");
+  await waitUntilLive(page);
+  const s = sheet(page, "New task");
+  const select = s.getByRole("combobox", { name: "Company", exact: true });
+  await s.getByLabel("Description").fill("Send the trial results");
+  await s.getByRole("button", { name: "A company" }).click();
+  await select.selectOption({ label: "Pelita Foods" });
+  await s.getByRole("button", { name: "Internal work" }).click();
+  await s.getByRole("button", { name: "A company" }).click();
+  await expect(s.getByText("Pelita Foods", { exact: true })).toBeVisible();
+  await s.getByRole("button", { name: "Change company: Pelita Foods" }).click();
+  await s.getByRole("button", { name: "Add task" }).click();
+  const message = s.getByText("Choose the company this task is about, or switch to Internal work.");
+  await expect(message).toBeVisible();
+  await expect(select).toBeFocused();
+  await expect(select).toHaveAttribute("aria-invalid", "true");
+  expect(await stored("tasks", "tasks")).toHaveLength(0);
+  await select.selectOption({ label: "Pelita Foods" });
+  await expect(message).toHaveCount(0);
+  await s.getByRole("button", { name: "Add task" }).click();
+  await expect(s).toHaveCount(0);
+  expect(await stored("tasks", "tasks")).toMatchObject([{ task: "Send the trial results", linkedClientId: 1 }]);
+});
+
+test("W5: changes saved with Mark done get their own toast, and Undo puts back only the done", async ({ page }) => {
+  await seedTasks([task("t1", { task: "Order the new chairs" })]);
+  await page.goto("/tasks?task=t1");
+  await waitUntilLive(page);
+  const s = sheet(page, "Task");
+  await s.getByLabel("Description").fill("Order the new desks");
+  await s.getByRole("button", { name: "Mark done" }).click();
+  await expect(s).toHaveCount(0);
+  await expect(toasts(page).getByText("Changes saved", { exact: true })).toBeVisible();
+  await expect(toasts(page).getByText("Marked done", { exact: true })).toBeVisible();
+  await toasts(page).getByRole("button", { name: "Undo" }).click();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(false);
+  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ task: "Order the new desks" });
+});

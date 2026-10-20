@@ -132,6 +132,20 @@ describe("the list", () => {
     expect(sorted("sort=priority")).toEqual(["Borneo", "Acme"]); // High first, none last
   });
 
+  it("finds the companies without a status or priority with None", () => {
+    expect(listCompanies(companies, state("priority=-"), settings, TODAY).sorted.map((c) => c.company)).toEqual(["Acme"]);
+    const noStatus = [co(6, { company: "Fajar", status: "" }), co(7, { company: "Gita", status: undefined }), co(8, { company: "Hana" })];
+    expect(listCompanies(noStatus, state("status=-&sort=company"), settings, TODAY).sorted.map((c) => c.company)).toEqual(["Fajar", "Gita"]);
+  });
+
+  it("sorts priority by the order of its options, as the team set them", () => {
+    const team = { ...settings, options: { ...settings.options, priority: [{ name: "Urgent", colour: "pink" as const }, ...settings.options.priority] } };
+    const rows = [co(1, { company: "Low one", priority: "Low" }), co(2, { company: "None" }), co(3, { company: "Urgent one", priority: "Urgent" }), co(4, { company: "High one", priority: "High" })];
+    const sorted = (query: string) => listCompanies(rows, state(query), team, TODAY).sorted.map((c) => c.company);
+    expect(sorted("sort=priority")).toEqual(["Urgent one", "High one", "Low one", "None"]);
+    expect(sorted("sort=priority&dir=desc")).toEqual(["Low one", "High one", "Urgent one", "None"]);
+  });
+
   it("tells the empty states apart", () => {
     expect(emptyCase(0, 0)).toBe("nothingYet");
     expect(emptyCase(0, 12)).toBe("groupEmpty");

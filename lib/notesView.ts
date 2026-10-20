@@ -211,7 +211,7 @@ export function snippetOf(row: NotesRow): { label: string; text: string; highlig
   return next ? { label: "Next step", text: next.replace(/\s+/g, " "), highlight: false } : null;
 }
 
-function labelOf(field: NoteMatch["field"]): string {
+export function labelOf(field: NoteMatch["field"]): string {
   if (field === "prospectName") return "Name";
   if (field === "detailedRemarks") return "Remarks";
   return HEADING_LABELS[field];

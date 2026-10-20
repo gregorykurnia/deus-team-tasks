@@ -1,11 +1,11 @@
 "use client";
 
 // The row menu (guide 4.9): Open company, Create a follow-up task, Last action: today, Move to another group, the
-// qualification notes (or start them), and Delete company in red.
+// qualification notes (or start them), and Delete company in red, disabled with its reason until it can run.
 import { useRouter } from "next/navigation";
-import type { RefObject } from "react";
+import { useId, type RefObject } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import Menu, { MenuItem, MenuSeparator } from "@/ui/Menu";
+import Menu, { MenuFoot, MenuItem, MenuSeparator } from "@/ui/Menu";
 
 interface RowMenuProps {
   company: PipelineEntry;
@@ -18,10 +18,12 @@ interface RowMenuProps {
   onToday: () => void;
   onMove: () => void;
   onDelete: () => void;
+  deleteBlocked: string | null; // why Delete company can't run yet
 }
 
-export default function RowMenu({ company, anchorRef, hasLastAction, notes, onClose, onOpen, onFollowUp, onToday, onMove, onDelete }: RowMenuProps) {
+export default function RowMenu({ company, anchorRef, hasLastAction, notes, onClose, onOpen, onFollowUp, onToday, onMove, onDelete, deleteBlocked }: RowMenuProps) {
   const router = useRouter();
+  const reasonId = useId();
   return (
     <Menu open anchorRef={anchorRef} onClose={onClose} label={`More for ${company.company}`} alignRight>
       <MenuItem icon="building" onSelect={onOpen}>
@@ -42,9 +44,10 @@ export default function RowMenu({ company, anchorRef, hasLastAction, notes, onCl
         {notes.label}
       </MenuItem>
       <MenuSeparator />
-      <MenuItem icon="trash" danger onSelect={onDelete}>
+      <MenuItem icon="trash" danger onSelect={onDelete} disabled={!!deleteBlocked} describedBy={deleteBlocked ? reasonId : undefined}>
         Delete company
       </MenuItem>
+      {deleteBlocked && <MenuFoot id={reasonId}>{deleteBlocked}</MenuFoot>}
     </Menu>
   );
 }

@@ -3,7 +3,7 @@
 // The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, then
 // Sort, Fields and Export. A filter that's on shows its value and a round × that clears it.
 import { useRef, useState } from "react";
-import type { ProductOption } from "@/lib/companies";
+import { NO_VALUE, type ProductOption } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import {
   availableFilters,
@@ -120,7 +120,7 @@ function ChoiceFilter({ name, label, any, state, options, onState }: { name: "st
             <OptionChip tone={o.colour}>{o.name}</OptionChip>
           </MenuChoice>
         ))}
-        <MenuChoice checked={value === "-"} onSelect={() => onState({ ...state, [name]: "-" })}>
+        <MenuChoice checked={value === NO_VALUE} onSelect={() => onState({ ...state, [name]: NO_VALUE })}>
           None
         </MenuChoice>
       </Menu>

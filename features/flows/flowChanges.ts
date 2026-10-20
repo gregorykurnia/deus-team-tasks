@@ -3,7 +3,7 @@
 // A colleague's change to a flow shows "Changed just now" on the part that changed, for a minute (guide 3, 5.8). What
 // this device wrote itself is remembered, so its own changes coming back from the data aren't taken for someone else's.
 import { useEffect, useRef, useState } from "react";
-import { changedParts, contentOf, sameContent, type FlowContent } from "@/lib/flows";
+import { changedParts, contentOf, sameFlowContent, type FlowContent } from "@/lib/flows";
 import type { Flow } from "@/lib/types";
 
 const CHANGED_SHOWS_MS = 60_000;
@@ -18,7 +18,8 @@ export function rememberOwnWrite(flowId: string, content: FlowContent) {
   ownWrites.set(flowId, list);
 }
 
-const isOwn = (f: Flow) => (ownWrites.get(f.id) ?? []).some((c) => sameContent(c, contentOf(f)));
+// Roles get their ids on this device's first save, and the data may hold them only where that save wrote: ids aside.
+const isOwn = (f: Flow) => (ownWrites.get(f.id) ?? []).some((c) => sameFlowContent(c, contentOf(f)));
 
 // The parts ("head", "decision", or a step's or an outcome's id) a colleague changed in the last minute.
 export function useChangedParts(flow: Flow): Set<string> {

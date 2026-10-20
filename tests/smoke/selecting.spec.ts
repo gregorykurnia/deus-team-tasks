@@ -129,6 +129,24 @@ test("D-008: Select all reaches every matching task, not only the 100 shown", as
   await expect.poll(async () => (await stored("tasks", "tasks")).filter((t) => t.completed === true).length).toBe(120);
 });
 
+test("D-008: Select all covers the view it was used in, and never grows to a wider one", async ({ page }) => {
+  await seedMixed();
+  await page.goto("/tasks?kind=internal");
+  await waitUntilLive(page);
+  await startSelecting(page);
+  await bar(page).getByRole("button", { name: "Select all 3" }).click();
+  await expect(bar(page)).toContainText("All 3 selected");
+  await page.getByRole("group", { name: "Kind of work" }).getByRole("button", { name: /^All/ }).click();
+  await expect(rows(page)).toHaveCount(4);
+  await expect(bar(page)).toContainText("3 selected");
+  await expect(bar(page)).not.toContainText("All 3 selected");
+  await expect(bar(page).getByRole("button", { name: "Select all 4" })).toBeVisible();
+  await expect(tick(page, "Chase the invoice")).toHaveAttribute("aria-checked", "false");
+  await bar(page).getByRole("button", { name: "Mark done" }).click();
+  await expect(toasts(page).getByText("3 tasks marked done")).toBeVisible();
+  expect(await storedById("tasks", "tasks", "co")).not.toMatchObject({ completed: true });
+});
+
 test("D-008: among finished tasks the bar offers Mark not done", async ({ page }) => {
   await seedTasks([
     task("x", { task: "Order the chairs", completed: true, completedAt: Date.now() - 86_400_000 }),

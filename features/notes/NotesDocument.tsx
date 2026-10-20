@@ -21,6 +21,7 @@ import {
   editedLine,
   HEADING_LABELS,
   HEADING_PROMPTS,
+  labelOf,
   LIKELIHOOD_IDS,
   LIKELIHOOD_WORDS,
   remarksFold,
@@ -41,6 +42,18 @@ import styles from "./Notes.module.css";
 
 export const SAVE_WAIT_MS = 800;
 const CHANGED_SHOWS_MS = 60_000; // "just now"
+
+// Writing that reached the device but not the server because the notes were deleted meanwhile (an offline stretch
+// while a colleague deleted them): kept per notes id until copied, as the notes themselves are gone.
+const lostWriting = new Map<string, Partial<Record<NotesTextKey, string>>>();
+
+function lostText(id: string): string {
+  const kept = lostWriting.get(id) ?? {};
+  return (Object.keys(kept) as NotesTextKey[])
+    .filter((k) => kept[k]?.trim())
+    .map((k) => `${labelOf(k)}\n${kept[k]}`)
+    .join("\n\n");
+}
 
 interface NotesDocumentProps {
   entry: ProspectJournalEntry;
@@ -69,6 +82,7 @@ export default function NotesDocument({ entry, name, company, group, status, tod
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [waiting, setWaiting] = useState(false); // typing not yet handed to the save
   const [pending, setPending] = useState(false); // handed over, not yet on the server
+  const [notSaved, setNotSaved] = useState(false); // the server refused the last save; the text stays here
   const [changed, setChanged] = useState<Partial<Record<NotesTextKey, number>>>({});
   const [remarksOpen, setRemarksOpen] = useState(false);
 
@@ -79,14 +93,71 @@ export default function NotesDocument({ entry, name, company, group, status, tod
 
   useEffect(() => watchNotesPending(id, setPending), [id]);
 
+  const stored = useRef(entry);
+  const mounted = useRef(true);
+  useEffect(() => {
+    stored.current = entry;
+  }, [entry]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const flushRef = useRef<() => void>(() => {});
+
   const failed = useCallback(
-    (err: unknown) => {
-      // Notes that were deleted meanwhile are the screen's to explain.
-      if ((err as { code?: string })?.code === "not-found") return;
+    (err: unknown, patch: Partial<Record<NotesTextKey, string>>, before: Partial<Record<NotesTextKey, string>>) => {
+      const keys = Object.keys(patch) as NotesTextKey[];
+      if ((err as { code?: string })?.code === "not-found") {
+        // Notes deleted meanwhile are the screen's to explain; writing they never got is kept to copy (gap N10).
+        if (!keys.some((k) => patch[k]?.trim())) return;
+        const first = !lostWriting.has(id);
+        lostWriting.set(id, { ...lostWriting.get(id), ...patch });
+        if (!first) return;
+        // One message for every queued save that failed the same way.
+        setTimeout(() => {
+          toast("Your writing in these notes couldn’t be saved: they were deleted meanwhile.", {
+            error: true,
+            keep: true,
+            action: "Copy it",
+            onAction: () =>
+              void navigator.clipboard.writeText(lostText(id)).then(
+                () => {
+                  lostWriting.delete(id);
+                  toast("Writing copied, ready to paste");
+                },
+                () => toast("It couldn’t be copied. Try again from the message.", { error: true })
+              ),
+          });
+        }, 300);
+        return;
+      }
       console.error("Notes couldn't be saved", err);
-      toast("Your latest writing couldn’t be saved. Copy it somewhere safe, then reload the page.", { error: true, keep: true });
+      // The server refused: what was written comes back as unsaved typing, so it stays on the screen and goes out with
+      // the next save, and the stored text rolling back isn't taken for a colleague's change.
+      if (mounted.current) {
+        const next = { ...draftsRef.current };
+        for (const k of keys) {
+          if (next[k] === undefined || next[k] === patch[k]) next[k] = patch[k];
+          dirty.current.add(k);
+          ownWrites.current[k] = before[k];
+        }
+        draftsRef.current = next;
+        setDrafts(next);
+        setChanged((c) => Object.fromEntries(Object.entries(c).filter(([k]) => !keys.includes(k as NotesTextKey))));
+        setNotSaved(true);
+      }
+      toast("Your latest writing couldn’t be saved. It’s still here: try again, or copy it somewhere safe.", {
+        error: true,
+        keep: true,
+        action: "Try again",
+        onAction: () => {
+          if (mounted.current) flushRef.current();
+        },
+      });
     },
-    [toast]
+    [id, toast]
   );
 
   const flush = useCallback(() => {
@@ -94,14 +165,22 @@ export default function NotesDocument({ entry, name, company, group, status, tod
     setWaiting(false);
     if (dirty.current.size === 0) return;
     const patch: Partial<Record<NotesTextKey, string>> = {};
+    const before: Partial<Record<NotesTextKey, string>> = {};
     for (const k of dirty.current) {
       const v = draftsRef.current[k] ?? "";
       patch[k] = v;
+      before[k] = stored.current[k] ?? "";
       ownWrites.current[k] = v;
     }
     dirty.current.clear();
-    void writeNotes(id, patch).catch(failed);
+    setNotSaved(false);
+    // Saving… from the moment it's handed over, not from the device's next snapshot.
+    setPending(true);
+    void writeNotes(id, patch).catch((err) => failed(err, patch, before));
   }, [id, failed]);
+  useEffect(() => {
+    flushRef.current = flush;
+  }, [flush]);
 
   // Leaving the notes, the page or the app saves what's typed.
   useEffect(() => {
@@ -109,9 +188,11 @@ export default function NotesDocument({ entry, name, company, group, status, tod
       if (document.visibilityState === "hidden") flush();
     };
     window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onHide);
     return () => {
       window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onHide);
       flush();
     };
@@ -180,7 +261,11 @@ export default function NotesDocument({ entry, name, company, group, status, tod
 
   function setLikelihood(l: Likelihood | "") {
     if (l === entry.opportunityStatus) return;
-    void writeNotes(id, { opportunityStatus: l }).catch(failed);
+    void writeNotes(id, { opportunityStatus: l }).catch((err) => {
+      if ((err as { code?: string })?.code === "not-found") return;
+      console.error("Likelihood couldn't be saved", err);
+      toast("The likelihood couldn’t be saved. Check your connection and try again.", { error: true });
+    });
   }
 
   // Every text field saves the same way; each says which it is in data-k.
@@ -190,20 +275,34 @@ export default function NotesDocument({ entry, name, company, group, status, tod
   const onBlurText = (e: FocusEvent<HTMLElement>) => blur(keyOf(e));
 
   const offline = status === "offline";
-  const saveLine = offline ? (
-    <span className={`${styles.save} ${styles.kept}`} role="status">
-      <Icon name="wifi" size={15} />
-      Kept on this device. Saves when you’re back online.
-    </span>
-  ) : waiting || pending ? (
-    <span className={styles.save} role="status">
-      <Spinner />
-      Saving…
-    </span>
-  ) : (
-    <span className={`${styles.save} ${styles.saved}`} role="status">
-      <Icon name="done" size={15} />
-      Saved
+  // One live region whose words change, so each change is announced (guide 8).
+  const saveState = offline ? "kept" : notSaved && !waiting ? "notSaved" : waiting || pending ? "saving" : "saved";
+  const saveLine = (
+    <span className={`${styles.save} ${saveState === "saving" ? "" : styles[saveState]}`} role="status">
+      {saveState === "kept" ? (
+        <>
+          <Icon name="wifi" size={15} />
+          Kept on this device. Saves when you’re back online.
+        </>
+      ) : saveState === "notSaved" ? (
+        <>
+          <Icon name="alert" size={15} />
+          Not saved.
+          <Button variant="link" small onClick={flush}>
+            Try again
+          </Button>
+        </>
+      ) : saveState === "saving" ? (
+        <>
+          <Spinner />
+          Saving…
+        </>
+      ) : (
+        <>
+          <Icon name="done" size={15} />
+          Saved
+        </>
+      )}
     </span>
   );
 

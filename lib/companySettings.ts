@@ -175,8 +175,15 @@ export function readCompanySettings(data: unknown): CompanySettings {
 
 const SETTINGS_REF = () => doc(db, "settings", "companies");
 
-export function useCompanySettings(): { settings: CompanySettings; loading: boolean; stored: boolean } {
-  const [state, setState] = useState({ settings: DEFAULT_COMPANY_SETTINGS, loading: true, stored: false });
+export interface CompanySettingsState {
+  settings: CompanySettings;
+  loading: boolean;
+  stored: boolean;
+  error: Error | null; // the record couldn't be read: the defaults show instead
+}
+
+export function useCompanySettings(): CompanySettingsState {
+  const [state, setState] = useState<CompanySettingsState>({ settings: DEFAULT_COMPANY_SETTINGS, loading: true, stored: false, error: null });
   useEffect(() => {
     watchSource("settings");
     const unsubscribe = onSnapshot(
@@ -184,12 +191,12 @@ export function useCompanySettings(): { settings: CompanySettings; loading: bool
       { includeMetadataChanges: true },
       (snap) => {
         reportSnapshot("settings", snap.metadata.fromCache);
-        setState({ settings: readCompanySettings(snap.data()), loading: false, stored: snap.exists() });
+        setState({ settings: readCompanySettings(snap.data()), loading: false, stored: snap.exists(), error: null });
       },
       (error) => {
         console.error("Unable to load the company settings", error);
         forgetSource("settings"); // Firestore closes a listener that reports an error
-        setState((s) => ({ ...s, loading: false }));
+        setState((s) => ({ ...s, loading: false, error }));
       }
     );
     return () => {
@@ -243,6 +250,22 @@ function checkName(s: CompanySettings, fieldKey: string, name: string, except?: 
   return clean;
 }
 
+// The settings changed, but not every company using the option followed. Running the same rename or removal again
+// finishes them.
+export class CompaniesBehindError extends Error {
+  constructor(public reason: unknown) {
+    super("The option changed, but not every company using it followed.");
+  }
+}
+
+async function companiesFollow(write: () => Promise<number>): Promise<number> {
+  try {
+    return await write();
+  } catch (err) {
+    throw new CompaniesBehindError(err);
+  }
+}
+
 const lockedMessage = (o: ChoiceOption) => `“${o.name}” can’t be renamed or removed: ${lockReason(o.role!).toLowerCase()}. Its colour can change.`;
 
 export async function addOption(fieldKey: string, name: string, colour: OptionColour): Promise<void> {
@@ -258,8 +281,8 @@ export async function recolourOption(fieldKey: string, name: string, colour: Opt
 }
 
 // Renames an option and every company using it follows. Returns how many
-// companies changed. If the companies failed to follow last time, running it
-// again finishes them.
+// companies changed. CompaniesBehindError says the option is renamed but some
+// companies didn't follow; running it again finishes them.
 export async function renameOption(fieldKey: string, from: string, to: string, companies: PipelineEntry[]): Promise<number> {
   let newName = to;
   await changeSettings("No connection. The option wasn't renamed.", (s) => {
@@ -273,12 +296,12 @@ export async function renameOption(fieldKey: string, from: string, to: string, c
     newName = checkName(s, fieldKey, to, from);
     o.name = newName;
   });
-  return newName === from ? 0 : replaceFieldValue(companies, fieldKey, from, newName);
+  return newName === from ? 0 : companiesFollow(() => replaceFieldValue(companies, fieldKey, from, newName));
 }
 
 // Removes an option and clears it from every company that uses it. Returns how
-// many companies changed. If the companies failed to follow last time, running
-// it again finishes them.
+// many companies changed. CompaniesBehindError says the option is removed but
+// some companies still have it; running it again finishes them.
 export async function removeOption(fieldKey: string, name: string, companies: PipelineEntry[]): Promise<number> {
   await changeSettings("No connection. The option wasn't removed.", (s) => {
     const o = optionsOf(s, fieldKey).find((x) => x.name === name);
@@ -286,7 +309,7 @@ export async function removeOption(fieldKey: string, name: string, companies: Pi
     if (o.role) throw new SettingsError("locked", lockedMessage(o));
     s.options[fieldKey] = optionsOf(s, fieldKey).filter((x) => x !== o);
   });
-  return replaceFieldValue(companies, fieldKey, name, undefined);
+  return companiesFollow(() => replaceFieldValue(companies, fieldKey, name, undefined));
 }
 
 function findField(s: CompanySettings, group: CompanyGroup, key: string): CompanyField {

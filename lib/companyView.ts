@@ -8,6 +8,7 @@ import {
   defaultCompanySort,
   filterCompanies,
   matchesCompanySearch,
+  NO_VALUE,
   sortCompanies,
   type CompanyGroup,
   type CompanySortDir,
@@ -135,7 +136,7 @@ export function narrowedBeyondSearch(state: CompanyViewState, fields: CompanyFie
 
 // "-" is a company with no value, and its filter says "None".
 export function filterValueLabel(value: string): string {
-  return value === "-" ? "None" : value;
+  return value === NO_VALUE ? "None" : value;
 }
 
 /* ---------- Sort ---------- */
@@ -213,7 +214,7 @@ export function listCompanies(
   const narrowed = filterCompanies(scoped, appliedFilters(state, fields), today);
   const sort = effectiveSort(state, fields);
   const field = fields.find((f) => f.key === sort.key);
-  const order = field?.type === "choice" && sort.key !== "priority" ? settings.options[sort.key]?.map((o) => o.name) : undefined;
+  const order = field?.type === "choice" ? settings.options[sort.key]?.map((o) => o.name) : undefined; // priority too
   const sorted = sortCompanies(narrowed, sort.key, sort.dir, { numeric: field?.type === "number", today, order });
   const q = state.q.trim();
   const elsewhere = q

@@ -123,9 +123,15 @@ interface TimelineInput {
   person: string | null;
   companies: CompaniesById;
   columnWidth: number;
+  listHref?: string; // where the chips link: All tasks, or narrowed to the Work filter's kind or task group
 }
 
-export function timelineOf({ tasks, events, from, today, rows, person, companies, columnWidth }: TimelineInput): Timeline {
+// A chip's link: the list it narrows, with the due filter on top.
+function dueHref(listHref: string, due: "overdue" | "nodate"): string {
+  return `${listHref}${listHref.includes("?") ? "&" : "?"}due=${due}`;
+}
+
+export function timelineOf({ tasks, events, from, today, rows, person, companies, columnWidth, listHref = "/tasks" }: TimelineInput): Timeline {
   const days = daysFrom(from, TIMELINE_DAYS);
   const last = TIMELINE_DAYS - 1;
   const index = (iso: string) => daysBetween(from, iso);
@@ -205,11 +211,11 @@ export function timelineOf({ tasks, events, from, today, rows, person, companies
       insights.push({ key: "quiet", tone: "calm", lead: "Quiet stretch: ", bold: `${shortDate(quiet.start, today)} to ${shortDate(quiet.end, today)}`, tail: ", nothing due" });
     }
     if (before) {
-      insights.push({ key: "before", tone: "red", lead: "", bold: plural(before, "overdue task"), tail: ` ended before ${shortDate(from, today)}`, href: "/tasks?due=overdue" });
+      insights.push({ key: "before", tone: "red", lead: "", bold: plural(before, "overdue task"), tail: ` ended before ${shortDate(from, today)}`, href: dueHref(listHref, "overdue") });
     }
     if (undated) {
       const many = undated !== 1;
-      insights.push({ key: "undated", tone: "plain", lead: "", bold: plural(undated, "task"), tail: ` ${many ? "have" : "has"} no dates, so ${many ? "they aren't" : "it isn't"} shown`, href: "/tasks?due=nodate" });
+      insights.push({ key: "undated", tone: "plain", lead: "", bold: plural(undated, "task"), tail: ` ${many ? "have" : "has"} no dates, so ${many ? "they aren't" : "it isn't"} shown`, href: dueHref(listHref, "nodate") });
     }
   }
 

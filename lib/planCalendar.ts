@@ -2,7 +2,7 @@
 // tasks split into deadline, starting and under way, with the day it first lands on. Pure, so every count and every
 // wording is tested. Open tasks only: the caller leaves finished ones out.
 import type { CalendarEvent } from "./calendarEvents";
-import { addDays, daysBetween, isoOf, isWeekend, longDayLabel, parseIso } from "./dates";
+import { addDays, daysBetween, isIsoDay, isoOf, isWeekend, longDayLabel, parseIso } from "./dates";
 import { datesOf } from "./planTimeline";
 import { weekStart, type PlanState } from "./planView";
 import { eventOnDay, eventsOnDay } from "./today";
@@ -14,6 +14,11 @@ export const CALENDAR_WINDOW_DAYS = 70;
 
 export function monthWindow(month: string): { start: string; days: number } {
   return { start: weekStart(`${month}-01`), days: CALENDAR_WINDOW_DAYS };
+}
+
+// Whether a run of events reaches a day.
+export function windowHas(window: { start: string; days: number }, iso: string): boolean {
+  return window.start <= iso && iso < addDays(window.start, window.days);
 }
 
 // The days of events Plan asks the calendar for, whichever view is open.
@@ -77,13 +82,31 @@ export function somethingOn(tasks: Task[], events: CalendarEvent[] | null, iso: 
 
 const SEARCH_DAYS = 400;
 
-// The next (or previous) day, from one on, that has a task running or an event.
+// The next (or previous) day, from one on and within 400 days, that has a task running or an event. Each task and event
+// is a run of days (a task with no deadline runs on), so the nearest day of each run is worked out, not looked for day by day.
 export function dayWithSomething(tasks: Task[], events: CalendarEvent[] | null, from: string, dir: -1 | 1): string | null {
-  for (let i = 1; i <= SEARCH_DAYS; i++) {
-    const iso = addDays(from, i * dir);
-    if (somethingOn(tasks, events, iso)) return iso;
+  const first = addDays(from, dir);
+  const limit = addDays(from, SEARCH_DAYS * dir);
+  const runs: { start: string; end: string | null }[] = [];
+  for (const task of tasks) {
+    const { start, end } = datesOf(task);
+    if (start ?? end) runs.push({ start: (start ?? end)!, end });
   }
-  return null;
+  for (const e of events ?? []) runs.push({ start: e.start, end: e.end });
+  let best: string | null = null;
+  for (const { start, end } of runs) {
+    let day: string | null;
+    if (dir === 1) day = end === null || end >= first ? (start > first ? start : first) : null;
+    else day = start <= first ? (end !== null && end < first ? end : first) : null;
+    if (!day || (dir === 1 ? day > limit : day < limit)) continue;
+    if (!best || (dir === 1 ? day < best : day > best)) best = day;
+  }
+  return best;
+}
+
+// A day typed in the date picker: a real day, and a whole year (typing "2027" passes through "0002" and "0020").
+export function isPickedDay(value: string): boolean {
+  return isIsoDay(value) && Number(value.slice(0, 4)) >= 1900;
 }
 
 // The first look at Day (D5): today if anything is happening, or else the next day that has something, with a note.

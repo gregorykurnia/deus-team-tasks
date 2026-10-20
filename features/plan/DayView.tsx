@@ -3,11 +3,11 @@
 // The Day view (guide 4.12, 6.4): the date and what's on it, a date picker, the week strip, then the day's lists. The
 // first look lands on today if anything is happening there, or else on the next day with something, with a note and
 // "Show today" (D5). A date in the address (a link from Today's chart, the timeline or the strip) always wins.
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { parseIso } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
-import { dayHeading, dayListsOf, daySummary, dayWithSomething, relativeDay, weekStrip } from "@/lib/planCalendar";
-import { workLabel, type PlanState } from "@/lib/planView";
+import { dayHeading, dayListsOf, daySummary, dayWithSomething, isPickedDay, relativeDay, weekStrip } from "@/lib/planCalendar";
+import { whoWords, type PlanState } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 import type { EventsState } from "@/lib/useCalendarEvents";
 import Button from "@/ui/Button";
@@ -49,7 +49,9 @@ export default function DayView(props: DayViewProps) {
   const next = useMemo(() => dayWithSomething(tasks, eventList, iso, 1), [tasks, eventList, iso]);
 
   const summary = loading ? "" : daySummary(lists);
-  const who = state.person ? ` for ${state.person}` : state.kind || state.group ? ` in ${workLabel(state)!.toLowerCase()}${state.kind ? " work" : ""}` : "";
+  const who = whoWords(state);
+  // What's typed in the date picker until it is a whole day: a year typed digit by digit isn't a day to go to yet.
+  const [typed, setTyped] = useState<string | null>(null);
   const tag = relativeDay(iso, today);
 
   return (
@@ -67,7 +69,19 @@ export default function DayView(props: DayViewProps) {
           <label className={styles.picker}>
             <span className="sr-only">Go to a date</span>
             <Icon name="cal" size={16} />
-            <input type="date" value={iso} aria-label="Go to a date" onChange={(e) => e.target.value && props.onDate(e.target.value)} />
+            <input
+              type="date"
+              value={typed ?? iso}
+              aria-label="Go to a date"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (isPickedDay(value)) {
+                  setTyped(null);
+                  props.onDate(value);
+                } else setTyped(value);
+              }}
+              onBlur={() => setTyped(null)}
+            />
           </label>
         </div>
         <div className={styles.strip} role="group" aria-label="Days of this week">

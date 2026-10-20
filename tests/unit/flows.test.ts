@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  replayable,
   addDecision,
+  applyChange,
   addStep,
   blankStep,
   changedParts,
@@ -18,12 +20,17 @@ import {
   restoreOutcome,
   restoreRole,
   restoreStep,
+  roleKey,
+  roleRef,
   sameContent,
+  sameFlowContent,
   searchFlows,
   setLoop,
   sortFlows,
   textAt,
+  withRoleIds,
   withText,
+  type Role,
 } from "@/lib/flows";
 import type { Flow } from "@/lib/types";
 
@@ -64,6 +71,12 @@ describe("the list", () => {
     expect(searchFlows(flows, "accept").map((f) => f.id)).toEqual(["a"]);
     expect(searchFlows(flows, "RENEW").map((f) => f.id)).toEqual(["b"]);
     expect(searchFlows(flows, "  ")).toHaveLength(2);
+  });
+
+  it("doesn't search an outcome's old label, which isn't shown anywhere", () => {
+    const f = flow("a");
+    const old = { ...f, decision: { ...f.decision!, branches: f.decision!.branches.map((o) => ({ ...o, label: "Hidden words" })) } };
+    expect(searchFlows([old], "hidden words")).toEqual([]);
   });
 
   it("sums a flow up", () => {
@@ -128,6 +141,29 @@ describe("roles", () => {
     expect(removed.steps[0].roles.map((r) => r.label)).toEqual(["B"]);
     expect(restoreRole(removed, "s1", 0, { label: "A", names: [] }).steps[0].roles.map((r) => r.label)).toEqual(["A", "B"]);
   });
+
+  it("Undo after a removal that wasn't saved leaves the role alone, instead of adding it twice", () => {
+    const f = flow("a", { steps: [{ id: "s1", title: "", description: "", roles: [{ label: "A", names: ["Ana"] }, { label: "B", names: [] }] }] });
+    expect(restoreRole(f, "s1", 0, { label: "A", names: ["Ana"] }).steps[0].roles.map((r) => r.label)).toEqual(["A", "B"]);
+    const named = withRoleIds(f);
+    const a = named.steps[0].roles[0] as Role;
+    expect(restoreRole(named, "s1", 0, a).steps[0].roles).toHaveLength(2);
+    expect(restoreRole(removeRole(named, "s1", a.id!), "s1", 0, a).steps[0].roles.map((r) => r.label)).toEqual(["A", "B"]);
+  });
+
+  it("are named by ref, so typing stays with its role when a colleague removes an earlier one", () => {
+    const f = flow("a", { steps: [{ id: "s1", title: "", description: "", roles: [{ label: "A", names: [] }, { label: "B", names: [] }, { label: "C", names: [] }] }] });
+    // Stored without ids: each ref is the id the role gets when the flow is next saved.
+    const ref = roleRef("s1", f.steps[0].roles[1], 1);
+    const named = withRoleIds(f);
+    expect(roleRef("s1", named.steps[0].roles[1], 1)).toBe(ref);
+    expect(withRoleIds(named)).toBe(named);
+    // A colleague removes A: the key still names B.
+    const theirs = removeRole(named, "s1", roleRef("s1", named.steps[0].roles[0], 0));
+    expect(textAt(theirs, roleKey("s1", ref))).toBe("B");
+    expect(withText(theirs, roleKey("s1", ref), "Approves").steps[0].roles.map((r) => r.label)).toEqual(["Approves", "C"]);
+    expect(textAt(theirs, roleKey("s1", "gone"))).toBeUndefined();
+  });
 });
 
 describe("the decision", () => {
@@ -174,11 +210,41 @@ describe("saving", () => {
     expect(sameContent({ a: 1, b: { c: 2, d: undefined } }, { b: { c: 2 }, a: 1 })).toBe(true);
   });
 
-  it("finds what a colleague changed", () => {
+  it("makes each change on the newest version, so two people editing different steps both keep their edit", () => {
+    const base = flow("a");
+    const mine = (f: Flow) => withText(f, "s1.title", "Mine");
+    const theirs = (f: Flow) => withText(f, "s2.title", "Theirs");
+    const stored = applyChange(applyChange(base, theirs).flow, mine).flow;
+    expect(stored.steps.map((s) => s.title)).toEqual(["Mine", "Theirs", "Kick-off call"]);
+  });
+
+  it("doesn't write when the change changes nothing, even if roles still need their ids", () => {
     const f = flow("a");
+    expect(applyChange(f, (x) => x).patch).toEqual({});
+    expect(applyChange(f, (x) => withText(x, "name", f.name)).patch).toEqual({});
+    const { patch } = applyChange(f, (x) => withText(x, "s1.title", "Sign it"));
+    expect((patch.steps![0].roles[0] as Role).id).toBe("s1-r0");
+  });
+
+  it("finds what a colleague changed, ids aside", () => {
+    const f = flow("a");
+    expect(changedParts(f, withRoleIds(f))).toEqual([]);
+    expect(sameFlowContent(withRoleIds(f), { ...f, decision: f.decision ?? null })).toBe(true);
     expect(changedParts(f, withText(f, "s2.title", "Accounts"))).toEqual(["s2"]);
     expect(changedParts(f, withText(f, "name", "Renamed"))).toEqual(["head"]);
     expect(changedParts(f, withText(f, "decision.label", "Ready?"))).toEqual(["decision"]);
     expect(changedParts(f, f)).toEqual([]);
+  });
+});
+
+describe("a change run again", () => {
+  it("names the parts it adds the same way each time, so typing into them finds them in the stored flow (R3)", () => {
+    const flow = { id: "f", name: "F", description: "", order: 1, steps: [blankStep()], decision: null };
+    const change = replayable(addDecision);
+    const here = change(flow);
+    const stored = change(structuredClone(flow));
+    expect(stored.decision?.branches.map((b) => b.id)).toEqual(here.decision?.branches.map((b) => b.id));
+    const other = addDecision(flow);
+    expect(other.decision?.branches[0].id).not.toBe(here.decision?.branches[0].id);
   });
 });

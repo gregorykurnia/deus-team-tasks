@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFlows, useTasks } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
+import { ConnectionBanner } from "@/desk/ConnectionBanner";
 import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import { failureMessage, useConnection } from "@/lib/connection";
@@ -247,7 +248,10 @@ export default function FlowsScreen() {
 
   return (
     <>
-      {!hideHeader && (
+      {/* A flow open full screen on a phone has no header, but the no-connection banner stays. */}
+      {hideHeader ? (
+        <ConnectionBanner />
+      ) : (
         <PageHeader
           title="Flows"
           subtitle={settled || flows.rows.length ? plural(flows.rows.length, "flow") : undefined}

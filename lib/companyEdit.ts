@@ -230,6 +230,20 @@ export function deleteWording(tasks: { total: number; open: number }, hasNotes: 
   return parts.join(" ");
 }
 
+type SourceState = { loading: boolean; fromCache: boolean; error: Error | null };
+
+// Why Delete company can't be pressed yet, or null when it can. Deleting turns every task of the company into internal
+// work and its notes into notes not tracked yet, so both have to be as the server has them, or some would be missed.
+export function deleteBlocked(tasks: SourceState, notes: SourceState, online: boolean): string | null {
+  if (!online) return "Deleting needs a connection.";
+  if (tasks.error || notes.error) {
+    const what = tasks.error && notes.error ? "tasks and qualification notes" : tasks.error ? "tasks" : "qualification notes";
+    return `Couldn’t load its ${what}, so it can’t be deleted yet. Reload the page.`;
+  }
+  if (tasks.loading || tasks.fromCache || notes.loading || notes.fromCache) return "Its tasks and qualification notes are still loading.";
+  return null;
+}
+
 /* ---------- New company (B1, B3, 5.5) ---------- */
 
 // The fields the new company sheet asks for: what the group's list shows, and the contact person.

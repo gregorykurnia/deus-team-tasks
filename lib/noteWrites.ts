@@ -55,7 +55,6 @@ export async function saveNotes(id: string, patch: Partial<Omit<ProspectJournalE
   await setDoc(notesRef(id), { ...patch, updatedAt: Date.now() }, { merge: true });
 }
 
-// Links notes for someone not tracked yet to a tracked company (U6). Returns the undo, which unlinks them again.
 // Saves what was written into notes that are there, and never brings deleted notes back as a half-empty set. With no
 // connection the change waits on the device and saves once it's back (D-014), so the promise only settles then.
 export async function writeNotes(id: string, patch: Partial<Omit<ProspectJournalEntry, "id" | "pipelineEntryId">>): Promise<void> {
@@ -68,17 +67,20 @@ export function watchNotesPending(id: string, onChange: (pending: boolean) => vo
     notesRef(id),
     { includeMetadataChanges: true },
     (snap) => onChange(snap.metadata.hasPendingWrites),
+    // The listener closed: the writes' own failures tell if they didn't save.
     () => onChange(false)
   );
 }
 
+// Links notes for someone not tracked yet to a tracked company (U6). Returns the undo, which unlinks them again.
+// Both fail on notes deleted meanwhile, rather than bringing them back as a half-empty set.
 export async function linkNotes(entry: ProspectJournalEntry, c: PipelineEntry): Promise<() => Promise<void>> {
   assertOnline("No connection. The notes weren’t linked.");
   const name = entry.prospectName;
-  await saveNotes(entry.id, { pipelineEntryId: c.id, prospectName: name || c.company });
+  await updateDoc(notesRef(entry.id), { pipelineEntryId: c.id, prospectName: name || c.company, updatedAt: Date.now() });
   return async () => {
     assertOnline("No connection. The notes are still linked.");
-    await setDoc(notesRef(entry.id), { pipelineEntryId: deleteField(), prospectName: name, updatedAt: Date.now() }, { merge: true });
+    await updateDoc(notesRef(entry.id), { pipelineEntryId: deleteField(), prospectName: name, updatedAt: Date.now() });
   };
 }
 

@@ -1,6 +1,7 @@
 // Flows (task 3.14, guide 6.8, 4.16, D-018): reading a flow with its loop back, editing in place (text saves as you
 // write and keeps every key typed fast, steps, roles, the decision and its outcomes), Undo for removed parts, search,
-// new flow, delete, and read only with no connection. Each checks the stored data as well as the screen.
+// new flow, delete, read only with no connection (typing kept when it goes), and a colleague's change landing while
+// typing. Each checks the stored data as well as the screen.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { flow, seedFlows, storedById, seedTasks, task } from "./data";
@@ -12,7 +13,7 @@ const list = (page: Page) => page.getByRole("region", { name: "Flows" });
 // Writes wait for the connection (N4): a test that writes first waits until the app is live.
 const waitUntilLive = (page: Page) => expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
 
-type Stored = { steps: { id: string; title: string; description: string; roles: { label: string; names: string[] }[] }[]; decision: { label: string; branches: { id: string; tone: string; title: string; loopTo?: string }[] } | null; name: string; updatedAt?: number };
+type Stored = { description: string; steps: { id: string; title: string; description: string; roles: { label: string; names: string[] }[] }[]; decision: { label: string; branches: { id: string; tone: string; title: string; loopTo?: string }[] } | null; name: string; updatedAt?: number };
 const read = async (id: string) => (await storedFlow(id)) as unknown as Stored | undefined;
 
 const onboarding = flow("onboarding", {
@@ -91,13 +92,28 @@ test("M4: a new flow needs a name, then opens in editing with its first step rea
 
   const title = doc(page).getByRole("textbox", { name: "Step 1 title" });
   await expect(title).toBeFocused();
-  // Typed fast, with saves landing while typing: no key is dropped (R1).
-  await title.pressSequentially("Check the invoice against the order", { delay: 15 });
+  // Typed fast, with a pause past 0.8s that saves mid-string, then more typing while a colleague's change to the same
+  // flow arrives: no key is dropped (R1), and the colleague's change is kept and shown.
+  await title.pressSequentially("Check the invoice", { delay: 15 });
   await expect(doc(page).getByText("Saving…")).toBeVisible();
+  await expect.poll(async () => (await read(id))?.steps[0]?.title).toBe("Check the invoice");
+  const colleague = (async () => {
+    await page.waitForTimeout(120);
+    await seedFlows([{ ...(await storedFlow(id))!, description: "Paid within 30 days." } as unknown as ReturnType<typeof flow>]);
+  })();
+  await title.pressSequentially(" against the order", { delay: 40 });
+  await colleague;
+  await expect(doc(page).getByText("Changed just now")).toBeVisible();
+  await expect(doc(page).getByRole("textbox", { name: "Flow description" })).toHaveValue("Paid within 30 days.");
   await expect(doc(page).getByText("Saved", { exact: true })).toBeVisible();
   await expect(title).toHaveValue("Check the invoice against the order");
   await expect.poll(async () => (await read(id))?.steps[0]?.title).toBe("Check the invoice against the order");
-  expect(await read(id)).toMatchObject({ name: "Supplier payments", steps: [{ roles: [{ label: "Responsible", names: [] }] }], decision: null });
+  expect(await read(id)).toMatchObject({
+    name: "Supplier payments",
+    description: "Paid within 30 days.",
+    steps: [{ roles: [{ label: "Responsible", names: [] }] }],
+    decision: null,
+  });
 
   // Leaving a field saves at once.
   await doc(page).getByRole("textbox", { name: "Step 1 description" }).fill("Match amounts and dates.");
@@ -148,12 +164,38 @@ test("M2: a role gets a label from the ones in use and people from the names in 
   await page.getByRole("option", { name: /Citra Dewi/ }).click();
   await people.fill("Dimas");
   await people.press("Enter");
-  await expect.poll(async () => (await read("onboarding"))?.steps[2].roles).toEqual([{ label: "Consulted", names: ["Citra Dewi", "Dimas"] }]);
+  await expect.poll(async () => (await read("onboarding"))?.steps[2].roles).toMatchObject([{ label: "Consulted", names: ["Citra Dewi", "Dimas"] }]);
 
   await step3.getByRole("button", { name: "Remove Consulted" }).click();
   await expect.poll(async () => (await read("onboarding"))?.steps[2].roles).toEqual([]);
   await toasts(page).getByRole("button", { name: "Undo" }).click();
   await expect.poll(async () => (await read("onboarding"))?.steps[2].roles.length).toBe(1);
+});
+
+test("M2: what's typed in a role stays with it when a colleague removes an earlier role", async ({ page }) => {
+  const roles = [
+    { label: "Responsible", names: ["Ana Putri"] },
+    { label: "Consulted", names: ["Budi"] },
+    { label: "Informed", names: [] },
+  ];
+  await seedFlows([flow("roles", { name: "Approvals", steps: [{ id: "s1", title: "Approve", description: "", roles }] })]);
+  await page.goto("/flows/roles?edit=1");
+  await waitUntilLive(page);
+  const second = doc(page).getByRole("combobox", { name: "Role 2 in step 1" });
+  await second.fill("Approves");
+  await doc(page).getByRole("textbox", { name: "Flow name" }).focus();
+  await expect.poll(async () => (await read("roles"))?.steps[0].roles.map((r) => r.label)).toEqual(["Responsible", "Approves", "Informed"]);
+  // Still being written in when a colleague removes the first role (keeping the ids the roles got on that save).
+  await second.fill("Approves the budget");
+  const now = (await storedFlow("roles"))!;
+  const steps = (now.steps as Stored["steps"]).map((st) => ({ ...st, roles: st.roles.slice(1) }));
+  await seedFlows([{ ...now, steps } as unknown as ReturnType<typeof flow>]);
+  const first = doc(page).getByRole("combobox", { name: "Role 1 in step 1" });
+  await expect(first).toHaveValue("Approves the budget");
+  await expect(first).toBeFocused();
+  await expect(doc(page).getByRole("combobox", { name: "Role 2 in step 1" })).toHaveValue("Informed");
+  await doc(page).getByRole("textbox", { name: "Flow name" }).focus();
+  await expect.poll(async () => (await read("roles"))?.steps[0].roles.map((r) => r.label)).toEqual(["Approves the budget", "Informed"]);
 });
 
 test("M3: a decision starts with a good and a bad outcome; outcomes change tone, loop back and are removed with Undo", async ({ page }) => {
@@ -192,6 +234,23 @@ test("A3, D-018: with no connection a flow stays readable and editing waits", as
   await expect(doc(page).getByText("Sign the contract")).toBeVisible();
   await context.setOffline(false);
   await expect(doc(page).getByRole("button", { name: "Edit flow" })).toBeVisible({ timeout: 30_000 });
+});
+
+test("A3, D-018: typing kept when the connection goes while editing stays, read only, and saves once it's back", async ({ page, context }) => {
+  await seedAll();
+  await page.goto("/flows/onboarding?edit=1");
+  await waitUntilLive(page);
+  const title = doc(page).getByRole("textbox", { name: "Step 3 title" });
+  await title.fill("Kick-off call with the sponsor");
+  await context.setOffline(true);
+  await expect(doc(page).getByText("Not saved yet. Saves when you’re back online.")).toBeVisible({ timeout: 15_000 });
+  await expect(title).toBeDisabled();
+  await expect(title).toHaveValue("Kick-off call with the sponsor");
+  expect((await read("onboarding"))?.steps[2].title).toBe("Kick-off call");
+  await context.setOffline(false);
+  await expect.poll(async () => (await read("onboarding"))?.steps[2].title, { timeout: 30_000 }).toBe("Kick-off call with the sponsor");
+  await expect(doc(page).getByText("Saved", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(title).toBeEnabled();
 });
 
 test("M4: deleting a flow asks first and says what goes", async ({ page }) => {

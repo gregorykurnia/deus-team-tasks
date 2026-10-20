@@ -70,6 +70,15 @@ describe("task writes", () => {
     await undo();
     expect(await readFields("tasks", "tasks/int")).toMatchObject({ taskGroup: "Old" });
   });
+
+  it("leaves out a task deleted meanwhile, so the rest of its batch still saves", async () => {
+    const tasks = [asTask("a"), asTask("gone"), asTask("b")];
+    await seedTasks([tasks[0], tasks[2]]);
+    const undo = await setTasksDone(tasks, true, (id) => id !== "gone");
+    expect((await readAll("tasks", "tasks")).map((t) => [t.id, t.completed])).toEqual([["a", true], ["b", true]]);
+    await undo();
+    expect((await readAll("tasks", "tasks")).map((t) => t.completed)).toEqual([false, false]);
+  });
 });
 
 describe("task group writes", () => {

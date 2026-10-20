@@ -609,7 +609,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 8px 6px;
     margin: 0 4px;
     padding: 12px 44px 12px 62px;
   }
@@ -629,14 +629,23 @@
     left: 12px;
   }
 
+  /* Each detail is a tap target (guide 5.13): 32px tall, and an invisible 4px above and below makes it 40px. The 8px
+     between lines of details keeps those from overlapping. */
   .cell {
     flex: none;
     max-width: 100%;
-    min-height: 0;
+    min-width: 40px;
+    min-height: 32px;
     margin: 0;
     padding: 2px 4px;
     gap: 5px;
     font-size: var(--t-label);
+  }
+
+  .cell::after {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
   }
 
   .rowMenu {

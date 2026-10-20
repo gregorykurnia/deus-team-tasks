@@ -1,8 +1,8 @@
 // Every task write goes through here. A field set to undefined is cleared with
 // deleteField(), the document id is never stored as a field, finishing a task
 // records when (completedAt), and nothing is written with no connection.
-import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc } from "firebase/firestore";
-import { commitInChunks } from "./batches";
+import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
+import { commitEach, PartlyCommitted } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { kindOf, type CompaniesById } from "./kinds";
@@ -54,33 +54,72 @@ export async function deleteTask(id: string): Promise<void> {
   await deleteDoc(doc(db, TASKS, id));
 }
 
-export async function deleteTasks(ids: string[]): Promise<void> {
+// A change to many tasks that stopped part way, when a batch after the first failed (lib/batches): `changed` were
+// saved, `left` weren't, and `undo` puts back the ones that were (null for a delete, which has no Undo).
+export class PartlyChanged extends Error {
+  constructor(
+    readonly changed: number,
+    readonly left: number,
+    readonly undo: Undo | null,
+    cause: unknown
+  ) {
+    super(`${changed} of ${changed + left} tasks were changed`, { cause });
+    this.name = "PartlyChanged";
+  }
+}
+
+// Whether a task is still there just before its batch goes (the live list's ids), so one a colleague deleted meanwhile
+// is left out rather than failing the batch it's in. Without it every task is written.
+export type StillThere = (id: string) => boolean;
+
+// One write per task in batches of 450. A stop part way throws PartlyChanged, with Undo for what was saved when given.
+async function writeEach<T extends { id: string }>(
+  tasks: T[],
+  write: (batch: WriteBatch, t: T) => void,
+  present?: StillThere,
+  undoFor?: (written: T[]) => Undo
+): Promise<T[]> {
+  try {
+    return await commitEach(db, tasks, write, present && ((t) => present(t.id)));
+  } catch (err) {
+    if (!(err instanceof PartlyCommitted)) throw err;
+    const { done, left } = err as PartlyCommitted<T>;
+    throw new PartlyChanged(done.length, left.length, undoFor ? undoFor(done) : null, err.cause);
+  }
+}
+
+export async function deleteTasks(ids: string[], present?: StillThere): Promise<void> {
   assertOnline("No connection. The tasks weren't deleted.");
-  await commitInChunks(
-    db,
-    ids.map((id) => (batch) => batch.delete(doc(db, TASKS, id)))
+  await writeEach(
+    ids.map((id) => ({ id })),
+    (batch, t) => batch.delete(doc(db, TASKS, t.id)),
+    present
   );
 }
 
 // Mark done or not done, with Undo that puts each task back as it was.
-export async function setTasksDone(tasks: Task[], done: boolean): Promise<Undo> {
+export async function setTasksDone(tasks: Task[], done: boolean, present?: StillThere): Promise<Undo> {
   assertOnline(`No connection. The ${tasks.length === 1 ? "task wasn't" : "tasks weren't"} marked ${done ? "done" : "not done"}.`);
   const changed = tasks.filter((t) => !!t.completed !== done);
   const now = Date.now();
-  await commitInChunks(
-    db,
-    changed.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate(withCompletedAt({ completed: done }, t, now))))
+  const undoFor = (written: Task[]) => () => putBackDone(written, present);
+  const written = await writeEach(
+    changed,
+    (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate(withCompletedAt({ completed: done }, t, now))),
+    present,
+    undoFor
   );
-  return () => putBackDone(changed);
+  return undoFor(written);
 }
 
 // Undo for marking done or not done: each task back to done or not as it was
 // (pass them as they were), with its finished date.
-export async function putBackDone(tasks: Task[]): Promise<void> {
+export async function putBackDone(tasks: Task[], present?: StillThere): Promise<void> {
   assertOnline("No connection. The change wasn't undone.");
-  await commitInChunks(
-    db,
-    tasks.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt })))
+  await writeEach(
+    tasks,
+    (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt })),
+    present
   );
 }
 
@@ -89,24 +128,16 @@ export async function putBackDone(tasks: Task[]): Promise<void> {
 export async function moveTasksToGroup(
   tasks: Task[],
   group: string | null,
-  companies: CompaniesById
+  companies: CompaniesById,
+  present?: StillThere
 ): Promise<{ moved: number; skipped: number; undo: Undo }> {
   assertOnline("No connection. The tasks weren't moved.");
   const internal = tasks.filter((t) => kindOf(t, companies) === "internal");
   const moving = internal.filter((t) => (t.taskGroup ?? null) !== group);
-  await commitInChunks(
-    db,
-    moving.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: group ?? undefined })))
-  );
-  return {
-    moved: moving.length,
-    skipped: tasks.length - internal.length,
-    undo: async () => {
-      assertOnline("No connection. The change wasn't undone.");
-      await commitInChunks(
-        db,
-        moving.map((t) => (batch) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: t.taskGroup })))
-      );
-    },
+  const undoFor = (written: Task[]) => async () => {
+    assertOnline("No connection. The change wasn't undone.");
+    await writeEach(written, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: t.taskGroup })), present);
   };
+  const written = await writeEach(moving, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: group ?? undefined })), present, undoFor);
+  return { moved: written.length, skipped: tasks.length - internal.length, undo: undoFor(written) };
 }

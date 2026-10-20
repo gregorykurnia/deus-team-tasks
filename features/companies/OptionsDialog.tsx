@@ -4,10 +4,11 @@
 // is changed in place and saved on Enter or on leaving it, and every company using it follows; the message says how
 // many. Removing asks first and says how many companies it's cleared from. The locked options (Deal done, Follow-up due,
 // and High, Not now and No: gap N9) say why, and only their colour changes. A new option is added with a colour.
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import {
   addOption,
+  CompaniesBehindError,
   LOCKED_DEPEND,
   lockReason,
   OPTION_COLOURS,
@@ -80,6 +81,25 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
   const newInput = useRef<HTMLInputElement>(null);
   const colours = usePending<OptionColour>();
 
+  // Try again runs later, maybe once the dialog is closed: it uses the companies as they are then.
+  const latest = useRef(companies);
+  useEffect(() => {
+    latest.current = companies;
+  });
+
+  // The option changed but some companies didn't follow (they show the old name, or still have it). Try again runs the
+  // same change, which finishes them, and says so; failing again offers Try again again.
+  function companiesBehind(message: string, retry: (companies: PipelineEntry[]) => Promise<number>, done: (n: number) => void) {
+    toast(`${message} Check your connection and try again.`, {
+      error: true,
+      action: "Try again",
+      onAction: () => void retry(latest.current).then(done, () => companiesBehind(message, retry, done)),
+    });
+  }
+
+  const renamedMessage = (n: number, name: string) => (n ? `Renamed. ${plural(n, "company", "companies")} now show “${name}”` : `Renamed to “${name}”`);
+  const removedMessage = (n: number, name: string) => (n ? `“${name}” removed and cleared from ${plural(n, "company", "companies")}` : `“${name}” removed`);
+
   const taken = (name: string, except?: string) => options.some((o) => o.name !== except && o.name.trim().toLowerCase() === name.toLowerCase());
 
   async function rename(o: ChoiceOption) {
@@ -98,9 +118,19 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
       setDrafts((now) => without(now, o.name)); // the settings have the new name by now: the companies follow after them
       if (error?.at === o.name) setError(null);
       onRenamed?.(field.key, o.name, name);
-      toast(n ? `Renamed. ${plural(n, "company", "companies")} now show “${name}”` : `Renamed to “${name}”`);
+      toast(renamedMessage(n, name));
     } catch (err) {
-      if (err instanceof SettingsError && err.problem === "taken") {
+      if (err instanceof CompaniesBehindError) {
+        // The option has its new name: only companies are left to follow.
+        setDrafts((now) => without(now, o.name));
+        if (error?.at === o.name) setError(null);
+        onRenamed?.(field.key, o.name, name);
+        companiesBehind(
+          `Renamed to “${name}”, but some companies still show “${o.name}”.`,
+          (now) => renameOption(field.key, o.name, name, now),
+          (n) => toast(renamedMessage(n, name))
+        );
+      } else if (err instanceof SettingsError && err.problem === "taken") {
         setError({ at: o.name, message: `There’s already an option called “${name}”.` });
       } else {
         setDrafts((now) => without(now, o.name));
@@ -157,10 +187,18 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
       const n = await removeOption(field.key, o.name, companies);
       onRemoved?.(field.key, o.name);
       setRemoving(null);
-      toast(n ? `“${o.name}” removed and cleared from ${plural(n, "company", "companies")}` : `“${o.name}” removed`);
+      toast(removedMessage(n, o.name));
     } catch (err) {
       setRemoving(null);
-      toast(failureMessage(err, "The option couldn’t be removed. Check your connection and try again."), { error: true });
+      if (err instanceof CompaniesBehindError) {
+        // The option is gone: only companies are left to follow.
+        onRemoved?.(field.key, o.name);
+        companiesBehind(
+          `“${o.name}” removed, but some companies still have it.`,
+          (now) => removeOption(field.key, o.name, now),
+          (n) => toast(removedMessage(n, o.name))
+        );
+      } else toast(failureMessage(err, "The option couldn’t be removed. Check your connection and try again."), { error: true });
     } finally {
       setRemoveBusy(false);
     }

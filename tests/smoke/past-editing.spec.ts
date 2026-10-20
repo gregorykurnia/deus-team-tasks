@@ -213,6 +213,23 @@ test("R8, 5.4: a parent with subsidiaries can't be deleted; a subsidiary and a c
   await expect.poll(async () => (await stored()).some((d) => d.id === "pelita")).toBe(false);
 });
 
+test("R8, 5.4: Undo never brings a subsidiary back under a parent company that's gone since (R3 review)", async ({ page }) => {
+  await seedAll();
+  await page.goto("/past");
+  await parent(page, "Nusa Retail").getByRole("button", { name: "Show the subsidiaries of Nusa Retail" }).click();
+  await more(page, "Nusa Outlet").click();
+  await menuItem(page, "Delete subsidiary").click();
+  await page.getByRole("alertdialog", { name: "Delete Nusa Outlet?" }).getByRole("button", { name: "Delete subsidiary" }).click();
+  await expect(toasts(page).getByText("Nusa Outlet deleted")).toBeVisible();
+  await more(page, "Nusa Retail").click();
+  await menuItem(page, "Delete company").click();
+  await page.getByRole("alertdialog", { name: "Delete Nusa Retail?" }).getByRole("button", { name: "Delete company" }).click();
+  await expect.poll(async () => (await stored()).some((d) => d.id === "nusa")).toBe(false);
+  await toasts(page).filter({ hasText: "Nusa Outlet deleted" }).getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Nusa Outlet can’t come back: Nusa Retail isn’t there any more.")).toBeVisible();
+  expect((await stored()).some((d) => d.id === "nusa-1")).toBe(false);
+});
+
 test("R9: offline, adding keeps what was typed and says so, and Try again adds it once back; a change in place offers Try again", async ({ page, context }) => {
   await seedAll();
   await page.goto("/past");

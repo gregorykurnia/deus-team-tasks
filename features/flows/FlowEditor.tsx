@@ -11,6 +11,7 @@ import {
   addRole,
   addStep,
   blankOutcome,
+  blankRole,
   blankStep,
   moveRole,
   moveStep,
@@ -23,6 +24,7 @@ import {
   restoreRole,
   restoreStep,
   roleKey,
+  roleRef,
   ROLE_LABELS,
   setLoop,
   setRoleNames,
@@ -331,24 +333,26 @@ interface RolesEditorProps {
   then: (id: string) => void;
 }
 
+// Each role is named by its ref, not its place, so what's typed in it stays with it when a colleague adds, moves or
+// removes another.
 function RolesEditor({ part, partName, editing, labels, names, then }: RolesEditorProps) {
   const toast = useToast();
   const flowId = editing.shown.id;
-  const roleId = (i: number) => fieldId(flowId, roleKey(part.id, i));
 
   return (
     <div className={styles.editRoles}>
       {part.roles.map((r, i) => {
-        const key = roleKey(part.id, i);
+        const ref = roleRef(part.id, r, i);
+        const key = roleKey(part.id, ref);
         const typed = editing.text(key);
         const q = typed.trim().toLowerCase();
         const offered = labels.filter((l) => l.toLowerCase() !== q && (!q || l.toLowerCase().includes(q))).slice(0, 7);
         const label = r.label.trim() || "this role";
         return (
-          <div key={i} className={styles.editRole}>
+          <div key={ref} className={styles.editRole}>
             <div className={styles.editRoleLabel} onFocus={() => editing.focus(key)} onBlur={() => editing.blur(key)}>
               <Combobox
-                id={roleId(i)}
+                id={fieldId(flowId, key)}
                 aria-label={`Role ${i + 1} in ${partName}`}
                 placeholder="Role, like “Responsible”"
                 text={typed}
@@ -365,18 +369,18 @@ function RolesEditor({ part, partName, editing, labels, names, then }: RolesEdit
                 placeholder="Type a name"
                 value={r.names}
                 suggestions={names}
-                onChange={(next) => editing.change((x) => setRoleNames(x, part.id, i, next))}
+                onChange={(next) => editing.change((x) => setRoleNames(x, part.id, ref, next))}
               />
             </div>
             <div className={styles.roleActs}>
-              <Button variant="icon" aria-label={`Move ${label} up`} disabled={i === 0} onClick={() => editing.change((x) => moveRole(x, part.id, i, -1))}>
+              <Button variant="icon" aria-label={`Move ${label} up`} disabled={i === 0} onClick={() => editing.change((x) => moveRole(x, part.id, ref, -1))}>
                 <Icon name="up" size={15} />
               </Button>
               <Button
                 variant="icon"
                 aria-label={`Move ${label} down`}
                 disabled={i === part.roles.length - 1}
-                onClick={() => editing.change((x) => moveRole(x, part.id, i, 1))}
+                onClick={() => editing.change((x) => moveRole(x, part.id, ref, 1))}
               >
                 <Icon name="down" size={15} />
               </Button>
@@ -384,10 +388,10 @@ function RolesEditor({ part, partName, editing, labels, names, then }: RolesEdit
                 variant="icon"
                 aria-label={`Remove ${label}`}
                 onClick={() => {
-                  editing.change((x) => removeRole(x, part.id, i));
+                  editing.change((x) => removeRole(x, part.id, ref));
                   toast(r.label.trim() ? `Role “${r.label.trim()}” removed` : "Role removed", {
                     action: "Undo",
-                    onAction: () => editing.change((x) => restoreRole(x, part.id, i, r)),
+                    onAction: () => editing.change((x) => restoreRole(x, part.id, i, { ...r, id: ref })),
                   });
                 }}
               >
@@ -402,8 +406,9 @@ function RolesEditor({ part, partName, editing, labels, names, then }: RolesEdit
           variant="quiet"
           small
           onClick={() => {
-            then(roleId(part.roles.length));
-            editing.change((x) => addRole(x, part.id));
+            const role = blankRole();
+            then(fieldId(flowId, roleKey(part.id, role.id!)));
+            editing.change((x) => addRole(x, part.id, role));
           }}
         >
           <Icon name="plus" size={15} />

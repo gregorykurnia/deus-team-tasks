@@ -12,6 +12,7 @@ import { normalizeSectorKey } from "@/lib/historicalClientTypes";
 import {
   addPastClient,
   deletePastClient,
+  HasSubsidiariesError,
   movePastClient,
   renamePastClient,
   setCounted,
@@ -38,12 +39,18 @@ export function usePastActions(glow: (id: string) => void) {
   const fresh = useCallback((c: HistoricalClient) => latest.current.find((x) => x.id === c.id) ?? c, []);
   const nameOf = useCallback((id: string | null) => latest.current.find((x) => x.id === id)?.name ?? "", []);
 
+  // Undo never leaves a subsidiary under a parent company that's gone since: it would drop out of the record.
   const undoing = useCallback(
-    (undo: Undo, id: string) => () =>
+    (undo: Undo, id: string, parentId?: string | null, refused?: string) => () => {
+      if (parentId && !latest.current.some((x) => x.id === parentId)) {
+        toast(refused ?? "That can’t be undone: its parent company isn’t there any more.", { error: true });
+        return;
+      }
       void undo().then(
         () => glow(id),
         (err) => toast(failureMessage(err, "The change couldn’t be undone. Check your connection and try again."), { error: true })
-      ),
+      );
+    },
     [toast, glow]
   );
 
@@ -107,7 +114,15 @@ export function usePastActions(glow: (id: string) => void) {
       };
       toast(addedMessage(input.name.trim(), input.parentId ? nameOf(input.parentId) : undefined), {
         action: "Undo",
-        onAction: () => void removeIt().catch((err) => toast(failureMessage(err, "It couldn’t be taken off again. Check your connection and try again."), { error: true })),
+        onAction: () =>
+          void removeIt().catch((err) =>
+            toast(
+              err instanceof HasSubsidiariesError
+                ? `${input.name.trim()} can’t be taken off again: ${err.message[0].toLowerCase()}${err.message.slice(1)}`
+                : failureMessage(err, "It couldn’t be taken off again. Check your connection and try again."),
+              { error: true }
+            )
+          ),
       });
       return id;
     },
@@ -133,9 +148,14 @@ export function usePastActions(glow: (id: string) => void) {
   // Moves a subsidiary to another parent company. Throws when it fails, so the dialog can say so.
   const move = useCallback(
     async (sub: HistoricalClient, parentId: string) => {
+      const from = fresh(sub).parentId;
+      const fromName = nameOf(from ?? null);
       const undo = await movePastClient(fresh(sub), parentId);
       glow(sub.id);
-      toast(`${sub.name} moved to ${nameOf(parentId)}`, { action: "Undo", onAction: undoing(undo, sub.id) });
+      toast(`${sub.name} moved to ${nameOf(parentId)}`, {
+        action: "Undo",
+        onAction: undoing(undo, sub.id, from, `${sub.name} can’t go back: ${fromName || "its parent company"} isn’t there any more.`),
+      });
     },
     [toast, glow, undoing, fresh, nameOf]
   );
@@ -143,10 +163,15 @@ export function usePastActions(glow: (id: string) => void) {
   // Deletes a past client after the confirmation. Throws when it fails, so the confirmation can say so.
   const remove = useCallback(
     async (c: HistoricalClient) => {
-      const undo = await deletePastClient(fresh(c), latest.current);
-      toast(`${c.name} deleted`, { action: "Undo", onAction: undoing(undo, c.id) });
+      const now = fresh(c);
+      const parentName = nameOf(now.parentId ?? null);
+      const undo = await deletePastClient(now, latest.current);
+      toast(`${c.name} deleted`, {
+        action: "Undo",
+        onAction: undoing(undo, c.id, now.parentId, `${c.name} can’t come back: ${parentName || "its parent company"} isn’t there any more.`),
+      });
     },
-    [toast, undoing, fresh]
+    [toast, undoing, fresh, nameOf]
   );
 
   return useMemo(

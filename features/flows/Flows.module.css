@@ -178,6 +178,18 @@
   color: var(--amber-ink);
 }
 
+.unsaved {
+  color: var(--red-ink);
+}
+
+/* The editor's fields, read only together with no connection. */
+.lock {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .docNotice {
   margin-top: 16px;
 }

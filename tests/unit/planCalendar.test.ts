@@ -9,6 +9,7 @@ import {
   dayWithSomething,
   eventsWindow,
   isBusy,
+  isPickedDay,
   landing,
   monthModelOf,
   monthWindow,
@@ -16,8 +17,9 @@ import {
   relativeDay,
   taskCount,
   weekStrip,
+  windowHas,
 } from "@/lib/planCalendar";
-import { parsePlan } from "@/lib/planView";
+import { parsePlan, whoWords } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 
 const TODAY = "2026-10-20"; // a Tuesday
@@ -90,6 +92,29 @@ describe("the day Day lands on (D5)", () => {
     expect(dayWithSomething(tasks, null, TODAY, 1)).toBe("2026-10-30");
     expect(dayWithSomething(tasks, null, "2026-10-30", 1)).toBeNull();
   });
+  it("finds the nearest day of a run of days, a task with no deadline or an event of several days", () => {
+    const run = [task("run", { startDate: "2026-10-01", endDate: "2026-10-31" }), task("open", { startDate: "2026-12-01" })];
+    expect(dayWithSomething(run, null, TODAY, 1)).toBe("2026-10-21");
+    expect(dayWithSomething(run, null, TODAY, -1)).toBe("2026-10-19");
+    expect(dayWithSomething(run, null, "2026-11-10", 1)).toBe("2026-12-01");
+    expect(dayWithSomething(run, null, "2026-11-10", -1)).toBe("2026-10-31");
+    expect(dayWithSomething(run, null, "2027-03-01", 1)).toBe("2027-03-02");
+    expect(dayWithSomething([], [event("trip", "2026-11-02", { end: "2026-11-06" })], "2026-11-09", -1)).toBe("2026-11-06");
+    expect(dayWithSomething([task("swapped", { startDate: "2026-11-05", endDate: "2026-11-01" })], null, TODAY, 1)).toBe("2026-11-01");
+  });
+  it("looks no further than 400 days", () => {
+    expect(dayWithSomething([task("far", { endDate: "2027-11-24" })], null, TODAY, 1)).toBe("2027-11-24");
+    expect(dayWithSomething([task("far", { endDate: "2027-11-25" })], null, TODAY, 1)).toBeNull();
+    expect(dayWithSomething([task("old", { endDate: "2025-09-15" })], null, TODAY, -1)).toBe("2025-09-15");
+    expect(dayWithSomething([task("old", { endDate: "2025-09-14" })], null, TODAY, -1)).toBeNull();
+  });
+  it("takes a typed date only once it is a whole day", () => {
+    expect(isPickedDay("2027-01-04")).toBe(true);
+    expect(isPickedDay("0002-10-20")).toBe(false);
+    expect(isPickedDay("0202-10-20")).toBe(false);
+    expect(isPickedDay("2026-02-30")).toBe(false);
+    expect(isPickedDay("")).toBe(false);
+  });
 });
 
 describe("words and the week strip", () => {
@@ -159,9 +184,24 @@ describe("the events Plan asks for", () => {
     const month = parsePlan(new URLSearchParams("view=month&month=2026-12"));
     expect(eventsWindow(month, TODAY, "2026-10-19", 28)).toEqual({ start: "2026-11-30", days: 70 });
   });
+  it("says whether a run of events reaches a day", () => {
+    expect(windowHas({ start: "2026-09-28", days: 70 }, "2026-09-28")).toBe(true);
+    expect(windowHas({ start: "2026-09-28", days: 70 }, "2026-12-06")).toBe(true);
+    expect(windowHas({ start: "2026-09-28", days: 70 }, "2026-12-07")).toBe(false);
+    expect(windowHas({ start: "2026-09-28", days: 70 }, "2026-09-27")).toBe(false);
+  });
   it("stays on the timeline's four weeks for the Timeline and People", () => {
     expect(eventsWindow(parsePlan(new URLSearchParams()), TODAY, "2026-10-19", 28)).toEqual({ start: "2026-10-19", days: 28 });
     expect(eventsWindow(parsePlan(new URLSearchParams("view=people")), TODAY, "2026-10-19", 28)).toEqual({ start: "2026-10-19", days: 28 });
+  });
+});
+
+describe("what a sentence is narrowed to", () => {
+  it("names the person, the kind of work, or the task group as it is written", () => {
+    expect(whoWords({ person: "Maya Chen", kind: null, group: null })).toBe(" for Maya Chen");
+    expect(whoWords({ person: null, kind: "prospect", group: null })).toBe(" in prospects work");
+    expect(whoWords({ person: null, kind: null, group: "Q4 Launch" })).toBe(" in Q4 Launch");
+    expect(whoWords({ person: null, kind: null, group: null })).toBe("");
   });
 });
 

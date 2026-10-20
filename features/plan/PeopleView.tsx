@@ -6,9 +6,9 @@
 // colour. Marking a task done from a person's page is the only write.
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { dayLabel, plural } from "@/lib/dates";
+import { plural } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
-import { byDeadline, personLine, personRows, rankLine, searchPeople, SEARCH_FROM, sparkHeight, widestLoad, workWords, type PersonRow } from "@/lib/planPeople";
+import { byDeadline, nextDueLabel, personLine, personRows, rankLine, searchPeople, SEARCH_FROM, sparkHeight, widestLoad, workWords, type PersonRow } from "@/lib/planPeople";
 import type { PlanState } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 import Avatar from "@/ui/Avatar";
@@ -48,7 +48,7 @@ export default function PeopleView(props: PeopleViewProps) {
   return <Ranking {...props} rows={rows} />;
 }
 
-function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, state }: PeopleViewProps & { rows: PersonRow[] }) {
+function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, state, today }: PeopleViewProps & { rows: PersonRow[] }) {
   const [query, setQuery] = useState("");
   const shown = searchPeople(rows, query);
   const widest = widestLoad(shown);
@@ -115,7 +115,7 @@ function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, 
                   <i key={i} data-today={i === 0 || undefined} data-quiet={!count || undefined} style={{ height: sparkHeight(count, most) }} />
                 ))}
               </span>
-              <span className={styles.pNext}>{row.next ? <>Next due <b>{dayLabel(row.next)}</b></> : <span className={styles.pNoNext}>No deadlines</span>}</span>
+              <span className={styles.pNext}>{row.next ? <>Next due <b>{nextDueLabel(row.next, today)}</b></> : <span className={styles.pNoNext}>No deadlines</span>}</span>
             </Link>
           );
         })}
@@ -174,10 +174,10 @@ function PersonPage(props: PeopleViewProps & { row: PersonRow }) {
         </div>
       </div>
       <div className={styles.figures}>
-        <Figure value={row.owned.length} label="Owned" />
-        <Figure value={row.informed.length} label="Kept informed" />
-        <Figure value={row.soon} label="Due in 2 weeks" tone={row.soon >= 4 ? "amber" : undefined} />
-        <Figure value={row.overdue} label="Overdue" tone={row.overdue ? "red" : undefined} />
+        <Figure value={loading ? null : row.owned.length} label="Owned" />
+        <Figure value={loading ? null : row.informed.length} label="Kept informed" />
+        <Figure value={loading ? null : row.soon} label="Due in 2 weeks" tone={!loading && row.soon >= 4 ? "amber" : undefined} />
+        <Figure value={loading ? null : row.overdue} label="Overdue" tone={!loading && row.overdue ? "red" : undefined} />
       </div>
     </section>
   );
@@ -256,10 +256,11 @@ function PersonPage(props: PeopleViewProps & { row: PersonRow }) {
   );
 }
 
-function Figure({ value, label, tone }: { value: number; label: string; tone?: "amber" | "red" }) {
+// A figure, or its skeleton while the tasks load (null).
+function Figure({ value, label, tone }: { value: number | null; label: string; tone?: "amber" | "red" }) {
   return (
     <div className={styles.figure} data-tone={tone}>
-      <b>{value.toLocaleString("en-GB")}</b>
+      <b>{value === null ? <Skeleton height={28} width={36} /> : value.toLocaleString("en-GB")}</b>
       <span>{label}</span>
     </div>
   );

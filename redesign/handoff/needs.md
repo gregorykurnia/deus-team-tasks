@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15
 
 # Needs
 
@@ -18,3 +18,6 @@ Design gaps found after the design was approved, written as job stories.
 | N10 | When I open a prospect's qualification notes from a link after someone deleted them, or a colleague deletes the notes while I am writing in them, I want to be told they are gone and what happened to what I was writing, so that I don't keep writing into notes nobody will see, or wonder where my writing went. | Task 3.11 | open |
 | N11 | When I record the first subsidiary of a parent company that has none yet, I want to add it in the same quick way as the ones after it, with just its name, so that I don't have to go through the full form for the first one. | Task 3.13 | open |
 | N12 | When I open a flow from a link after someone deleted it, or a colleague deletes a flow while I am reading or editing it, I want to be told it is gone, so that I don't keep editing a flow nobody will see, or wonder where it went. | Task 3.14 | open |
+| N13 | When something I changed couldn't be saved, or was only partly saved (some of many tasks, or some of the companies that use a renamed choice), or is waiting for the connection to come back, I want to be told what wasn't saved yet and to be able to try again, with what I wrote still there, so that I never believe something is saved when it isn't. | Phase 3 review | open |
+| N14 | When I open a link to a task while I have no connection, and that task isn't on my device yet, I want to be told it will open once I'm back online, and have it open by itself then, so that I don't think the task is gone. | Phase 3 review | open |
+| N15 | When I say a task is about a company but haven't said which company yet, I want to be asked for it before the task is saved, so that the task doesn't quietly end up as internal work. | Phase 3 review | open |

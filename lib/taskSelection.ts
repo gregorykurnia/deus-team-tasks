@@ -9,6 +9,13 @@ export interface Selection {
 
 export const NO_SELECTION: Selection = { ids: new Set(), all: false };
 
+// "Select all" remembers the tasks it took in, so a change of view can let go of the rest (viewChanged).
+export const selectAll = (listIds: string[]): Selection => ({ ids: new Set(listIds), all: true });
+
+// Another filter, kind or search never widens "Select all" to tasks it didn't take in: what stays chosen is the tasks
+// selected then that the new view still shows.
+export const viewChanged = (selection: Selection): Selection => (selection.all ? { ids: selection.ids, all: false } : selection);
+
 // In the list's order.
 export function chosenIds(selection: Selection, listIds: string[]): string[] {
   return selection.all ? listIds : listIds.filter((id) => selection.ids.has(id));

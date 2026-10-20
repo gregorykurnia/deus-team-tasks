@@ -14,9 +14,10 @@ import styles from "./Today.module.css";
 interface WhoCarriesProps {
   people: Carrier[] | null; // null while the tasks load
   error: boolean;
+  offline: boolean; // no connection, and no tasks ever loaded on this device
 }
 
-export default function WhoCarries({ people, error }: WhoCarriesProps) {
+export default function WhoCarries({ people, error, offline }: WhoCarriesProps) {
   let body;
   if (error) {
     body = (
@@ -25,6 +26,12 @@ export default function WhoCarries({ people, error }: WhoCarriesProps) {
           Check your connection and reload the page.
         </Notice>
       </div>
+    );
+  } else if (offline) {
+    body = (
+      <EmptyState size="small" icon="wifi" title="No connection">
+        Who&rsquo;s carrying what will appear once you are back online.
+      </EmptyState>
     );
   } else if (!people) {
     body = (

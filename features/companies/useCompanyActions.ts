@@ -51,13 +51,14 @@ export function useCompanyActions() {
     [toast, undoing]
   );
 
-  // One field changed from a quick editor. Deal done as an Active company's status moves it to Deal done.
+  // One field changed from a quick editor. Deal done as an Active company's status moves it to Deal done. Says whether it
+  // was saved, so the editor can stay open with what was typed when it wasn't.
   const setValue = useCallback(
-    async (c: PipelineEntry, field: Pick<CompanyField, "key" | "label">, value: FieldValue) => {
+    async (c: PipelineEntry, field: Pick<CompanyField, "key" | "label">, value: FieldValue): Promise<boolean> => {
       try {
         if (movesToDealDone(c, field.key, value)) {
           await move(c, "dealDone", {});
-          return;
+          return true;
         }
         const patch = { [field.key]: value };
         let undo: Undo;
@@ -65,20 +66,24 @@ export function useCompanyActions() {
         if (isKeptInStep(field.key)) ({ undo, tasksChanged } = await updateCompanyKeptInStep(c, patch, latest.current.tasks));
         else undo = await updateCompany(c, patch);
         toast(changeMessage(field.label, value === undefined, tasksChanged), { action: "Undo", onAction: undoing(undo) });
+        return true;
       } catch (err) {
         toast(failureMessage(err, `${field.label} couldn't be saved. Check your connection and try again.`), { error: true });
+        return false;
       }
     },
     [move, toast, undoing]
   );
 
   const rename = useCallback(
-    async (c: PipelineEntry, name: string) => {
+    async (c: PipelineEntry, name: string): Promise<boolean> => {
       try {
         const undo = await updateCompany(c, { company: name });
         toast("Company renamed", { action: "Undo", onAction: undoing(undo) });
+        return true;
       } catch (err) {
         toast(failureMessage(err, "The new name couldn't be saved. Check your connection and try again."), { error: true });
+        return false;
       }
     },
     [toast, undoing]

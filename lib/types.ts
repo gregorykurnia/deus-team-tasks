@@ -40,6 +40,7 @@ export interface Task {
 export type NewTask = Omit<Task, "id">;
 
 export interface FlowRole {
+  id?: string; // stable while roles move (R3); an older role gets one on its flow's next save
   label: string;
   names: string[];
 }

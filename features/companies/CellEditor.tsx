@@ -2,8 +2,9 @@
 
 // The quick editor (guide 4.9): one detail changed in one step, in a menu anchored to the value. A choice shows its options
 // as chips with the chosen one ticked, then Clear and Edit options. A date has a field, quick picks, then Clear and Save. Text has a field
-// (or a 130px text box) with Save. Enter saves (Ctrl + Enter in a text box), and the screen's toast offers Undo.
-import { useState, type KeyboardEvent, type RefObject } from "react";
+// (or a 130px text box) with Save. Enter saves (Ctrl + Enter in a text box), and the screen's toast offers Undo. It closes
+// once saved: when saving fails, it stays open with what was typed, and the toast says what wasn't saved.
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { parseValue, quickPicks, sameValue, type FieldValue } from "@/lib/companyEdit";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import Button from "@/ui/Button";
@@ -26,7 +27,7 @@ interface CellEditorProps {
   required?: string; // the company's name: what to say when it's emptied
   onEditOptions?: () => void; // a choice field: its options dialog
   today: string;
-  onSave: (value: FieldValue) => void;
+  onSave: (value: FieldValue) => Promise<boolean>; // true once saved
 }
 
 export default function CellEditor(props: CellEditorProps) {
@@ -51,7 +52,7 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, onSave, onEditOpt
   return (
     <>
       {options.map((o) => (
-        <MenuChoice key={o.name} checked={value === o.name} onSelect={() => onSave(o.name)}>
+        <MenuChoice key={o.name} checked={value === o.name} onSelect={() => value !== o.name && void onSave(o.name)}>
           <span className={styles.miChoice}>
             <OptionChip tone={o.colour}>{o.name}</OptionChip>
             {optionNotes[o.name] && <small className={styles.miNote}>{optionNotes[o.name]}</small>}
@@ -62,7 +63,7 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, onSave, onEditOpt
       {value !== undefined && value !== "" && (
         <>
           <MenuSeparator />
-          <MenuItem icon="x" onSelect={() => onSave(undefined)}>
+          <MenuItem icon="x" onSelect={() => void onSave(undefined)}>
             Clear
           </MenuItem>
         </>
@@ -79,12 +80,38 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, onSave, onEditOpt
   );
 }
 
+// Saves a typed value and closes once it's saved. A second Save while one runs is ignored. An editor closed meanwhile
+// (another cell opened, say) doesn't close what's open now.
+function useSave(onSave: CellEditorProps["onSave"], onClose: () => void) {
+  const [busy, setBusy] = useState(false);
+  const running = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  async function save(value: FieldValue) {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    const saved = await onSave(value);
+    running.current = false;
+    if (!mounted.current) return;
+    setBusy(false);
+    if (saved) onClose();
+  }
+  return { busy, save };
+}
+
 function DateEditor({ field, value, synced, today, onSave, onClose }: CellEditorProps) {
   const stored = typeof value === "string" ? value : "";
   const [date, setDate] = useState(stored);
+  const saver = useSave(onSave, onClose);
   const save = (iso: string) => {
-    onClose();
-    if (!sameValue(iso, stored)) onSave(iso || undefined);
+    if (sameValue(iso, stored)) onClose();
+    else void saver.save(iso || undefined);
   };
   return (
     <>
@@ -126,7 +153,7 @@ function DateEditor({ field, value, synced, today, onSave, onClose }: CellEditor
         <Button small onClick={onClose}>
           Cancel
         </Button>
-        <Button small variant="main" onClick={() => save(date)}>
+        <Button small variant="main" busy={saver.busy} busyLabel="Saving…" onClick={() => save(date)}>
           Save
         </Button>
       </div>
@@ -138,6 +165,7 @@ function TextEditor({ field, value, required, onSave, onClose }: CellEditorProps
   const stored = value === undefined || value === null ? "" : String(value);
   const [draft, setDraft] = useState(stored);
   const [missing, setMissing] = useState(false);
+  const saver = useSave(onSave, onClose);
   const long = field.type === "long";
   const save = (raw: string) => {
     const next = parseValue(field, raw);
@@ -145,8 +173,8 @@ function TextEditor({ field, value, required, onSave, onClose }: CellEditorProps
       setMissing(true);
       return;
     }
-    onClose();
-    if (!sameValue(next, stored)) onSave(next);
+    if (sameValue(next, stored)) onClose();
+    else void saver.save(next);
   };
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && (!long || e.ctrlKey || e.metaKey)) {
@@ -187,7 +215,7 @@ function TextEditor({ field, value, required, onSave, onClose }: CellEditorProps
         <Button small onClick={onClose}>
           Cancel
         </Button>
-        <Button small variant="main" onClick={() => save(draft)}>
+        <Button small variant="main" busy={saver.busy} busyLabel="Saving…" onClick={() => save(draft)}>
           Save
         </Button>
       </div>

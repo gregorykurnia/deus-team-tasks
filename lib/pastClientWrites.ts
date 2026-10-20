@@ -3,6 +3,7 @@ import { deleteDoc, deleteField, doc, setDoc, updateDoc } from "firebase/firesto
 import { assertOnline } from "./connection";
 import { clientsDb } from "./firebaseClients";
 import { canonicalSector, type HistoricalClient } from "./historicalClientTypes";
+import { plural } from "./dates";
 import type { Undo } from "./taskWrites";
 
 export const PAST_CLIENTS = "historicalClients";
@@ -52,7 +53,7 @@ export function movePastClient(sub: HistoricalClient, parentId: string): Promise
 
 export class HasSubsidiariesError extends Error {
   constructor(public subsidiaries: number) {
-    super(`It has ${subsidiaries} subsidiaries. Move or delete them first.`);
+    super(`It has ${plural(subsidiaries, "subsidiary", "subsidiaries")}. Move or delete them first.`);
   }
 }
 

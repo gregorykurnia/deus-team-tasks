@@ -153,6 +153,10 @@ describe("the timeline", () => {
     expect(before).toMatchObject({ key: "before", bold: "1 overdue task", href: "/tasks?due=overdue" });
     expect(before.tail).toBe(" ended before 19 Oct");
     expect(undated).toMatchObject({ key: "undated", bold: "1 task", tail: " has no dates, so it isn't shown", href: "/tasks?due=nodate" });
+    const narrowed = timelineOf({ ...base, tasks: busy, listHref: "/tasks?kind=client" }).insights;
+    expect(narrowed.find((i) => i.key === "before")?.href).toBe("/tasks?kind=client&due=overdue");
+    const group = timelineOf({ ...base, tasks: busy, listHref: "/tasks/groups/g1" }).insights;
+    expect(group.find((i) => i.key === "undated")?.href).toBe("/tasks/groups/g1?due=nodate");
   });
 
   it("counts the team calendar per day, with a ring for an all-day event", () => {

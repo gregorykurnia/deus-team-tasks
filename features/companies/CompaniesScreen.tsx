@@ -13,7 +13,7 @@ import { over } from "@/desk/areas";
 import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { deleteWording, hasField, isKeptInStep, RENAME_MISSING } from "@/lib/companyEdit";
+import { deleteBlocked, deleteWording, hasField, isKeptInStep, RENAME_MISSING } from "@/lib/companyEdit";
 import {
   COMPANY_GROUP_LABELS,
   COMPANY_GROUPS,
@@ -89,7 +89,7 @@ export default function CompaniesScreen() {
   const notes = useNotes();
   const toast = useToast();
   const actions = useCompanyActions();
-  const { settings, loading: settingsLoading } = useCompanyOptions();
+  const { settings, loading: settingsLoading, error: settingsError } = useCompanyOptions();
   const phone = useMediaQuery(TABLET_AND_SMALLER); // the tab bar layout: the search goes under the title
 
   const state = useMemo(() => parseCompanyView(search), [search]);
@@ -139,6 +139,8 @@ export default function CompaniesScreen() {
   const [deleting, setDeleting] = useState<PipelineEntry | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const live = (c: PipelineEntry) => byId.get(c.id) ?? c;
+  // Delete waits for the tasks and notes as the server has them, so none of the company's are missed.
+  const cantDelete = deleteBlocked(tasks, notes, online);
   const openTasksOf = (id: number) => tasks.rows.filter((t) => t.linkedClientId === id && !t.completed).length;
 
   function edit(anchor: HTMLElement, c: PipelineEntry, field: EditField) {
@@ -154,9 +156,9 @@ export default function CompaniesScreen() {
   const record = useOverParam("company");
   const recordParam = search.get("company");
   const recordCompany = recordParam ? byId.get(Number(recordParam)) : undefined;
-  // The device's copy can be older than the server's: a company is only missing once the server has answered, or once
-  // there's no connection and the copy is all there is.
-  const settled = !companies.loading && (!companies.fromCache || status === "offline");
+  // The device's copy can be older than the server's: a company is only missing once the server has answered, once
+  // there's no connection and the copy is all there is, or once the companies failed to load.
+  const settled = !companies.loading && (!companies.fromCache || status === "offline" || !!companies.error);
   const recordMissing = record.open && settled && !recordCompany;
   const deletedHere = useRef<number | null>(null); // deleted from here: the record closes without a second message
   const told = useRef<string | null>(null);
@@ -219,14 +221,18 @@ export default function CompaniesScreen() {
 
   async function confirmDelete() {
     if (!deleting || deleteBusy) return;
+    if (cantDelete) {
+      // The tasks or notes went back to loading, or failed, while the confirmation was open: it stays.
+      toast(cantDelete, { error: true });
+      return;
+    }
     setDeleteBusy(true);
     deletedHere.current = deleting.id;
     try {
       await actions.remove(deleting);
       setDeleting(null);
     } catch (err) {
-      deletedHere.current = null;
-      setDeleting(null);
+      deletedHere.current = null; // the confirmation stays, to try again
       toast(failureMessage(err, "The company couldn't be deleted. Check your connection and try again."), { error: true });
     } finally {
       setDeleteBusy(false);
@@ -382,6 +388,14 @@ export default function CompaniesScreen() {
         <WhereToAct counts={whereToActCounts(active, today)} current={state.act} onPick={(act) => update((now) => ({ ...now, act }))} />
       )}
       <section className={styles.panel} aria-label={look.label}>
+        {settingsError && !failed && (
+          // The settings failed to load (provisional until the studio answers N5).
+          <div className={styles.panelNote}>
+            <Notice tone="warning" title="Couldn’t load the team’s fields and options.">
+              The built-in ones show instead. Reload the page to try again.
+            </Notice>
+          </div>
+        )}
         {ready && (
           <CompanyFilters
             state={state}
@@ -419,6 +433,7 @@ export default function CompaniesScreen() {
           onRename={(anchor, c) => edit(anchor, c, NAME_FIELD)}
           onMove={(c) => setMoving({ company: c })}
           onDelete={setDeleting}
+          deleteBlocked={cantDelete}
         />
       )}
       {fieldsOver.open && !settingsLoading && (
@@ -457,7 +472,7 @@ export default function CompaniesScreen() {
             required={field.key === "company" ? RENAME_MISSING : undefined}
             onEditOptions={field.type === "choice" ? () => setOptionsFor(field) : undefined}
             today={today}
-            onSave={(value) => void (field.key === "company" && typeof value === "string" ? actions.rename(c, value) : actions.setValue(c, field, value))}
+            onSave={(value) => (field.key === "company" && typeof value === "string" ? actions.rename(c, value) : actions.setValue(c, field, value))}
           />
         );
       })()}
@@ -473,6 +488,7 @@ export default function CompaniesScreen() {
           onToday={() => void actions.logToday(live(rowMenu), today)}
           onMove={() => setMoving({ company: live(rowMenu) })}
           onDelete={() => setDeleting(live(rowMenu))}
+          deleteBlocked={cantDelete}
         />
       )}
       {moving && today && (

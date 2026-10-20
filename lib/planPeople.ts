@@ -1,7 +1,7 @@
 // What Plan's People view shows (guide 4.12, 6.4): everyone ranked by what they own, with the owned and informed bar, a
 // two-week sparkline of their deadlines and the next one; and one person's figures and two lists. Pure, so every count
 // and wording is tested. The tasks passed in are open ones, already narrowed by Work.
-import { daysBetween, plural } from "./dates";
+import { dayLabel, daysBetween, plural, weekdayDate } from "./dates";
 import type { Kind } from "./kinds";
 import { isPerson } from "./people";
 import type { Task } from "./types";
@@ -13,7 +13,7 @@ const SOON_DAYS = 13; // "Due in 2 weeks" counts today and the thirteen days aft
 export interface PersonRow {
   name: string;
   owned: Task[]; // open tasks they're responsible for
-  informed: Task[]; // open tasks they're only kept informed on
+  informed: Task[]; // open tasks they're only kept informed on (responsible wins when they're both)
   overdue: number; // owned, with a deadline gone by
   soon: number; // owned, due in the next two weeks
   next: string | null; // their next deadline from today on
@@ -30,8 +30,9 @@ export function personRows(names: string[], open: Task[], today: string): Person
   };
   names.filter(isPerson).forEach(get);
   for (const t of open) {
-    for (const name of new Set(t.responsible.filter(isPerson))) get(name).owned.push(t);
-    for (const name of new Set(t.informed.map((i) => i.name).filter(isPerson))) get(name).informed.push(t);
+    const owners = new Set(t.responsible.filter(isPerson));
+    for (const name of owners) get(name).owned.push(t);
+    for (const name of new Set(t.informed.map((i) => i.name).filter((n) => isPerson(n) && !owners.has(n)))) get(name).informed.push(t);
   }
   for (const row of rows.values()) {
     for (const t of row.owned) {
@@ -75,6 +76,11 @@ export function personLine(row: PersonRow, work: string | null): string {
 export function rankLine(row: PersonRow): string {
   if (!row.owned.length && !row.informed.length) return "Nothing open";
   return `Owns ${row.owned.length.toLocaleString("en-US")}, kept informed on ${row.informed.length.toLocaleString("en-US")}`;
+}
+
+// The next deadline in the ranking: "Thu 5" within two weeks, "Thu 5 Feb" beyond, so a far one isn't read as this week's.
+export function nextDueLabel(iso: string, today: string): string {
+  return daysBetween(today, iso) <= SOON_DAYS ? dayLabel(iso) : weekdayDate(iso, today);
 }
 
 // Nearest deadline first, tasks with none last.

@@ -35,6 +35,7 @@ const NAMES: Record<Kind, { noun: string; for: string; team: string }> = {
 interface NeedsAttentionProps {
   pending: boolean; // the tasks (or the companies that tell their kind) haven't arrived
   error: boolean;
+  offline: boolean; // no connection, and no tasks ever loaded on this device
   attention: Attention | null;
   kind: KindChoice;
   onKind: (kind: KindChoice) => void;
@@ -46,7 +47,7 @@ interface NeedsAttentionProps {
   onAdd: (text: string) => Promise<boolean>;
 }
 
-export default function NeedsAttention({ pending, error, attention, kind, onKind, openCount, companies, today, leaving, onDone, onAdd }: NeedsAttentionProps) {
+export default function NeedsAttention({ pending, error, offline, attention, kind, onKind, openCount, companies, today, leaving, onDone, onAdd }: NeedsAttentionProps) {
   const phone = useMediaQuery("(max-width: 640px)");
   const ready = !pending && !error && attention;
   const count = (k: KindChoice) => (ready ? attention.counts[k] : undefined);
@@ -77,6 +78,12 @@ export default function NeedsAttention({ pending, error, attention, kind, onKind
           Check your connection and reload the page.
         </Notice>
       </div>
+    );
+  } else if (offline) {
+    body = (
+      <EmptyState size="small" icon="wifi" title="No connection">
+        Tasks that need attention will appear once you are back online.
+      </EmptyState>
     );
   } else if (pending || !attention) {
     body = (

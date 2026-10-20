@@ -1,7 +1,8 @@
 "use client";
 
 // Opens task details over any screen from the address: ?task=new or ?task=<id> (plan §2), so a reload keeps it and the
-// phone's back gesture closes it. It waits for the tasks to load, and says so when the task isn't there.
+// phone's back gesture closes it. It waits for the server to confirm the tasks, and says so when the task isn't there;
+// with no connection, a task that isn't on the device waits for the connection.
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCompanies, useTaskGroups, useTasks } from "@/desk/DeskData";
@@ -9,6 +10,7 @@ import { without } from "@/desk/areas";
 import { useConnection } from "@/lib/connection";
 import type { Task } from "@/lib/types";
 import Sheet from "@/ui/Sheet";
+import EmptyState from "@/ui/EmptyState";
 import { LoadingLine, Skeleton } from "@/ui/Skeleton";
 import { useToast } from "@/ui/Toaster";
 import TaskSheet from "./TaskSheet";
@@ -24,7 +26,7 @@ export default function TaskSheetHost() {
   const tasks = useTasks();
   const groups = useTaskGroups();
   const companies = useCompanies();
-  const { online } = useConnection();
+  const { status } = useConnection();
   const toast = useToast();
 
   // Opened from inside the app (the param appeared after the first paint), closing steps back, so back doesn't
@@ -55,19 +57,20 @@ export default function TaskSheetHost() {
   if (found && found !== held) setHeld(found);
   const shown = found ?? (held && held.id === param ? held : undefined);
 
-  const missing = !!param && param !== "new" && !tasks.loading && !shown;
+  // The device's copy may be older than the link (a task added since the last visit): only the server's word, or a
+  // failed load, says it isn't there. With no connection it keeps waiting, and opens once the connection is back.
+  const looking = !!param && param !== "new" && !shown;
+  const confirmed = !tasks.loading && (!tasks.fromCache || !!tasks.error);
+  const missing = looking && confirmed;
+  const waitingOffline = looking && !confirmed && status === "offline";
   const told = useRef<string | null>(null);
   useEffect(() => {
     if (!missing || told.current === param) return;
     told.current = param;
-    const message = tasks.error
-      ? "Tasks couldn't be loaded, so this task can't open. Try again in a moment."
-      : online
-        ? "This task isn't there any more. Someone may have deleted it."
-        : "No connection. This task opens once the connection is back.";
+    const message = tasks.error ? "Tasks couldn't be loaded, so this task can't open. Try again in a moment." : "This task isn't there any more. Someone may have deleted it.";
     toast(message, { error: true });
     close();
-  }, [missing, param, tasks.error, online, toast, close]);
+  }, [missing, param, tasks.error, toast, close]);
 
   if (!param || missing) return null;
 
@@ -79,6 +82,15 @@ export default function TaskSheetHost() {
   }
 
   // A company task opened before the companies arrive would read as internal work: wait for both.
+  if (waitingOffline) {
+    return (
+      <Sheet open onClose={close} title="Task">
+        <EmptyState size="small" icon="wifi" title="No connection">
+          This task isn&rsquo;t on this device yet. It will open once you are back online.
+        </EmptyState>
+      </Sheet>
+    );
+  }
   if (!shown || companies.loading) {
     return (
       <Sheet open onClose={close} title="Task">

@@ -6,6 +6,7 @@
 // today with the avatars pinned. Every number and bar has words (title and label), so nothing depends on colour.
 import Link from "next/link";
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { groupHref } from "@/desk/areas";
 import { dayLabel, parseIso, plural, shortDate, weekdayDate } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
 import { linkedCompany } from "@/lib/kinds";
@@ -34,6 +35,7 @@ interface TimelineProps {
   from: string;
   today: string;
   tasks: Task[]; // the open tasks to draw, already narrowed (none when only events are shown)
+  groupId: string | null; // the Work filter's task group, for the chips' links
   hasTasks: boolean; // there are tasks at all, narrowed or not
   loading: boolean;
   events: EventsState;
@@ -70,10 +72,12 @@ export default function Timeline(props: TimelineProps) {
     return () => observer.disconnect();
   }, []);
 
+  // The chips link to the same Work in All tasks, or the group's own list. All tasks has no person filter.
+  const listHref = state.kind ? `/tasks?kind=${state.kind}` : props.groupId ? groupHref(props.groupId) : "/tasks";
   const model = useMemo(
     () =>
-      timelineOf({ tasks: eventsOnly ? [] : tasks, events: eventList, from, today, rows: state.rows, person: state.person, companies, columnWidth }),
-    [tasks, eventsOnly, eventList, from, today, state.rows, state.person, companies, columnWidth]
+      timelineOf({ tasks: eventsOnly ? [] : tasks, events: eventList, from, today, rows: state.rows, person: state.person, companies, columnWidth, listHref }),
+    [tasks, eventsOnly, eventList, from, today, state.rows, state.person, companies, columnWidth, listHref]
   );
 
   // Lanes unfolded with "Show more" fold again when the view changes.

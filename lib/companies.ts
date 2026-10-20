@@ -127,17 +127,24 @@ export function matchesCompanySearch(c: PipelineEntry, query: string): boolean {
 
 export interface CompanyFilter {
   search?: string;
-  status?: string | null;
-  priority?: string | null;
+  status?: string | null; // an option name, or "-" for companies without one
+  priority?: string | null; // the same
   productKey?: string | null;
   whereToAct?: WhereToAct | null;
+}
+
+// The value a Status or Priority filter wants: "-" is none, so an empty or missing value matches it.
+export const NO_VALUE = "-";
+
+function choiceMatches(value: unknown, wanted: string): boolean {
+  return wanted === NO_VALUE ? value === undefined || value === null || value === "" : value === wanted;
 }
 
 export function filterCompanies(companies: PipelineEntry[], f: CompanyFilter, today: string = todayIso()): PipelineEntry[] {
   return companies.filter((c) => {
     if (f.search && !matchesCompanySearch(c, f.search)) return false;
-    if (f.status && c.status !== f.status) return false;
-    if (f.priority && c.priority !== f.priority) return false;
+    if (f.status && !choiceMatches(c.status, f.status)) return false;
+    if (f.priority && !choiceMatches(c.priority, f.priority)) return false;
     if (f.productKey && !hasProduct(c, f.productKey)) return false;
     if (f.whereToAct && !isWhereToAct(c, f.whereToAct, today)) return false;
     return true;
@@ -148,6 +155,7 @@ export function filterCompanies(companies: PipelineEntry[], f: CompanyFilter, to
 
 export type CompanySortDir = "asc" | "desc";
 
+// The old UI's priority order, for a sort given no option order. The redesign passes the options' order instead.
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
 
 function companySortValue(c: PipelineEntry, key: string, numeric: boolean, today: string, order?: string[]): string | number | null {

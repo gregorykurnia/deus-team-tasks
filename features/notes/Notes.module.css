@@ -337,6 +337,10 @@
   color: var(--amber-ink);
 }
 
+.notSaved {
+  color: var(--red-ink);
+}
+
 .docHead {
   display: flex;
   align-items: center;

@@ -423,6 +423,14 @@ test.describe("People (D1, D6)", () => {
     await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
   });
 
+  test("a placeholder in the address shows everyone, and someone named both ways counts once", async ({ page }) => {
+    await seedTasks([task("a", { task: "Write the proposal", responsible: [MAYA, "Full Team"], informed: [{ name: MAYA }] })]);
+    await page.goto("/plan?view=people&person=Full%20Team");
+    const rows = people(page).getByRole("link");
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText("Owns 1, kept informed on 0");
+  });
+
   test("a search finds people once there are more than eight, and Work narrows the counts", async ({ page }) => {
     await seedCompanies([company(1, { company: "Pelita Foods", status: "Active" })]);
     await seedTasks([

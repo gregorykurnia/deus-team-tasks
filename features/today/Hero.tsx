@@ -4,6 +4,7 @@ import Link from "next/link";
 import { KIND_LABELS, KINDS } from "@/lib/kinds";
 import type { Hero as HeroModel, TwoWeeks } from "@/lib/today";
 import type { EventsState } from "@/lib/useCalendarEvents";
+import EmptyState from "@/ui/EmptyState";
 import Notice from "@/ui/Notice";
 import { Skeleton } from "@/ui/Skeleton";
 import { KIND_TOKEN } from "@/ui/kindStyle";
@@ -16,10 +17,11 @@ interface HeroProps {
   weeks: TwoWeeks | null;
   events: EventsState;
   error: boolean;
+  offline: boolean; // no connection, and no tasks ever loaded on this device
   onAdd: (text: string) => Promise<boolean>;
 }
 
-export default function Hero({ hero, weeks, events, error, onAdd }: HeroProps) {
+export default function Hero({ hero, weeks, events, error, offline, onAdd }: HeroProps) {
   if (error) {
     return (
       <section className={styles.hero} aria-label="Today at a glance">
@@ -27,6 +29,17 @@ export default function Hero({ hero, weeks, events, error, onAdd }: HeroProps) {
           <Notice tone="error" title="Couldn't load tasks.">
             Check your connection and reload the page.
           </Notice>
+        </div>
+      </section>
+    );
+  }
+  if (offline) {
+    return (
+      <section className={styles.hero} aria-label="Today at a glance">
+        <div className={styles.heroNote}>
+          <EmptyState icon="wifi" title="No connection">
+            The day&rsquo;s summary will appear once you are back online.
+          </EmptyState>
         </div>
       </section>
     );

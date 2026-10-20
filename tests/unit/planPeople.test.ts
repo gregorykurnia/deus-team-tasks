@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byDeadline, personLine, personRows, rankLine, searchPeople, sparkHeight, widestLoad, workWords } from "@/lib/planPeople";
+import { byDeadline, nextDueLabel, personLine, personRows, rankLine, searchPeople, sparkHeight, widestLoad, workWords } from "@/lib/planPeople";
 import type { Task } from "@/lib/types";
 
 const TODAY = "2026-10-20"; // a Tuesday
@@ -42,6 +42,19 @@ describe("personRows", () => {
     expect(maya.perDay[0]).toBe(1);
     expect(maya.perDay[2]).toBe(1);
     expect(maya.perDay.reduce((a, b) => a + b, 0)).toBe(2);
+  });
+
+  it("counts someone both responsible and kept informed once, as responsible", () => {
+    const [maya, kevin] = personRows([MAYA, KEVIN], [task("x", { responsible: [MAYA], informed: [{ name: MAYA }, { name: KEVIN }] })], TODAY);
+    expect([maya.name, maya.owned.length, maya.informed.length]).toEqual([MAYA, 1, 0]);
+    expect([kevin.name, kevin.owned.length, kevin.informed.length]).toEqual([KEVIN, 0, 1]);
+  });
+
+  it("dates the next deadline in full beyond two weeks", () => {
+    expect(nextDueLabel("2026-10-22", TODAY)).toBe("Thu 22");
+    expect(nextDueLabel("2026-11-02", TODAY)).toBe("Mon 2");
+    expect(nextDueLabel("2026-11-03", TODAY)).toBe("Tue 3 Nov");
+    expect(nextDueLabel("2027-02-05", TODAY)).toBe("Fri 5 Feb 2027");
   });
 
   it("lists a name with no open work, and leaves out placeholders", () => {

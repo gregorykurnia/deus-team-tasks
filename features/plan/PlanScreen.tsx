@@ -11,7 +11,7 @@ import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/
 import PageHeader from "@/desk/PageHeader";
 import { failureMessage, useConnection } from "@/lib/connection";
 import { groupNavItems } from "@/lib/deskNav";
-import { eventsWindow, landing, somethingOn } from "@/lib/planCalendar";
+import { eventsWindow, landing, monthWindow, somethingOn, windowHas } from "@/lib/planCalendar";
 import { loadPerPerson } from "@/lib/planMath";
 import { planTasks } from "@/lib/planTimeline";
 import {
@@ -60,11 +60,13 @@ export default function PlanScreen() {
 
   const parsed = useMemo(() => parsePlan(search), [search]);
   // A task group that's gone (deleted since the link was made) narrows to nothing, so it's let go once groups are known.
+  // People opens a person's page only for a person: a placeholder such as "Full Team" shows everyone.
   const groupsKnown = !groups.loading && !groups.error;
-  const state: PlanState = useMemo(
-    () => (parsed.group && groupsKnown && !groups.rows.some((g) => g.name === parsed.group) ? { ...parsed, group: null } : parsed),
-    [parsed, groupsKnown, groups.rows]
-  );
+  const state: PlanState = useMemo(() => {
+    let next = parsed.group && groupsKnown && !groups.rows.some((g) => g.name === parsed.group) ? { ...parsed, group: null } : parsed;
+    if (next.view === "people" && next.person && !isPerson(next.person)) next = { ...next, person: null };
+    return next;
+  }, [parsed, groupsKnown, groups.rows]);
   const from = today ? timelineFrom(state, today) : null;
 
   // The view is written to the address in place, so Back leaves the screen rather than stepping through filters.
@@ -140,6 +142,11 @@ export default function PlanScreen() {
   // Waiting on the calendar to pick a day matters only when the tasks alone don't settle it.
   const holding = !!today && state.view === "day" && !state.date && state.show !== "tasks" && events.status === "loading" && !somethingOn(dayTasks, null, today);
   const shown: PlanState = state.view === "day" && today && !state.date ? { ...state, date: landed?.date ?? today } : state;
+  // A landed day past the events asked for (only tasks ahead of it) gets its own month's events, for the day's lists. The
+  // landing itself stays on the first answer, so the day doesn't move again once they arrive.
+  const farWindow = landed?.landed && range && state.show !== "tasks" && !windowHas(range, landed.date) ? monthWindow(landed.date.slice(0, 7)) : null;
+  const farEvents = useCalendarEvents(farWindow?.start ?? null, farWindow?.days ?? TIMELINE_DAYS);
+  const dayEvents = farWindow ? farEvents : events;
   const people = useMemo(
     () => loadPerPerson(open, today ?? undefined).filter((p) => isPerson(p.name)).map((p) => ({ name: p.name, owned: p.owned })).sort((a, b) => a.name.localeCompare(b.name)),
     [open, today]
@@ -227,6 +234,7 @@ export default function PlanScreen() {
           from={from}
           today={today}
           tasks={narrowed}
+          groupId={state.group ? (groups.rows.find((g) => g.name === state.group)?.id ?? null) : null}
           hasTasks={open.length > 0}
           loading={!ready}
           events={events}
@@ -269,7 +277,7 @@ export default function PlanScreen() {
           holding={holding}
           tasks={dayTasks}
           loading={!ready}
-          events={events}
+          events={dayEvents}
           companies={byId}
           offline={offline}
           tools={tools}

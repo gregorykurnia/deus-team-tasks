@@ -102,6 +102,12 @@ describe("people (D6, W4)", () => {
       { name: "Ben", owned: 1, informed: 1, nextDeadline: "2026-10-22" },
     ]);
   });
+  it("counts someone both responsible and kept informed once, as responsible", () => {
+    expect(loadPerPerson([task("x", { responsible: ["Ana"], informed: [{ name: "Ana" }, { name: "Ben" }] })], TODAY)).toEqual([
+      { name: "Ana", owned: 1, informed: 0, nextDeadline: null },
+      { name: "Ben", owned: 0, informed: 1, nextDeadline: null },
+    ]);
+  });
   it("splits owned from informed, with the person's part", () => {
     const ben = tasksForPerson(tasks, "Ben");
     expect(ben.owned.map((t) => t.id)).toEqual(["b"]);

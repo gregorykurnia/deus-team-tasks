@@ -114,9 +114,16 @@ export function clearedPlanFilters(state: PlanState): PlanState {
   return { ...state, kind: null, group: null, person: state.view === "people" ? state.person : null };
 }
 
-export function workLabel(state: PlanState): string | null {
+export function workLabel(state: Pick<PlanState, "kind" | "group">): string | null {
   if (state.kind) return { prospect: "Prospects", client: "Clients", internal: "Internal" }[state.kind];
   return state.group;
+}
+
+// " for Ana", " in prospects work" or " in Q4 Launch": what a sentence is narrowed to. A task group keeps its own name.
+export function whoWords(state: Pick<PlanState, "kind" | "group" | "person">): string {
+  if (state.person) return ` for ${state.person}`;
+  if (state.kind) return ` in ${workLabel(state)!.toLowerCase()} work`;
+  return state.group ? ` in ${state.group}` : "";
 }
 
 // What the stepper says between its arrows, and what the header says under the title.

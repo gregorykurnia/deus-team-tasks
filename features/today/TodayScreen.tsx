@@ -48,8 +48,10 @@ export default function TodayScreen() {
   const waiting = (s: { loading: boolean; fromCache: boolean; rows: unknown[] }) =>
     s.loading || (s.fromCache && s.rows.length === 0 && status !== "live");
   const tasksFailed = !!tasks.error && tasks.rows.length === 0;
-  const pending = !today || waiting(tasks) || companies.loading;
-  const ready = !pending && !tasksFailed && today !== null;
+  // Opened with no connection and nothing on the device: no longer loading, but empty until the connection is back.
+  const offlineEmpty = status === "offline" && tasks.fromCache && tasks.rows.length === 0 && !tasks.error;
+  const pending = !today || (waiting(tasks) && !offlineEmpty) || companies.loading;
+  const ready = !pending && !tasksFailed && !offlineEmpty && today !== null;
 
   // Open tasks, plus any just marked done that are still on their way out of the list.
   const listed = useMemo(() => tasks.rows.filter((t) => !t.completed || leaving.has(t.id)), [tasks.rows, leaving]);
@@ -138,11 +140,12 @@ export default function TodayScreen() {
           </Notice>
         </div>
       )}
-      <Hero hero={model?.hero ?? null} weeks={model?.weeks ?? null} events={events} error={tasksFailed} onAdd={capture} />
+      <Hero hero={model?.hero ?? null} weeks={model?.weeks ?? null} events={events} error={tasksFailed} offline={offlineEmpty} onAdd={capture} />
       <div className={styles.board}>
         <NeedsAttention
-          pending={!ready && !tasksFailed}
+          pending={!ready && !tasksFailed && !offlineEmpty}
           error={tasksFailed}
+          offline={offlineEmpty}
           attention={model?.attention ?? null}
           kind={kind}
           onKind={setKind}
@@ -155,7 +158,7 @@ export default function TodayScreen() {
         />
         <div className={styles.rail}>
           <CalendarToday events={events} today={today} offline={status === "offline"} />
-          <WhoCarries people={model?.people ?? null} error={tasksFailed} />
+          <WhoCarries people={model?.people ?? null} error={tasksFailed} offline={offlineEmpty} />
         </div>
       </div>
     </>

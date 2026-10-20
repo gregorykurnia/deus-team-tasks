@@ -8,6 +8,7 @@ import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS } from "@/lib/companies";
 import {
   addOption,
   addOwnField,
+  CompaniesBehindError,
   DEFAULT_COMPANY_SETTINGS,
   fieldNameTaken,
   nearestOptionColour,
@@ -89,6 +90,20 @@ describe("options (C3)", () => {
     await seed("clients", "pipeline", companies, { keepIdField: true });
     await renameOption("status", "Meeting Soon", "Meeting booked", []); // the companies didn't follow
     await removeOption("type", "Partner", []);
+    expect(await renameOption("status", "Meeting Soon", "Meeting booked", companies)).toBe(1);
+    expect(await removeOption("type", "Partner", companies)).toBe(1);
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ status: "Meeting booked" });
+    expect(await readFields("clients", "pipeline/2")).not.toHaveProperty("type");
+  });
+
+  it("says when the option changed but the companies didn't follow, so the same call can run again", async () => {
+    const companies = [co(1, { status: "Meeting Soon" }), co(2, { type: "Partner" })];
+    await seed("clients", "pipeline", companies, { keepIdField: true });
+    const gone = [co(99, { status: "Meeting Soon", type: "Partner" })]; // not stored: its update fails
+    await expect(renameOption("status", "Meeting Soon", "Meeting booked", gone)).rejects.toBeInstanceOf(CompaniesBehindError);
+    await expect(removeOption("type", "Partner", gone)).rejects.toBeInstanceOf(CompaniesBehindError);
+    expect((await storedSettings()).options.status.map((o) => o.name)).toContain("Meeting booked");
+    expect((await storedSettings()).options.type.map((o) => o.name)).not.toContain("Partner");
     expect(await renameOption("status", "Meeting Soon", "Meeting booked", companies)).toBe(1);
     expect(await removeOption("type", "Partner", companies)).toBe(1);
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ status: "Meeting booked" });

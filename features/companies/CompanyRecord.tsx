@@ -7,7 +7,7 @@
 // sheet over it.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useCompaniesById, useNotes, useTasks } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
 import type { PipelineEntry } from "@/lib/clientTypes";
@@ -20,7 +20,7 @@ import { plural } from "@/lib/dates";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import Icon from "@/ui/Icon";
-import Menu, { MenuItem, MenuSeparator } from "@/ui/Menu";
+import Menu, { MenuFoot, MenuItem, MenuSeparator } from "@/ui/Menu";
 import Notice from "@/ui/Notice";
 import Sheet from "@/ui/Sheet";
 import { GroupTag } from "@/ui/Tag";
@@ -40,13 +40,14 @@ interface CompanyRecordProps {
   onRename: (anchor: HTMLElement, company: PipelineEntry) => void;
   onMove: (company: PipelineEntry) => void;
   onDelete: (company: PipelineEntry) => void;
+  deleteBlocked: string | null; // why Delete company can't run yet
 }
 
 // Open tasks by deadline, the undated last; finished ones most recent first.
 const byDeadline = (a: Task, b: Task) => (a.endDate || "9999").localeCompare(b.endDate || "9999");
 const byFinished = (a: Task, b: Task) => (b.completedAt ?? 0) - (a.completedAt ?? 0);
 
-export default function CompanyRecord({ company: c, settings, today, online, actions, onClose, onEdit, onRename, onMove, onDelete }: CompanyRecordProps) {
+export default function CompanyRecord({ company: c, settings, today, online, actions, onClose, onEdit, onRename, onMove, onDelete, deleteBlocked }: CompanyRecordProps) {
   const tasks = useTasks();
   const notes = useNotes();
   const byId = useCompaniesById();
@@ -55,6 +56,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
   const [showDone, setShowDone] = useState(false);
   const [menu, setMenu] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const deleteReasonId = useId();
 
   const group = companyGroup(c);
   const fields = settings.fields[group];
@@ -217,9 +219,10 @@ export default function CompanyRecord({ company: c, settings, today, online, act
           Move to another group
         </MenuItem>
         <MenuSeparator />
-        <MenuItem icon="trash" danger onSelect={() => onDelete(c)}>
+        <MenuItem icon="trash" danger onSelect={() => onDelete(c)} disabled={!!deleteBlocked} describedBy={deleteBlocked ? deleteReasonId : undefined}>
           Delete company
         </MenuItem>
+        {deleteBlocked && <MenuFoot id={deleteReasonId}>{deleteBlocked}</MenuFoot>}
       </Menu>
     </>
   );

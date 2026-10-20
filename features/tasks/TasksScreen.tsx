@@ -18,8 +18,8 @@ import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
 import type { TaskSortKey } from "@/lib/taskQueries";
-import { chosenIds, headState, movedMessage, NO_SELECTION, selectAllOffer, selectedLine, toggleChosen, toggleHead, type Selection } from "@/lib/taskSelection";
-import { addTask, deleteTasks, moveTasksToGroup, setTasksDone } from "@/lib/taskWrites";
+import { chosenIds, headState, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
+import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, type Undo } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
@@ -136,6 +136,14 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
   const viewKey = viewParams(state, inGroup).toString();
   const [extra, setExtra] = useState({ key: viewKey, rows: 0 });
   const limit = PAGE_SIZE + (extra.key === viewKey ? extra.rows : 0);
+  // "Select all" covers the tasks it was used on: another filter, kind or search keeps only those (12 overdue never
+  // become 1,579). Sorting changes no tasks, so it keeps "Select all".
+  const tasksKey = `${groupId ?? ""}?${viewParams({ ...state, sort: null, dir: null }, inGroup)}`;
+  const [selectedIn, setSelectedIn] = useState(tasksKey);
+  if (selectedIn !== tasksKey) {
+    setSelectedIn(tasksKey);
+    setSelection(viewChanged);
+  }
 
   // A task just marked done (or not done) stays where it was, for as long as it takes to leave.
   const [leaving, setLeaving] = useState<ReadonlyMap<string, Task>>(new Map());
@@ -216,8 +224,16 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [selecting, bulkBusy]);
 
-  // The chosen tasks as they are now. Writes go in batches of 450 (lib/batches), so "Select all" can reach thousands.
+  // The chosen tasks as they are now. Writes go in batches of 450 (lib/batches), so "Select all" can reach thousands;
+  // each batch leaves out tasks deleted since (stillThere), and one that fails part way says how far it got.
   const chosenTasks = () => chosen.map((id) => live.get(id)).filter((t): t is Task => !!t);
+  const liveNow = useRef(live);
+  useEffect(() => {
+    liveNow.current = live;
+  });
+  const stillThere = (id: string) => liveNow.current.has(id);
+  const undoAction = (undo: Undo | null) =>
+    undo ? { action: "Undo", onAction: () => undo().catch((err) => toast(undoFailed(err), { error: true })) } : {};
   const internalChosen = useMemo(() => {
     const isInternal = (id: string) => {
       const t = live.get(id);
@@ -240,28 +256,39 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
     const done = !finished;
     void bulk(done ? "done" : "reopen", async () => {
       try {
-        const undo = await setTasksDone(picked, done);
+        const undo = await setTasksDone(picked, done, stillThere);
         setSelecting(false);
-        toast(done ? `${plural(picked.length, "task")} marked done` : `${plural(picked.length, "task")} moved back to open tasks`, {
-          action: "Undo",
-          onAction: () => undo().catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
-        });
+        toast(done ? `${plural(picked.length, "task")} marked done` : `${plural(picked.length, "task")} moved back to open tasks`, undoAction(undo));
       } catch (err) {
-        toast(failureMessage(err, `The tasks couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
+        // Stopped part way: what's still chosen is what's left to do, so the same action tries again.
+        if (err instanceof PartlyChanged) {
+          const saved = `${num(picked.length - err.left)} of ${plural(picked.length, "task")}`;
+          const message = done
+            ? `${saved} marked done. Couldn't mark the other ${num(err.left)} done. Check your connection and try again.`
+            : `${saved} moved back to open tasks. Couldn't move the other ${num(err.left)} back. Check your connection and try again.`;
+          toast(message, { error: true, ...undoAction(err.undo) });
+        } else toast(failureMessage(err, `The tasks couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
       }
     });
   }
 
   async function moveChosen(groupName: string | null, made?: boolean) {
     const picked = chosenTasks();
-    const { skipped, undo } = await moveTasksToGroup(picked, groupName, byId);
-    setSelecting(false);
-    const count = picked.length - skipped;
-    const message = made ? `Group “${groupName}” created, and ${plural(count, "task")} moved into it` : movedMessage(count, groupName, skipped);
-    toast(message, {
-      action: "Undo",
-      onAction: () => undo().catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
-    });
+    try {
+      const { skipped, undo } = await moveTasksToGroup(picked, groupName, byId, stillThere);
+      setSelecting(false);
+      const count = picked.length - skipped;
+      const message = made ? `Group “${groupName}” created, and ${plural(count, "task")} moved into it` : movedMessage(count, groupName, skipped);
+      toast(message, undoAction(undo));
+    } catch (err) {
+      if (!(err instanceof PartlyChanged)) throw err;
+      const where = groupName ? `to ${groupName}` : "out of their groups";
+      const lead = made ? `Group “${groupName}” created. ` : "";
+      toast(`${lead}Moved ${num(err.changed)} of ${plural(err.changed + err.left, "task")} ${where}. Couldn't move the other ${num(err.left)}. Check your connection and try again.`, {
+        error: true,
+        ...undoAction(err.undo),
+      });
+    }
   }
 
   function bulkMove(groupName: string | null) {
@@ -288,13 +315,15 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
     const picked = chosenTasks();
     void bulk("delete", async () => {
       try {
-        await deleteTasks(picked.map((t) => t.id));
+        await deleteTasks(picked.map((t) => t.id), stillThere);
         setConfirmingDelete(false);
         setSelecting(false);
         toast(`${plural(picked.length, "task")} deleted`);
       } catch (err) {
         setConfirmingDelete(false);
-        toast(failureMessage(err, "The tasks couldn't be deleted. Check your connection and try again."), { error: true });
+        if (err instanceof PartlyChanged)
+          toast(`${num(picked.length - err.left)} of ${plural(picked.length, "task")} deleted. Couldn't delete the other ${num(err.left)}. Check your connection and try again.`, { error: true });
+        else toast(failureMessage(err, "The tasks couldn't be deleted. Check your connection and try again."), { error: true });
       }
     });
   }
@@ -539,7 +568,7 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
             busy={bulkBusy}
             groups={groupItems}
             internal={internalChosen}
-            onSelectAll={() => setSelection({ ids: new Set(), all: true })}
+            onSelectAll={() => setSelection(selectAll(listIds))}
             onDone={bulkDone}
             onMove={bulkMove}
             onNewGroup={() => setGroupForMove(true)}
@@ -616,6 +645,13 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
       </Confirm>
     </>
   );
+}
+
+// An Undo of many tasks that stopped part way says how far it got.
+function undoFailed(err: unknown): string {
+  if (err instanceof PartlyChanged)
+    return `The change was undone for ${num(err.changed)} of ${plural(err.changed + err.left, "task")}. Couldn't undo it for the other ${num(err.left)}.`;
+  return failureMessage(err, "The change couldn't be undone.");
 }
 
 // What a list with nothing in it says (guide 4.15, 6.2): why it's empty, and the way out.

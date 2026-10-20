@@ -49,10 +49,15 @@ export default function PastAddDialog({ clients, sectors, labelOf, subsOf, onClo
   const parent = parentId ? clients.find((c) => c.id === parentId && !c.parentId) : undefined;
   const anyParent = clients.some((c) => !c.parentId);
 
-  // Choosing a parent fills in its sector, unless one is typed already.
+  // Choosing a parent fills in its sector, unless one is typed already. A sector filled in from the parent before
+  // follows when another parent is chosen.
+  const [filled, setFilled] = useState<string | null>(null);
   function choose(p: HistoricalClient) {
     setParentId(p.id);
-    if (!sector.trim()) setSector(labelOf(p));
+    if (!sector.trim() || sector === filled) {
+      setSector(labelOf(p));
+      setFilled(labelOf(p));
+    }
     if (missing === "parent") setMissing(null);
   }
 

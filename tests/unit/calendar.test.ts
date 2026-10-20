@@ -70,6 +70,25 @@ describe("the calendar route (D10)", () => {
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ calendarId: "team", singleEvents: true, timeZone: "Asia/Jakarta" }));
   });
 
+  it("follows every page, so no event is dropped", async () => {
+    const page = (id: string, nextPageToken?: string) => ({ data: { items: [{ id, start: { date: "2026-10-22" }, end: { date: "2026-10-23" } }], nextPageToken } });
+    list.mockResolvedValueOnce(page("a", "p2")).mockResolvedValueOnce(page("b", "p3")).mockResolvedValueOnce(page("c"));
+    const body = await (await GET(url())).json();
+    expect(body.events.map((e: { id: string }) => e.id)).toEqual(["a", "b", "c"]);
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(list.mock.calls.map(([q]) => [q.maxResults, q.pageToken])).toEqual([
+      [2500, undefined],
+      [2500, "p2"],
+      [2500, "p3"],
+    ]);
+  });
+
+  it("stops after ten pages", async () => {
+    list.mockResolvedValue({ data: { items: [], nextPageToken: "more" } });
+    expect((await (await GET(url())).json()).status).toBe("ok");
+    expect(list).toHaveBeenCalledTimes(10);
+  });
+
   it("says failed when the calendar can't be read, and tasks carry on", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     list.mockRejectedValue(new Error("boom"));

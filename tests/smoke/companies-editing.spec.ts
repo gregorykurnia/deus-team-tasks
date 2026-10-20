@@ -244,3 +244,24 @@ test("5.8: offline, the record can be read but a change is refused with what was
   await context.setOffline(false);
   expect((await storedById("clients", "pipeline", 2))?.status).toBe("Meeting Soon");
 });
+
+test("4.9, 5.8: offline, a quick editor keeps what was typed, and Delete company says it needs a connection", async ({ page, context }) => {
+  await seedAll();
+  await page.goto("/companies?company=2");
+  const record = page.getByRole("dialog", { name: "Borneo Retail" });
+  await expect(record).toBeVisible();
+  await context.setOffline(true);
+  await expect(record.getByText("Offline. Changes can’t be saved.")).toBeVisible();
+  await record.getByRole("button", { name: "Products: empty. Change" }).click();
+  const editor = page.getByRole("menu", { name: "Products" });
+  await editor.getByRole("textbox", { name: "Products" }).fill("Point of sale");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(toasts(page).getByText("No connection. The change wasn't saved.")).toBeVisible();
+  await expect(editor.getByRole("textbox", { name: "Products" })).toHaveValue("Point of sale"); // still open
+  await editor.getByRole("button", { name: "Cancel" }).click();
+  await record.getByRole("button", { name: "More for Borneo Retail" }).click();
+  await expect(page.getByRole("menuitem", { name: "Delete company" })).toBeDisabled();
+  await expect(page.getByText("Deleting needs a connection.")).toBeVisible();
+  await context.setOffline(false);
+  expect((await storedById("clients", "pipeline", 2))?.product).toBeUndefined();
+});

@@ -110,6 +110,17 @@ test("A3: with no connection, adding is refused and what was typed stays", async
   expect(await stored("tasks", "tasks")).toHaveLength(1);
 });
 
+test("A3: opened offline with nothing on the device, Today says so instead of loading forever", async ({ page }) => {
+  // context.setOffline only flips the browser's own flag: block the emulator itself, before the page loads.
+  await page.route(/127\.0\.0\.1:8180/, (route) => route.abort());
+  await page.goto("/");
+  await expect(hero(page).getByRole("heading", { name: "No connection" })).toBeVisible({ timeout: 15_000 });
+  await expect(hero(page).getByText("The day’s summary will appear once you are back online.")).toBeVisible();
+  await expect(needs(page).getByRole("heading", { name: "No connection" })).toBeVisible();
+  await expect(needs(page).getByText("Loading tasks")).toHaveCount(0);
+  await expect(needs(page).getByLabel("New task")).toHaveCount(0);
+});
+
 test("W5: the done circle marks a task done, it leaves the list, and Undo brings it back", async ({ page }) => {
   await seedTasks([task("t1", { task: "Order the new chairs", endDate: isoDay(-1) }), task("t2", { task: "Another one", endDate: isoDay(-2) })]);
   await page.goto("/");

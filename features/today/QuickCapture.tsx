@@ -18,12 +18,15 @@ export default function QuickCapture({ id, label, placeholder = "Add a task, lik
   const [busy, setBusy] = useState(false);
 
   async function add() {
-    const sentence = text.trim();
+    const sent = text;
+    const sentence = sent.trim();
     if (!sentence || busy) return;
     setBusy(true);
     const added = await onAdd(sentence);
     setBusy(false);
-    if (added) setText("");
+    // Only what was sent goes: the field stays live while the task is added, so anything typed since (the next task,
+    // after what was sent) is kept, and a field cleared and retyped meanwhile is left alone.
+    if (added) setText((now) => (now.startsWith(sent) ? now.slice(sent.length).trimStart() : now));
   }
 
   return (

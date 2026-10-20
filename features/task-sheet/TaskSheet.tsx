@@ -32,6 +32,7 @@ import styles from "./TaskSheet.module.css";
 
 const TOUCH_ICONS: Record<string, IconName> = { Call: "phone", Email: "mail", Meeting: "people", Message: "chat", Visit: "pin" };
 const DESCRIPTION_MISSING = "Add a short description so the team knows what this is.";
+const COMPANY_MISSING = "Choose the company this task is about, or switch to Internal work.";
 
 interface TaskSheetProps {
   task?: Task; // none for a new task
@@ -42,7 +43,7 @@ interface TaskSheetProps {
 
 type Busy = null | "save" | "done" | "delete";
 
-export default function TaskSheet({ task, gone = false, initialGroup, onClose }: TaskSheetProps) {
+export default function TaskSheet({ task, gone: deleted = false, initialGroup, onClose }: TaskSheetProps) {
   const tasks = useTasks();
   const groups = useTaskGroups();
   const companies = useCompanies();
@@ -58,11 +59,17 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
   const [busy, setBusy] = useState<Busy>(null);
   const [confirming, setConfirming] = useState(false);
   const set = (patch: Partial<TaskDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  // Our own delete takes the task off the list before the server confirms it: that isn't someone else deleting it.
+  const gone = deleted && busy !== "delete";
 
   const company = draft.about === "company" && draft.companyId != null ? byId.get(draft.companyId) : undefined;
   const kind: Kind = draft.about === "internal" ? "internal" : company ? kindOf({ linkedClientId: company.id }, byId) : "prospect";
   const finished = !!task?.completed;
+  // "A company" with none chosen would save as internal work while the head says Prospect: it needs one first.
+  const companyMissing = draft.about === "company" && !company;
   const error = missing && !hasDescription(draft) ? DESCRIPTION_MISSING : undefined;
+  const companyError = missing && companyMissing ? COMPANY_MISSING : undefined;
+  const incomplete = !hasDescription(draft) || companyMissing;
 
   // "Add details" opens the rest and moves on to the first new field.
   const body = useRef<HTMLDivElement>(null);
@@ -96,7 +103,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
   async function save() {
     if (busy || gone) return;
     setTries((n) => n + 1);
-    if (!hasDescription(draft)) {
+    if (incomplete) {
       setMissing(true);
       return;
     }
@@ -133,18 +140,20 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
     if (!task || busy || gone) return;
     const patch = patchFromDraft(opened, draft);
     const changed = Object.keys(patch).length > 0;
-    if (changed && !hasDescription(draft)) {
+    if (changed && incomplete) {
       setTries((n) => n + 1);
       setMissing(true);
       return;
     }
     setBusy("done");
     try {
-      if (changed) await saveTaskKeptInStep(task, { ...patch, completed: done }, byId, tasks.rows);
-      else await setTasksDone([task], done);
+      // The changes are saved as Save changes saves them, with no Undo; the toast's Undo is for done or not done only.
+      if (changed) {
+        const { companyChanged, tasksChanged } = await saveTaskKeptInStep(task, { ...patch, completed: done }, byId, tasks.rows);
+        toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
+      } else await setTasksDone([task], done);
       onClose();
-      const what = done ? "marked done" : "moved back to open tasks";
-      toast(changed ? `Changes saved and ${what}` : done ? "Marked done" : "Moved back to open tasks", {
+      toast(done ? "Marked done" : "Moved back to open tasks", {
         action: "Undo",
         onAction: () => void putBackDone([task]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
       });
@@ -238,8 +247,9 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
             )}
           </Field>
 
-          <Field label="About" group>
-            {() => (
+          {/* Switching keeps the company or group chosen, so switching back finds it again; only the side shown is saved. */}
+          <Field label="About" group error={companyError} focusKey={error ? undefined : tries}>
+            {(control) => (
               <div>
                 <Segmented<About>
                   label="About"
@@ -250,7 +260,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
                     { value: "internal", label: "Internal work", icon: "team" },
                   ]}
                   value={draft.about}
-                  onChange={(about) => about && set(about === "internal" ? { about, companyId: null } : { about, group: "" })}
+                  onChange={(about) => about && set({ about })}
                 />
                 <div className={styles.aboutBox}>
                   {draft.about === "internal" ? (
@@ -284,6 +294,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
                     </div>
                   ) : (
                     <SelectInput
+                      {...control}
                       aria-label="Company"
                       value=""
                       onChange={(e) => e.target.value && set({ companyId: Number(e.target.value) })}

@@ -1,6 +1,6 @@
 // Selecting several tasks (guide 4.7, D-008): what's chosen, the head checkbox, and what the bar and the move menu say.
 import { describe, expect, it } from "vitest";
-import { chosenIds, headState, moveNote, movedMessage, NO_SELECTION, selectAllOffer, selectedLine, toggleChosen, toggleHead, type Selection } from "@/lib/taskSelection";
+import { chosenIds, headState, moveNote, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
 
 const list = ["a", "b", "c", "d", "e"];
 const shown = ["a", "b", "c"];
@@ -19,6 +19,17 @@ describe("what's chosen", () => {
     const one = toggleChosen(NO_SELECTION, "b", list);
     expect(chosenIds(one, list)).toEqual(["b"]);
     expect(chosenIds(toggleChosen(one, "b", list), list)).toEqual([]);
+  });
+
+  it("Select all never grows to a wider view: only the tasks it took in that are still shown stay chosen", () => {
+    const overdue = ["b", "d"];
+    const all = selectAll(overdue);
+    expect(chosenIds(all, overdue)).toEqual(overdue);
+    const widened = viewChanged(all);
+    expect(widened.all).toBe(false);
+    expect(chosenIds(widened, list)).toEqual(["b", "d"]);
+    expect(chosenIds(viewChanged(selectAll(list)), ["d", "a"])).toEqual(["d", "a"]);
+    expect(viewChanged(pick("a"))).toEqual(pick("a"));
   });
 
   it("unticking one after Select all keeps the rest", () => {

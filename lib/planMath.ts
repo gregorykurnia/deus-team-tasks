@@ -139,7 +139,7 @@ export function quietStretch(days: string[], tasks: Dated[], events: number[], t
 export interface PersonLoad {
   name: string;
   owned: number; // open tasks they're responsible for
-  informed: number; // open tasks they're kept informed on
+  informed: number; // open tasks they're kept informed on, and not responsible for
   nextDeadline: string | null;
 }
 
@@ -153,12 +153,14 @@ export function loadPerPerson(tasks: Task[], today: string = todayIso()): Person
   };
   for (const t of tasks) {
     if (t.completed) continue;
-    for (const name of new Set(t.responsible.filter(isPerson))) {
+    const owners = new Set(t.responsible.filter(isPerson));
+    for (const name of owners) {
       const p = get(name);
       p.owned++;
       if (t.endDate && t.endDate >= today && (!p.nextDeadline || t.endDate < p.nextDeadline)) p.nextDeadline = t.endDate;
     }
-    for (const name of new Set(t.informed.map((i) => i.name).filter(isPerson))) get(name).informed++;
+    // Someone named both ways counts once, as responsible.
+    for (const name of new Set(t.informed.map((i) => i.name).filter((n) => isPerson(n) && !owners.has(n)))) get(name).informed++;
   }
   return [...map.values()].sort((a, b) => b.owned - a.owned || b.informed - a.informed || a.name.localeCompare(b.name));
 }

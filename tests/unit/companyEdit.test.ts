@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   changeMessage,
   defaultMoveTarget,
+  deleteBlocked,
   deleteWording,
   fieldText,
   keptInStepNote,
@@ -154,6 +155,18 @@ describe("deleting (B14)", () => {
       "It will be removed for everyone on the team. Its 5 tasks (2 open) stay, as internal work. Its qualification notes stay too, without a company."
     );
     expect(deleteWording({ total: 1, open: 1 }, false)).toBe("It will be removed for everyone on the team. Its 1 task stays, as internal work.");
+  });
+
+  it("waits until the tasks and notes are as the server has them, with no error", () => {
+    const ready = { loading: false, fromCache: false, error: null };
+    const failed = { ...ready, error: new Error("denied") };
+    expect(deleteBlocked(ready, ready, true)).toBeNull();
+    expect(deleteBlocked(ready, ready, false)).toBe("Deleting needs a connection.");
+    expect(deleteBlocked({ ...ready, loading: true }, ready, true)).toBe("Its tasks and qualification notes are still loading.");
+    expect(deleteBlocked(ready, { ...ready, fromCache: true }, true)).toBe("Its tasks and qualification notes are still loading.");
+    expect(deleteBlocked(failed, ready, true)).toBe("Couldn’t load its tasks, so it can’t be deleted yet. Reload the page.");
+    expect(deleteBlocked(ready, failed, true)).toBe("Couldn’t load its qualification notes, so it can’t be deleted yet. Reload the page.");
+    expect(deleteBlocked(failed, { ...failed, fromCache: true }, true)).toBe("Couldn’t load its tasks and qualification notes, so it can’t be deleted yet. Reload the page.");
   });
 });
 
