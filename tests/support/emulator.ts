@@ -97,13 +97,13 @@ export async function clearAll() {
   await Promise.all([clearProject("tasks"), clearProject("clients")]);
 }
 
-export type SeedDoc = { id: string | number } & Record<string, unknown>;
+export type SeedDoc = { id: string | number };
 
 // The client tracker's collections also keep the id inside the document,
 // and the app reads it from there: pass keepIdField for those.
-export async function seed(project: ProjectKey, collection: string, docs: SeedDoc[], { keepIdField = false } = {}) {
+export async function seed<T extends SeedDoc>(project: ProjectKey, collection: string, docs: T[], { keepIdField = false } = {}) {
   if (docs.length === 0) return;
-  const writes = docs.map(({ id, ...data }) => ({
+  const writes = (docs as (SeedDoc & Record<string, unknown>)[]).map(({ id, ...data }) => ({
     update: {
       name: `${docsPath(project)}/${collection}/${id}`,
       fields: encodeFields(keepIdField ? { id, ...data } : data),

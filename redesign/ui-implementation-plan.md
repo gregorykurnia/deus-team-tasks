@@ -140,8 +140,8 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | **1** | **Phase 1: safety net and data (no visual change)** | | |
 | 1.1 | Test harness: `npm ci`, Playwright config, Firestore emulator, Vitest, `npm run test:smoke` / `test:unit` | Opus 5.5 High | 2026-10-20 · `130f886` (Vitest 4: Vitest 5 needs newer Node types) |
 | 1.2 | Smoke specs on the old UI: tasks, task groups, flows | Opus 5.5 High | 2026-10-20 · `481931b` (desktop only on the old UI; two known bugs marked as expected failures until 1.4) |
-| 1.3 | Smoke specs on the old UI: companies, notes, past clients | Opus 5.5 High | 2026-10-20 (two known bugs marked as expected failures until 1.5) |
-| 1.4 | Move logic out of components into `lib/` (tasks, groups, plan, flows) | Opus 5.5 High | |
+| 1.3 | Smoke specs on the old UI: companies, notes, past clients | Opus 5.5 High | 2026-10-20 · `28f0b7a` (two known bugs marked as expected failures until 1.5) |
+| 1.4 | Move logic out of components into `lib/` (tasks, groups, plan, flows) | Opus 5.5 High | 2026-10-20 · `06958ce` (also `lib/dates.ts`, `lib/taskWrites.ts`, `lib/batches.ts`; flows had no logic to move) |
 | 1.5 | Move logic out of components into `lib/` (companies, notes, past clients); safe writes | Opus 5.5 High | |
 | 1.6 | Data additions, connection state, offline cache, calendar route | Opus 5.5 High | |
 | 1.7 | Shared company settings in Firestore (read path + defaults) | Opus 5.5 High | |

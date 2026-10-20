@@ -115,7 +115,7 @@ describe("Today", () => {
       ],
       ctx
     );
-    expect(Object.fromEntries(Object.entries(sections).map(([k, v]) => [k, v.map((t) => t.id)]))).toEqual({
+    expect(Object.fromEntries(Object.entries(sections).map(([k, v]: [string, Task[]]) => [k, v.map((t) => t.id)]))).toEqual({
       overdue: ["o"],
       soon: ["s1", "s2"],
       active: ["a"],
