@@ -80,3 +80,8 @@ Companies has its own page (`prototype/companies.html`), reached from the side b
 1. **Deleting a company (B14):** its tasks stay, as internal work, and its qualification notes stay, without a company. The inventory doesn't say what happens to them. The alternative is deleting them with the company.
 2. **Products as a managed list:** C3 names status, type, priority and own choice fields. Products are designed as a list of options too (several per company, managed the same way), so the product filter and export stay clean. The alternative is free text.
 3. **"Fields that matter for each group" (C2)** is read as "what the group's list shows (and exports)", while every field stays in the record. The alternative is hiding fields from the record as well.
+
+## D-012 — Owner's answers to D-011 (2026-10-20)
+1. **Deleting a company:** confirmed as designed. Its tasks stay, as internal work, and its qualification notes stay, without a company.
+2. **Products are free text**, not a managed list. Several products are written with commas between them ("Fleet tracking, Analytics"). The Product filter lists the products already written in the group, most used first, and ignores case and spacing, so "point of sale " and "Point of sale" are one product. Search and export use the text as written. This replaces the Products option list in D-011, and the stress data now has free-text products.
+3. **Fields per group:** the owner took the designer's recommendation. The switches control what the list shows (and exports), and every field stays in the record.

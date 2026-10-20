@@ -1186,3 +1186,4 @@ a.insight:hover, button.insight:hover { background: #fff; box-shadow: 0 0 0 1px 
   .orow .ocount { grid-column: 2; grid-row: 2; padding-left: 4px; }
   .orow.add { grid-template-columns: 38px minmax(0, 1fr) auto; }
 }
+.menu .mi .mi-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -112,12 +112,19 @@
     if (c.stage === 'hold') parts.push(c.reason);
     return parts.join(' ').toLowerCase();
   };
+  // Products are free text (owner, D-012). The filter splits on commas and ignores case and spacing.
+  const productsOf = (c) => String(c.products || '').split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+  const productList = (g) => {
+    const seen = new Map();
+    companiesIn(g).forEach((c) => productsOf(c).forEach((p) => { const k = p.toLowerCase(); const e = seen.get(k) || { name: p, n: 0 }; e.n++; seen.set(k, e); }));
+    return Array.from(seen.values()).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+  };
   const matchQ = (c) => !ui.q || searchText(c).includes(ui.q.toLowerCase());
   const hasF = (id) => groupFields(ui.g).some((f) => f.id === id);
   function apply(list) {
     list = list.filter(matchQ);
     if (ui.prio && hasF('prio')) list = list.filter((c) => (ui.prio === '-' ? !c.prio : c.prio === ui.prio));
-    if (ui.product && hasF('products')) list = list.filter((c) => c.products.includes(ui.product));
+    if (ui.product && hasF('products')) list = list.filter((c) => productsOf(c).some((p) => p.toLowerCase() === ui.product.toLowerCase()));
     if (ui.status && hasF('status')) list = list.filter((c) => (ui.status === '-' ? !c.status : c.status === ui.status));
     const a = ui.g === 'active' && ACTS.find((x) => x.id === ui.act);
     if (a) list = list.filter(a.test);
@@ -223,7 +230,7 @@
     const optLabel = (fid, v) => (v === '-' ? 'None' : ((opt(field(fid), v) || {}).label || ''));
     if (hasF('status')) parts.push(fb('status', 'choice', 'Status', optLabel('status', ui.status), !!ui.status));
     if (hasF('prio')) parts.push(fb('prio', 'flag', 'Priority', optLabel('prio', ui.prio), !!ui.prio));
-    if (hasF('products')) parts.push(fb('product', 'filter', 'Product', optLabel('products', ui.product), !!ui.product));
+    if (hasF('products')) parts.push(fb('product', 'filter', 'Product', ui.product, !!ui.product));
     const k = sortKey();
     parts.push(`<button class="fbtn" data-menu="sort" aria-haspopup="menu">${ic('sort')}Sort <span class="v">${esc(sortLabel(k))}, ${dirLabels(k)[sortDir() === 'asc' ? 0 : 1].toLowerCase()}</span>${ic('down')}</button>`);
     parts.push('<span class="sp"></span>');
@@ -596,7 +603,7 @@
       const name = st.name.trim();
       if (!name) { st.err = 'name'; paint('#nc-name'); return; }
       if (blocked('The company')) return;
-      const base = { contact: '', type: '', status: '', answer: '', prio: '', products: [], reason: '', outreach: null, last: null, target: null, next: '', trial: '', industry: '', source: '', notes: '' };
+      const base = { contact: '', type: '', status: '', answer: '', prio: '', products: '', reason: '', outreach: null, last: null, target: null, next: '', trial: '', industry: '', source: '', notes: '' };
       const c = Object.assign(base, st.vals, { id: 'co' + Date.now(), name, short: P.initials(name).slice(0, 2), stage: st.g });
       if (st.g === 'done') c.status = 'won';
       P.db.companies.unshift(c);
@@ -784,7 +791,7 @@
           if (blocked('The change')) return;
           P.db.coOptions[fid] = optsOf(f).filter((x) => x !== o);
           P.db.companies.forEach((c) => { if (f.kind === 'multi') { if ((c[fid] || []).includes(o.id)) c[fid] = c[fid].filter((x) => x !== o.id); } else if (c[fid] === o.id) c[fid] = ''; });
-          if (ui[fid === 'products' ? 'product' : fid] === o.id) ui[fid === 'products' ? 'product' : fid] = '';
+          if (ui[fid] === o.id) ui[fid] = '';
           paint(); P.render(); P.toast(n ? `“${o.label}” removed and cleared from ${plural(n, 'company', 'companies')}` : `“${o.label}” removed`);
         } });
         return;
@@ -831,9 +838,13 @@
 
   /* ---------- Menus ---------- */
   function openMenu(key, btn) {
-    if (key === 'status' || key === 'prio' || key === 'product') {
-      const f = field(key === 'product' ? 'products' : key); const cur = ui[key];
-      return P.menu(btn, `<h4>${esc(f.label)}</h4>${P.mi('', key === 'product' ? 'Any product' : 'Any', !cur)}${optsOf(f).filter((o) => o.id !== 'won').map((o) => `<button class="mi" role="menuitemradio" data-v="${esc(o.id)}" aria-checked="${cur === o.id}">${chip(o)}${ic('check', 'tick')}</button>`).join('')}${key === 'product' ? '' : P.mi('-', 'None set', cur === '-')}`, (v) => { ui[key] = v; ui.limit = 100; render(); });
+    if (key === 'product') {
+      const list = productList(ui.g); const cur = ui.product.toLowerCase();
+      return P.menu(btn, `<h4>Product</h4>${P.mi('', 'Any product', !cur)}${list.slice(0, 60).map((p) => `<button class="mi" role="menuitemradio" data-v="${esc(p.name)}" aria-checked="${cur === p.name.toLowerCase()}"><span class="mi-t">${esc(p.name)}</span><small class="mi-note">${num(p.n)}</small>${ic('check', 'tick')}</button>`).join('')}${list.length > 60 ? `<p class="foot">Showing the 60 most used of ${num(list.length)}. Search finds the rest.</p>` : ''}${list.length ? '' : '<p class="foot">No products written down in this group yet.</p>'}`, (v) => { ui.product = v; ui.limit = 100; render(); });
+    }
+    if (key === 'status' || key === 'prio') {
+      const f = field(key); const cur = ui[key];
+      return P.menu(btn, `<h4>${esc(f.label)}</h4>${P.mi('', 'Any', !cur)}${optsOf(f).filter((o) => o.id !== 'won').map((o) => `<button class="mi" role="menuitemradio" data-v="${esc(o.id)}" aria-checked="${cur === o.id}">${chip(o)}${ic('check', 'tick')}</button>`).join('')}${P.mi('-', 'None set', cur === '-')}`, (v) => { ui[key] = v; ui.limit = 100; render(); });
     }
     if (key === 'sort') {
       const k = sortKey(); const d = sortDir(); const dl = dirLabels(k);
@@ -885,7 +896,7 @@
         liveCo = new Set();
         const c = P.company('pel') || P.db.companies.find((x) => x.stage === 'active');
         if (c) { c.status = 'nego'; c.last = P.iso(0); liveCo.add(c.id); flashCo.add(c.id); }
-        const n = { id: 'live1', name: 'Cendana Hotels', short: 'CH', stage: ui.g, contact: 'Nadia Putri', type: 'client', status: ui.g === 'active' ? 'meet' : '', answer: ui.g === 'hold' ? 'later' : '', prio: 'medium', products: ['pos'], reason: '', outreach: null, last: P.iso(0), target: P.iso(9), next: '', trial: '', industry: 'Hospitality', source: 'Referral', notes: '' };
+        const n = { id: 'live1', name: 'Cendana Hotels', short: 'CH', stage: ui.g, contact: 'Nadia Putri', type: 'client', status: ui.g === 'active' ? 'meet' : '', answer: ui.g === 'hold' ? 'later' : '', prio: 'medium', products: 'Point of sale', reason: '', outreach: null, last: P.iso(0), target: P.iso(9), next: '', trial: '', industry: 'Hospitality', source: 'Referral', notes: '' };
         P.db.companies.unshift(n); liveCo.add(n.id); flashCo.add(n.id);
         P.render();
       }, 1200);

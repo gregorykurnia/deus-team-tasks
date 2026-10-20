@@ -23,7 +23,7 @@
       { id: 'status', label: 'Status', kind: 'choice', groups: ['active'] },
       { id: 'answer', label: 'Answer', kind: 'choice', groups: ['hold'] },
       { id: 'prio', label: 'Priority', kind: 'choice', groups: ['lead', 'active'] },
-      { id: 'products', label: 'Products', kind: 'multi', groups: ['active', 'done', 'hold'] },
+      { id: 'products', label: 'Products', kind: 'text', groups: ['active', 'done', 'hold'] },
       { id: 'reason', label: 'Reason', kind: 'long', groups: ['hold'] },
       { id: 'outreach', label: 'Planned outreach', kind: 'date', groups: ['lead'] },
       { id: 'last', label: 'Last action', kind: 'date', groups: ['active', 'done', 'hold'] },
@@ -41,7 +41,6 @@
       type: [O('client', 'Client', 'blue'), O('partner', 'Partner', 'violet'), O('indiv', 'Individual partner', 'pink')],
       answer: [O('later', 'Not now', 'amber'), O('no', 'No', 'slate')],
       prio: [O('high', 'High', 'red'), O('medium', 'Medium', 'amber'), O('low', 'Low', 'slate')],
-      products: [O('fleet', 'Fleet tracking', 'blue'), O('pay', 'Payroll', 'teal'), O('pos', 'Point of sale', 'violet'), O('loyal', 'Loyalty add-on', 'pink'), O('ana', 'Analytics', 'sky')],
     };
     const shown = {
       lead: ['outreach', 'prio', 'type', 'industry', 'source', 'notes'],
@@ -51,6 +50,9 @@
     };
     return { fields, options, shown };
   }
+  // Products are free text (D-012). Mock data is written with short ids, then spelled out here.
+  const PRODUCT = { fleet: 'Fleet tracking', pay: 'Payroll', pos: 'Point of sale', loyal: 'Loyalty add-on', ana: 'Analytics' };
+  const productText = (ids) => ids.map((x) => PRODUCT[x] || x).join(', ');
 
   /* ---------- Normal data ---------- */
   function normal() {
@@ -98,6 +100,8 @@
       C({ id: 'hut', name: 'Hutama Energy', short: 'HE', stage: 'hold', type: 'client', answer: 'no', products: ['fleet', 'ana'], last: d(-100) }),
     ];
     // Fields the team added (C1): a choice on three groups, a number on Active, a date on No or not now.
+    companies.forEach((c) => { c.products = productText(c.products); });
+    companies.find((c) => c.id === 'ner').products = 'point of sale , Loyalty add-on'; // typed differently: the filter still groups it
     const schema = coSchema();
     schema.fields.push(
       { id: 'region', label: 'Region', kind: 'choice', groups: ['lead', 'active', 'done'], own: true },
@@ -263,7 +267,7 @@
     const O = (id, label, color, lock) => ({ id, label, color, lock: lock || null });
     schema.options.status.splice(5, 0, O('s6', 'Waiting for the regional procurement committee’s second-round approval', 'slate'), O('s7', '技术评估', 'teal'), O('s8', 'بانتظار الموافقة', 'violet'),
       ...['Security review', 'Legal review', 'Reference call', 'Pilot planning', 'Budget check', 'Board sign-off', 'Contract sent', 'Onboarding call', 'Price agreed', 'Paused by them', 'Champion left', 'Re-engaged', 'Second demo'].map((l, i) => O('x' + i, l, ['blue', 'teal', 'violet', 'pink', 'sky', 'slate'][i % 6])));
-    for (let i = 0; i < 26; i++) schema.options.products.push(O('pr' + i, i === 3 ? 'Enterprisewideintegratedworkforceschedulingandtimeattendancesuite' : 'Product ' + String.fromCharCode(65 + (i % 26)) + (i > 12 ? ' Pro' : ''), ['blue', 'teal', 'violet', 'pink', 'sky', 'slate', 'green'][i % 7]));
+    const prodNames = Object.values(PRODUCT).concat(['Enterprisewideintegratedworkforceschedulingandtimeattendancesuite', '人事管理', 'إدارة الأسطول'], Array.from({ length: 23 }, (_, i) => 'Product ' + String.fromCharCode(65 + i) + (i > 12 ? ' Pro' : '')));
     const own = [
       ['o1', 'Estimated annual contract value in Indonesian rupiah (millions)', 'number'], ['o2', 'Decision maker', 'text'], ['o3', 'Procurement portal reference', 'text'],
       ['o4', 'Contract end date with their current vendor', 'date'], ['o5', 'Competitors in the deal', 'long'], ['o6', 'Region', 'choice'], ['o7', 'Branches', 'number'], ['o8', '担当者メモ', 'long'], ['o9', 'Signed NDA', 'choice'],
@@ -278,7 +282,7 @@
     const industries = ['Logistics', 'Healthcare', 'Retail', 'Food and beverage', 'Banking', 'Hospitality', 'Education', 'Manufacturing of industrial machinery and spare parts for the mining sector', '製造業', 'Energy'];
     const sources = ['Trade fair', 'Referral', 'LinkedIn', 'Website enquiry', 'Cold outreach', 'Partner introduction', 'A conversation at the Surabaya logistics forum dinner, table 12'];
     const statusIds = schema.options.status.map((o) => o.id).filter((x) => x !== 'won');
-    const prodIds = schema.options.products.map((o) => o.id);
+    
     const fill = (c, i) => {
       if (c.stage === 'active' && i % 5 === 4) c.stage = 'hold';
       const sparse = r2() < 0.3; // empty optional fields
@@ -286,7 +290,7 @@
         contact: sparse ? '' : p2(contacts), type: sparse && r2() < 0.5 ? '' : p2(['client', 'client', 'partner', 'indiv']),
         status: c.stage === 'done' ? 'won' : (c.stage === 'active' && !sparse ? p2(statusIds) : ''),
         answer: c.stage === 'hold' ? p2(['later', 'no']) : '', prio: sparse ? '' : p2(['high', 'medium', 'low']),
-        products: sparse ? [] : Array.from(new Set(Array.from({ length: r2() < 0.1 ? b2(5, 12) : b2(1, 2) }, () => p2(prodIds)))),
+        products: sparse ? '' : Array.from(new Set(Array.from({ length: r2() < 0.1 ? b2(5, 12) : b2(1, 2) }, () => p2(prodNames)))).join(', '),
         reason: c.stage === 'hold' && !sparse ? (r2() < 0.2 ? longText : 'Budget frozen until next year.') : '',
         outreach: c.stage === 'lead' && !sparse ? d(b2(-20, 40)) : null,
         last: c.stage === 'lead' || (sparse && r2() < 0.5) ? null : d(-b2(0, 400)),

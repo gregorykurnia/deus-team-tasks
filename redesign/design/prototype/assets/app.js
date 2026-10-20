@@ -109,7 +109,7 @@
   /* ---------- Data ---------- */
   P.db = P.stress ? PROTO_DATA.stress() : PROTO_DATA.normal();
   // Changes made while clicking through carry across pages in this tab (normal state only). ?reset starts over.
-  const SAVE_KEY = 'proto.db.v3.' + (P.stress ? 'stress' : 'normal');
+  const SAVE_KEY = 'proto.db.v4.' + (P.stress ? 'stress' : 'normal');
   try {
     if (qs.has('reset')) sessionStorage.removeItem(SAVE_KEY);
     else if (!P.state && sessionStorage.getItem(SAVE_KEY)) P.db = JSON.parse(sessionStorage.getItem(SAVE_KEY));
