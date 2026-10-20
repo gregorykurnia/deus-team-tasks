@@ -15,6 +15,7 @@
     "playwright@anthropic-plugin-directory": false,
     "security-guidance@anthropic-plugin-directory": false,
     "superpowers@anthropic-plugin-directory": false,
+    "vercel@anthropic-plugin-directory": false,
     "vercel@claude-plugins-official": false
   },
   "permissions": {
