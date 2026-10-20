@@ -3,6 +3,9 @@
 
 const DAY_MS = 86_400_000;
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function isoOf(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -57,4 +60,16 @@ export function ago(iso: string, today: string = todayIso()): string {
 
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+}
+
+// "Thu 23": the weekday and the day of the month.
+export function dayLabel(iso: string): string {
+  const d = parseIso(iso);
+  return `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}`;
+}
+
+// "Tuesday, 20 October", for a page's subtitle.
+export function longDayLabel(iso: string): string {
+  const d = parseIso(iso);
+  return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
 }

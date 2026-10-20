@@ -72,6 +72,10 @@
     width: 100%;
   }
 
+  .searchOffPhone {
+    display: none;
+  }
+
   .action {
     display: none;
   }

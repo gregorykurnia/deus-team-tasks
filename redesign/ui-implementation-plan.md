@@ -159,7 +159,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | R2.1 | Phase 2 review fixes (listed in `redesign/reviews/phase-2.md`), before Phase 3; then tick Phase 2 in `redesign/redesign-plan.md` | Opus 5.5 High | 2026-10-20 (all 23 items; gaps N4 connecting, N5 failed source, provisional) |
 | **3** | **Phase 3: screens (all states, phone and desktop)** | | |
 | 3.1 | Task details sheet (quick, full, kept in step, delete, offline) | Opus 5.5 High | 2026-10-20 · this commit (a new dated company task also brings its company in step; gap N6 provisional; test emulator moved to port 8180) |
-| 3.2 | Today | Sonnet 5.5 High | |
+| 3.2 | Today | Sonnet 5.5 High | 2026-10-20 · this commit (links into All tasks use `?due=`, `?kind=prospect\|client\|internal`, `?idle=14`, `?q=`, `?focus=search` for 3.3 to read; search still waits on N3) |
 | 3.3 | All tasks and task groups (filters, sort, details shown, group create/rename/delete) | Sonnet 5.5 High | |
 | 3.4 | Selecting several tasks (select all, bulk done/move/delete, Undo) | Opus 5.5 High | |
 | 3.5 | Plan: bar, filters, stepper, Timeline | Sonnet 5.5 High | |

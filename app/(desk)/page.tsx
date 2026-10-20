@@ -1,5 +1,5 @@
-import PageHeader from "@/desk/PageHeader";
+import TodayScreen from "@/features/today/TodayScreen";
 
 export default function Page() {
-  return <PageHeader title="Today" />;
+  return <TodayScreen />;
 }

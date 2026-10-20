@@ -19,10 +19,11 @@ interface PageHeaderProps {
   title: string;
   subtitle?: ReactNode;
   search?: ReactNode;
+  phoneSearchHref?: string; // on phones the search field becomes a round search button that goes here (Today, guide 6.1)
   action?: PageAction;
 }
 
-export default function PageHeader({ title, subtitle, search, action }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, search, phoneSearchHref, action }: PageHeaderProps) {
   return (
     <header>
       <div className={styles.bar}>
@@ -31,7 +32,12 @@ export default function PageHeader({ title, subtitle, search, action }: PageHead
           {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
         </div>
         <span className={styles.spacer} />
-        {search && <div className={styles.search}>{search}</div>}
+        {search && <div className={phoneSearchHref ? `${styles.search} ${styles.searchOffPhone}` : styles.search}>{search}</div>}
+        {phoneSearchHref && (
+          <Link className={styles.phoneAction} href={phoneSearchHref} aria-label="Search">
+            <Icon name="search" />
+          </Link>
+        )}
         {action && (
           <>
             <Link className={styles.action} href={action.href} scroll={false}>

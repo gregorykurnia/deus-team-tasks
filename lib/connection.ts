@@ -145,6 +145,11 @@ export class OfflineError extends Error {
   }
 }
 
+// What an error toast says for a failed write: the refusal's own words when there is no connection, else `otherwise`.
+export function failureMessage(err: unknown, otherwise: string): string {
+  return err instanceof OfflineError ? err.message : otherwise;
+}
+
 export function assertOnline(message?: string): void {
   update(); // the browser's own flag or the wait for the server may have changed without an event yet
   if (!snapshot.online) throw new OfflineError(message);

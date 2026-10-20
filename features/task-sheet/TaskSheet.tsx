@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks } from "@/desk/DeskData";
 import { addTaskKeptInStep, saveTaskKeptInStep } from "@/lib/companyWrites";
-import { OfflineError } from "@/lib/connection";
+import { failureMessage } from "@/lib/connection";
 import { ago, isoOf, plural } from "@/lib/dates";
 import { isDealDone, kindOf, type Kind } from "@/lib/kinds";
 import { initials, openCountsByName } from "@/lib/people";
@@ -41,10 +41,6 @@ interface TaskSheetProps {
 }
 
 type Busy = null | "save" | "done" | "delete";
-
-function failure(err: unknown, otherwise: string): string {
-  return err instanceof OfflineError ? err.message : otherwise;
-}
 
 export default function TaskSheet({ task, gone = false, initialGroup, onClose }: TaskSheetProps) {
   const tasks = useTasks();
@@ -117,7 +113,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
         toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
       } catch (err) {
         setBusy(null);
-        toast(failure(err, "Your changes couldn't be saved. Check your connection and try again."), { error: true });
+        toast(failureMessage(err, "Your changes couldn't be saved. Check your connection and try again."), { error: true });
       }
       return;
     }
@@ -128,7 +124,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
       toast(keptInStepMessage("Task added", companyChanged, tasksChanged));
     } catch (err) {
       setBusy(null);
-      toast(failure(err, "The task couldn't be added. Check your connection and try again."), { error: true });
+      toast(failureMessage(err, "The task couldn't be added. Check your connection and try again."), { error: true });
     }
   }
 
@@ -150,12 +146,12 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
       const what = done ? "marked done" : "moved back to open tasks";
       toast(changed ? `Changes saved and ${what}` : done ? "Marked done" : "Moved back to open tasks", {
         action: "Undo",
-        onAction: () => void putBackDone([task]).catch((err) => toast(failure(err, "The change couldn't be undone."), { error: true })),
+        onAction: () => void putBackDone([task]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
       });
     } catch (err) {
       setBusy(null);
       const what = done ? "marked done" : "marked not done";
-      toast(failure(err, `The task couldn't be ${what}. Check your connection and try again.`), { error: true });
+      toast(failureMessage(err, `The task couldn't be ${what}. Check your connection and try again.`), { error: true });
     }
   }
 
@@ -170,7 +166,7 @@ export default function TaskSheet({ task, gone = false, initialGroup, onClose }:
     } catch (err) {
       setBusy(null);
       setConfirming(false);
-      toast(failure(err, "The task couldn't be deleted. Check your connection and try again."), { error: true });
+      toast(failureMessage(err, "The task couldn't be deleted. Check your connection and try again."), { error: true });
     }
   }
 
