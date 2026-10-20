@@ -7,11 +7,13 @@
   --accent: #4f46e5;
 }
 
-/* Tokens as Tailwind theme values, so utilities such as bg-glass, text-ink and rounded-l work.
-   Tailwind's own names (rounded-xl, rounded-2xl, shadow-sm and so on) are not overridden, because the old
-   screens still use them. So the design's r-xl and r-xs are registered as rounded-sheet and rounded-cell. */
+/* Tokens as Tailwind theme values, so utilities such as bg-glass, text-ink and rounded-panel work.
+   Tailwind's own names are not overridden: rounded-xl and rounded-2xl are in use by the old screens, and
+   rounded-l and rounded-s are Tailwind's side utilities, which would clash. So the design's r-xl, r-l, r-s
+   and r-xs are registered as rounded-sheet, rounded-panel, rounded-small and rounded-cell. */
 @theme inline {
   --font-sans: var(--font);
+  --color-accent: var(--accent);
 
   --color-page: var(--page);
   --color-glass: var(--glass);
@@ -67,11 +69,11 @@
 
   --radius-sheet: var(--r-xl);
   --radius-dialog: var(--r-dialog);
-  --radius-l: var(--r-l);
+  --radius-panel: var(--r-l);
   --radius-menu: var(--r-menu);
   --radius-m: var(--r-m);
   --radius-field: var(--r-field);
-  --radius-s: var(--r-s);
+  --radius-small: var(--r-s);
   --radius-cell: var(--r-xs);
   --radius-pill: var(--r-pill);
 }

@@ -56,7 +56,7 @@ lib/                    data (kept hooks and Firebase setup, plus new modules li
 tests/smoke/, tests/unit/
 ```
 
-**Styling.** `styles/tokens.css` is `redesign/design/tokens.css` as frozen, minus its Google Fonts import. Tokens are registered as Tailwind 4 theme variables (`@theme inline`), so both utilities (`bg-glass`, `text-ink`, `rounded-l`) and `var(--…)` work. Components use CSS Modules ported from the matching section of the prototype's `assets/app.css`, always taking values from the tokens and following the guide wherever it says **Changed from the prototype** (muted text, ink shades, field outlines, done-circle ring, button gradient). Tailwind utilities for simple layout only.
+**Styling.** `styles/tokens.css` is `redesign/design/tokens.css` as frozen, minus its Google Fonts import. Tokens are registered as Tailwind 4 theme variables (`@theme inline`), so both utilities (`bg-glass`, `text-ink`, `rounded-panel`) and `var(--…)` work. Tailwind's own side-radius names (`rounded-l`, `rounded-s`) are not reused. Components use CSS Modules ported from the matching section of the prototype's `assets/app.css`, always taking values from the tokens and following the guide wherever it says **Changed from the prototype** (muted text, ink shades, field outlines, done-circle ring, button gradient). Tailwind utilities for simple layout only.
 
 **Fonts and icons.** Plus Jakarta Sans 400–800 through `next/font/google` (self-hosted, so it works offline), set as `--font`. Geist goes. Icons: one `Icon` component holding the prototype's set (`assets/app.js`, `ICONS`), 24px grid, 2.1 stroke, `currentColor`, `aria-hidden` unless labelled.
 
@@ -148,7 +148,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-1.md`; later items added to 2.3, 3.10, 3.14, 4.3) |
 | R1.1 | Phase 1 review fixes (listed in `redesign/reviews/phase-1.md`) | Opus 5.5 High | 2026-10-20 (same commit as R1) |
 | **2** | **Phase 2: foundations** | | |
-| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | 2026-10-20 · this commit (r-xl and r-xs registered as rounded-sheet and rounded-cell) |
+| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | 2026-10-20 · this commit (radius names: rounded-sheet, rounded-panel, rounded-small, rounded-cell) |
 | 2.2 | Icon set | Haiku 5.5 Max | 2026-10-20 · this commit (creates /gallery with the icons; 2.4 adds the rest) |
 | 2.3 | App shell: routes, DeskData, side bar, tab bar, More, page header, banner, live dot | Opus 5.5 High | |
 | 2.4 | Display components: buttons, pills, tags, chips, avatars, notices, empty, skeleton, meters + dev gallery | Haiku 5.5 Max | |
