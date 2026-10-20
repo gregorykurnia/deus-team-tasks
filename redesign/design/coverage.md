@@ -8,7 +8,7 @@ Maps every job story and state in `redesign/handoff/inventory.md` to where the p
 - Tokens named in the guide all exist in `tokens.css`.
 - Not checked: how each state looks on a phone. That rests on the responsive CSS (23 breakpoint rules) and the screenshots the owner approved (`shots/`), not on every state at both widths.
 
-**Result.** All 69 job stories and every state in the inventory are covered. One mismatch between the guide and the prototype was found (G-1, needs the owner). Two small notes (G-2, G-3). Nothing else is missing.
+**Result.** All 69 job stories and every state in the inventory are covered. One mismatch between the guide and the prototype was found and fixed (G-1). Two small notes (G-2, G-3). Nothing else is missing.
 
 Paths below are relative to `prototype/`. "Guide" is `design-guide.md`.
 
@@ -159,7 +159,7 @@ Every screen has a stress version (`?stress`, or the Stress links on `map.html`)
 
 | # | Gap | Status |
 |---|---|---|
-| G-1 | **Which company fields the list shows (C2) is "remembered on the device" in guide 5.6, but the prototype doesn't remember it** (a reload resets the switches). Only the task columns (W15) are remembered. The inventory only asks for remembering on W15. | **Owner to decide: D-023.** Neither file changed yet. |
+| G-1 | **Which company fields the list shows (C2) is "remembered on the device" in guide 5.6, but the prototype doesn't remember it** (a reload resets the switches). Only the task columns (W15) are remembered. The inventory only asks for remembering on W15. | **Fixed (D-024):** shared by the team. Guide 5.6 corrected; the prototype already said so. |
 | G-2 | Phone screenshots exist for 38 screens, not every state. Phone layout for the rest is by shared CSS. | Note only. The rebuild's visual review should check phones state by state. |
 | G-3 | The selecting-several story (D-008) has no ID in `inventory.md`. | Note only. The owner adds it on their side. |
 

@@ -455,7 +455,7 @@ Only what the inventory requires: a task's description, a company's name, a task
 - Filters are pills that show their value and clear with ×. A results line says "24 of 128".
 - Sort by tapping a column head, or from the sort menu on phones. Direction labels are in words ("Earliest first", "Longest without action first", "A to Z"). **Empty values always go last**, whichever way round.
 - Defaults: tasks by deadline, earliest first. Prospect work by latest deadline first, undated last (W14). Finished tasks most recent first. Companies by most recent action. To approach by soonest planned outreach. Qualification notes by last edited. Past clients by name, A to Z. Flows A to Z.
-- "Details shown" (W15) and the company group's fields are remembered on the device between visits.
+- "Details shown" on All tasks (W15) is remembered on the device between visits. The fields a company group's list shows (C2) are not: they're saved with the group, so everyone on the team sees the same fields and the export matches (D-024).
 
 ### 5.7 Long lists
 - Today caps each section at 6, with "See all 14".

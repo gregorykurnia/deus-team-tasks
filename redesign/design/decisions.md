@@ -189,3 +189,6 @@ Owner: "I approve of the guide". Recorded as approval of `design-guide.md` and `
 1. **Shared by the team** (designer's recommendation): the switches are saved with the group, so everyone sees the same fields and the export matches what colleagues see. This fits "choose which fields matter for each group" as a team decision, and "everyone uses the same shared data".
 2. **Per device**, as the guide says now: each person picks their own columns, and the export follows the person's own choice. Matches W15.
 Until the owner answers, neither the guide nor the prototype is changed. If the answer is 1, guide 5.6 and the Fields sheet's help text change, and the guide gets a version at the freeze as usual.
+
+## D-024 — Owner's answer to D-023 (2026-10-20)
+Owner: "I think ill just go w ur recc". **The fields a company group's list shows are shared by the team** (option 1): saved with the group, the same for everyone, and the export matches. Guide 5.6 now says so. The prototype's Fields sheet already said "Changes apply for everyone on the team", so it needed no change. Only the task columns (W15) stay per device. The coverage gap G-1 is closed. Next: stage 5, the freeze, when the owner approves.
