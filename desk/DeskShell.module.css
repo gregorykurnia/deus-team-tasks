@@ -1,0 +1,29 @@
+/* The page frame (guide 2.3): 1480px at most, centred, the side bar 24px beside the content. */
+.app {
+  display: grid;
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
+  gap: 24px;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-pad);
+}
+
+.main {
+  min-width: 0;
+  padding-top: 6px;
+}
+
+/* 900px and under (--bp-tablet): one column, with room at the bottom for the tab bar. */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px 16px calc(130px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: 14px 14px calc(130px + env(safe-area-inset-bottom));
+  }
+}

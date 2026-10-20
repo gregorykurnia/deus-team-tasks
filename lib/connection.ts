@@ -67,6 +67,12 @@ export function reportSnapshot(source: Source, fromCache: boolean, now = Date.no
   update();
 }
 
+// A subscription that closed stops counting, so its last state can't keep the
+// app counted as online after the sources still open fall back to the device.
+export function forgetSource(source: Source) {
+  if (sources.delete(source)) update();
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("online", update);
   window.addEventListener("offline", update);

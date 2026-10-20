@@ -1,0 +1,62 @@
+.tabbar {
+  display: none;
+}
+
+/* 900px and under (--bp-tablet): a floating glass bar 20px above the bottom edge (guide 3). */
+@media (max-width: 900px) {
+  .tabbar {
+    position: fixed;
+    right: 14px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    left: 14px;
+    z-index: var(--z-tabbar);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 8px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.8);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-line);
+    box-shadow: var(--shadow);
+  }
+}
+
+.tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 6px 0;
+  border-radius: 20px;
+  font-size: var(--t-micro);
+  font-weight: var(--w-bold);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.tab[aria-current] {
+  background: var(--surface);
+  color: var(--blue);
+  box-shadow: 0 4px 12px -4px rgba(40, 46, 110, 0.25);
+}
+
+/* The raised New task button: a 56px blue gradient with a white edge. */
+.add {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  margin: -28px 6px 0;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: var(--cta);
+  color: #fff;
+  box-shadow: 0 12px 24px -8px rgba(47, 107, 234, 0.6);
+}

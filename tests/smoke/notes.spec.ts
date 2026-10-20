@@ -2,7 +2,7 @@
 // notes for someone not tracked yet, delete.
 import { test, expect } from "./fixtures";
 import { acceptDialogs, company, seedBaseline, seedCompanies, stored, storedById } from "./data";
-import { openArea } from "./old-ui";
+import { OLD_UI, openArea } from "./old-ui";
 import { seed } from "../support/emulator";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
@@ -32,13 +32,13 @@ test.beforeEach(async () => {
 });
 
 async function openNotes(page: import("@playwright/test").Page) {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Prospect Journal", "Clients");
 }
 
 test("U5: start qualification notes from a company", async ({ page }) => {
   await seedCompanies([company(1, { company: "Pelita Foods" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Client Pipeline", "Clients");
   await page.getByRole("button", { name: "Add Pelita Foods to prospect journal" }).click();
 

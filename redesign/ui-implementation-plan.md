@@ -20,7 +20,7 @@ How to use it: the **task table in §5 is the build checklist** and the only pla
 **Constraints** (from the redesign plan's project settings): Next.js 16.3.1 App Router, React 19.2.8, TypeScript, Tailwind CSS 4, no component library. Firestore in two projects (`db`: tasks, taskGroups, flows; `clientsDb`: pipeline, prospectJournal, historicalClients). No sign-in. Team calendar through `app/api/calendar/route.ts`. Installable PWA. Vercel, Node 24. Light mode only.
 
 - **Next.js here is newer than the model's training.** `node_modules` isn't installed on the Linux server yet: run `npm ci` first. Before writing routing, layout, font or metadata code, read the matching guide in `node_modules/next/dist/docs/` (AGENTS.md).
-- **Old app stays live** on `main` until the merge. The new UI is built on `redesign` and reviewed on its Vercel preview. No flag, no second entry point.
+- **Old app stays live** on `main` until the merge. The new UI is built on `redesign` and reviewed on its Vercel preview. No flag. On `redesign` only, the old screens sit at `/old` from 2.3 until 4.7, so the Phase 1 smoke tests keep a target and the preview keeps a working UI (owner, 2026-10-20).
 - **Both apps share the live data until the merge.** Every data change in Phase 1 must keep the old UI working (only add fields, never rename or remove them). The `redesign` preview writes real data (Q2).
 
 **Routes** (App Router, all screens are client components under one client layout):
@@ -148,9 +148,9 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-1.md`; later items added to 2.3, 3.10, 3.14, 4.3) |
 | R1.1 | Phase 1 review fixes (listed in `redesign/reviews/phase-1.md`) | Opus 5.5 High | 2026-10-20 (same commit as R1) |
 | **2** | **Phase 2: foundations** | | |
-| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | 2026-10-20 · this commit (radius names: rounded-sheet, rounded-panel, rounded-small, rounded-cell) |
-| 2.2 | Icon set | Haiku 5.5 Max | 2026-10-20 · this commit (creates /gallery with the icons; 2.4 adds the rest) |
-| 2.3 | App shell: routes, DeskData, side bar, tab bar, More, page header, banner, live dot | Opus 5.5 High | |
+| 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | 2026-10-20 · `893b19b`, review fixes `fee5428` (radius names: rounded-sheet, rounded-panel, rounded-small, rounded-cell) |
+| 2.2 | Icon set | Haiku 5.5 Max | 2026-10-20 · `ab2b618` (creates /gallery with the icons; 2.4 adds the rest) |
+| 2.3 | App shell: routes, DeskData, side bar, tab bar, More, page header, banner, live dot | Opus 5.5 High | 2026-10-20 · this commit (old screens at `/old`; More and the back-online toast move onto 2.5's Sheet and Toaster) |
 | 2.4 | Display components: buttons, pills, tags, chips, avatars, notices, empty, skeleton, meters + dev gallery | Haiku 5.5 Max | |
 | 2.5 | Overlays: menu, sheet, bottom sheet, dialog, confirm, toaster | Sonnet 5.5 High | |
 | 2.6 | Fields: all field variants, segmented, filter button, people picker, sector picker, in-place field | Sonnet 5.5 High | |
@@ -254,7 +254,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.2 Live and leftovers.** Arrive glow and "Just changed" on every screen, the many-changes toast (N2), back online message, anything still open on the §4 checklist, and N1 / N3 once designed.
 
-**4.3 Smoke tests for the new UI.** Rewrite every 1.2/1.3 spec's steps and selectors (roles and labels from the design) keeping the same behaviours; add selecting several, quick capture, options rename, notes offline writing, and the company delete cascade (tasks become internal, notes not tracked; R1). **Done when** the full suite passes twice in a row on a free machine.
+**4.3 Smoke tests for the new UI.** Rewrite every 1.2/1.3 spec's steps and selectors (roles and labels from the design) keeping the same behaviours, and drop `OLD_UI` (`/old`) from them; add selecting several, quick capture, options rename, notes offline writing, and the company delete cascade (tasks become internal, notes not tracked; R1). **Done when** the full suite passes twice in a row on a free machine.
 
 **4.4 Screenshots.** A Playwright script shoots each `map.html` state from the prototype and the matching new route at 1440 and 390, side by side, into `redesign/compare/` (git-ignored). Fix differences or log deliberate ones (guide "Changed from the prototype"). Coverage G-2: check phones state by state.
 
@@ -262,7 +262,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.6 Real-phone check.** You use the preview on your phone (install it, go offline, write notes offline, come back). A helper session writes the findings as fix tasks.
 
-**4.7 Old files out.** Delete every file in the "Replaces" column of §3 and old helpers no longer used (`clientLocalConfig.ts` after 4.8, `clientColumnResize.ts`, `colors.ts`, seed files), drop Geist. `scripts/old-names-check.sh` greps `app/ desk/ ui/ features/ styles/` for the old component and file names; it must print nothing.
+**4.7 Old files out.** Delete the `/old` route (`app/old/`), every file in the "Replaces" column of §3 and old helpers no longer used (`clientLocalConfig.ts` after 4.8, `clientColumnResize.ts`, `colors.ts`, seed files), drop Geist. `scripts/old-names-check.sh` greps `app/ desk/ ui/ features/ styles/` for the old component and file names; it must print nothing.
 
 **4.8 Data step for launch.** A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections.
 

@@ -1,7 +1,7 @@
 // Task groups on the old UI: create, star, delete.
 import { test, expect } from "./fixtures";
 import { acceptDialogs, seedBaseline, seedGroups, seedTasks, stored, storedById, task } from "./data";
-import { taskRow } from "./old-ui";
+import { OLD_UI, taskRow } from "./old-ui";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
 
@@ -14,7 +14,7 @@ function groupHeader(page: import("@playwright/test").Page, name: string) {
 }
 
 test("W8: create a task group", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await page.getByRole("button", { name: "+ Add Task Group" }).click();
   await page.getByPlaceholder("Group name").fill("Office move");
   await page.getByRole("button", { name: "Create" }).click();
@@ -27,7 +27,7 @@ test("W8: create a task group", async ({ page }) => {
 
 test("W8: a task group's name must be new", async ({ page }) => {
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await page.getByRole("button", { name: "+ Add Task Group" }).click();
   await page.getByPlaceholder("Group name").fill("Office move");
   await page.getByRole("button", { name: "Create" }).click();
@@ -41,7 +41,7 @@ test("W9: star a task group so it comes first", async ({ page }) => {
     { id: "g1", name: "Hiring", order: 1 },
     { id: "g2", name: "Office move", order: 2 },
   ]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await groupHeader(page, "Office move").getByTitle("Star group").click();
 
   await expect.poll(async () => (await storedById("tasks", "taskGroups", "g2"))?.starred).toBe(true);
@@ -51,7 +51,7 @@ test("W9: star a task group so it comes first", async ({ page }) => {
 test("W10: one task group's work on its own", async ({ page }) => {
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
   await seedTasks([task("t1", { task: "Pack the archive", taskGroup: "Office move" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await page.getByRole("button", { name: /^Office move\s*1$/ }).click();
 
   await expect(taskRow(page, "Pack the archive")).toBeVisible();
@@ -61,7 +61,7 @@ test("W10: one task group's work on its own", async ({ page }) => {
 test("W11: delete a task group after confirming", async ({ page }) => {
   acceptDialogs(page);
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await groupHeader(page, "Office move").getByTitle("Delete group").click();
 
   await expect.poll(() => stored("tasks", "taskGroups")).toEqual([]);
@@ -72,7 +72,7 @@ test("W11: deleting a task group leaves its tasks ungrouped", async ({ page }) =
   acceptDialogs(page);
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
   await seedTasks([task("t1", { task: "Pack the archive", taskGroup: "Office move" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await groupHeader(page, "Office move").getByTitle("Delete group").click();
 
   await expect.poll(() => stored("tasks", "taskGroups")).toEqual([]);
@@ -84,7 +84,7 @@ test("W11: deleting a task group leaves its tasks ungrouped", async ({ page }) =
 test("W11: move a task to a task group", async ({ page }) => {
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
   await seedTasks([task("t1", { task: "Pack the archive" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await taskRow(page, "Pack the archive").click();
   await page.locator("select").filter({ hasText: "— Ungrouped" }).selectOption("Office move");
   await page.getByRole("button", { name: "Save" }).click();

@@ -1,11 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, type QueryDocumentSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { ProspectJournalEntry } from "./prospectJournalTypes";
 import { NOTES } from "./noteWrites";
 import { reportSnapshot } from "./connection";
+
+export const notesQuery = () => collection(clientsDb, NOTES);
+// Oldest change first, as the notes have always been listed.
+export function toNotes(docs: QueryDocumentSnapshot[]): ProspectJournalEntry[] {
+  return docs
+    .map((item) => {
+      const entry = item.data() as ProspectJournalEntry;
+      return { ...entry, id: item.id, detailedRemarks: entry.detailedRemarks ?? "" };
+    })
+    .sort((a, b) => a.updatedAt - b.updatedAt);
+}
 
 export function useProspectJournal() {
   const [entries, setEntries] = useState<ProspectJournalEntry[]>([]);
@@ -13,21 +24,11 @@ export function useProspectJournal() {
 
   useEffect(() => {
     return onSnapshot(
-      collection(clientsDb, NOTES),
+      notesQuery(),
       { includeMetadataChanges: true },
       (snapshot) => {
         reportSnapshot("notes", snapshot.metadata.fromCache);
-        const rows = snapshot.docs
-          .map((item) => {
-            const entry = item.data() as ProspectJournalEntry;
-            return {
-              ...entry,
-              id: item.id,
-              detailedRemarks: entry.detailedRemarks ?? "",
-            };
-          })
-          .sort((a, b) => a.updatedAt - b.updatedAt);
-        setEntries(rows);
+        setEntries(toNotes(snapshot.docs));
         setLoading(false);
       },
       (error) => {

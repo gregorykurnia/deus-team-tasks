@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, type QueryDocumentSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { PipelineEntry } from "./clientTypes";
 import { reportSnapshot } from "./connection";
 import { PIPELINE } from "./companyWrites";
+
+export const companiesQuery = () => collection(clientsDb, PIPELINE);
+export function toCompany(d: QueryDocumentSnapshot): PipelineEntry {
+  const data = d.data() as PipelineEntry;
+  return typeof data.id === "number" ? data : { ...data, id: Number(d.id) };
+}
 
 export function useClientPipeline() {
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
@@ -13,16 +19,12 @@ export function useClientPipeline() {
 
   useEffect(() => {
     return onSnapshot(
-      collection(clientsDb, PIPELINE),
+      companiesQuery(),
       { includeMetadataChanges: true },
       (snap) => {
         reportSnapshot("companies", snap.metadata.fromCache);
         // Each company also stores its id inside; the document's own id backs it up.
-        const rows = snap.docs.map((d) => {
-          const data = d.data() as PipelineEntry;
-          return typeof data.id === "number" ? data : { ...data, id: Number(d.id) };
-        });
-        setEntries(rows);
+        setEntries(snap.docs.map(toCompany));
         setLoading(false);
       },
       (err) => {

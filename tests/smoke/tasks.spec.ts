@@ -1,7 +1,7 @@
 // Tasks on the old UI: capture, edit, mark done, delete, kinds of work.
 import { test, expect } from "./fixtures";
 import { acceptDialogs, company, isoDay, seedBaseline, seedCompanies, seedTasks, storedById, stored, task } from "./data";
-import { addPerson, field, openArea, taskModal, taskRow } from "./old-ui";
+import { OLD_UI, addPerson, field, openArea, taskModal, taskRow } from "./old-ui";
 import { clearAll, readFields } from "../support/emulator";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
@@ -11,7 +11,7 @@ test.beforeEach(async () => {
 });
 
 test("W1 W2 W3: capture a task with its details, owner and informed people", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await page.getByRole("button", { name: "+ Add task", exact: true }).click();
   const modal = taskModal(page, "New Task");
   await modal.getByPlaceholder("Describe the task…").fill("Send the trial summary");
@@ -46,7 +46,7 @@ test("W1: a task needs a description", async ({ page }) => {
     alerts.push(d.message());
     void d.accept();
   });
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await page.getByRole("button", { name: "+ Add task", exact: true }).click();
   await taskModal(page, "New Task").getByRole("button", { name: "Save" }).click();
   expect(alerts).toEqual(["Task description is required."]);
@@ -55,7 +55,7 @@ test("W1: a task needs a description", async ({ page }) => {
 
 test("W7: edit a task's details", async ({ page }) => {
   await seedTasks([task("t1", { task: "Draft the agenda", responsible: ["Ana"] })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await taskRow(page, "Draft the agenda").click();
   const modal = taskModal(page, "Edit Task");
   await modal.getByPlaceholder("Describe the task…").fill("Draft the workshop agenda");
@@ -70,7 +70,7 @@ test("W7: edit a task's details", async ({ page }) => {
 
 test("W5 W6: mark a task done, find it among finished tasks, mark it not done", async ({ page }) => {
   await seedTasks([task("t1", { task: "Book the room" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await taskRow(page, "Book the room").getByRole("checkbox").click();
 
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(true);
@@ -85,7 +85,7 @@ test("W5 W6: mark a task done, find it among finished tasks, mark it not done", 
 test("W7: delete a task after confirming", async ({ page }) => {
   acceptDialogs(page);
   await seedTasks([task("t1", { task: "Old reminder" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await taskRow(page, "Old reminder").getByTitle("Delete").click();
 
   await expect(taskRow(page, "Old reminder")).toHaveCount(0);
@@ -102,7 +102,7 @@ test("W12: a company task is prospect work, and client work once the deal is don
     task("c", { task: "Renewal for Arunika", linkedClientId: 2 }),
     task("i", { task: "Tidy the shared drive" }),
   ]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await expect(taskRow(page, "Tidy the shared drive")).toBeVisible();
   await expect(taskRow(page, "Call Pelita about the trial")).toHaveCount(0);
 
@@ -122,7 +122,7 @@ test("W14: prospect work comes latest deadline first, undated last, and narrows 
     task("b", { task: "Undated follow-up", linkedClientId: 1, lastActionDate: isoDay(-20) }),
     task("c", { task: "Late deadline", linkedClientId: 1, endDate: isoDay(9), lastActionDate: isoDay(-15) }),
   ]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Prospects");
   const rows = page.locator("tbody tr");
   await expect(rows).toHaveText([/Late deadline/, /Early deadline/, /Undated follow-up/]);
@@ -133,7 +133,7 @@ test("W14: prospect work comes latest deadline first, undated last, and narrows 
 
 test("D11: a task edited from another view is saved", async ({ page }) => {
   await seedTasks([task("t1", { task: "Prepare the demo", startDate: isoDay(0), endDate: isoDay(0), responsible: ["Ana"] })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Daily View", "Views");
   await page.getByText("Prepare the demo").click();
   const modal = taskModal(page, "Edit Task");
@@ -145,7 +145,7 @@ test("D11: a task edited from another view is saved", async ({ page }) => {
 
 test("D11: editing from another view writes no stray id field", async ({ page }) => {
   await seedTasks([task("t1", { task: "Prepare the demo", startDate: isoDay(0), endDate: isoDay(0) })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Daily View", "Views");
   await page.getByText("Prepare the demo").click();
   const modal = taskModal(page, "Edit Task");
@@ -158,7 +158,7 @@ test("D11: editing from another view writes no stray id field", async ({ page })
 
 test("W7: clearing a task's type clears it", async ({ page }) => {
   await seedTasks([task("t1", { task: "Draft the agenda", taskType: "Follow Up" })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await taskRow(page, "Draft the agenda").click();
   const modal = taskModal(page, "Edit Task");
   await field(modal, "Task type").selectOption("");
@@ -170,7 +170,7 @@ test("W7: clearing a task's type clears it", async ({ page }) => {
 test.describe("on empty data", () => {
   test("Q7: the app opens without adding sample data", async ({ page }) => {
     await clearAll();
-    await page.goto("/");
+    await page.goto(OLD_UI);
     await expect(page.getByText("No tasks yet. Add your first one.")).toBeVisible();
     await page.waitForTimeout(1500); // the old app added its samples as soon as it saw nothing
     expect(await stored("tasks", "tasks")).toEqual([]);
@@ -179,7 +179,7 @@ test.describe("on empty data", () => {
 });
 
 test("A3: with no connection a new task is refused, and nothing is stored", async ({ page, context }) => {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await expect(taskRow(page, "Baseline task")).toBeVisible();
   await context.setOffline(true);
   await page.getByRole("button", { name: "+ Add task", exact: true }).click();

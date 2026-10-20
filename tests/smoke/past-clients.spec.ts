@@ -3,7 +3,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { acceptDialogs, seedBaseline, stored, storedById } from "./data";
-import { dialog, openArea, panel } from "./old-ui";
+import { OLD_UI, dialog, openArea, panel } from "./old-ui";
 import { seed } from "../support/emulator";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
@@ -19,7 +19,7 @@ test.beforeEach(async () => {
 });
 
 async function openPast(page: Page) {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Clients Historical", "Clients");
 }
 

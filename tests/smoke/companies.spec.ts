@@ -2,7 +2,7 @@
 // kept in step with tasks, delete.
 import { test, expect } from "./fixtures";
 import { acceptDialogs, company, isoDay, seedBaseline, seedCompanies, seedTasks, stored, storedById, task } from "./data";
-import { cell, companyTab, dialog, field, openArea, panel, taskModal } from "./old-ui";
+import { OLD_UI, cell, companyTab, dialog, field, openArea, panel, taskModal } from "./old-ui";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
 
@@ -11,7 +11,7 @@ test.beforeEach(async () => {
 });
 
 async function openCompanies(page: import("@playwright/test").Page) {
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Client Pipeline", "Clients");
   await expect(page.getByText("Client Pipeline", { exact: true }).last()).toBeVisible();
 }
@@ -144,7 +144,7 @@ test("B12: a task's new dates reach its company", async ({ page }) => {
   await seedTasks([
     task("t1", { task: "Call Pelita", linkedClientId: 1, lastActionDate: isoDay(-9), endDate: isoDay(3) }),
   ]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Prospects");
   await page.getByText("Call Pelita", { exact: true }).click();
   const modal = taskModal(page, "Edit Task");
@@ -158,7 +158,7 @@ test("B12: a task's new dates reach its company", async ({ page }) => {
 test("B13: open a company's record from its task", async ({ page }) => {
   await seedCompanies([company(1, { company: "Pelita Foods" })]);
   await seedTasks([task("t1", { task: "Call Pelita", linkedClientId: 1 })]);
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Prospects");
   await page.locator("tbody tr").filter({ hasText: "Call Pelita" }).getByRole("button", { name: /Pelita Foods/ }).click();
   await expect(field(dialog(page, "Edit entry"), "Company name")).toHaveValue("Pelita Foods");

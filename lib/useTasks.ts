@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, type QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import { Task, NewTask } from "./types";
 import { reportSnapshot } from "./connection";
 import { addTask, deleteTask, TASKS, updateTask } from "./taskWrites";
+
+export const tasksQuery = () => query(collection(db, TASKS), orderBy("order", "asc"));
+export const toTask = (d: QueryDocumentSnapshot): Task => ({ ...(d.data() as NewTask), id: d.id });
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -13,10 +16,9 @@ export function useTasks() {
   const latest = useRef<Task[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, TASKS), orderBy("order", "asc"));
-    return onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+    return onSnapshot(tasksQuery(), { includeMetadataChanges: true }, (snap) => {
       reportSnapshot("tasks", snap.metadata.fromCache);
-      const rows: Task[] = snap.docs.map((d) => ({ ...(d.data() as NewTask), id: d.id }));
+      const rows = snap.docs.map(toTask);
       latest.current = rows;
       setTasks(rows);
       setLoading(false);

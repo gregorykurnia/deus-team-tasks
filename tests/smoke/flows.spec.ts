@@ -1,13 +1,13 @@
 // Flows on the old UI: create, rename, steps, roles, decision, delete.
 import { test, expect } from "./fixtures";
 import { acceptDialogs, flow, seedBaseline, seedFlows, stored, storedById } from "./data";
-import { openArea } from "./old-ui";
+import { OLD_UI, openArea } from "./old-ui";
 
 test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
 
 test.beforeEach(async ({ page }) => {
   await seedBaseline();
-  await page.goto("/");
+  await page.goto(OLD_UI);
   await openArea(page, "Flow");
 });
 

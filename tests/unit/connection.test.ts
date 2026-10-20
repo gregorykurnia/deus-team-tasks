@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertOnline, getConnection, OfflineError, reportSnapshot, resetConnection } from "@/lib/connection";
+import { assertOnline, forgetSource, getConnection, OfflineError, reportSnapshot, resetConnection } from "@/lib/connection";
 
 function setBrowserOnline(online: boolean) {
   vi.stubGlobal("navigator", { onLine: online });
@@ -38,5 +38,14 @@ describe("connection (A3, guide 5.8)", () => {
     expect(() => assertOnline()).toThrow(OfflineError);
     reportSnapshot("companies", false, 3000);
     expect(getConnection()).toEqual({ online: true, loadedAt: 3000 });
+  });
+
+  it("forgets a source whose subscription closed, so it can't keep the app counted as online", () => {
+    setBrowserOnline(true);
+    reportSnapshot("tasks", false, 1000);
+    reportSnapshot("flows", false, 2000);
+    forgetSource("flows"); // the flows screen closed its subscription
+    reportSnapshot("tasks", true);
+    expect(getConnection().online).toBe(false);
   });
 });

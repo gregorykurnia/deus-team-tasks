@@ -2,6 +2,9 @@
 // and deletes this file.
 import type { Locator, Page } from "@playwright/test";
 
+// The old UI moved off "/" when the new shell took it (task 2.3).
+export const OLD_UI = "/old";
+
 // Side bar buttons are named with their icon, as in "⇄ Flow".
 function navButton(page: Page, name: string) {
   return page.getByRole("navigation").getByRole("button", { name: new RegExp(`(^|\\s)${name}(\\s|$)`) }).first();

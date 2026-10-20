@@ -1,0 +1,227 @@
+/* Side bar (guide 3): a glass column, sticky, the full height of the window. */
+.side {
+  position: sticky;
+  top: 20px;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px 14px 14px;
+  overflow: hidden;
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--shadow);
+}
+
+/* 900px and under (--bp-tablet): the tab bar takes over. */
+@media (max-width: 900px) {
+  .side {
+    display: none;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 2px 8px;
+  font-size: 15px;
+  font-weight: var(--w-bold);
+  color: var(--ink);
+}
+
+.mark {
+  flex: none;
+  border-radius: 11px;
+}
+
+.areas {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--ink-2);
+  font-weight: var(--w-semibold);
+  text-decoration: none;
+  transition: background var(--dur-hover);
+}
+
+.area:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.area svg {
+  opacity: 0.75;
+}
+
+.area[aria-current] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-current);
+}
+
+.area[aria-current] svg {
+  opacity: 1;
+  color: var(--blue);
+}
+
+.count {
+  margin-left: auto;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.area[aria-current] .count {
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: #fff;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.groupsHead {
+  display: flex;
+  align-items: center;
+  margin: 0 0 6px;
+  padding: 0 6px 0 12px;
+}
+
+.groupsHead h2 {
+  margin: 0;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.add {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border-radius: 9px;
+  color: var(--ink-2);
+}
+
+.add:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* The list scrolls on its own when there are many groups. */
+.groupList {
+  min-height: 0;
+  margin: 0 -6px;
+  padding: 0 6px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 12px;
+  border-radius: 12px;
+  color: var(--ink-2);
+  font-weight: var(--w-medium);
+  text-decoration: none;
+}
+
+.group:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.group[aria-current] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--w-semibold);
+  box-shadow: var(--shadow-current);
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  font-size: 10.5px;
+  font-weight: var(--w-heavy);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.star {
+  color: var(--star);
+}
+
+.groupCount {
+  margin-left: auto;
+  font-size: var(--t-label);
+  color: var(--muted);
+}
+
+.empty {
+  margin: 0;
+  padding: 4px 12px;
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+
+.skeleton {
+  display: block;
+  height: 22px;
+  margin: 8px 12px;
+  border-radius: 8px;
+  background: var(--fill);
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  margin-top: auto;
+}
+
+.install {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: var(--t-small);
+  font-weight: var(--w-bold);
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.install:hover {
+  background: rgba(255, 255, 255, 0.6);
+}

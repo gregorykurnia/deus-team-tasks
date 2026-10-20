@@ -1,0 +1,154 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: fade var(--dur-fade) ease-out;
+}
+
+/* A bottom sheet that rises 40px, fading in (guide 2.7). */
+.sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--z-sheet);
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  background: var(--surface-sheet);
+  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  backdrop-filter: blur(30px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), var(--shadow-pop);
+  animation: rise 0.25s var(--ease-out);
+}
+
+/* More only exists on phones; the side bar covers larger screens. */
+@media (min-width: 901px) {
+  .scrim,
+  .sheet {
+    display: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.grab {
+  display: block;
+  width: 40px;
+  height: 5px;
+  margin: 8px auto 0;
+  border-radius: 9px;
+  background: rgba(27, 31, 59, 0.18);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 6px 20px;
+}
+
+.head h2 {
+  margin: 0;
+  font-size: var(--t-h2);
+  font-weight: var(--w-heavy);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  border-radius: 50%;
+  color: var(--ink-2);
+}
+
+.close:hover {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.body {
+  padding: 4px 20px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  font-weight: var(--w-bold);
+  text-decoration: none;
+}
+
+.link[aria-current] {
+  background: var(--surface);
+  box-shadow: var(--ring-selected);
+}
+
+.link > svg {
+  color: var(--blue);
+}
+
+.link small,
+.install small {
+  display: block;
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+  color: var(--muted);
+}
+
+.install {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+  text-decoration: none;
+}
+
+.install span {
+  flex: 1;
+}
+
+.install small {
+  color: var(--ink-2);
+}
+
+.live {
+  margin-top: 16px;
+}
