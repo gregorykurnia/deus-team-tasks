@@ -153,3 +153,9 @@ Flows have their own page (`prototype/flows.html`), from the side bar and, on ph
 1. **The decision comes after the last step.** M3 talks about going back to an *earlier* step, so the decision is placed at the end. The alternative is letting it sit after any step, with the steps after it continuing from the good outcome.
 2. **Flows open to read, with "Edit flow" to change them.** Every change still saves at once (M4). The alternative is always-editable pages, as in qualification notes. Read first keeps a process easy to follow for the people who only use it.
 3. **Removing a step or an outcome uses Undo instead of a confirmation.** The inventory asks for a confirmation only when a whole flow is deleted.
+
+## D-019 — Groups 5 and 6 approved; stage 2 done (2026-10-20)
+Owner: "Ooo yeah it's approved", after seeing the screenshots of groups 5 and 6 (`shots/27` to `shots/38`). Recorded as approval of past clients (D-016) and of flows, installing and opening with no connection (D-018). The approval covers the prototype as built, which already follows the six proposals:
+- **D-016:** subsidiaries have their own sector, filled in from the parent's. Every company not under another is a parent company. There is no "Add to past clients" action on Deal done companies.
+- **D-018:** the decision comes after the last step. Flows open to read, with "Edit flow". Removing a step or an outcome uses Undo.
+Any of these can still change at the owner's word; a change after the guide is frozen goes through `needs.md`. Stage 2 is done. Next: stage 3, the design guide, in a fresh session.
