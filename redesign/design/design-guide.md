@@ -1,6 +1,6 @@
 # Design guide
 
-**Draft, stage 3 (2026-10-20).** Not frozen yet: a version number and date go here at stage 5, once the owner approves it.
+**v1.0 (2026-10-20).** Frozen with the owner's approval (D-025). Later changes bump the version and are logged in `decisions.md`.
 
 Direction **G, "Glass in calm blue"** (D-003, D-004). The tokens are in `tokens.css`. The working prototype is in `prototype/`. Open `prototype/index.html`, or `prototype/map.html` for a link to every screen and state. When this guide and the prototype disagree, this guide wins. Every place where it deliberately differs from the prototype is marked **Changed from the prototype**.
 

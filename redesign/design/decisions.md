@@ -192,3 +192,6 @@ Until the owner answers, neither the guide nor the prototype is changed. If the 
 
 ## D-024 — Owner's answer to D-023 (2026-10-20)
 Owner: "I think ill just go w ur recc". **The fields a company group's list shows are shared by the team** (option 1): saved with the group, the same for everyone, and the export matches. Guide 5.6 now says so. The prototype's Fields sheet already said "Changes apply for everyone on the team", so it needed no change. Only the task columns (W15) stay per device. The coverage gap G-1 is closed. Next: stage 5, the freeze, when the owner approves.
+
+## D-025 — Freeze: design guide v1.0 (2026-10-20)
+Owner: "Yes, approve design guide and freeze pls". `design-guide.md` is now **v1.0 (2026-10-20)**, with `tokens.css` and `coverage.md` (all 69 stories and every state covered, G-1 closed in D-024). Stage 5 is done. From here, any change bumps the version and is logged here. New needs arrive as open rows in `handoff/needs.md`.
