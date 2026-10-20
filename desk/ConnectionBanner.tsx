@@ -1,13 +1,12 @@
 "use client";
 
 // No connection (A3, guide 5.8): the banner under the page header, and the
-// toast when the connection comes back. Task 2.5's Toaster takes over the toast.
-import { useEffect, useState } from "react";
+// toast when the connection comes back.
+import { useEffect } from "react";
 import { getConnection, subscribeConnection, useConnection } from "@/lib/connection";
 import Icon from "@/ui/Icon";
+import { useToast } from "@/ui/Toaster";
 import styles from "./ConnectionBanner.module.css";
-
-const TOAST_LIFE_MS = 5200; // --toast-life
 
 // "at 09:12", or "on 18 Oct at 09:12" when the data is from an earlier day.
 function loadedWhen(loadedAt: number, now = new Date()): string {
@@ -37,37 +36,20 @@ export function ConnectionBanner() {
   );
 }
 
+// When the connection comes back, a toast says so (guide 5.8).
 export function BackOnlineToast() {
-  const [shown, setShown] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     let wasOffline = !getConnection().online;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = subscribeConnection(() => {
-      clearTimeout(timer);
-      if (!getConnection().online) {
-        wasOffline = true;
-        setShown(false);
-      } else if (wasOffline) {
+    return subscribeConnection(() => {
+      if (!getConnection().online) wasOffline = true;
+      else if (wasOffline) {
         wasOffline = false;
-        setShown(true);
-        timer = setTimeout(() => setShown(false), TOAST_LIFE_MS);
+        toast("Back online. Everything is up to date.");
       }
     });
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
-  }, []);
+  }, [toast]);
 
-  return (
-    <div className={styles.toasts} role="status">
-      {shown && (
-        <div className={styles.toast}>
-          <Icon name="check" />
-          Back online. Everything is up to date.
-        </div>
-      )}
-    </div>
-  );
+  return null;
 }

@@ -1,0 +1,78 @@
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-dialog);
+  width: min(var(--dialog-w), calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 24px;
+  overflow-y: auto;
+  border-radius: var(--r-dialog);
+  background: var(--surface-dialog);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), var(--shadow-pop);
+  transform: translate(-50%, -50%);
+  outline: none;
+  animation: fade 0.16s ease-out;
+}
+
+.wide {
+  width: min(560px, calc(100vw - 32px));
+}
+
+/* A confirmation can sit on top of a sheet. */
+.overSheet {
+  z-index: var(--z-dialog-over-sheet);
+}
+
+/* 900px and under: 14px above the bottom edge. */
+@media (max-width: 900px) {
+  .dialog {
+    top: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: var(--t-h2);
+  font-weight: var(--w-heavy);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2);
+}
+
+.text {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-weight: var(--w-medium);
+}
+
+.text > p {
+  margin: 0;
+}
+
+.quote {
+  display: -webkit-box;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  overflow: hidden;
+  border-radius: var(--r-field);
+  background: var(--fill);
+  font-weight: var(--w-bold);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

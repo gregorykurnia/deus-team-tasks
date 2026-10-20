@@ -1,0 +1,26 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: fade var(--dur-fade) ease-out;
+}
+
+/* Behind a confirmation that sits over a sheet. */
+.over {
+  z-index: var(--z-dialog);
+}
+
+@media (min-width: 901px) {
+  .phoneOnly {
+    display: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

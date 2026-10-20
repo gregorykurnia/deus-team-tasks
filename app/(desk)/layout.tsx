@@ -3,6 +3,7 @@ import { BackOnlineToast } from "@/desk/ConnectionBanner";
 import { DeskData } from "@/desk/DeskData";
 import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
+import { ToasterProvider } from "@/ui/Toaster";
 import TabBar from "@/desk/TabBar";
 import styles from "@/desk/DeskShell.module.css";
 
@@ -10,16 +11,18 @@ import styles from "@/desk/DeskShell.module.css";
 export default function DeskLayout({ children }: LayoutProps<"/">) {
   return (
     <DeskData>
-      <div className={styles.app}>
-        <SideNav />
-        <main className={styles.main}>{children}</main>
-      </div>
-      <TabBar />
-      {/* More reads the address, so it renders in the browser only. */}
-      <Suspense fallback={null}>
-        <MoreSheet />
-      </Suspense>
-      <BackOnlineToast />
+      <ToasterProvider>
+        <div className={styles.app}>
+          <SideNav />
+          <main className={styles.main}>{children}</main>
+        </div>
+        <TabBar />
+        {/* More reads the address, so it renders in the browser only. */}
+        <Suspense fallback={null}>
+          <MoreSheet />
+        </Suspense>
+        <BackOnlineToast />
+      </ToasterProvider>
     </DeskData>
   );
 }

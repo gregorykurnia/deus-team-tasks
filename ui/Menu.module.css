@@ -1,0 +1,186 @@
+/* Menus (guide 4.3): a white floating card, 18px corners, at least 230px wide and at most 340px, scrolling after 440px. */
+.catcher {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-menu) - 1);
+}
+
+.menu {
+  position: fixed;
+  z-index: var(--z-menu);
+  min-width: 230px;
+  max-width: min(340px, calc(100vw - 24px));
+  max-height: min(440px, calc(100vh - 24px));
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: var(--r-menu);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 0 0 1px var(--hair), var(--shadow-pop);
+  animation: pop var(--dur-pop) ease-out;
+}
+
+/* Fades in, rises 4px and scales from 98% (guide 2.7). */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.heading {
+  padding: 8px 12px 4px;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  color: var(--muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  font-weight: var(--w-semibold);
+  text-align: left;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.danger {
+  color: var(--red);
+}
+
+.danger:hover:not(:disabled),
+.danger:focus-visible {
+  color: var(--red);
+}
+
+.tick {
+  margin-left: auto;
+  color: var(--blue);
+}
+
+.item[aria-checked="false"] .tick {
+  visibility: hidden;
+}
+
+/* Pick several: a rounded checkbox, blue when on. */
+.box {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1.5px rgba(27, 31, 59, 0.25);
+  color: #fff;
+}
+
+.box svg {
+  opacity: 0;
+}
+
+.item[aria-checked="true"] .box {
+  background: var(--blue);
+  box-shadow: none;
+}
+
+.item[aria-checked="true"] .box svg {
+  opacity: 1;
+}
+
+.separator {
+  height: 1px;
+  margin: 6px 8px;
+  border: 0;
+  background: var(--hair);
+}
+
+.foot {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: var(--w-medium);
+  color: var(--muted);
+}
+
+.number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  font-size: 13.5px;
+  font-weight: var(--w-semibold);
+  color: var(--ink-2);
+}
+
+.number label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.number input {
+  width: 64px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-xs);
+  box-shadow: inset 0 0 0 1.5px var(--line-field);
+  font-weight: var(--w-bold);
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px 6px 6px;
+}
+
+.swatchButton {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  border-radius: var(--r-s);
+}
+
+.swatchButton:hover,
+.swatchButton:focus-visible {
+  background: var(--fill);
+}
+
+.swatchButton[aria-checked="true"] {
+  box-shadow: var(--ring-selected);
+}
+
+.swatch {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: var(--sw-bg);
+  box-shadow: inset 0 0 0 2px var(--sw-fg);
+}
+
+.blue { --sw-bg: var(--opt-blue-bg); --sw-fg: var(--opt-blue); }
+.sky { --sw-bg: var(--opt-sky-bg); --sw-fg: var(--opt-sky); }
+.teal { --sw-bg: var(--opt-teal-bg); --sw-fg: var(--opt-teal); }
+.green { --sw-bg: var(--opt-green-bg); --sw-fg: var(--opt-green); }
+.amber { --sw-bg: var(--opt-amber-bg); --sw-fg: var(--opt-amber); }
+.red { --sw-bg: var(--opt-red-bg); --sw-fg: var(--opt-red); }
+.violet { --sw-bg: var(--opt-violet-bg); --sw-fg: var(--opt-violet); }
+.pink { --sw-bg: var(--opt-pink-bg); --sw-fg: var(--opt-pink); }
+.slate { --sw-bg: var(--opt-slate-bg); --sw-fg: var(--opt-slate); }

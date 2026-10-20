@@ -12,6 +12,9 @@ import Notice from "@/ui/Notice";
 import EmptyState from "@/ui/EmptyState";
 import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
 import { LikelihoodMeter, LoadMeter, type Rating } from "@/ui/Meter";
+import { Suspense } from "react";
+import { ToasterProvider } from "@/ui/Toaster";
+import OverlayDemos from "./OverlayDemos";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
@@ -277,6 +280,20 @@ export function Meters() {
           <LikelihoodMeter rating={rating} />
         </State>
       ))}
+    </Section>
+  );
+}
+
+export function Overlays() {
+  return (
+    <Section id="overlays" title="Overlays (4.3, 4.11, 4.14)">
+      <div className="w-full">
+        <ToasterProvider>
+          <Suspense fallback={null}>
+            <OverlayDemos />
+          </Suspense>
+        </ToasterProvider>
+      </div>
     </Section>
   );
 }
