@@ -57,6 +57,7 @@
     return String(v);
   };
   const companiesIn = (g) => P.db.companies.filter((c) => c.stage === g);
+  const hasNotes = (c) => (P.db.notes || []).some((n) => n.co === c.id);
   const openTasksOf = (c) => P.db.tasks.filter((t) => t.co === c.id && !t.done);
 
   /* ---------- Urgency (B6, B7) ---------- */
@@ -455,6 +456,7 @@
         if (blocked('The deletion')) return;
         P.closeAll();
         P.db.tasks.forEach((t) => { if (t.co === c.id) t.co = null; });
+        (P.db.notes || []).forEach((n) => { if (n.co === c.id) { n.co = null; n.name = c.name; } }); // notes stay, as "not tracked yet" (D-012)
         P.db.companies = P.db.companies.filter((x) => x !== c);
         rec = null; P.render(); P.toast(`${c.name} deleted`);
       },
@@ -468,7 +470,7 @@
       <button class="mi" data-v="fu">${ic('plus')}<span>Create a follow-up task</span></button>
       ${hasLast ? `<button class="mi" data-v="today">${ic('clock')}<span>Last action: today</span></button>` : ''}
       <button class="mi" data-v="move">${ic('swap')}<span>Move to another group</span></button>
-      <a class="mi" href="${P.keep('soon.html?area=notes&co=' + c.id)}">${ic('note')}<span>Qualification notes</span></a>
+      <a class="mi" href="${P.keep('notes.html?co=' + c.id)}">${ic('note')}<span>${hasNotes(c) ? 'Qualification notes' : 'Start qualification notes'}</span></a>
       <hr><button class="mi red" data-v="delete">${ic('trash')}<span>Delete company</span></button>`, (v) => {
       P.closeTop();
       if (v === 'open') openRecord(c.id);
@@ -516,7 +518,7 @@
       if (c.stage === 'lead' && c.outreach && P.diff(c.outreach) < 0) alerts.push(`<div class="notice warn">${ic('flag')}<div><p><b>Outreach was planned ${plural(-P.diff(c.outreach), 'day')} ago.</b> Reach out, or plan a new date.</p></div></div>`);
       sh.innerHTML = `<span class="grab" aria-hidden="true"></span>
         <div class="sheet-head rhead">${mono(c, 'lg')}<div class="rh"><h2 id="co-h">${esc(c.name)}</h2><p><span class="gtag g-${c.stage}">${ic(G(c.stage).icon)}${G(c.stage).label}</span>${c.contact ? `<span class="rc">${esc(c.contact)}</span>` : ''}</p></div><span class="sp"></span><button class="icon-btn" data-r="menu" aria-label="More for ${esc(c.name)}">${ic('more')}</button><button class="icon-btn" data-r="close" aria-label="Close">${ic('x')}</button></div>
-        <div class="rec-acts"><button class="btn sm" data-r="fu">${ic('plus')}Follow-up task</button>${gf.some((f) => f.id === 'last') ? `<button class="btn sm" data-r="today">${ic('clock')}Last action: today</button>` : ''}<a class="btn sm" href="${P.keep('soon.html?area=notes&co=' + c.id)}">${ic('note')}Qualification notes</a><button class="btn sm" data-r="move">${ic('swap')}Move</button></div>
+        <div class="rec-acts"><button class="btn sm" data-r="fu">${ic('plus')}Follow-up task</button>${gf.some((f) => f.id === 'last') ? `<button class="btn sm" data-r="today">${ic('clock')}Last action: today</button>` : ''}<a class="btn sm" href="${P.keep('notes.html?co=' + c.id)}">${ic('note')}${hasNotes(c) ? 'Qualification notes' : 'Start qualification notes'}</a><button class="btn sm" data-r="move">${ic('swap')}Move</button></div>
         <div class="sheet-body">${P.offline ? '<div class="notice warn">' + ic('wifi') + '<div><p><b>No connection.</b> You can read this record, but changes can’t be saved until you’re back online.</p></div></div>' : ''}${alerts.join('')}
           ${sections}${ownHTML}
           <section class="rsect rtasks"><h3>Tasks<span class="c">${open.length ? num(open.length) + ' open' : ''}</span><button class="link" data-r="fu">${ic('plus')}Follow-up task</button></h3>

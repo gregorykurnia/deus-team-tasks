@@ -109,13 +109,13 @@
   /* ---------- Data ---------- */
   P.db = P.stress ? PROTO_DATA.stress() : PROTO_DATA.normal();
   // Changes made while clicking through carry across pages in this tab (normal state only). ?reset starts over.
-  const SAVE_KEY = 'proto.db.v4.' + (P.stress ? 'stress' : 'normal');
+  const SAVE_KEY = 'proto.db.v5.' + (P.stress ? 'stress' : 'normal');
   try {
     if (qs.has('reset')) sessionStorage.removeItem(SAVE_KEY);
     else if (!P.state && sessionStorage.getItem(SAVE_KEY)) P.db = JSON.parse(sessionStorage.getItem(SAVE_KEY));
   } catch (e) { /* storage unavailable */ }
   P.save = () => { if (P.state) return; try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(P.db)); } catch (e) { /* full or unavailable */ } };
-  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; }
+  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; P.db.notes = []; }
   if (P.state === 'no-clients') P.db.tasks = P.db.tasks.filter((t) => { const c = t.co && P.db.companies.find((x) => x.id === t.co); return !(c && c.stage === 'done'); });
   if (P.state === 'quiet') P.db.tasks = P.db.tasks.filter((t) => t.done || (t.end && P.diff(t.end) > 3));
   P.loading = P.state === 'loading' || P.state === 'offline-empty';
@@ -201,7 +201,7 @@
     { id: 'tasks', label: 'All tasks', icon: 'list', href: 'tasks.html' },
     { id: 'plan', label: 'Plan', icon: 'cal', href: 'plan.html' },
     { id: 'companies', label: 'Companies', icon: 'building', href: 'companies.html' },
-    { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'soon.html?area=notes' },
+    { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'notes.html' },
     { id: 'past', label: 'Past clients', icon: 'archive', href: 'soon.html?area=past' },
     { id: 'flows', label: 'Flows', icon: 'flow', href: 'soon.html?area=flows' },
   ];

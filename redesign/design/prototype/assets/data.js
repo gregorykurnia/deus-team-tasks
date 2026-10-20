@@ -180,7 +180,42 @@
       ev({ date: d(20), title: 'Weekly pipeline sync', start: '09:30', end: '10:15' }),
       ev({ date: d(23), title: 'Board update', start: '15:00', end: '16:00' }),
     ];
-    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+    // Qualification notes (U1 to U6): at most one set per tracked company, and some for prospects not tracked yet.
+    const N = (o) => Object.assign({ co: null, name: '', likely: '', remarks: '', edited: d(0), h: {} }, o);
+    const notes = [
+      N({ id: 'n1', co: 'hal', likely: 'high', edited: d(-1), h: {
+        need: 'Cut empty-truck kilometres and give customers live delivery times.', situation: 'Spreadsheets per depot, updated by phone twice a day. 380 trucks across Java.',
+        pain: 'Roughly 12% of trips run part-empty. Two big customers complained about missed delivery windows this quarter.', fit: 'Fleet tracking covers routing and live times. Analytics for the depot managers.',
+        urgency: 'Want it live before the year-end peak, so a decision by mid-November.', stake: 'Budi (ops director) champions it. The CFO signs above IDR 500m. IT reviews security.',
+        ready: 'Budget set aside in Q4. Procurement needs three quotes.', next: 'Send the revised proposal with volume pricing (Rina, this week).', block: 'Their IT policy asks for data stored in Indonesia.' },
+        remarks: 'Met Budi at the Jakarta logistics fair in August. He used a competitor at his last company and didn’t like their support, so local support matters a lot to him.\n\nThey are also talking to one other vendor. Keep the tone practical: he doesn’t like slides.' }),
+      N({ id: 'n2', co: 'nor', likely: 'med', edited: d(-15), h: {
+        need: 'Pay 600 staff across 9 clinics without the monthly overtime mistakes.', situation: 'An old desktop payroll tool, run by one person in finance.',
+        pain: 'Overtime errors cost about 40 hours of fixes a month, and staff complain.', fit: 'Payroll fits well. Shift import from their rota tool needs checking.',
+        stake: 'dr. Anita decides, but the finance lead has to agree. Haven’t met the finance lead yet.', next: 'Book a demo with the finance lead (Kevin).', block: 'Budget not confirmed. Their finance lead is new and cautious.' } }),
+      N({ id: 'n3', co: 'pel', likely: 'vhigh', edited: d(-3), h: {
+        need: 'One point of sale for 22 outlets, with a loyalty scheme.', situation: 'Two outlets on our trial. The rest on paper receipts and a basic cash register.',
+        pain: 'No idea which outlets or dishes make money until the month closes.', fit: 'Point of sale plus the loyalty add-on. Trial usage is strong.',
+        urgency: 'Trial ends 6 November. They want to roll out before Ramadan.', stake: 'Yusuf (owner) decides alone.', ready: 'Has budget. Asked for the contract draft.',
+        next: 'Review trial usage, then send the contract draft (Sarah and Rina).', block: 'None seen so far.' } }),
+      N({ id: 'n4', co: 'arc', likely: 'med', edited: d(-9), h: {
+        need: 'See stock and sales across 40 stores in one place.', pain: 'Stock-outs on best sellers every weekend.', fit: 'Point of sale and analytics. Their ERP integration is the open question.',
+        stake: 'Lina (head of retail ops) and the IT manager. The board approves anything over a year.', next: 'Share the retail rollout case study (Dimas).', block: 'IT policy: they want on-premise hosting for sales data. Budget only after the board meeting.' } }),
+      N({ id: 'n5', co: 'kir', likely: 'high', edited: d(-4), h: {
+        need: 'Payroll for doctors paid per session.', situation: 'Pilot at one clinic since September.', fit: 'Works for session pay. Needs a custom report for the medical director.',
+        urgency: 'Pilot ends 30 October.', next: 'Collect pilot feedback from the clinic manager (Aditya).', block: 'Budget for the other 6 clinics comes from head office.' } }),
+      N({ id: 'n6', co: 'cak', likely: 'mlow', edited: d(-8), h: {
+        need: 'Analytics for 1,200 field technicians.', stake: 'A procurement committee of five. We only know two of them.', ready: 'Formal tender expected in January.',
+        next: 'Answer their security questions (Siti asked for them by Friday).', block: 'Budget split across two departments. A long tender process. Strong incumbent vendor.' } }),
+      N({ id: 'n7', co: 'sem', likely: 'low', edited: d(-16), h: { need: 'Dashboards for property sales.', block: 'Gone quiet after the proposal. Budget unclear.' } }),
+      N({ id: 'n8', co: 'gar', likely: 'vhigh', edited: d(0), h: {
+        need: 'Payroll and member loyalty for 12 gyms.', fit: 'Both products fit.', urgency: 'New year sign-up season.', stake: 'Rizky (founder) and his COO.', ready: 'Negotiating the final price.', next: 'Send the final price for 12 gyms (Rina, by Friday).' } }),
+      N({ id: 'n9', name: 'Borneo Agro (met at the trade fair)', likely: 'med', edited: d(-2), h: {
+        need: 'Track 90 plantation trucks.', situation: 'No system at all. Drivers report by WhatsApp.', next: 'Get the right contact from their head office (Kevin).', block: 'Remote sites with patchy signal.' },
+        remarks: 'Only had ten minutes at the booth. The person we met was their regional manager, not the buyer.' }),
+      N({ id: 'n10', name: 'dr. Sari’s clinic group', likely: '', edited: d(-6), h: { need: 'Payroll, maybe scheduling.' } }),
+    ];
+    return { people, companies, groups, tasks, events, notes, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   /* ---------- Stress data ---------- */
@@ -308,7 +343,18 @@
       companies.push(c);
     }
 
-    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
+    // Notes: 1,500 sets, long text, other scripts, empty headings, one very long set of remarks.
+    const HK = ['need', 'situation', 'pain', 'fit', 'urgency', 'stake', 'ready', 'next', 'block'];
+    const lines = [longText, 'Budget frozen until April.', '预算要等到明年四月才能确定。', 'الميزانية مجمدة حتى أبريل.', 'IT policy requires data stored in Indonesia.', 'x', 'Waiting for procurement.', 'Champion left the company.'];
+    const notes = [];
+    const tracked = companies.filter((c) => c.stage !== 'done');
+    for (let i = 0; i < 1500; i++) {
+      const h = {}; HK.forEach((k) => { if (r2() < 0.7) h[k] = p2(lines); });
+      notes.push({ id: 'sn' + i, co: i < 1300 ? tracked[i % tracked.length].id : null, name: i < 1300 ? '' : p2(['Prospect from the Surabaya logistics forum dinner, table 12, the one with the refrigerated fleet', 'Ab', '未登録の見込み客', 'عميل محتمل']) + ' ' + i,
+        likely: p2(['vhigh', 'high', 'med', 'mlow', 'low', '']), edited: d(-b2(0, 300)), h, remarks: i === 0 ? Array.from({ length: 60 }, () => longText).join('\n\n') : (r2() < 0.3 ? longText : '') });
+    }
+    notes[1].h = {}; // a set with every heading empty
+    return { people, companies, groups, tasks, events, notes, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   window.PROTO_DATA = { TODAY, d, normal, stress };

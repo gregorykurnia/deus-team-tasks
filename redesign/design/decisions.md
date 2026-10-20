@@ -85,3 +85,22 @@ Companies has its own page (`prototype/companies.html`), reached from the side b
 1. **Deleting a company:** confirmed as designed. Its tasks stay, as internal work, and its qualification notes stay, without a company.
 2. **Products are free text**, not a managed list. Several products are written with commas between them ("Fleet tracking, Analytics"). The Product filter lists the products already written in the group, most used first, and ignores case and spacing, so "point of sale " and "Point of sale" are one product. Search and export use the text as written. This replaces the Products option list in D-011, and the stress data now has free-text products.
 3. **Fields per group:** the owner took the designer's recommendation. The switches control what the list shows (and exports), and every field stays in the record.
+
+## D-013 — Group 3 approved (2026-10-20)
+Owner: "The review is alr good to go. Can we continue to the next". Recorded as approval of group 3 (companies, fields and options, export; D-011, D-012). Group 4 started in the same session.
+
+## D-014 — Group 4: qualification notes (2026-10-20)
+Qualification notes has its own page (`prototype/notes.html`), from the side bar and, on phones, from More.
+- **Layout:** on large screens, the prospects are listed on the left and one prospect's notes open on the right, like a document. On phones, the list comes first and a prospect's notes open full screen, with "All notes" to go back.
+- **Nine fixed headings (U1)** run down the page in the inventory's order, each with a short prompt while empty. A small row of ticks says "6 of 9 headings written", so every prospect is assessed the same way.
+- **Likelihood (U2):** a five-step picker (Very high to Low), shown everywhere as a small signal meter with its word. Above the list, "How likely" shows every prospect as one bar in shades of blue, with a count per step and "Not rated". Tapping a step shows only those prospects. The shades are calm blues, not red and green, so a low rating reads as information rather than an alarm.
+- **Remarks (U3):** a separate section below the headings. Once longer than a few lines, it folds to three lines with "Show all remarks · 240 words". Remarks never show in the list.
+- **Saving (U4):** saves 0.8 seconds after typing stops, and straight away when you leave a field. A quiet "Saving…" changes to "Saved" at the top. With no connection, writing carries on and the sign reads "Kept on this device. Saves when you're back online." That's a commitment for the rebuild: text typed offline is kept on the device until it can be saved.
+- **From a company and back (U5):** the company record (and its row menu) has "Qualification notes", or "Start qualification notes" when there are none yet. One tap opens them, or starts them. The notes show the company's group and "Open company". A company can't get a second set: pickers mark companies that already have notes.
+- **Not tracked yet (U6):** "New notes" asks whether they're for a tracked company or someone not tracked yet. The latter needs a name, and nothing else. These notes say "Not tracked yet" and offer "Link to a tracked company". Deleting a company turns its notes into notes for someone not tracked yet, under the company's old name (D-012).
+- **Patterns (U7):** search covers names, every heading and the remarks. The result line says, for example, "7 of 10 prospects mention “budget”", and each result shows which heading it was found under, with the words highlighted.
+- **Delete (U8)** is in the notes menu, with a confirmation. The company stays.
+- **Export (E1):** the notes shown now (search and filters apply), one row per prospect, with columns for the prospect, whether it's a tracked company, its group, likelihood, the nine headings, remarks and last edited.
+- **Order and filters:** last edited first by default, or by likelihood or name. Filters: all prospects, tracked companies, or not tracked yet.
+- **Live (A1):** a heading a colleague just changed shows "Changed just now". If you're writing in that same heading at that moment, your text isn't replaced while you type. Two people writing in the same heading at once is not designed further.
+- **Mock data:** 10 sets of notes (8 tracked companies, 2 not tracked yet; one has no rating). Stress data has 1,500 sets in several scripts, one set with every heading empty, and one with very long remarks.
