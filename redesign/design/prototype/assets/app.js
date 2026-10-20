@@ -53,6 +53,18 @@
     left: '<path d="m15 6-6 6 6 6"/>',
     right: '<path d="m9 6 6 6-6 6"/>',
     done: '<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+    flag: '<path d="M5.5 21V4.5"/><path d="M5.5 4.5h11.5l-2.5 4 2.5 4H5.5"/>',
+    bolt: '<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z"/>',
+    pause: '<circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/>',
+    download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+    snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
+    swap: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
+    sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
+    hourglass: '<path d="M7 3.5h10M7 20.5h10M8 3.5c0 4 4 5.5 4 8.5s-4 4.5-4 8.5M16 3.5c0 4-4 5.5-4 8.5s4 4.5 4 8.5"/>',
+    text: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
+    hash: '<path d="M9 4 7.5 20M16.5 4 15 20M4.5 9h16M3.5 15h16"/>',
+    choice: '<circle cx="7" cy="8" r="2"/><circle cx="7" cy="16" r="2"/><path d="M12 8h8M12 16h8"/>',
+    para: '<path d="M4 6h16M4 10h16M4 14h16M4 18h10"/>',
   };
   P.ic = (name, cls) => `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
   const ic = P.ic;
@@ -97,13 +109,13 @@
   /* ---------- Data ---------- */
   P.db = P.stress ? PROTO_DATA.stress() : PROTO_DATA.normal();
   // Changes made while clicking through carry across pages in this tab (normal state only). ?reset starts over.
-  const SAVE_KEY = 'proto.db.' + (P.stress ? 'stress' : 'normal');
+  const SAVE_KEY = 'proto.db.v3.' + (P.stress ? 'stress' : 'normal');
   try {
     if (qs.has('reset')) sessionStorage.removeItem(SAVE_KEY);
     else if (!P.state && sessionStorage.getItem(SAVE_KEY)) P.db = JSON.parse(sessionStorage.getItem(SAVE_KEY));
   } catch (e) { /* storage unavailable */ }
   P.save = () => { if (P.state) return; try { sessionStorage.setItem(SAVE_KEY, JSON.stringify(P.db)); } catch (e) { /* full or unavailable */ } };
-  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; }
+  if (P.state === 'empty' || P.state === 'offline-empty') { P.db.tasks = []; P.db.groups = []; P.db.companies = []; }
   if (P.state === 'no-clients') P.db.tasks = P.db.tasks.filter((t) => { const c = t.co && P.db.companies.find((x) => x.id === t.co); return !(c && c.stage === 'done'); });
   if (P.state === 'quiet') P.db.tasks = P.db.tasks.filter((t) => t.done || (t.end && P.diff(t.end) > 3));
   P.loading = P.state === 'loading' || P.state === 'offline-empty';
@@ -188,7 +200,7 @@
     { id: 'today', label: 'Today', icon: 'sun', href: 'index.html' },
     { id: 'tasks', label: 'All tasks', icon: 'list', href: 'tasks.html' },
     { id: 'plan', label: 'Plan', icon: 'cal', href: 'plan.html' },
-    { id: 'companies', label: 'Companies', icon: 'building', href: 'soon.html?area=companies' },
+    { id: 'companies', label: 'Companies', icon: 'building', href: 'companies.html' },
     { id: 'notes', label: 'Qualification notes', icon: 'note', href: 'soon.html?area=notes' },
     { id: 'past', label: 'Past clients', icon: 'archive', href: 'soon.html?area=past' },
     { id: 'flows', label: 'Flows', icon: 'flow', href: 'soon.html?area=flows' },
@@ -222,7 +234,7 @@
     return `<a href="${P.keep('index.html')}"${cur('today')}>${ic('sun')}Today</a>
       <a href="${P.keep('tasks.html')}"${cur('tasks')}>${ic('list')}Tasks</a>
       <button class="mid" data-act="task-new" aria-label="New task">${ic('plus')}</button>
-      <a href="${P.keep('soon.html?area=companies')}"${cur('companies')}>${ic('building')}Companies</a>
+      <a href="${P.keep('companies.html')}"${cur('companies')}>${ic('building')}Companies</a>
       <button class="tb" data-act="more"${['plan', 'notes', 'past', 'flows'].includes(P.page) ? ' aria-current="page"' : ''}>${ic('more')}More</button>`;
   }
   P.offlineBanner = () => (P.offline ? `<div class="banner" role="status">${ic('wifi')}<div><b>No connection.</b> ${P.state === 'offline-empty' ? 'Nothing has loaded yet. Everything will appear once you are back online.' : 'You are seeing what was loaded at 09:12. Changes can\'t be saved until you are back online.'}</div></div>` : '');
@@ -318,6 +330,22 @@
       P.render(); P.toast('Task deleted');
     } });
   };
+  /* B12: a company's last action and target date stay in step with its open tasks.
+     Returns how many other tasks changed. */
+  P.syncCompany = (coId, dates, exceptTask) => {
+    const c = P.company(coId); if (!c) return 0;
+    if ('target' in dates) c.target = dates.target;
+    if ('last' in dates) c.last = dates.last;
+    let n = 0;
+    P.db.tasks.forEach((t) => {
+      if (t.co !== coId || t.done || t.id === exceptTask) return;
+      const before = t.end + '|' + t.last;
+      if ('target' in dates) t.end = dates.target;
+      if ('last' in dates) t.last = dates.last;
+      if (before !== t.end + '|' + t.last) { n++; P.flash.add(t.id); }
+    });
+    return n;
+  };
   P.quickAdd = (text, extra) => {
     const desc = text.trim(); if (!desc) return null;
     if (P.offline) { P.toast('No connection. The task wasn\'t added.', { err: true }); return null; }
@@ -349,7 +377,7 @@
       const errDesc = ui.err === 'desc';
       const groupsOpts = P.sortedGroups().map((g) => `<option value="${g.id}"${draft.group === g.id ? ' selected' : ''}>${esc(g.name)}${g.important ? ' ★' : ''}</option>`).join('');
       const about = ui.about === 'co'
-        ? (co ? `<div class="co-pick"><span class="mono k-${k}" style="background:var(--${k}-soft);color:var(--${k})">${esc(co.short)}</span><div style="min-width:0"><div class="nm">${esc(co.name)}</div><small>${k === 'cli' ? 'Client, deal done' : 'Prospect'}</small></div><span class="sp"></span>${src ? `<a class="link" href="${P.keep('soon.html?area=companies&co=' + co.id)}">Open company</a>` : `<button class="btn sm quiet" data-act="co-change">Change</button>`}</div>`
+        ? (co ? `<div class="co-pick"><span class="mono k-${k}" style="background:var(--${k}-soft);color:var(--${k})">${esc(co.short)}</span><div style="min-width:0"><div class="nm">${esc(co.name)}</div><small>${k === 'cli' ? 'Client, deal done' : 'Prospect'}</small></div><span class="sp"></span>${src ? `<a class="link" href="${P.keep('companies.html?co=' + co.id)}">Open company</a>` : `<button class="btn sm quiet" data-act="co-change">Change</button>`}</div>`
           : `<div class="field" style="margin-top:0"><select class="select" id="f-co" data-k="co" aria-label="Company"><option value="">Choose a company</option>${P.db.companies.slice(0, 300).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>`)
         : `<select class="select" id="f-group" data-k="group" aria-label="Task group"><option value="">No group</option>${groupsOpts}</select>`;
       const more = ui.full ? `
@@ -475,7 +503,13 @@
       if (!draft.desc) { ui.err = 'desc'; paint('#f-desc'); return; }
       if (P.offline) { P.toast('No connection. Your changes weren\'t saved.', { err: true }); return; }
       if (ui.about === 'int') draft.co = null; else draft.group = null;
-      if (src) { Object.assign(src, draft); P.flash.add(src.id); P.closeTop(); P.render(); P.toast('Changes saved'); }
+      if (src) {
+        const moved = draft.co && (draft.end !== src.end || draft.last !== src.last);
+        Object.assign(src, draft); P.flash.add(src.id);
+        const n = moved ? P.syncCompany(draft.co, { target: draft.end, last: draft.last }, src.id) : 0;
+        P.closeTop(); P.render();
+        P.toast(moved ? `Changes saved. ${P.company(draft.co).name}${n ? ` and ${P.plural(n, 'other task')}` : ''} now match${n ? '' : 'es'}.` : 'Changes saved');
+      }
       else { P.closeTop(); const t = Object.assign({ id: 'n' + Date.now() }, draft); P.db.tasks.unshift(t); P.flash.add(t.id); P.render(); P.toast('Task added'); }
     }
     return sh;
@@ -551,7 +585,7 @@
       const u = new URL(location.href);
       u.search = '';
       Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined) u.searchParams.set(k, v); });
-      ['group', 'kind', 'view', 'area'].forEach((k) => { if (P.qs.has(k) && !(k in params)) u.searchParams.set(k, P.qs.get(k)); });
+      ['group', 'kind', 'view', 'area', 'g'].forEach((k) => { if (P.qs.has(k) && !(k in params)) u.searchParams.set(k, P.qs.get(k)); });
       const s = u.toString().replace(/=(&|$)/g, '$1');
       const on = Object.entries(params).every(([k, v]) => (v === null ? !P.qs.has(k) : P.qs.get(k) === v || (v === '' && P.qs.has(k))));
       return `<a href="${s}" class="${on ? 'on' : ''}">${label}</a>`;

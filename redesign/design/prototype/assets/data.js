@@ -11,22 +11,101 @@
   const TYPES = ['Follow-up', 'Proposal', 'Demo', 'Trial', 'Review', 'Renewal', 'Admin', 'Hiring'];
   const TOUCH = ['Call', 'Email', 'Meeting', 'Message', 'Visit'];
 
+  /* ---------- Company fields and options (B1 to B4, C1 to C3) ----------
+     Each company sits in one of four groups: lead (to approach), active, done (deal done), hold (no or not now).
+     Built-in fields belong to the groups the job stories name; own fields are added per group (C1).
+     coShown lists, per group, the fields the list shows (C2). Choice values are option ids. */
+  const ALL = ['lead', 'active', 'done', 'hold'];
+  function coSchema() {
+    const fields = [
+      { id: 'contact', label: 'Contact person', kind: 'text', groups: ['active', 'done', 'hold'] },
+      { id: 'type', label: 'Type', kind: 'choice', groups: ALL.slice() },
+      { id: 'status', label: 'Status', kind: 'choice', groups: ['active'] },
+      { id: 'answer', label: 'Answer', kind: 'choice', groups: ['hold'] },
+      { id: 'prio', label: 'Priority', kind: 'choice', groups: ['lead', 'active'] },
+      { id: 'products', label: 'Products', kind: 'multi', groups: ['active', 'done', 'hold'] },
+      { id: 'reason', label: 'Reason', kind: 'long', groups: ['hold'] },
+      { id: 'outreach', label: 'Planned outreach', kind: 'date', groups: ['lead'] },
+      { id: 'last', label: 'Last action', kind: 'date', groups: ['active', 'done', 'hold'] },
+      { id: 'target', label: 'Target date', kind: 'date', groups: ['active', 'done'] },
+      { id: 'next', label: 'Next actions', kind: 'long', groups: ['active', 'done'] },
+      { id: 'trial', label: 'Trial', kind: 'text', groups: ['active'] },
+      { id: 'industry', label: 'Industry', kind: 'text', groups: ['lead', 'active', 'done'] },
+      { id: 'source', label: 'How we found it', kind: 'text', groups: ['lead', 'active', 'done'] },
+      { id: 'notes', label: 'Notes', kind: 'long', groups: ['lead'] },
+    ];
+    const O = (id, label, color, lock) => ({ id, label, color, lock: lock || null });
+    const options = {
+      status: [O('meet', 'First meeting', 'sky'), O('needs', 'Needs analysis', 'teal'), O('prop', 'Proposal sent', 'violet'), O('trial', 'Trial running', 'pink'), O('nego', 'Negotiation', 'blue'),
+        O('fu', 'Follow-up due', 'amber', 'Shows who is waiting on us'), O('won', 'Deal done', 'green', 'Moves the company to Deal done')],
+      type: [O('client', 'Client', 'blue'), O('partner', 'Partner', 'violet'), O('indiv', 'Individual partner', 'pink')],
+      answer: [O('later', 'Not now', 'amber'), O('no', 'No', 'slate')],
+      prio: [O('high', 'High', 'red'), O('medium', 'Medium', 'amber'), O('low', 'Low', 'slate')],
+      products: [O('fleet', 'Fleet tracking', 'blue'), O('pay', 'Payroll', 'teal'), O('pos', 'Point of sale', 'violet'), O('loyal', 'Loyalty add-on', 'pink'), O('ana', 'Analytics', 'sky')],
+    };
+    const shown = {
+      lead: ['outreach', 'prio', 'type', 'industry', 'source', 'notes'],
+      active: ['status', 'prio', 'last', 'target', 'products', 'next'],
+      done: ['last', 'target', 'products', 'next', 'type'],
+      hold: ['answer', 'reason', 'products', 'type', 'last'],
+    };
+    return { fields, options, shown };
+  }
+
   /* ---------- Normal data ---------- */
   function normal() {
     const people = ['Rina Hartono', 'Kevin Tan', 'Dimas Prasetyo', 'Aditya Wijaya', 'Sarah Lim', 'Maya Chen', 'Joko Susanto'];
-    // Companies: only what tasks need here. "done" means the deal is done, so its tasks count as client work.
+    // Companies. "done" means the deal is done, so its tasks count as client work.
+    const C = (o) => Object.assign({ contact: '', type: '', status: '', answer: '', prio: '', products: [], reason: '', outreach: null, last: null, target: null, next: '', trial: '', industry: '', source: '', notes: '', region: '', size: null, revisit: null }, o);
     const companies = [
-      { id: 'hal', name: 'Halcyon Logistics', short: 'HL', stage: 'active', target: d(-1), last: d(-6) },
-      { id: 'nor', name: 'Northwind Clinics', short: 'NC', stage: 'active', target: d(0), last: d(-15) },
-      { id: 'pel', name: 'Pelita Foods', short: 'PF', stage: 'active', target: d(2), last: d(-3) },
-      { id: 'mer', name: 'Meridian Bank', short: 'MB', stage: 'done', target: d(3), last: d(-2) },
-      { id: 'arc', name: 'Arcadia Retail Group', short: 'AR', stage: 'active', target: d(10), last: d(-9) },
-      { id: 'sol', name: 'Solace Hotels', short: 'SH', stage: 'done', target: d(15), last: d(-21) },
-      { id: 'kir', name: 'Kirana Health', short: 'KH', stage: 'active', target: d(7), last: d(-4) },
-      { id: 'tir', name: 'Tirta Water', short: 'TW', stage: 'done', target: d(8), last: d(-1) },
-      { id: 'bay', name: 'Bayu Motors', short: 'BM', stage: 'active', target: null, last: d(-18) },
-      { id: 'lum', name: 'Lumen Education', short: 'LE', stage: 'lead', target: null, last: null },
+      // Active prospects
+      C({ id: 'hal', name: 'Halcyon Logistics', short: 'HL', stage: 'active', contact: 'Budi Santoso', type: 'client', status: 'prop', prio: 'high', products: ['fleet', 'ana'], last: d(-6), target: d(-1), next: 'Send the revised proposal with volume pricing, then book the pricing call.', industry: 'Logistics', source: 'Trade fair', region: 'jkt', size: 850 }),
+      C({ id: 'nor', name: 'Northwind Clinics', short: 'NC', stage: 'active', contact: 'dr. Anita Kusuma', type: 'client', status: 'fu', prio: 'high', products: ['pay'], last: d(-15), target: d(0), next: 'Book a demo with their finance lead.', industry: 'Healthcare', source: 'Referral from Kirana Health', region: 'sby', size: 420 }),
+      C({ id: 'pel', name: 'Pelita Foods', short: 'PF', stage: 'active', contact: 'Yusuf Rahman', type: 'client', status: 'trial', prio: 'medium', products: ['pos', 'loyal'], last: d(-3), target: d(2), next: 'Review the trial usage, then prepare the contract draft.', trial: 'Two outlets, until 6 Nov', industry: 'Food and beverage', source: 'Website enquiry', region: 'bdg', size: 300 }),
+      C({ id: 'arc', name: 'Arcadia Retail Group', short: 'AR', stage: 'active', contact: 'Lina Wijaya', type: 'client', status: 'needs', prio: 'medium', products: ['pos', 'ana'], last: d(-9), target: d(10), next: 'Share the retail rollout case study.', industry: 'Retail', source: 'LinkedIn', region: 'jkt' }),
+      C({ id: 'kir', name: 'Kirana Health', short: 'KH', stage: 'active', contact: 'Hendra Gunawan', type: 'client', status: 'trial', prio: 'medium', products: ['pay'], last: d(-4), target: d(7), next: 'Collect pilot feedback from the clinic manager.', trial: 'Pilot at one clinic, until 30 Oct', industry: 'Healthcare', source: 'Conference talk', region: 'sby', size: 180 }),
+      C({ id: 'bay', name: 'Bayu Motors', short: 'BM', stage: 'active', contact: 'Agus Salim', type: 'client', status: 'fu', prio: 'low', products: ['fleet'], last: d(-18), trial: 'Extension requested', industry: 'Automotive', source: 'Cold outreach' }),
+      C({ id: 'ksp', name: 'Kapuas Shipping', short: 'KS', stage: 'active', contact: 'Michael Tanoto', type: 'partner', status: 'meet', prio: 'high', products: ['fleet'], last: d(-2), target: d(3), next: 'Agree the referral terms.', industry: 'Logistics', source: 'Partner introduction', region: 'jkt' }),
+      C({ id: 'gar', name: 'Garuda Fitness', short: 'GF', stage: 'active', contact: 'Rizky Pratama', type: 'client', status: 'nego', prio: 'high', products: ['pay', 'loyal'], last: d(-1), target: d(5), next: 'Send the final price for 12 gyms.', industry: 'Fitness', source: 'Website enquiry', region: 'bdg', size: 260 }),
+      C({ id: 'sem', name: 'Semesta Property', short: 'SP', stage: 'active', contact: 'Clara Hadiwijaya', type: 'client', status: 'prop', prio: 'medium', products: ['ana'], last: d(-16), target: d(-3), next: 'Chase the proposal decision.', industry: 'Property', source: 'Referral', region: 'jkt', size: 510 }),
+      C({ id: 'wib', name: 'Wibowo Consulting', short: 'WC', stage: 'active', contact: 'Darto Wibowo', type: 'indiv', status: 'needs', prio: 'low', products: ['loyal'], last: d(-21), target: d(14), industry: 'Consulting', source: 'Former colleague' }),
+      C({ id: 'cak', name: 'Cakra Telecom', short: 'CT', stage: 'active', contact: 'Siti Nurhaliza', type: 'client', status: 'fu', prio: 'high', products: ['ana', 'pay'], last: d(-8), target: d(1), next: 'Answer their security questions.', industry: 'Telecoms', source: 'Trade fair', region: 'jkt', size: 1200 }),
+      C({ id: 'lot', name: 'Lotus Pharmacy Chain', short: 'LP', stage: 'active', contact: 'Ivan Hartanto', type: 'client', status: 'meet', prio: 'medium', products: ['pos'], last: d(-5), target: d(12), industry: 'Healthcare', source: 'Cold outreach', region: 'mdn' }),
+      C({ id: 'ner', name: 'Nera Coffee', short: 'NE', stage: 'active', contact: 'Dewi Lestari', type: 'client', status: 'prop', prio: 'low', products: ['pos', 'loyal'], last: d(-11), target: d(6), next: 'Walk them through the loyalty add-on.', industry: 'Food and beverage', source: 'Instagram', region: 'bdg' }),
+      C({ id: 'bin', name: 'Bintang Freight', short: 'BF', stage: 'active', contact: 'Andre Siregar', type: 'client', status: 'needs', products: ['fleet'], last: d(-30), industry: 'Logistics', source: 'Trade fair', region: 'mdn' }),
+      // Deal done
+      C({ id: 'mer', name: 'Meridian Bank', short: 'MB', stage: 'done', contact: 'Robert Lim', type: 'client', status: 'won', products: ['ana', 'pay'], last: d(-2), target: d(3), next: 'Quarterly review: bring the support ticket summary.', industry: 'Banking', source: 'Referral', region: 'jkt' }),
+      C({ id: 'sol', name: 'Solace Hotels', short: 'SH', stage: 'done', contact: 'Maria Gunadi', type: 'client', status: 'won', products: ['pos', 'loyal'], last: d(-21), target: d(15), next: 'Send the renewal reminder.', industry: 'Hospitality', source: 'Trade fair', region: 'sby' }),
+      C({ id: 'tir', name: 'Tirta Water', short: 'TW', stage: 'done', contact: 'Bayu Aji', type: 'client', status: 'won', products: ['fleet'], last: d(-1), target: d(8), next: 'Check in after the go-live.', industry: 'Utilities', source: 'Cold outreach', region: 'bdg' }),
+      C({ id: 'aur', name: 'Aurora Schools', short: 'AS', stage: 'done', contact: 'Fajar Nugroho', type: 'client', status: 'won', products: ['pay'], last: d(-40), industry: 'Education', source: 'Webinar' }),
+      C({ id: 'ped', name: 'Pedati Courier', short: 'PC', stage: 'done', contact: 'Yohana Sitompul', type: 'partner', status: 'won', products: ['fleet'], last: d(-12), industry: 'Logistics', source: 'Partner introduction', region: 'mdn' }),
+      C({ id: 'sin', name: 'Sinar Optik', short: 'SO', stage: 'done', contact: 'Wulan', type: 'client', status: 'won', products: ['pos'], last: d(-60), industry: 'Retail', source: 'Walk-in' }),
+      // To approach
+      C({ id: 'lum', name: 'Lumen Education', short: 'LE', stage: 'lead', type: 'client', prio: 'medium', outreach: d(1), industry: 'Education', source: 'Webinar sign-up', notes: 'Runs 14 tutoring centres. Asked about payroll in the webinar chat.', region: 'jkt' }),
+      C({ id: 'bal', name: 'Bali Surf Resorts', short: 'BS', stage: 'lead', type: 'client', prio: 'high', outreach: d(-2), industry: 'Hospitality', source: 'Trade fair', notes: 'Three resorts, a fourth opening in March. The general manager took our card.' }),
+      C({ id: 'ind', name: 'Indo Cold Chain', short: 'IC', stage: 'lead', type: 'client', prio: 'high', outreach: d(3), industry: 'Logistics', source: 'LinkedIn', notes: '60 refrigerated trucks. Their ops director posted about route delays.', region: 'sby' }),
+      C({ id: 'mar', name: 'Marga Construction', short: 'MC', stage: 'lead', type: 'client', prio: 'medium', outreach: d(8), industry: 'Construction', source: 'Referral from Meridian Bank' }),
+      C({ id: 'kop', name: 'Koperasi Sejahtera', short: 'KS', stage: 'lead', type: 'client', prio: 'low', industry: 'Finance', source: 'Cold list' }),
+      C({ id: 'tok', name: 'Toko Kita', short: 'TK', stage: 'lead', type: 'client', prio: 'low', outreach: d(14), industry: 'Retail', source: 'Instagram' }),
+      C({ id: 'ary', name: 'Arya Kusuma', short: 'AK', stage: 'lead', type: 'indiv', prio: 'medium', outreach: d(5), industry: 'Consulting', source: 'Former colleague', notes: 'Independent consultant. Could resell to mid-size clinics.' }),
+      C({ id: 'sam', name: 'Samudra Fisheries', short: 'SF', stage: 'lead', type: 'client', industry: 'Food and beverage', source: 'Trade fair' }),
+      // No or not now
+      C({ id: 'pra', name: 'Prima Steel', short: 'PS', stage: 'hold', contact: 'Thomas Halim', type: 'client', answer: 'no', products: ['fleet'], reason: 'Chose a competitor with an on-premise option. Their IT policy rules out cloud hosting until 2028.', last: d(-45) }),
+      C({ id: 'jas', name: 'Jasa Medika', short: 'JM', stage: 'hold', contact: 'Ratna Sari', type: 'client', answer: 'later', products: ['pay'], reason: 'Budget frozen until the new fiscal year in April.', last: d(-20), revisit: d(160) }),
+      C({ id: 'ker', name: 'Kereta Kencana Travel', short: 'KK', stage: 'hold', contact: 'Benny Gozali', type: 'client', answer: 'later', products: ['pos'], reason: 'Merging with a sister company. Revisit once the merger closes.', last: d(-33), revisit: d(75) }),
+      C({ id: 'ema', name: 'Emas Jewellers', short: 'EJ', stage: 'hold', contact: 'Lisa Tjandra', type: 'client', answer: 'no', products: ['pos'], reason: 'Too small for our minimum contract.', last: d(-70) }),
+      C({ id: 'del', name: 'Delta Printing', short: 'DP', stage: 'hold', contact: 'Rudi Hartono', type: 'partner', answer: 'later', products: ['ana'], reason: 'Their partner programme lead left. Waiting for a replacement.', last: d(-9), revisit: d(30) }),
+      C({ id: 'hut', name: 'Hutama Energy', short: 'HE', stage: 'hold', type: 'client', answer: 'no', products: ['fleet', 'ana'], last: d(-100) }),
     ];
+    // Fields the team added (C1): a choice on three groups, a number on Active, a date on No or not now.
+    const schema = coSchema();
+    schema.fields.push(
+      { id: 'region', label: 'Region', kind: 'choice', groups: ['lead', 'active', 'done'], own: true },
+      { id: 'size', label: 'Deal size (IDR m)', kind: 'number', groups: ['active'], own: true },
+      { id: 'revisit', label: 'Revisit after', kind: 'date', groups: ['hold'], own: true },
+    );
+    schema.options.region = [{ id: 'jkt', label: 'Jakarta', color: 'blue' }, { id: 'sby', label: 'Surabaya', color: 'teal' }, { id: 'bdg', label: 'Bandung', color: 'violet' }, { id: 'mdn', label: 'Medan', color: 'pink' }];
+    schema.shown.hold.push('revisit');
     const groups = [
       { id: 'q4', name: 'Q4 planning', short: 'Q4', hue: 0, important: true },
       { id: 'hiring', name: 'Hiring', short: 'H', hue: 1, important: false },
@@ -97,7 +176,7 @@
       ev({ date: d(20), title: 'Weekly pipeline sync', start: '09:30', end: '10:15' }),
       ev({ date: d(23), title: 'Board update', start: '15:00', end: '16:00' }),
     ];
-    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice() };
+    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   /* ---------- Stress data ---------- */
@@ -175,7 +254,57 @@
     for (let i = 0; i < 24; i++) events.push({ date: d(0), title: pick(['Supplier call', 'Interview', 'Client visit', 'Pipeline sync', '季度会议', 'اجتماع العملاء', 'Kunjungan ke kantor cabang Surabaya']), start: String(7 + Math.floor(i / 2)).padStart(2, '0') + ':' + (i % 2 ? '30' : '00'), end: String(8 + Math.floor(i / 2)).padStart(2, '0') + ':' + (i % 2 ? '30' : '00'), url: '#calendar' });
     for (let i = 1; i < 14; i++) for (let j = 0; j < between(2, 12); j++) events.push({ date: d(i), title: 'Event', start: '10:00', end: '11:00', url: '#calendar' });
 
-    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice() };
+    // Company details. A separate random sequence, so the task data above stays exactly as it was.
+    let seed2 = 99;
+    const r2 = () => { seed2 |= 0; seed2 = seed2 + 0x6D2B79F5 | 0; let t = Math.imul(seed2 ^ seed2 >>> 15, 1 | seed2); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const p2 = (a) => a[Math.floor(r2() * a.length)];
+    const b2 = (a, b) => a + Math.floor(r2() * (b - a + 1));
+    const schema = coSchema();
+    const O = (id, label, color, lock) => ({ id, label, color, lock: lock || null });
+    schema.options.status.splice(5, 0, O('s6', 'Waiting for the regional procurement committee’s second-round approval', 'slate'), O('s7', '技术评估', 'teal'), O('s8', 'بانتظار الموافقة', 'violet'),
+      ...['Security review', 'Legal review', 'Reference call', 'Pilot planning', 'Budget check', 'Board sign-off', 'Contract sent', 'Onboarding call', 'Price agreed', 'Paused by them', 'Champion left', 'Re-engaged', 'Second demo'].map((l, i) => O('x' + i, l, ['blue', 'teal', 'violet', 'pink', 'sky', 'slate'][i % 6])));
+    for (let i = 0; i < 26; i++) schema.options.products.push(O('pr' + i, i === 3 ? 'Enterprisewideintegratedworkforceschedulingandtimeattendancesuite' : 'Product ' + String.fromCharCode(65 + (i % 26)) + (i > 12 ? ' Pro' : ''), ['blue', 'teal', 'violet', 'pink', 'sky', 'slate', 'green'][i % 7]));
+    const own = [
+      ['o1', 'Estimated annual contract value in Indonesian rupiah (millions)', 'number'], ['o2', 'Decision maker', 'text'], ['o3', 'Procurement portal reference', 'text'],
+      ['o4', 'Contract end date with their current vendor', 'date'], ['o5', 'Competitors in the deal', 'long'], ['o6', 'Region', 'choice'], ['o7', 'Branches', 'number'], ['o8', '担当者メモ', 'long'], ['o9', 'Signed NDA', 'choice'],
+    ];
+    own.forEach(([id, label, kind]) => schema.fields.push({ id, label, kind, groups: ['active'], own: true }));
+    schema.options.o6 = ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Makassar', 'Denpasar', 'Balikpapan', 'Pontianak'].map((l, i) => O('rg' + i, l, ['blue', 'teal', 'violet', 'pink', 'sky', 'slate', 'green', 'amber'][i]));
+    schema.options.o9 = [O('y', 'Yes', 'green'), O('n', 'No', 'slate')];
+    schema.shown.active = schema.shown.active.concat(['trial', 'type', 'contact', 'industry', 'source'], own.map((o) => o[0]));
+    schema.shown.lead.push('contact');
+    const contacts = people.concat(['Ir. H. Muhammad Fadhlurrahman Syarifuddin, S.T., M.M.', 'Jo', '王秀英', 'Анна Смирнова']);
+    const longText = 'They are comparing us with two other vendors and the decision sits with the regional CFO, who joins only the final meeting. Procurement needs the security questionnaire, the data processing agreement, references from two clients in the same sector, and a pricing table that separates one-off setup from the monthly fee. Their fiscal year closes in March, so anything signed after mid-February slips to next year.';
+    const industries = ['Logistics', 'Healthcare', 'Retail', 'Food and beverage', 'Banking', 'Hospitality', 'Education', 'Manufacturing of industrial machinery and spare parts for the mining sector', '製造業', 'Energy'];
+    const sources = ['Trade fair', 'Referral', 'LinkedIn', 'Website enquiry', 'Cold outreach', 'Partner introduction', 'A conversation at the Surabaya logistics forum dinner, table 12'];
+    const statusIds = schema.options.status.map((o) => o.id).filter((x) => x !== 'won');
+    const prodIds = schema.options.products.map((o) => o.id);
+    const fill = (c, i) => {
+      if (c.stage === 'active' && i % 5 === 4) c.stage = 'hold';
+      const sparse = r2() < 0.3; // empty optional fields
+      Object.assign(c, {
+        contact: sparse ? '' : p2(contacts), type: sparse && r2() < 0.5 ? '' : p2(['client', 'client', 'partner', 'indiv']),
+        status: c.stage === 'done' ? 'won' : (c.stage === 'active' && !sparse ? p2(statusIds) : ''),
+        answer: c.stage === 'hold' ? p2(['later', 'no']) : '', prio: sparse ? '' : p2(['high', 'medium', 'low']),
+        products: sparse ? [] : Array.from(new Set(Array.from({ length: r2() < 0.1 ? b2(5, 12) : b2(1, 2) }, () => p2(prodIds)))),
+        reason: c.stage === 'hold' && !sparse ? (r2() < 0.2 ? longText : 'Budget frozen until next year.') : '',
+        outreach: c.stage === 'lead' && !sparse ? d(b2(-20, 40)) : null,
+        last: c.stage === 'lead' || (sparse && r2() < 0.5) ? null : d(-b2(0, 400)),
+        target: (c.stage === 'active' || c.stage === 'done') && !sparse ? d(b2(-30, 90)) : null,
+        next: sparse ? '' : (r2() < 0.15 ? longText : 'Send the updated proposal.'), trial: !sparse && r2() < 0.2 ? 'Three sites, until the end of the month' : '',
+        industry: sparse ? '' : p2(industries), source: sparse ? '' : p2(sources), notes: c.stage === 'lead' && !sparse ? longText : '',
+        o1: sparse ? null : b2(10, 99999), o2: sparse ? '' : p2(contacts), o3: sparse ? '' : 'PRC-' + b2(100000, 999999) + '-JKT-2026-PROCUREMENT', o4: sparse ? null : d(b2(-30, 700)),
+        o5: sparse ? '' : longText, o6: sparse ? '' : 'rg' + b2(0, 7), o7: sparse ? null : b2(1, 4200), o8: sparse ? '' : '来月の会議で予算を確認する予定です。', o9: sparse ? '' : p2(['y', 'n']),
+      });
+    };
+    companies.forEach(fill);
+    for (let i = companies.length; i < 3200; i++) {
+      const c = { id: 'c' + i, name: p2(['PT ', 'CV ', '', '']) + p2(['Sinar', 'Maju', 'Jaya', 'Abadi', 'Mega', 'Surya', 'Bumi', 'Cahaya', 'Karya', 'Prima']) + ' ' + p2(['Logistik', 'Sentosa', 'Makmur', 'Teknik', 'Pangan', 'Medika', 'Niaga', 'Energi']) + ' ' + (i + 1), short: 'C' + (i % 9), stage: p2(['lead', 'lead', 'active', 'active', 'active', 'done', 'hold']), target: null, last: null };
+      fill(c, i); if (c.stage === 'hold' && !c.answer) c.answer = 'later';
+      companies.push(c);
+    }
+
+    return { people, companies, groups, tasks, events, types: TYPES.slice(), touch: TOUCH.slice(), coFields: schema.fields, coOptions: schema.options, coShown: schema.shown };
   }
 
   window.PROTO_DATA = { TODAY, d, normal, stress };

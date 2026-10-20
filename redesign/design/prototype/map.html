@@ -124,6 +124,54 @@
     <tr><td>Loading, nothing yet</td><td><a href="plan.html?view=people&state=loading">Loading</a><a href="plan.html?view=people&state=empty">Nothing yet</a></td></tr>
   </table></section>
 
+  <section class="panel glass"><h2>Companies: the four groups</h2><p class="ids">B2, B3, B4, B6, B7, B8, B9, A1, A4</p>
+  <table>
+    <tr><td>Active prospects, with where to act</td><td><a href="companies.html">Normal</a><a href="companies.html?stress">Stress (3,200 companies, 22 fields shown)</a></td></tr>
+    <tr><td>To approach, deal done, no or not now</td><td><a href="companies.html?g=lead">To approach</a><a href="companies.html?g=done">Deal done</a><a href="companies.html?g=hold">No or not now</a><a href="companies.html?g=hold&stress">Stress</a></td></tr>
+    <tr><td>Gone cold, waiting on us, high priority, target close or missed</td><td><a href="companies.html?act=cold">Gone cold</a><a href="companies.html?act=fu">Waiting on us</a><a href="companies.html?act=high">High priority</a><a href="companies.html?act=due">Target date</a></td></tr>
+    <tr><td>Search and filters, no results</td><td><a href="companies.html?q=fleet">Search</a><a href="companies.html?q=jas">Only in another group</a><a href="companies.html?q=zebra">No results</a><a href="companies.html?g=lead&prio=high">Priority filter</a></td></tr>
+    <tr><td>Order by any detail</td><td><a href="companies.html?open=sort">Sort menu</a><a href="companies.html?sort=target&dir=asc">By target date</a><a href="companies.html?sort=name&dir=asc">By name</a></td></tr>
+    <tr><td>Nothing yet, one group empty</td><td><a href="companies.html?state=empty">No companies</a><a href="companies.html?state=empty-group&g=hold">No or not now is empty</a></td></tr>
+    <tr><td>Loading, no connection</td><td><a href="companies.html?state=loading">Loading</a><a href="companies.html?state=offline">Offline</a><a href="companies.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="companies.html?state=live">Open (changes after a second)</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Companies: one detail, one step</h2><p class="ids">B10, B12, C3 (clearing a choice)</p>
+  <table>
+    <tr><td>Change a choice, a date, a text from the list</td><td><a href="companies.html?open=edit-status">Status</a><a href="companies.html?open=edit-date">Target date</a><a href="companies.html?open=edit-text">Next actions</a></td></tr>
+    <tr><td>Row menu: follow-up task, last action today, move, notes, delete</td><td><a href="companies.html?open=row-menu">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Company record</h2><p class="ids">B1, B3, B4, B10, B11, B12, B13, B14, U5 (link only)</p>
+  <table>
+    <tr><td>Active prospect, with its tasks kept in step</td><td><a href="companies.html?co=hal">Halcyon Logistics</a><a href="companies.html?open=record-cold">Gone cold, target missed</a><a href="companies.html?co=c1&stress">Stress</a></td></tr>
+    <tr><td>To approach, no or not now</td><td><a href="companies.html?open=record-lead">To approach</a><a href="companies.html?open=record-hold">No or not now</a><a href="companies.html?open=record-hold&stress">Stress</a></td></tr>
+    <tr><td>From a task straight to its company</td><td><a href="tasks.html?open=task-edit">Task, then “Open company”</a></td></tr>
+    <tr><td>Follow-up task created, or couldn't be created</td><td><a href="companies.html?open=followup">Created</a><a href="companies.html?state=task-fail&open=followup">Failed</a></td></tr>
+    <tr><td>Delete a company</td><td><a href="companies.html?open=delete">Confirm</a></td></tr>
+    <tr><td>Offline: read only until back online</td><td><a href="companies.html?state=offline&co=hal">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>New company, moving between groups</h2><p class="ids">B1, B3, B4, B5</p>
+  <table>
+    <tr><td>New company (only the name is required)</td><td><a href="companies.html?open=new">Open</a><a href="companies.html?open=new-required">Name missing</a></td></tr>
+    <tr><td>Move, with what's known carried over</td><td><a href="companies.html?open=move">To approach → Active</a><a href="companies.html?open=move-hold">Active → No or not now</a></td></tr>
+    <tr><td>Status set to Deal done moves it to Deal done</td><td><a href="companies.html?open=edit-status">Choose “Deal done”</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Fields and options</h2><p class="ids">C1, C2, C3</p>
+  <table>
+    <tr><td>Fields per group: show in the list, rename, remove own fields</td><td><a href="companies.html?open=fields">Active</a><a href="companies.html?g=hold&open=fields">No or not now</a><a href="companies.html?open=fields&stress">Stress</a></td></tr>
+    <tr><td>Add a field (short text, long text, number, date, choice)</td><td><a href="companies.html?open=field-new">Open</a></td></tr>
+    <tr><td>Remove an own field (values stay stored)</td><td><a href="companies.html?open=field-remove">Confirm</a></td></tr>
+    <tr><td>Options with colours; locked statuses</td><td><a href="companies.html?open=options">Status options</a><a href="companies.html?open=options&stress">Stress (23 options)</a><a href="companies.html?open=option-remove">Remove an option</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Export</h2><p class="ids">E1 (companies; notes and past clients come with their groups)</p>
+  <table>
+    <tr><td>Companies shown now, with the fields shown</td><td><a href="companies.html?open=export">Open</a><a href="companies.html?act=cold&open=export">Filtered</a><a href="companies.html?q=zebra&open=export">Nothing to export</a></td></tr>
+  </table></section>
+
   <section class="panel glass"><h2>Moving around on phones</h2><p class="ids">A2, A4</p>
   <table>
     <tr><td>Tab bar, raised add button, More</td><td><a href="index.html?open=more">More sheet</a></td></tr>
@@ -132,8 +180,7 @@
 
   <section class="panel glass"><h2>Coming in later sessions</h2>
   <table class="later">
-    <tr><td>Companies, fields and options</td><td>B1 to B14, C1 to C3, E1</td></tr>
-    <tr><td>Qualification notes</td><td>U1 to U8, E1</td></tr>
+    <tr><td>Qualification notes</td><td>U1 to U8, E1 (the record already links to them)</td></tr>
     <tr><td>Past clients</td><td>R1 to R9, E1</td></tr>
     <tr><td>Flows</td><td>M1 to M4</td></tr>
     <tr><td>Installing, opening offline</td><td>A2, A3</td></tr>
