@@ -85,10 +85,10 @@ DESIGN="$STUDIO/redesign/design"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 NOSANDBOX=""
 if [ "$(uname)" = Linux ]; then
-  # Linux server (arm64, no Google Chrome build): Playwright's Chromium, same lockdown flags.
-  # Chrome's own sandbox can't start under Ubuntu's user-namespace restriction; the proxy and
-  # local-only server still confine the page.
-  CHROME="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | tail -1)"
+  # Linux server (arm64, no Google Chrome build): Playwright's headless shell (full Chromium hangs
+  # there), same lockdown flags. Chrome's own sandbox can't start under Ubuntu's user-namespace
+  # restriction; the proxy and local-only server still confine the page.
+  CHROME="$(ls -d "$HOME"/.cache/ms-playwright/chromium_headless_shell-*/chrome-linux*/headless_shell 2>/dev/null | tail -1)"
   NOSANDBOX="--no-sandbox"
 fi
 FONTS="fonts.googleapis.com;fonts.gstatic.com"
