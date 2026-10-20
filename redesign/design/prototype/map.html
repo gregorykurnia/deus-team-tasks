@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .wrap { max-width: 980px; margin: 0 auto; padding: 36px 20px 80px; }
+  h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+  .intro { color: var(--ink-2); font-weight: 500; max-width: 68ch; }
+  .panel { margin-top: 22px; padding: 18px 22px 20px; }
+  h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
+  .ids { color: var(--muted); font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 7px 8px; border-top: 1px solid var(--hair); vertical-align: top; }
+  td:first-child { width: 42%; font-weight: 600; }
+  td a { color: var(--blue); font-weight: 600; text-decoration: none; margin-right: 12px; white-space: nowrap; }
+  td a:hover { text-decoration: underline; }
+  .later { color: var(--muted); }
+  @media (max-width: 640px) { td:first-child { width: auto; } tr { display: grid; } td { border-top: 0; padding: 3px 0; } tr { border-top: 1px solid var(--hair); padding: 8px 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Prototype map</h1>
+  <p class="intro">Every screen and state built so far, with the job stories it serves. Each link opens on its own; add <b>stress</b> to see the stress data set. Light mode only, as the brief asks. The dashed “Prototype” control on each page switches data and states and is not part of the design.</p>
+
+  <section class="panel glass"><h2>Today</h2><p class="ids">W1, W5, W12, W13, D2, D3, D4 (today only), D7 (summary), D9, D10, D11, A1, A4</p>
+  <table>
+    <tr><td>Normal</td><td><a href="index.html">Normal</a><a href="index.html?stress">Stress</a></td></tr>
+    <tr><td>One kind of work (prospects, clients, internal)</td><td><a href="index.html?kind=pro">Prospects</a><a href="index.html?kind=cli">Clients</a><a href="index.html?kind=int">Internal</a></td></tr>
+    <tr><td>No work of one kind</td><td><a href="index.html?state=no-clients&kind=cli">No client work</a></td></tr>
+    <tr><td>Nothing due in the next three days</td><td><a href="index.html?state=quiet">Normal</a><a href="index.html?state=quiet&stress">Stress</a></td></tr>
+    <tr><td>Nothing yet (no tasks at all)</td><td><a href="index.html?state=empty">Open</a></td></tr>
+    <tr><td>Loading (tasks and events load separately)</td><td><a href="index.html?state=loading">Everything</a><a href="index.html?state=events-loading">Events only</a></td></tr>
+    <tr><td>Calendar not set up / couldn't load</td><td><a href="index.html?state=events-off">Not set up</a><a href="index.html?state=events-fail">Failed</a></td></tr>
+    <tr><td>No connection</td><td><a href="index.html?state=offline">With last loaded data</a><a href="index.html?state=offline-empty">Nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="index.html?state=live">Open (changes after a second)</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>All tasks</h2><p class="ids">W5, W6, W12, W13, W14, W15, D2, D3, D11, A1</p>
+  <table>
+    <tr><td>Open tasks</td><td><a href="tasks.html">Normal</a><a href="tasks.html?stress">Stress (2,400 tasks)</a></td></tr>
+    <tr><td>By kind of work</td><td><a href="tasks.html?kind=pro">Prospects</a><a href="tasks.html?kind=cli">Clients</a><a href="tasks.html?kind=int">Internal</a></td></tr>
+    <tr><td>Prospect work with no action for 14+ days</td><td><a href="tasks.html?kind=pro&idle=14">Open</a><a href="tasks.html?kind=pro&idle=60">None match</a></td></tr>
+    <tr><td>Overdue, due soon, no dates</td><td><a href="tasks.html?due=overdue">Overdue</a><a href="tasks.html?due=soon">Next 3 days</a><a href="tasks.html?due=nodate">No dates</a></td></tr>
+    <tr><td>Finished tasks</td><td><a href="tasks.html?view=done">Last 7 days</a><a href="tasks.html?view=done&range=all">Any time</a><a href="tasks.html?view=done&stress">Stress</a></td></tr>
+    <tr><td>No results</td><td><a href="tasks.html?q=zebra">Search</a><a href="tasks.html?kind=cli&due=nodate">Filters</a></td></tr>
+    <tr><td>No tasks of one kind</td><td><a href="tasks.html?state=no-clients&kind=cli">No client work</a><a href="tasks.html?state=empty">Nothing yet</a></td></tr>
+    <tr><td>Details shown, sort, no-action filter</td><td><a href="tasks.html?open=columns">Details shown</a><a href="tasks.html?open=sort">Sort</a><a href="tasks.html?open=idle">No action for</a></td></tr>
+    <tr><td>Loading, no connection</td><td><a href="tasks.html?state=loading">Loading</a><a href="tasks.html?state=offline">Offline</a><a href="tasks.html?state=offline-empty">Offline, nothing loaded</a></td></tr>
+    <tr><td>Live change from a colleague</td><td><a href="tasks.html?state=live">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Task groups</h2><p class="ids">W8, W9, W10, W11</p>
+  <table>
+    <tr><td>One group's work</td><td><a href="tasks.html?group=q4">Q4 planning</a><a href="tasks.html?group=g0&stress">Stress, long name</a><a href="tasks.html?group=g5&stress">Empty group</a></td></tr>
+    <tr><td>New group</td><td><a href="tasks.html?open=group-new">Open</a><a href="tasks.html?open=group-empty">Name missing</a><a href="tasks.html?open=group-dup">Name taken</a><a href="tasks.html?state=group-fail&open=group-fail">Couldn't create</a></td></tr>
+    <tr><td>Rename, delete (tasks become ungrouped)</td><td><a href="tasks.html?group=office&open=group-rename">Rename</a><a href="tasks.html?group=office&open=group-delete">Delete</a></td></tr>
+    <tr><td>Nothing yet (no groups)</td><td><a href="tasks.html?state=empty">Open</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Task details</h2><p class="ids">W1, W2, W3, W4, W7, B12 (note), B13 (link), D11</p>
+  <table>
+    <tr><td>New task, quick and with all details</td><td><a href="tasks.html?open=task-new">Quick</a><a href="tasks.html?open=task-new-full">All details</a></td></tr>
+    <tr><td>Description missing</td><td><a href="tasks.html?open=task-required">Open</a></td></tr>
+    <tr><td>Edit a company task, an internal task, a finished task</td><td><a href="tasks.html?open=task-edit">Company</a><a href="tasks.html?open=task-edit-int">Internal</a><a href="tasks.html?open=task-done">Finished</a><a href="tasks.html?open=task-edit&stress">Stress</a></td></tr>
+    <tr><td>Names already in use, adding a new name</td><td><a href="tasks.html?open=task-names">Suggestions</a><a href="tasks.html?open=task-names-new">New name</a></td></tr>
+    <tr><td>Delete a task</td><td><a href="tasks.html?open=task-delete">Confirm</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Moving around on phones</h2><p class="ids">A2, A4</p>
+  <table>
+    <tr><td>Tab bar, raised add button, More</td><td><a href="index.html?open=more">More sheet</a></td></tr>
+    <tr><td>Task groups on phones (chips under the title)</td><td><a href="tasks.html">Open at phone width</a></td></tr>
+  </table></section>
+
+  <section class="panel glass"><h2>Coming in later sessions</h2>
+  <table class="later">
+    <tr><td>Plan</td><td>D1, D4 to D10</td></tr>
+    <tr><td>Companies, fields and options</td><td>B1 to B14, C1 to C3, E1</td></tr>
+    <tr><td>Qualification notes</td><td>U1 to U8, E1</td></tr>
+    <tr><td>Past clients</td><td>R1 to R9, E1</td></tr>
+    <tr><td>Flows</td><td>M1 to M4</td></tr>
+    <tr><td>Installing, opening offline</td><td>A2, A3</td></tr>
+  </table></section>
+</div>
+</body>
+</html>
