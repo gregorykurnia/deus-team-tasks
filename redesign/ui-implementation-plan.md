@@ -144,7 +144,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 1.4 | Move logic out of components into `lib/` (tasks, groups, plan, flows) | Opus 5.5 High | 2026-10-20 · `06958ce` (also `lib/dates.ts`, `lib/taskWrites.ts`, `lib/batches.ts`; flows had no logic to move) |
 | 1.5 | Move logic out of components into `lib/` (companies, notes, past clients); safe writes | Opus 5.5 High | 2026-10-20 · `d7e3504` (kept in step is one write per Firebase project, not one batch; ids from `settings/companyIds`, rule published in 1.7) |
 | 1.6 | Data additions, connection state, offline cache, calendar route | Opus 5.5 High | 2026-10-20 · `be15701` (old flows screen drops keys when typed fast, before and after; for R1) |
-| 1.7 | Shared company settings in Firestore (read path + defaults) | Opus 5.5 High | Code and tests in; waiting to publish `firestore.rules` (needs `npx firebase login`) |
+| 1.7 | Shared company settings in Firestore (read path + defaults) | Opus 5.5 High | 2026-10-20 · `217c06a` (rules published 2026-10-20) |
 | R1 | **Phase 1 review** (fresh session) | Opus 5.5 High | |
 | **2** | **Phase 2: foundations** | | |
 | 2.1 | Tokens, base styles, font, backdrop, reduce motion | Haiku 5.5 Max | |
