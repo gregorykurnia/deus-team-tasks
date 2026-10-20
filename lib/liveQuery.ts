@@ -4,7 +4,7 @@
 // loading, error and fromCache, so every area loads and fails on its own.
 import { onSnapshot, type CollectionReference, type Query, type QueryDocumentSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { forgetSource, reportSnapshot, type Source } from "./connection";
+import { forgetSource, reportSnapshot, watchSource, type Source } from "./connection";
 
 export interface LiveRows<T> {
   rows: T[];
@@ -24,6 +24,7 @@ export function useLiveQuery<T>(
   const [state, setState] = useState<LiveRows<T>>(LOADING);
 
   useEffect(() => {
+    watchSource(source);
     const unsubscribe = onSnapshot(
       makeQuery(),
       { includeMetadataChanges: true },

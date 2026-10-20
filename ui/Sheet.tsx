@@ -2,12 +2,13 @@
 
 // Sheets (guide 4.11): a drawer 16px in from the right on large screens, a bottom sheet with a grab handle on
 // phones. A head with the title, a tag and a close button; a scrolling body; an optional foot.
-import { useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Button from "./Button";
 import Icon from "./Icon";
 import Scrim from "./Scrim";
 import { useIsClient } from "./useIsClient";
+import { LARGE_SCREEN, useMediaQuery } from "./useMediaQuery";
 import { useOverlay } from "./useOverlay";
 import styles from "./Sheet.module.css";
 
@@ -28,7 +29,19 @@ interface SheetProps {
 
 export default function Sheet(props: SheetProps) {
   const client = useIsClient();
-  if (!props.open || !client) return null;
+  const large = useMediaQuery(LARGE_SCREEN);
+  // A phone-only sheet left open on a large screen (opened, then the window widened or turned, or its
+  // address opened on a computer) closes, so it can't lock the page or hold focus while hidden.
+  const hidden = !!props.phoneOnly && large;
+  const { open, onClose } = props;
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+  useEffect(() => {
+    if (open && hidden) closeRef.current();
+  }, [open, hidden]);
+  if (!open || !client || hidden) return null;
   return createPortal(<SheetPanel {...props} />, document.body);
 }
 

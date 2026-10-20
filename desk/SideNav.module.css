@@ -194,6 +194,11 @@
   color: var(--muted);
 }
 
+/* A source that failed (R2.1, provisional until the studio answers N5). */
+.failed {
+  color: var(--red-ink);
+}
+
 .skeleton {
   display: block;
   height: 22px;

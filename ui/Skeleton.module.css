@@ -21,13 +21,19 @@
   background: rgba(255, 255, 255, 0.6);
 }
 
+/* The same shimmering gradient as a block (a flat colour can't shimmer). */
 .row > span,
 .lines span {
   display: block;
   border-radius: 8px;
-  background: rgba(27, 31, 59, 0.08);
-  animation: shimmer 1.4s linear infinite;
+  background: linear-gradient(
+    90deg,
+    rgba(27, 31, 59, 0.06) 0%,
+    rgba(27, 31, 59, 0.1) 40%,
+    rgba(27, 31, 59, 0.06) 80%
+  );
   background-size: 300% 100%;
+  animation: shimmer 1.4s linear infinite;
 }
 
 .circle {
@@ -77,6 +83,6 @@
     background-position: 100% 0;
   }
   to {
-    background-position: 0 0;
+    background-position: -50% 0;
   }
 }

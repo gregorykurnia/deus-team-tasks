@@ -39,12 +39,25 @@ test.describe("large screens", () => {
     await seedTasks([task("t1", { taskGroup: "Office move" }), task("t2", { taskGroup: "Office move", completed: true })]);
     await page.goto("/plan");
     const group = mainNav(page).getByRole("link", { name: /Office move/ });
-    await expect(group).toContainText("1");
+    await expect(group).toHaveAccessibleName(/^Office move\s*1$/); // one open task: the finished one isn't counted
     await group.click();
     await expect(page).toHaveURL("/tasks/groups/g1");
     await expect(title(page)).toHaveText("Office move");
     await expect(group).toHaveAttribute("aria-current", "page");
     await expect(mainNav(page).getByRole("link", { name: named("All tasks") })).not.toHaveAttribute("aria-current");
+  });
+
+  test("More opened by its address on a large screen closes, so it can't lock the page", async ({ page }) => {
+    await page.goto("/plan?view=month&more=1");
+    await expect(page).toHaveURL("/plan?view=month");
+    await expect(page.getByRole("dialog", { name: "More" })).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
+  });
+
+  test("Install keeps the screen's own address state", async ({ page }) => {
+    await page.goto("/plan?view=month");
+    await mainNav(page).getByRole("link", { name: "Install the app" }).click();
+    await expect(page).toHaveURL("/plan?view=month&install=1");
   });
 });
 
@@ -102,6 +115,41 @@ test.describe("phones", () => {
     await mainNav(page).getByRole("link", { name: "New task" }).click();
     await expect(page).toHaveURL("/companies?task=new");
   });
+
+  test("+ and More keep the screen's own address state, and closing More takes off only its own", async ({ page }) => {
+    await page.goto("/plan?view=month");
+    await mainNav(page).getByRole("link", { name: "New task" }).click();
+    await expect(page).toHaveURL("/plan?view=month&task=new");
+
+    await page.goto("/plan?view=day");
+    const more = mainNav(page).getByRole("button", { name: "More" });
+    await more.click();
+    await expect(page).toHaveURL("/plan?view=day&more=1");
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL("/plan?view=day");
+
+    await page.goto("/plan?view=day&more=1"); // opened by its address: closing replaces it
+    await page.getByRole("dialog", { name: "More" }).getByRole("button", { name: "Close" }).click();
+    await expect(page).toHaveURL("/plan?view=day");
+  });
+
+  test("after the back gesture closes More, the next close doesn't step back a page", async ({ page }) => {
+    await page.goto("/tasks");
+    await page.goto("/");
+    const more = mainNav(page).getByRole("button", { name: "More" });
+    const sheet = page.getByRole("dialog", { name: "More" });
+    await more.click();
+    await expect(sheet).toBeVisible();
+    await page.goBack(); // closes More
+    await expect(sheet).toBeHidden();
+    await page.goForward(); // More again, not opened from the tab bar this time
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("button", { name: "Close" }).click();
+    await expect(page).toHaveURL("/");
+    // Closing replaced the entry rather than stepping back, so back still lands on Today, not on All tasks.
+    await page.goBack();
+    await expect(page).toHaveURL("/");
+  });
 });
 
 test("A3: with no connection a banner says so, and a toast says when it's back", async ({ page, context }) => {
@@ -112,4 +160,16 @@ test("A3: with no connection a banner says so, and a toast says when it's back",
   await context.setOffline(false);
   await expect(page.getByText("Back online. Everything is up to date.")).toBeVisible();
   await expect(page.getByText("No connection.")).toBeHidden();
+});
+
+test("A3: opened with the server unreachable, the app says it's connecting, then that there's no connection", async ({ page, isMobile }) => {
+  // context.setOffline only flips the browser's own flag: block the emulator itself, before the page loads.
+  await page.route(/127\.0\.0\.1:8080/, (route) => route.abort());
+  await page.goto("/tasks");
+  await expect(title(page)).toHaveText("Tasks");
+  if (!isMobile) await expect(mainNav(page).getByText("Connecting…")).toBeVisible(); // the live status in the side bar
+  await expect(page.getByText("Live, everyone's up to date")).toHaveCount(0);
+  await expect(page.getByText("No connection.")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Nothing has loaded yet.", { exact: false })).toBeVisible();
+  if (!isMobile) await expect(mainNav(page).getByText("Offline. Changes can't be saved.")).toBeVisible();
 });

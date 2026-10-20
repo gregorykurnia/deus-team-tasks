@@ -91,6 +91,19 @@ test.describe("sector picker", () => {
     await option.click();
     await expect(sector).toHaveValue("Healthcare");
   });
+
+  test("Enter keeps what was typed; an arrow key first picks the highlighted sector", async ({ page }) => {
+    const sector = page.getByRole("combobox", { name: "Sector" });
+    await sector.fill("Food");
+    await expect(page.getByRole("option", { name: /Food and beverage/ })).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(sector).toHaveValue("Food");
+    await expect(page.getByRole("listbox")).toBeHidden();
+    await sector.fill("Foo");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(sector).toHaveValue("Food and beverage");
+  });
 });
 
 test.describe("required fields", () => {
@@ -103,6 +116,20 @@ test.describe("required fields", () => {
     await description.pressSequentially("Call Pelita Foods");
     await expect(form(page).getByText("Add a short description so the team knows what this is.")).toBeHidden();
     await expect(description).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  test("every try with the error still there takes focus back to the field", async ({ page }) => {
+    const description = form(page).getByLabel("Description");
+    const add = form(page).getByRole("button", { name: "Add task" });
+    await add.click();
+    await expect(description).toBeFocused();
+    await add.focus();
+    await add.click();
+    await expect(description).toBeFocused();
+  });
+
+  test("the Informed label names the add field", async ({ page }) => {
+    await expect(form(page).getByLabel("Informed")).toHaveAttribute("placeholder", "Add someone to keep informed");
   });
 });
 

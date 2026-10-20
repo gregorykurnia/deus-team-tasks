@@ -2,16 +2,18 @@
 
 // Task rows in their variants and states (task 2.7): card, list, day and record rows, with done, overdue, within three days,
 // undated, last action in each tone, just changed, selected and leaving. The done circle and the Select switch are live.
+// The rows are dated from a fixed demo day, so the server (in UTC) and the browser (UTC+7) render the same thing; screens
+// use useToday instead.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { addDays, todayIso } from "@/lib/dates";
+import { addDays } from "@/lib/dates";
 import { companiesById, DEAL_DONE_STATUS } from "@/lib/kinds";
 import type { Task } from "@/lib/types";
 import Button from "@/ui/Button";
 import SelectBox from "@/ui/SelectBox";
 import { TaskCard, TaskDayRow, TaskListRow, TaskRecordRow } from "@/ui/TaskRow";
 
-const TODAY = todayIso();
+const TODAY = "2026-10-20";
 const companies = companiesById([
   { id: 1, company: "Pelita Foods", status: "To Follow Up" },
   { id: 2, company: "Arunika Labs", status: DEAL_DONE_STATUS },
@@ -93,9 +95,14 @@ export default function TaskRowDemos() {
     return () => live.forEach(clearTimeout);
   }, []);
 
-  function markDone(id: string) {
-    setMarked((m) => ({ ...m, [id]: Date.now() }));
-    timers.current.push(setTimeout(() => setGone((l) => [...l, id]), 900));
+  // Marked done, a row leaves the open list; marked not done (a finished one), it only changes back.
+  function toggleDone(t: Task, done: boolean) {
+    if (!done) {
+      setMarked((m) => ({ ...m, [t.id]: 0 }));
+      return;
+    }
+    setMarked((m) => ({ ...m, [t.id]: new Date(`${TODAY}T12:00:00`).getTime() })); // done on the demo day
+    timers.current.push(setTimeout(() => setGone((l) => [...l, t.id]), 900));
   }
 
   const shown = TASKS.filter((t) => !gone.includes(t.id));
@@ -132,14 +139,15 @@ export default function TaskRowDemos() {
       <Panel title="Card rows (Today)">
         {shown.map((t) => {
           const doneAt = marked[t.id];
+          const shownTask = doneAt ? { ...t, completed: true, completedAt: doneAt } : doneAt === 0 ? { ...t, completed: false, completedAt: undefined } : t;
           return (
             <TaskCard
               key={t.id}
-              task={doneAt ? { ...t, completed: true, completedAt: doneAt } : t}
+              task={shownTask}
               companies={companies}
               today={TODAY}
               href={open(t.id)}
-              onDone={() => markDone(t.id)}
+              onToggleDone={(done) => toggleDone(t, done)}
               leaving={!!doneAt}
               justChanged={t.id === "t6"}
               selecting={selecting}

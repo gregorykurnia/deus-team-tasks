@@ -49,15 +49,56 @@ test("by keyboard: Tab reaches the done circle, then the title, and a ring shows
   await expect(page).toHaveURL(/\?task=t1$/);
 });
 
-test("the done circle's hit area reaches about 44px", async ({ page }) => {
+test("the done circle's hit area reaches about 44px, on every side", async ({ page }) => {
   const circle = rowOf(page, CALL).getByRole("button", { name: `Mark done: ${CALL}` });
   await circle.scrollIntoViewIfNeeded(); // elementFromPoint only sees what is in the window
   const box = (await circle.boundingBox())!;
-  const reached = await page.evaluate(
-    ([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"),
-    [box.x - 9, box.y + box.height / 2]
+  const [midX, midY] = [box.x + box.width / 2, box.y + box.height / 2];
+  const probes = [
+    [box.x - 9, midY],
+    [box.x + box.width + 9, midY],
+    [midX, box.y - 9],
+    [midX, box.y + box.height + 9],
+  ];
+  for (const point of probes) {
+    const reached = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), point);
+    expect(reached, `at ${point}`).toBe(`Mark done: ${CALL}`);
+  }
+});
+
+test("marking a finished task not done keeps it in place, where marking done makes a row leave", async ({ page }) => {
+  const SHARE = "Share the retail rollout case study";
+  const row = rowOf(page, SHARE);
+  await row.getByRole("button", { name: `Mark not done: ${SHARE}` }).click();
+  await expect(row).not.toHaveAttribute("data-done");
+  await expect(row).not.toHaveAttribute("data-leaving");
+  await page.waitForTimeout(1200); // past the leave animation
+  await expect(row).toBeVisible();
+});
+
+test("the deadline pill's full date shows on hover, and a click on it still opens the task", async ({ page }) => {
+  const row = rowOf(page, CALL);
+  const pill = row.getByText("2 days late");
+  await pill.scrollIntoViewIfNeeded();
+  const box = (await pill.boundingBox())!;
+  const title = await page.evaluate(
+    ([x, y]) => document.elementFromPoint(x, y)?.closest("[title]")?.getAttribute("title"),
+    [box.x + box.width / 2, box.y + box.height / 2]
   );
-  expect(reached).toBe(`Mark done: ${CALL}`);
+  expect(title).toMatch(/^Deadline /);
+  await pill.click();
+  await expect(page).toHaveURL(/\?task=t1$/);
+});
+
+test("while selecting, a click on the row toggles its checkbox instead of opening the task", async ({ page }) => {
+  await page.getByRole("button", { name: "Select", exact: true }).click();
+  const row = rowOf(page, CALL);
+  const box = (await row.boundingBox())!;
+  await row.click({ position: { x: box.width / 2, y: 6 } });
+  await expect(row).toHaveAttribute("data-selected", "true");
+  await expect(page).not.toHaveURL(/\?task=/);
+  await row.getByText(CALL).click();
+  await expect(row).not.toHaveAttribute("data-selected");
 });
 
 test("selecting several swaps the circles for checkboxes, with a head box that can be mixed", async ({ page }) => {

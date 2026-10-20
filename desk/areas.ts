@@ -35,7 +35,23 @@ export function groupHref(groupId: string): string {
 }
 
 // A link that opens something over the current screen, kept in the address so
-// a reload keeps it and the phone's back gesture closes it.
-export function over(pathname: string, param: string): string {
-  return `${pathname}?${param}`;
+// a reload keeps it and the phone's back gesture closes it. The screen's own
+// address state (a filter, a view) stays; params named in `drop` go.
+export function over(pathname: string, search: string | URLSearchParams, param: string, drop: string[] = []): string {
+  const params = new URLSearchParams(search);
+  drop.forEach((key) => params.delete(key));
+  new URLSearchParams(param).forEach((value, key) => params.set(key, value));
+  return withSearch(pathname, params);
+}
+
+// The address with some params taken off, as when an overlay closes.
+export function without(pathname: string, search: string | URLSearchParams, keys: string[]): string {
+  const params = new URLSearchParams(search);
+  keys.forEach((key) => params.delete(key));
+  return withSearch(pathname, params);
+}
+
+function withSearch(pathname: string, params: URLSearchParams): string {
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }

@@ -19,6 +19,7 @@ interface DialogProps {
   quote?: string; // a name in a grey box, three lines at most
   initialFocus?: string | string[];
   actions?: ReactNode; // right-aligned
+  busy?: boolean; // while its action runs, Esc and the scrim don't close it
   children?: ReactNode;
 }
 
@@ -28,16 +29,19 @@ export default function Dialog(props: DialogProps) {
   return createPortal(<DialogPanel {...props} />, document.body);
 }
 
-function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions, children }: DialogProps) {
+function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions, busy, children }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const textId = useId();
-  const { overSheet } = useOverlay({ kind: "dialog", onClose, panel, initialFocus });
+  const close = () => {
+    if (!busy) onClose();
+  };
+  const { overSheet } = useOverlay({ kind: "dialog", onClose: close, panel, initialFocus });
   const classes = [styles.dialog, wide && styles.wide, overSheet && styles.overSheet].filter(Boolean).join(" ");
 
   return (
     <>
-      <Scrim onClick={onClose} over={overSheet} />
+      <Scrim onClick={close} over={overSheet} />
       <div
         ref={panel}
         className={classes}
@@ -82,10 +86,12 @@ export function Confirm({ open, onClose, onConfirm, title, confirmLabel, busyLab
       title={title}
       quote={quote}
       alert
+      busy={busy}
       initialFocus="[data-cancel]"
       actions={
         <>
-          <Button data-cancel onClick={onClose}>
+          {/* Closing mid-action would hide an action that carries on: Cancel waits too. */}
+          <Button data-cancel onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button variant="danger" busy={busy} busyLabel={busyLabel} onClick={onConfirm}>

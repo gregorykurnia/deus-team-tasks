@@ -3,12 +3,12 @@
 // Menus (guide 4.3): a floating card that opens below its button, or above when there's no room, kept 12px inside the
 // window. Variants: pick one, pick several, a number, a red item, a disabled item with its reason, a colour palette.
 // Arrow keys move, Enter picks, Esc or a tap outside closes, and focus goes back to the button.
-import { createContext, useContext, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import Button from "./Button";
 import Icon, { type IconName } from "./Icon";
 import type { OptionTone } from "./OptionChip";
-import { placeMenu } from "./placeMenu";
+import { inView, placeMenu } from "./placeMenu";
 import { useIsClient } from "./useIsClient";
 import { useOverlay } from "./useOverlay";
 import styles from "./Menu.module.css";
@@ -42,20 +42,42 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, children }: MenuProp
   const panel = useRef<HTMLDivElement>(null);
   useOverlay({ kind: "menu", onClose, panel, restore: anchorRef, initialFocus: ['[aria-checked="true"]', ITEMS, "input"] });
 
-  // Placed before it is painted, so it never shows in the wrong place.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+
+  // Placed before it is painted, so it never shows in the wrong place, and placed again when the page scrolls or the
+  // window changes size, so it stays with its button. A button scrolled out of sight closes it.
   useLayoutEffect(() => {
     const el = panel.current!;
-    const anchor = anchorRef.current;
-    if (!anchor) return;
-    const { left, top } = placeMenu(
-      anchor.getBoundingClientRect(),
-      { width: el.offsetWidth, height: el.offsetHeight },
-      { width: window.innerWidth, height: window.innerHeight },
-      { alignRight }
-    );
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-    el.style.visibility = "visible";
+    function place() {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const box = anchor.getBoundingClientRect();
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      if (!inView(box, viewport)) {
+        closeRef.current();
+        return;
+      }
+      el.style.maxHeight = ""; // measure its full height
+      const { left, top, maxHeight } = placeMenu(box, { width: el.offsetWidth, height: el.offsetHeight }, viewport, { alignRight });
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+      el.style.maxHeight = `min(440px, ${maxHeight}px)`;
+      el.style.visibility = "visible";
+    }
+    place();
+    const onScroll = (e: Event) => {
+      if (e.target instanceof Node && el.contains(e.target)) return; // the menu's own list scrolling
+      place();
+    };
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", place);
+    };
   }, [anchorRef, alignRight]);
 
   function onKeyDown(e: KeyboardEvent) {

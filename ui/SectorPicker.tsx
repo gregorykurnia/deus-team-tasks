@@ -2,6 +2,7 @@
 
 // The sector picker (guide 4.13, R6): sectors already in use with how many companies use each, and a note under the field
 // that says, before saving, whether what is typed is the same sector as one in use (and saved that way) or a new one.
+// Nothing is highlighted until an arrow key, so Enter keeps what was typed ("Food" doesn't become "Food and beverage").
 import { sectorNote, suggestSectors, type SectorCount } from "@/lib/sectors";
 import Combobox from "./Combobox";
 import Notice from "./Notice";
@@ -31,7 +32,7 @@ export default function SectorPicker({ value, onChange, sectors, ...aria }: Sect
   return (
     <div className={styles.picker}>
       <div className={styles.box}>
-        <Combobox {...aria} placeholder="Pick a sector or type a new one" text={value} onText={onChange} options={options} heading="Sectors in use" onPick={onChange} />
+        <Combobox {...aria} placeholder="Pick a sector or type a new one" text={value} onText={onChange} options={options} heading="Sectors in use" onPick={onChange} highlightFirst={false} />
       </div>
       <div className={styles.note} aria-live="polite">
         {note && (

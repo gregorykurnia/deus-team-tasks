@@ -1,3 +1,5 @@
+"use client";
+
 // Buttons (guide 4.1). Every variant is a class here, so a link can look the same through buttonClass.
 import type { ComponentPropsWithRef } from "react";
 import Spinner from "./Spinner";
@@ -27,16 +29,24 @@ export default function Button({
   disabled,
   className,
   type = "button",
+  onClick,
   children,
   ...rest
 }: ButtonProps) {
+  // Busy stays focusable: a disabled button sends focus to the page, out of the dialog it's in.
+  // The press is ignored instead, which also stops a busy submit button sending its form again.
   return (
     <button
       {...rest}
       type={type}
       className={[buttonClass(variant, small, glass), className].filter(Boolean).join(" ")}
-      disabled={disabled || busy}
+      disabled={disabled}
+      aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
+      onClick={(e) => {
+        if (busy) e.preventDefault();
+        else onClick?.(e);
+      }}
     >
       {busy && <Spinner light={variant === "main" || variant === "danger"} />}
       {busy && busyLabel ? busyLabel : children}

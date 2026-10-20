@@ -41,6 +41,8 @@ Task rows and display:
 22. Avatar keys use the name (duplicates when someone is both responsible and informed); two `Kind` spellings (`ui/Tag` vs `lib/kinds`): keep one mapping.
 23. `shell.spec.ts` group count uses `toContainText("1")`: assert the exact count.
 
+**Done in R2.1 (2026-10-20):** all 23 items above, with smoke or unit tests for each behaviour change. Items 1 and 4 opened two design gaps, sent as N4 (connecting) and N5 (a source failing while online), each built provisionally. The gallery's rows now use a fixed demo day (item 20). Checks: type check, lint on changed files, build pass; unit tests 227/227; full smoke suite 157 passed, 68 skipped, 1 browser crash in setup that passed on its rerun.
+
 ## Moved to later tasks
 - 4.1: the page title and description still say "DEUS Platform" and "handover plan" (Q9 names it DEUS Team Space; 4.1 already renames the manifest).
 - 3.x screens: `--z-menu` sits below `--z-dialog`, as in the prototype. Any screen that opens a menu from inside a dialog raises it there.

@@ -134,9 +134,9 @@ export function Pills() {
 export function Tags() {
   return (
     <Section id="tags" title="Tags (4.4)">
-      <KindTag kind="pro" />
-      <KindTag kind="cli" />
-      <KindTag kind="int" />
+      <KindTag kind="prospect" />
+      <KindTag kind="client" />
+      <KindTag kind="internal" />
       <GroupTag group="toApproach">To approach</GroupTag>
       <GroupTag group="active">Active</GroupTag>
       <GroupTag group="dealDone">Deal done</GroupTag>

@@ -201,3 +201,69 @@ test.describe("toasts", () => {
     expect(page.viewportSize()!.height - (box.y + box.height)).toBeGreaterThanOrEqual(100);
   });
 });
+
+test.describe("busy, placement and timing (R2.1)", () => {
+  test("a busy confirmation can't be closed, keeps focus on its button, and closes when the action is done", async ({ page }) => {
+    await opener(page, "Confirm, slow").click();
+    const dialog = page.getByRole("alertdialog", { name: "Delete this task group?" });
+    const confirm = dialog.getByRole("button", { name: "Delete group" });
+    await confirm.focus();
+    await page.keyboard.press("Enter");
+    const busy = dialog.getByRole("button", { name: "Deleting…" });
+    await expect(busy).toHaveAttribute("aria-busy", "true");
+    await expect(busy).toBeFocused(); // a disabled button would have sent focus to the page
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await page.mouse.click(5, 5);
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Enter"); // pressed again while busy: ignored
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Confirmed after a moment: Delete group")).toHaveCount(1);
+  });
+
+  test("a menu too tall for either side opens on the roomier one and scrolls, never over its button", async ({ page }) => {
+    const button = opener(page, "Menu: pick several");
+    await page.setViewportSize({ width: page.viewportSize()!.width, height: 260 });
+    await button.evaluate((el) => {
+      el.style.cssText = "position:fixed;left:40px;top:150px;z-index:5";
+    });
+    await button.click();
+    const menu = page.getByRole("menu", { name: "Product" });
+    await expect(menu).toBeVisible();
+    const box = (await menu.boundingBox())!;
+    const buttonBox = (await button.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(buttonBox.y); // above: 142px there, 62px below
+    expect(box.y).toBeGreaterThanOrEqual(12);
+  });
+
+  test("a menu stays with its button when the window changes size", async ({ page }) => {
+    const button = opener(page, "Menu: pick one");
+    await button.evaluate((el) => {
+      el.style.cssText = "position:fixed;right:40px;top:40px;z-index:5";
+    });
+    await button.click();
+    const menu = page.getByRole("menu", { name: "Due" });
+    await expect(menu).toBeVisible();
+    const { width, height } = page.viewportSize()!;
+    await page.setViewportSize({ width: width - 100, height });
+    await expect.poll(async () => {
+      const m = (await menu.boundingBox())!;
+      const b = (await button.boundingBox())!;
+      return Math.round(m.y - (b.y + b.height));
+    }).toBe(8);
+    const m = (await menu.boundingBox())!;
+    const inner = await page.evaluate(() => window.innerWidth); // on a phone the page can be wider than the window set
+    expect(m.x + m.width).toBeLessThanOrEqual(inner - 12);
+  });
+
+  test("a toast waits while the pointer is over it", async ({ page }) => {
+    await opener(page, "Toast with action").click();
+    const toast = page.getByText("Marked done");
+    await expect(toast).toBeVisible();
+    await toast.hover();
+    await page.waitForTimeout(6000); // past its 5.2 seconds
+    await expect(toast).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(toast).toBeHidden({ timeout: 7000 });
+  });
+});

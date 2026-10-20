@@ -17,11 +17,11 @@ function loadedWhen(loadedAt: number, now = new Date()): string {
 }
 
 export function ConnectionBanner() {
-  const { online, loadedAt } = useConnection();
+  const { status, loadedAt } = useConnection();
   // The status region stays in the page, so the banner is announced when it appears.
   return (
     <div role="status">
-      {!online && (
+      {status === "offline" && (
         <div className={styles.banner}>
           <Icon name="wifi" />
           <p>
@@ -41,10 +41,12 @@ export function BackOnlineToast() {
   const toast = useToast();
 
   useEffect(() => {
-    let wasOffline = !getConnection().online;
+    // Connecting at the start isn't being offline: only a real offline spell gets the toast.
+    let wasOffline = getConnection().status === "offline";
     return subscribeConnection(() => {
-      if (!getConnection().online) wasOffline = true;
-      else if (wasOffline) {
+      const { status } = getConnection();
+      if (status === "offline") wasOffline = true;
+      else if (status === "live" && wasOffline) {
         wasOffline = false;
         toast("Back online. Everything is up to date.");
       }

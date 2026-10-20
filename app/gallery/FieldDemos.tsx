@@ -39,7 +39,7 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 export default function FieldDemos() {
   const [description, setDescription] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [tries, setTries] = useState(0); // presses of Add task
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState<"high" | "medium" | "low" | null>(null);
   const [touch, setTouch] = useState<string | null>(null);
@@ -55,12 +55,12 @@ export default function FieldDemos() {
   const [dueOpen, setDueOpen] = useState(false);
   const dueRef = useRef<HTMLButtonElement>(null);
 
-  const error = submitted && !description.trim() ? "Add a short description so the team knows what this is." : undefined;
+  const error = tries > 0 && !description.trim() ? "Add a short description so the team knows what this is." : undefined;
 
   return (
     <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
       <Card title="A form, like the new-task sheet">
-        <Field label="Description" error={error} focusOnError>
+        <Field label="Description" error={error} focusKey={tries}>
           {(c) => <TextArea {...c} big value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What needs doing?" />}
         </Field>
         <Field label="Deadline" optional>
@@ -98,12 +98,12 @@ export default function FieldDemos() {
           {(c) => <PeoplePicker {...c} value={people} onChange={setPeople} suggestions={NAMES} placeholder="Add a name" />}
         </Field>
         <Field label="Informed" optional>
-          {() => <InformedList value={informed} onChange={setInformed} suggestions={NAMES} />}
+          {(c) => <InformedList {...c} value={informed} onChange={setInformed} suggestions={NAMES} />}
         </Field>
-        <Button variant="main" onClick={() => setSubmitted(true)}>
+        <Button variant="main" onClick={() => setTries((n) => n + 1)}>
           Add task
         </Button>
-        {submitted && description.trim() && <p className="text-[13px] text-muted">Added: {description}</p>}
+        {tries > 0 && description.trim() && <p className="text-[13px] text-muted">Added: {description}</p>}
       </Card>
 
       <div className="flex min-w-0 flex-col gap-6">

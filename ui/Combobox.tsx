@@ -25,6 +25,7 @@ interface ComboboxProps {
   onPick: (key: string) => void;
   onBackspaceEmpty?: () => void;
   bare?: boolean; // no box of its own: it sits inside a picker's box
+  highlightFirst?: boolean; // Enter takes the top option; off, nothing is highlighted until an arrow key
 }
 
 export default function Combobox({
@@ -35,20 +36,25 @@ export default function Combobox({
   onPick,
   onBackspaceEmpty,
   bare = false,
+  highlightFirst = true,
   placeholder,
   ...aria
 }: ComboboxProps) {
   const listId = useId();
+  const start = highlightFirst ? 0 : -1;
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(start);
   const shown = open && options.length > 0;
   const optionId = (i: number) => `${listId}-${i}`;
+  // The options can change from outside (a colleague's change, a name picked): the highlight stays on one that exists.
+  const clamp = (i: number) => Math.min(i, options.length - 1);
+  const current = clamp(active);
 
   function pick(i: number) {
     const option = options[i];
     if (!option) return;
     onPick(option.key);
-    setActive(0);
+    setActive(start);
     setOpen(false);
   }
 
@@ -59,15 +65,15 @@ export default function Combobox({
       if (!shown) {
         setOpen(true);
         setActive(0);
-      } else setActive((a) => Math.min(a + 1, options.length - 1));
+      } else setActive((a) => clamp(clamp(a) + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (shown) setActive((a) => Math.max(a - 1, 0));
+      if (shown) setActive((a) => Math.max(clamp(a) - 1, 0));
     } else if (e.key === "Enter") {
-      if (shown) {
+      if (shown && current >= 0) {
         e.preventDefault();
-        pick(active);
-      }
+        pick(current);
+      } else setOpen(false); // nothing highlighted: what was typed stays, and Enter carries on (to save)
     } else if (e.key === "Escape") {
       if (shown) {
         e.preventDefault();
@@ -90,13 +96,13 @@ export default function Combobox({
         aria-expanded={shown}
         aria-controls={shown ? listId : undefined}
         aria-autocomplete="list"
-        aria-activedescendant={shown ? optionId(active) : undefined}
+        aria-activedescendant={shown && current >= 0 ? optionId(current) : undefined}
         autoComplete="off"
         placeholder={placeholder}
         value={text}
         onChange={(e) => {
           onText(e.target.value);
-          setActive(0);
+          setActive(start);
           setOpen(true);
         }}
         onKeyDown={onKeyDown}
@@ -112,7 +118,7 @@ export default function Combobox({
                 key={o.key}
                 id={optionId(i)}
                 role="option"
-                aria-selected={i === active}
+                aria-selected={i === current}
                 className={[styles.option, o.isNew && styles.isNew].filter(Boolean).join(" ")}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(i)}

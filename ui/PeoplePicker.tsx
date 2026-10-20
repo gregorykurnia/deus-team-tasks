@@ -98,13 +98,14 @@ export default function PeoplePicker({ value, onChange, suggestions, placeholder
   );
 }
 
-interface InformedListProps {
+interface InformedListProps extends ControlProps {
   value: Informed[];
   onChange: (people: Informed[]) => void;
   suggestions: NameCount[];
 }
 
-export function InformedList({ value, onChange, suggestions }: InformedListProps) {
+// A Field's id goes on the add input, so the field's label points at it.
+export function InformedList({ value, onChange, suggestions, ...control }: InformedListProps) {
   return (
     <div className={styles.informed}>
       {value.map((person) => (
@@ -128,6 +129,7 @@ export function InformedList({ value, onChange, suggestions }: InformedListProps
       <div className={styles.add}>
         <Icon name="plus" size={16} />
         <NameInput
+          {...control}
           aria-label="Add someone to keep informed"
           placeholder="Add someone to keep informed"
           suggestions={suggestions}

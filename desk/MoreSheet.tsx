@@ -4,9 +4,10 @@
 // and the live status. It opens with ?more=1, so the phone's back gesture closes it.
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect } from "react";
 import Icon from "@/ui/Icon";
 import Sheet from "@/ui/Sheet";
-import { areaOf, MORE_AREAS, over } from "./areas";
+import { areaOf, MORE_AREAS, over, without } from "./areas";
 import LiveDot from "./LiveDot";
 import { useInstalled } from "./useInstalled";
 import styles from "./MoreSheet.module.css";
@@ -19,18 +20,24 @@ export function markMoreOpenedHere() {
 }
 
 export default function MoreSheet() {
-  const open = useSearchParams().get("more") === "1";
+  const search = useSearchParams();
+  const open = search.get("more") === "1";
   const pathname = usePathname();
   const router = useRouter();
   const installed = useInstalled();
   const area = areaOf(pathname);
 
-  function close() {
+  // Closed some other way (the back gesture, a link): the next close mustn't step back.
+  useEffect(() => {
+    if (!open) openedHere = false;
+  }, [open]);
+
+  const close = useCallback(() => {
     const back = openedHere;
     openedHere = false;
     if (back) router.back();
-    else router.replace(pathname, { scroll: false });
-  }
+    else router.replace(without(pathname, search, ["more"]), { scroll: false });
+  }, [router, pathname, search]);
   // A link replaces the ?more=1 entry, so back skips the sheet.
   const forget = () => {
     openedHere = false;
@@ -52,7 +59,7 @@ export default function MoreSheet() {
         ))}
       </ul>
       {!installed && (
-        <Link className={styles.install} href={over(pathname, "install=1")} replace onClick={forget}>
+        <Link className={styles.install} href={over(pathname, search, "install=1", ["more"])} replace onClick={forget}>
           <Icon name="install" size={20} />
           <span>
             Install on this phone

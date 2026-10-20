@@ -8,9 +8,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { groupNavItems, navCounts } from "@/lib/deskNav";
 import Icon from "@/ui/Icon";
-import { areaOf, AREAS, groupHref, over, type AreaId } from "./areas";
+import { areaOf, AREAS, groupHref, type AreaId } from "./areas";
 import { useCompaniesById, useTaskGroups, useTasks } from "./DeskData";
 import LiveDot from "./LiveDot";
+import OverLink from "./OverLink";
 import { useInstalled } from "./useInstalled";
 import styles from "./SideNav.module.css";
 
@@ -24,7 +25,9 @@ export default function SideNav() {
   const installed = useInstalled();
   const groupsHeading = useId();
 
-  const counts = useMemo(() => (tasks.loading ? null : navCounts(tasks.rows)), [tasks]);
+  // Counts wait for the tasks, and stay hidden if they couldn't load: "0" would be a wrong answer.
+  const counted = !tasks.loading && !tasks.error;
+  const counts = useMemo(() => (counted ? navCounts(tasks.rows) : null), [counted, tasks.rows]);
   const groupItems = useMemo(() => groupNavItems(groups.rows, tasks.rows, companies), [groups.rows, tasks.rows, companies]);
   // All tasks is current only outside a task group, which has its own entry.
   const isCurrent = (id: AreaId) => (id === "tasks" ? pathname === "/tasks" : areaOf(pathname) === id);
@@ -65,6 +68,8 @@ export default function SideNav() {
             <span className={styles.skeleton} />
             <span className={styles.skeleton} />
           </div>
+        ) : groups.error ? (
+          <p className={`${styles.empty} ${styles.failed}`}>Couldn’t load task groups.</p>
         ) : groupItems.length === 0 ? (
           <p className={styles.empty}>Group internal work by topic, like “Hiring”.</p>
         ) : (
@@ -88,7 +93,7 @@ export default function SideNav() {
                         <Icon name="star" size={13} className={styles.star} />
                       </>
                     )}
-                    <span className={styles.groupCount}>{tasks.loading ? null : num(g.open)}</span>
+                    <span className={styles.groupCount}>{counted ? num(g.open) : null}</span>
                   </Link>
                 </li>
               );
@@ -99,10 +104,10 @@ export default function SideNav() {
 
       <div className={styles.foot}>
         {!installed && (
-          <Link className={styles.install} href={over(pathname, "install=1")}>
+          <OverLink className={styles.install} param="install=1">
             <Icon name="install" size={16} />
             Install the app
-          </Link>
+          </OverLink>
         )}
         <LiveDot />
       </div>

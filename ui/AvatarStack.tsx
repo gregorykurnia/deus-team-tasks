@@ -26,8 +26,9 @@ export default function AvatarStack({ responsible, informed = [], max = 3 }: Ava
 
   return (
     <span className={styles.stack} role="img" aria-label={label}>
-      {shown.map((p) => (
-        <Avatar key={p.name} name={p.name} informed={p.informed} />
+      {/* Someone can be both responsible and informed, so a name alone isn't a unique key. */}
+      {shown.map((p, i) => (
+        <Avatar key={`${i}-${p.name}`} name={p.name} informed={p.informed} />
       ))}
       {rest > 0 && <span className={styles.more}>+{rest}</span>}
     </span>

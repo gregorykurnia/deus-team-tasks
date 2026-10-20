@@ -1,13 +1,14 @@
 // Tags (guide 4.4): the kind of work, the company group, outside tags, the live tag, read only and sector.
 import type { ReactNode } from "react";
+import type { Kind } from "@/lib/kinds";
 import Icon, { type IconName } from "./Icon";
+import { KIND_TOKEN } from "./kindStyle";
 import styles from "./Tag.module.css";
 
-export type Kind = "pro" | "cli" | "int";
-const KIND_LABELS: Record<Kind, string> = { pro: "Prospect work", cli: "Client work", int: "Internal" };
+const KIND_TAGS: Record<Kind, string> = { prospect: "Prospect work", client: "Client work", internal: "Internal" };
 
 export function KindTag({ kind }: { kind: Kind }) {
-  return <span className={`${styles.tag} ${styles[kind]}`}>{KIND_LABELS[kind]}</span>;
+  return <span className={`${styles.tag} ${styles[KIND_TOKEN[kind]]}`}>{KIND_TAGS[kind]}</span>;
 }
 
 export type GroupTone = "toApproach" | "active" | "dealDone" | "noOrNotNow";

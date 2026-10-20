@@ -2,7 +2,7 @@
 
 // A form field (guide 4.13): the label above, "optional" beside it, the control, then a hint or an error.
 // The control gets its id and aria wiring through the child function, so the label names it and the error describes it.
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import Icon from "./Icon";
 import styles from "./Field.module.css";
 
@@ -17,18 +17,22 @@ interface FieldProps {
   optional?: boolean;
   hint?: string;
   error?: string; // what to do, as a sentence: "Add a short description so the team knows what this is."
-  focusOnError?: boolean; // move focus to the control when an error appears (a form that was just submitted)
+  focusKey?: number; // the form's submit count: each new try with an error moves focus to the control
   children: (control: FieldControl) => ReactNode;
 }
 
-export default function Field({ label, optional, hint, error, focusOnError = false, children }: FieldProps) {
+export default function Field({ label, optional, hint, error, focusKey, children }: FieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
 
+  // Keyed on the try, not the message: a second try with the same error still takes focus back to the field.
+  const lastKey = useRef(focusKey);
   useEffect(() => {
-    if (error && focusOnError) document.getElementById(id)?.focus();
-  }, [error, focusOnError, id]);
+    if (focusKey === lastKey.current) return;
+    lastKey.current = focusKey;
+    if (error) document.getElementById(id)?.focus();
+  }, [focusKey, error, id]);
 
   return (
     <div className={styles.field}>

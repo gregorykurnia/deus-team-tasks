@@ -156,7 +156,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 2.6 | Fields: all field variants, segmented, filter button, people picker, sector picker, in-place field | Sonnet 5.5 High | 2026-10-20 · `bb34cc2` (choice chips built here; picker matching lives in lib/people and lib/sectors) |
 | 2.7 | Task row family, done circle, urgency rules wired in, selecting checkboxes | Sonnet 5.5 High | 2026-10-20 · `d8adb43` (row content comes from lib/taskRow; the list row has fixed cells until 3.3's column chooser) |
 | R2 | **Phase 2 review** | Opus 5.5 High | 2026-10-20 (notes: `redesign/reviews/phase-2.md`; title rename added to 4.1) |
-| R2.1 | Phase 2 review fixes (listed in `redesign/reviews/phase-2.md`), before Phase 3; then tick Phase 2 in `redesign/redesign-plan.md` | Opus 5.5 High | |
+| R2.1 | Phase 2 review fixes (listed in `redesign/reviews/phase-2.md`), before Phase 3; then tick Phase 2 in `redesign/redesign-plan.md` | Opus 5.5 High | 2026-10-20 (all 23 items; gaps N4 connecting, N5 failed source, provisional) |
 | **3** | **Phase 3: screens (all states, phone and desktop)** | | |
 | 3.1 | Task details sheet (quick, full, kept in step, delete, offline) | Opus 5.5 High | |
 | 3.2 | Today | Sonnet 5.5 High | |
@@ -280,6 +280,8 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N1 | Finished tasks and flows changed before this version have no recorded date. The design always shows one ("Done 3 days ago", "Finished: last 7 days", "edited …"). | 3.3, 3.14 (dates), 4.2 |
 | N2 | The many-changes toast names the colleague ("Kevin Tan’s changes just came in"), but nobody signs in, so the app can't know who changed something. | 4.2 |
 | N3 | Today's search says it covers tasks, companies and notes, but no results for companies and notes are designed (the prototype sends the query to All tasks only). | 3.2 (search only) |
+| N4 | The app opening before any source reaches the server (R2.1): the guide has Live and No connection only. Provisional: a grey dot and "Connecting…", no banner, writes refused; No connection after 8s. | nothing (provisional built) |
+| N5 | A source that fails to load while online (R2.1): only the calendar's failure is designed. Provisional: the side bar hides its counts, and the groups say "Couldn't load task groups." in red ink. | each screen's error state (3.x reuse the provisional) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

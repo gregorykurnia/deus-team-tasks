@@ -13,7 +13,7 @@ const TODAY = "2026-10-20";
 const companies = companiesById([{ id: 1, company: "Pelita Foods", status: "To Follow Up" }] as PipelineEntry[]);
 const base: Task = {
   id: "t1",
-  task: "Call Pelita Foods about the trial",
+  task: "Follow up on the trial",
   linkedClientId: 1,
   touchPoint: "Call",
   responsible: ["Maya Chen"],
@@ -50,14 +50,14 @@ describe("selection checkbox (guide 4.7)", () => {
 describe("card row (Today)", () => {
   it("opens the task from its title, and has its own done button", () => {
     const markup = html(<TaskCard {...props} task={base} />);
-    expect(markup).toMatch(/<a [^>]*href="\?task=t1"[^>]*>Call Pelita Foods about the trial<\/a>/);
-    expect(markup).toContain('aria-label="Mark done: Call Pelita Foods about the trial"');
+    expect(markup).toMatch(/<a [^>]*href="\?task=t1"[^>]*>Follow up on the trial<\/a>/);
+    expect(markup).toContain('aria-label="Mark done: Follow up on the trial"');
   });
 
   it("shows the company, touch point, last action in its tone, the deadline in words, and who is on it", () => {
     const markup = html(<TaskCard {...props} task={{ ...base, lastActionDate: "2026-10-05" }} />);
-    expect(markup).toContain("Pelita Foods");
-    expect(markup).toContain("Call");
+    expect(markup).toMatch(/<span class="[^"]*place[^"]*">Pelita Foods<\/span>/);
+    expect(markup).toContain("<span>Call</span>");
     expect(markup).toContain("No action for 15 days");
     expect(markup).toContain("2 days late");
     expect(markup).toContain('aria-label="Responsible: Maya Chen. Informed: Kevin Tan (backup)"');
@@ -75,7 +75,7 @@ describe("card row (Today)", () => {
     const done = html(<TaskCard {...props} task={{ ...base, completed: true, completedAt: new Date(2026, 9, 17, 12).getTime() }} leaving />);
     expect(done).toContain('data-done="true"');
     expect(done).toContain('data-leaving="true"');
-    expect(done).toContain('aria-label="Mark not done: Call Pelita Foods about the trial"');
+    expect(done).toContain('aria-label="Mark not done: Follow up on the trial"');
     expect(done).toContain("Done 3 days ago");
     expect(done).not.toContain("days late");
   });
@@ -85,12 +85,19 @@ describe("card row (Today)", () => {
     expect(html(<TaskCard {...props} task={base} />)).not.toContain("Just changed");
   });
 
+  it("puts the deadline pill and the people above the title's link, so their hover titles show", () => {
+    const markup = html(<TaskCard {...props} task={base} />);
+    expect(markup).toMatch(/class="[^"]*lift[^"]*"><span[^>]*title="Deadline Sun 18 Oct"/);
+    expect(markup).toMatch(/class="[^"]*right[^"]*lift[^"]*"/);
+  });
+
   it("swaps the done circle for a checkbox when selecting, and marks a selected row", () => {
     const markup = html(<TaskCard {...props} task={base} selecting selected />);
     expect(markup).toContain('role="checkbox"');
-    expect(markup).toContain('aria-label="Select: Call Pelita Foods about the trial"');
+    expect(markup).toContain('aria-label="Select: Follow up on the trial"');
     expect(markup).toContain('data-selected="true"');
     expect(markup).not.toContain("Mark done:");
+    expect(markup).not.toContain("<a "); // a click on the row toggles the checkbox, it doesn't open the task
   });
 });
 
@@ -98,9 +105,15 @@ describe("list row (All tasks)", () => {
   it("shows the company, the deadline and the people, and opens the task", () => {
     const markup = html(<TaskListRow {...props} task={base} />);
     expect(markup).toContain('href="?task=t1"');
-    expect(markup).toContain("Pelita Foods");
+    expect(markup).toMatch(/<span class="[^"]*label[^"]*">About<\/span>Pelita Foods<\/span>/);
     expect(markup).toContain("2 days late");
     expect(markup).toContain("Responsible: Maya Chen");
+  });
+
+  it("shows only the live tag under the title while just changed, as the details have their own cells", () => {
+    const markup = html(<TaskListRow {...props} task={{ ...base, priority: "High" }} justChanged />);
+    expect(markup).toContain("Just changed");
+    expect(markup).not.toContain("<span>Call</span>");
   });
 
   it("says 'No dates' for an undated task", () => {
@@ -132,7 +145,7 @@ describe("day row (Plan's Day view, a person's page)", () => {
 describe("record row (inside a company record)", () => {
   it("shows the title and the deadline pill, and opens the task", () => {
     const markup = html(<TaskRecordRow {...props} task={base} />);
-    expect(markup).toContain("Call Pelita Foods about the trial");
+    expect(markup).toContain("Follow up on the trial");
     expect(markup).toContain("2 days late");
     expect(markup).toContain('href="?task=t1"');
   });

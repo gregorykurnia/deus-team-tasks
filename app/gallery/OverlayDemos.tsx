@@ -30,6 +30,8 @@ export default function OverlayDemos() {
   const [menu, setMenu] = useState<MenuName | null>(() => (initial?.startsWith("menu-") ? (initial.slice(5) as MenuName) : null));
   const [overlay, setOverlay] = useState<Overlay>(() => (OVERLAYS.includes(initial as Overlay & string) ? (initial as Overlay) : null));
   const [confirmOpen, setConfirmOpen] = useState(initial === "confirm");
+  const [slowOpen, setSlowOpen] = useState(false); // a confirmation whose action takes a moment: busy until it's done
+  const [slowBusy, setSlowBusy] = useState(false);
   const [note, setNote] = useState("");
   const [due, setDue] = useState("Within 3 days");
   const [products, setProducts] = useState<string[]>(["POS"]);
@@ -68,6 +70,7 @@ export default function OverlayDemos() {
         <Button onClick={() => setOverlay("dialog")}>Dialog</Button>
         <Button onClick={() => setConfirmOpen(true)}>Confirm</Button>
         <Button onClick={() => setOverlay("details")}>Confirm over a sheet</Button>
+        <Button onClick={() => setSlowOpen(true)}>Confirm, slow</Button>
         <Button onClick={() => toast("Saved")}>Toast</Button>
         <Button onClick={() => toast("Marked done", { action: "Undo", onAction: () => setNote("Undone: Marked done") })}>Toast with action</Button>
         <Button onClick={() => toast("No connection. The task wasn’t added.", { error: true })}>Error toast</Button>
@@ -206,6 +209,24 @@ export default function OverlayDemos() {
         quote="Call Pelita Foods about the trial"
       >
         It will be removed for everyone on the team.
+      </Confirm>
+      <Confirm
+        open={slowOpen}
+        onClose={() => setSlowOpen(false)}
+        onConfirm={() => {
+          setSlowBusy(true);
+          setTimeout(() => {
+            setSlowBusy(false);
+            setSlowOpen(false);
+            setNote("Confirmed after a moment: Delete group");
+          }, 1500);
+        }}
+        busy={slowBusy}
+        busyLabel="Deleting…"
+        title="Delete this task group?"
+        confirmLabel="Delete group"
+      >
+        Its tasks stay, with no group.
       </Confirm>
     </>
   );

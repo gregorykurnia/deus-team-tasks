@@ -55,9 +55,9 @@ describe("pills and tags (guide 4.4)", () => {
   });
 
   it("a kind tag names the kind of work", () => {
-    expect(renderToStaticMarkup(<KindTag kind="pro" />)).toContain("Prospect work");
-    expect(renderToStaticMarkup(<KindTag kind="cli" />)).toContain("Client work");
-    expect(renderToStaticMarkup(<KindTag kind="int" />)).toContain("Internal");
+    expect(renderToStaticMarkup(<KindTag kind="prospect" />)).toContain("Prospect work");
+    expect(renderToStaticMarkup(<KindTag kind="client" />)).toContain("Client work");
+    expect(renderToStaticMarkup(<KindTag kind="internal" />)).toContain("Internal");
   });
 
   it("the live and read-only tags carry words, not only colour", () => {

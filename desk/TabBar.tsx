@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/ui/Icon";
 import { areaOf, MORE_AREAS, over } from "./areas";
 import { markMoreOpenedHere } from "./MoreSheet";
+import OverLink from "./OverLink";
 import styles from "./TabBar.module.css";
 
 export default function TabBar() {
@@ -17,7 +18,7 @@ export default function TabBar() {
 
   function openMore() {
     markMoreOpenedHere();
-    router.push(over(pathname, "more=1"), { scroll: false });
+    router.push(over(pathname, window.location.search, "more=1"), { scroll: false });
   }
 
   return (
@@ -30,9 +31,9 @@ export default function TabBar() {
         <Icon name="list" size={21} />
         Tasks
       </Link>
-      <Link className={styles.add} href={over(pathname, "task=new")} scroll={false} aria-label="New task">
+      <OverLink className={styles.add} param="task=new" scroll={false} aria-label="New task">
         <Icon name="plus" size={21} />
-      </Link>
+      </OverLink>
       <Link className={styles.tab} href="/companies" aria-current={current(area === "companies")}>
         <Icon name="building" size={21} />
         Companies

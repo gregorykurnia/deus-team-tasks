@@ -39,6 +39,22 @@
   display: flex;
 }
 
+/* Above the title's link, so their hover titles show (the full date, the names). A click on them still opens the task. */
+.lift {
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.pillBox {
+  display: inline-flex;
+}
+
+/* Selecting several: the title isn't a link, and a click anywhere on the row toggles its checkbox. */
+.row[data-selecting] {
+  cursor: pointer;
+}
+
 /* Done: the title struck through in muted, the badge greyed. */
 .row[data-done] .title {
   color: var(--muted);
@@ -58,14 +74,16 @@
   box-shadow: var(--ring-selected);
 }
 
-/* Leaving an open list: after .35s the row slides 14px right and fades, over .5s (guide 2.7). */
-.row[data-leaving] {
-  animation: leave var(--dur-leave) ease 0.35s forwards;
-}
-
 /* New or changed: the blue arrive glow for 1.8s. */
 .row[data-new] {
   animation: arrive var(--dur-arrive) ease;
+}
+
+/* Leaving an open list: after .35s the row slides 14px right and fades, over .5s (guide 2.7). After the glow, so leaving
+   wins when a row is both, and it can't be pressed on its way out. */
+.row[data-leaving] {
+  animation: leave var(--dur-leave) ease 0.35s forwards;
+  pointer-events: none;
 }
 
 @keyframes leave {
