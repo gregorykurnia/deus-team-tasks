@@ -59,7 +59,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 
 **Design (studio, never sees the old app)**
 - [x] Step 4a: 3 directions as screenshots; familiarity check done; choice recorded in `decisions.md` (reported done by the owner, 2026-10-20) — **Opus 5.5 High** · studio; screenshots by `! ./shoot`, no model
-- [x] Step 4b: all job stories and states prototyped, including stress data (reported done by the owner, 2026-10-20) — **Opus 5.5 High** · studio
+- [ ] Step 4b: all job stories and states prototyped, including stress data — **Opus 5.5 High** · studio
 - [ ] Step 4c: design guide complete — **Opus 5.5 High** · studio
 - [ ] Step 5: coverage audit passed — **Sonnet 5.5 High** · fresh studio session
 - [ ] Step 5b: design guide approved, versioned and imported — you approve, then **Haiku 5.5 High** · Claude on `<base>`
