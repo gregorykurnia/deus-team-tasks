@@ -99,12 +99,14 @@ export async function clearAll() {
 
 export type SeedDoc = { id: string | number } & Record<string, unknown>;
 
-export async function seed(project: ProjectKey, collection: string, docs: SeedDoc[]) {
+// The client tracker's collections also keep the id inside the document,
+// and the app reads it from there: pass keepIdField for those.
+export async function seed(project: ProjectKey, collection: string, docs: SeedDoc[], { keepIdField = false } = {}) {
   if (docs.length === 0) return;
   const writes = docs.map(({ id, ...data }) => ({
     update: {
       name: `${docsPath(project)}/${collection}/${id}`,
-      fields: encodeFields(data),
+      fields: encodeFields(keepIdField ? { id, ...data } : data),
     },
   }));
   await check(
@@ -143,4 +145,12 @@ export async function readDoc(project: ProjectKey, path: string): Promise<Stored
   await check(res, `Reading ${project}/${path}`);
   const doc = (await res.json()) as { name: string; fields?: Record<string, FsValue> };
   return { id: doc.name.split("/").pop()!, ...decodeFields(doc.fields ?? {}) };
+}
+
+// The stored fields only, without the document id that readDoc adds.
+export async function readFields(project: ProjectKey, path: string): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${BASE}/v1/${docsPath(project)}/${path}`, { headers: OWNER });
+  if (res.status === 404) return null;
+  await check(res, `Reading ${project}/${path}`);
+  return decodeFields(((await res.json()) as { fields?: Record<string, FsValue> }).fields ?? {});
 }
