@@ -9,5 +9,10 @@ Owner's verdict on A (Calm list), B (Command) and C (Day strip): "too boring", "
 What was missing (the owner picked all four): **richer colour** (colour across larger areas), **depth and layers** (floating surfaces, soft shadows, frosted glass), **a standout moment** on each screen, and **softer, rounder shapes**.
 Round 1 moved to `round-1/` for the record. Round 2 starts fresh as D, E and F, all built on those four ingredients and still within the brief (modern sans-serif, light, polished, not gimmicky).
 
-## D-003 — Direction choice
+## D-003 — Direction choice: a mix of D and F (2026-10-20)
+Round 2 (D Glass, E Tide, F Bento) was shown. The owner asked for the designer's view. The designer recommended D as the base, because it sorts tasks by urgency, its side bar scales to every area and task groups, and its colour stays out of the content's way. The recommendation also replaced D's progress ring with F's two-week deadline chart, because the chart answers a daily question (where is the crunch?, D1).
+Owner: agreed ("Sure"), adding that **D's purple is "way too striking"**. Owner picked a **calm blue** accent (#2F6BEA) over a pale sky-and-aqua backdrop, with the hero turned into a light frosted card.
+Mix built as `directions/g-glass-blue/`. This is the one extra screenshot round a mix gets; the next step is the owner's approval of G.
+
+## D-004 — Approval of the mix
 _Waiting for the owner._
