@@ -132,7 +132,8 @@ export async function readAll(project: ProjectKey, collection: string): Promise<
       nextPageToken?: string;
     };
     for (const doc of body.documents ?? []) {
-      out.push({ id: doc.name.split("/").pop()!, ...decodeFields(doc.fields ?? {}) });
+      // The document id wins over an "id" field stored inside (the client tracker keeps one).
+      out.push({ ...decodeFields(doc.fields ?? {}), id: doc.name.split("/").pop()! });
     }
     pageToken = body.nextPageToken ?? "";
   } while (pageToken);
@@ -144,7 +145,7 @@ export async function readDoc(project: ProjectKey, path: string): Promise<Stored
   if (res.status === 404) return null;
   await check(res, `Reading ${project}/${path}`);
   const doc = (await res.json()) as { name: string; fields?: Record<string, FsValue> };
-  return { id: doc.name.split("/").pop()!, ...decodeFields(doc.fields ?? {}) };
+  return { ...decodeFields(doc.fields ?? {}), id: doc.name.split("/").pop()! };
 }
 
 // The stored fields only, without the document id that readDoc adds.
