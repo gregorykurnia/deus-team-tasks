@@ -18,7 +18,8 @@ export function todayIso(now: Date = new Date()): string {
 }
 
 export function isIsoDay(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(parseIso(value).getTime());
+  // Written back it must read the same: "2026-13-40" would otherwise roll over into January 2027.
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && isoOf(parseIso(value)) === value;
 }
 
 export function parseIso(iso: string): Date {
@@ -47,6 +48,17 @@ export function shortDate(iso: string, today: string = todayIso()): string {
   const d = parseIso(iso);
   const base = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
   return iso.slice(0, 4) === today.slice(0, 4) ? base : `${base} ${d.getFullYear()}`;
+}
+
+// "Thu 23 Oct", with the year when it isn't this year's.
+export function weekdayDate(iso: string, today: string = todayIso()): string {
+  return `${WEEKDAYS_SHORT[parseIso(iso).getDay()]} ${shortDate(iso, today)}`;
+}
+
+// "October 2026", from "2026-10".
+export function monthTitle(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return `${MONTHS_LONG[m - 1]} ${y}`;
 }
 
 // "today", "yesterday", "3 days ago", or the date for anything in the future.

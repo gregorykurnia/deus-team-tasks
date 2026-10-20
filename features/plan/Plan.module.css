@@ -1,0 +1,731 @@
+/* Plan: the bar, the filters, the stepper and the timeline (guide 4.12, 6.4). Values are the prototype's (assets/app.css,
+   "Plan" and "Task bars"), taken from the tokens. The bar's gradient runs from the kind's ink to its base colour instead
+   of the prototype's lighter end, so the white words on it keep their contrast. */
+
+.screenNote {
+  margin-top: 14px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---------- View and show switches ---------- */
+.tbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ---------- The panel: filters first, then the timeline ---------- */
+.panel {
+  min-width: 0;
+  margin-top: 14px;
+  padding: 8px 8px 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-l);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 10px;
+}
+
+.menuGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.menuName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuCount {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--muted);
+  font-weight: var(--w-medium);
+}
+
+/* ---------- The date stepper ---------- */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stepLabel {
+  min-width: 128px;
+  font-size: 13.5px;
+  font-weight: var(--w-bold);
+  font-variant-numeric: var(--num);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepButton {
+  width: 36px;
+  height: 36px;
+}
+
+.stepper > :last-child {
+  margin-left: 6px;
+}
+
+.stepper > :last-child:disabled {
+  opacity: 0.45;
+}
+
+/* ---------- Summary chips and the legend ---------- */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.insight {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 6px 14px 6px 6px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 6px 16px -10px rgba(40, 46, 110, 0.35);
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+  text-align: left;
+  text-decoration: none;
+}
+
+.insight b {
+  color: var(--ink);
+  font-weight: var(--w-bold);
+}
+
+.insightIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--int-soft);
+  color: var(--int-ink);
+}
+
+.warm .insightIcon {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.calm .insightIcon {
+  background: var(--cli-soft);
+  color: var(--cli-ink);
+}
+
+.red .insightIcon {
+  background: var(--red-soft);
+  color: var(--red-ink);
+}
+
+a.insight:hover,
+button.insight:hover {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(47, 107, 234, 0.3), 0 8px 18px -10px rgba(40, 46, 110, 0.4);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: var(--w-semibold);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.legend .dash {
+  width: 14px;
+  border: 1.5px dashed var(--ink-2);
+  background: none;
+}
+
+.legend .pin {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--ink-2);
+  transform: rotate(45deg);
+}
+
+/* ---------- Timeline ---------- */
+.scroll {
+  overflow-x: auto;
+  border-radius: var(--r-m);
+  scrollbar-width: thin;
+}
+
+.tl {
+  --lane: 210px;
+  --days: 28;
+  position: relative;
+}
+
+.cols {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--lane);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+  pointer-events: none;
+}
+
+.cols i.weekend {
+  background: rgba(27, 31, 59, 0.028);
+}
+
+.cols i.crunch {
+  background: linear-gradient(180deg, rgba(255, 217, 154, 0.55), rgba(255, 226, 178, 0.28));
+}
+
+.cols i.today {
+  background: rgba(47, 107, 234, 0.07);
+  box-shadow: inset 2px 0 0 rgba(47, 107, 234, 0.35);
+}
+
+.row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--lane) minmax(0, 1fr);
+}
+
+.row + .row {
+  border-top: 1px solid var(--hair);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px 8px 12px;
+}
+
+.lane .label {
+  position: relative;
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+.lineText {
+  min-width: 0;
+}
+
+.lineText p {
+  margin: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: var(--w-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineText small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--w-medium);
+}
+
+.lineText small.amber {
+  color: var(--amber-ink);
+  font-weight: var(--w-bold);
+}
+
+.lineText small.readOnly {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.labelIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 1px var(--hair);
+  color: var(--ink-2);
+}
+
+.kindMark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--kind-soft);
+  color: var(--kind-ink);
+  font-size: 12px;
+  font-weight: var(--w-heavy);
+}
+
+.nobody {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--w-heavy);
+}
+
+.more {
+  position: absolute;
+  left: 56px;
+  bottom: 8px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: var(--w-bold);
+}
+
+.more:hover {
+  background: #d6e3ff;
+}
+
+.moreShort {
+  display: none;
+}
+
+.track {
+  position: relative;
+  min-width: 0;
+}
+
+/* The head: weeks, then days with today a blue circle. */
+.head .track {
+  padding-top: 6px;
+}
+
+.weeks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.week {
+  padding: 2px 0 4px 8px;
+  overflow: hidden;
+  border-left: 1px solid var(--hair);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--w-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week[data-current] {
+  color: var(--blue-ink);
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+  padding-bottom: 6px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 0 5px;
+  border-radius: var(--r-xs);
+  font-variant-numeric: var(--num);
+}
+
+.day span {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: var(--w-bold);
+}
+
+.day b {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: var(--w-bold);
+}
+
+.day:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.day[data-weekend] span,
+.day[data-weekend] b {
+  color: var(--faint);
+}
+
+.day[data-today] span {
+  color: var(--blue-ink);
+}
+
+.day[data-today] b {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 6px 14px -6px rgba(47, 107, 234, 0.7);
+}
+
+/* Counts per day: deadlines, then the team calendar. */
+.cells {
+  display: grid;
+  grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  min-height: 44px;
+}
+
+.cells.tall {
+  align-items: start;
+  padding: 8px 0;
+}
+
+.count {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: rgba(27, 31, 59, 0.07);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: var(--w-heavy);
+  font-variant-numeric: var(--num);
+}
+
+.count[data-crunch] {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+  box-shadow: 0 0 0 1.5px rgba(178, 95, 0, 0.28);
+}
+
+.eventCount {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: var(--event-soft);
+  color: var(--event-ink);
+  font-size: 11.5px;
+  font-weight: var(--w-heavy);
+  font-variant-numeric: var(--num);
+}
+
+.eventCount[data-all-day] {
+  box-shadow: inset 0 0 0 1.5px #a9b8d0;
+}
+
+.eventCount:hover,
+.eventTime:hover {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.eventStack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: calc(100% - 4px);
+}
+
+.eventTime {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--event-soft);
+  color: var(--event-ink);
+  font-size: 9.5px;
+  font-weight: var(--w-bold);
+  font-variant-numeric: var(--num);
+  white-space: nowrap;
+}
+
+.eventTime[data-all-day] {
+  background: #d6e0ef;
+}
+
+.eventTime[data-more] {
+  background: none;
+  color: var(--blue-ink);
+}
+
+.note {
+  padding: 2px 8px;
+}
+
+.note > div {
+  margin: 6px 0;
+}
+
+.skeletonCell {
+  display: block;
+  margin: 9px 8px;
+}
+
+.empty {
+  position: relative;
+  z-index: 1;
+  margin: 10px 8px 6px;
+  border-radius: var(--r-m);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------- Task bars. --kind and --kind-ink carry the kind of work. ---------- */
+.bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 24px;
+  border-radius: 8px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.fill {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(120deg, var(--kind-ink), var(--kind));
+  box-shadow: 0 5px 12px -7px var(--kind);
+}
+
+.words {
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: var(--w-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fill .words {
+  color: #fff;
+  font-weight: var(--w-bold);
+}
+
+.bar:hover .fill {
+  filter: brightness(1.07) saturate(1.05);
+  box-shadow: 0 8px 18px -8px var(--kind);
+}
+
+.bar:hover > .words {
+  color: var(--blue-ink);
+}
+
+.bar[data-clip-left] .fill {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.bar[data-clip-right] .fill {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* No deadline: it fades out to the right. */
+.bar[data-open-end] .fill {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 60%, transparent);
+  mask-image: linear-gradient(90deg, #000 60%, transparent);
+}
+
+/* A deadline only: a diamond. */
+.bar[data-diamond] .fill {
+  position: relative;
+  background: none;
+  box-shadow: none;
+}
+
+.bar[data-diamond] .fill::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--kind);
+  box-shadow: 0 0 0 2.5px #fff, 0 3px 8px -2px var(--kind);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.bar[data-diamond] > .words {
+  padding-left: 2px;
+}
+
+/* Missed: a red inner edge, or a red diamond. */
+.bar[data-late]:not([data-diamond]) .fill {
+  box-shadow: inset -4px 0 0 var(--red), 0 5px 12px -7px var(--kind);
+}
+
+.bar[data-late][data-diamond] .fill::before {
+  background: var(--red);
+  box-shadow: 0 0 0 2.5px #fff, 0 3px 8px -2px var(--red);
+}
+
+.bar[data-late] > .words {
+  color: var(--red-ink);
+}
+
+/* Kept informed: a dashed outline. */
+.bar[data-informed] .fill {
+  border: 1.5px dashed var(--kind);
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: none;
+}
+
+.bar[data-informed] .fill .words {
+  color: var(--kind-ink);
+}
+
+.bar[data-informed][data-diamond] .fill {
+  border: 0;
+  background: none;
+}
+
+.bar[data-informed][data-diamond] .fill::before {
+  border: 1.5px dashed var(--kind);
+  background: #fff;
+}
+
+/* ---------- 760px and under (--bp-list): the lanes' avatars pin, and the four weeks scroll sideways ---------- */
+@media (max-width: 760px) {
+  .tl {
+    --lane: 56px;
+    min-width: calc(var(--lane) + var(--days) * 44px);
+  }
+
+  .filters {
+    padding: 4px 10px 10px;
+  }
+
+  .stepper {
+    order: -1;
+    flex-basis: 100%;
+    margin-bottom: 4px;
+  }
+
+  .stepLabel {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .summary {
+    margin-top: 14px;
+  }
+
+  .insight {
+    font-size: 12.5px;
+  }
+
+  .scroll {
+    border-radius: 0 0 var(--r-m) var(--r-m);
+  }
+
+  .label {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    justify-content: center;
+    padding: 8px 4px;
+    background: rgba(245, 248, 253, 0.97);
+    box-shadow: 1px 0 0 var(--hair);
+  }
+
+  .lineText {
+    display: none;
+  }
+
+  .lane .label {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .more {
+    position: static;
+    padding: 2px 7px;
+  }
+
+  .moreLong {
+    display: none;
+  }
+
+  .moreShort {
+    display: inline;
+  }
+
+  .week {
+    padding-left: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stepButton {
+    width: 40px;
+    height: 40px;
+  }
+}
