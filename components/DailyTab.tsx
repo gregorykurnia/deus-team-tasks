@@ -4,16 +4,10 @@ import { useMemo, useState } from "react";
 import { Task } from "@/lib/types";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
+import { addDays, isoOf, parseIso, todayIso } from "@/lib/dates";
+import { dayRole, firstDayToShow, tasksOnDay } from "@/lib/planMath";
 
-function toDate(s: string) {
-  return new Date(s + "T00:00:00");
-}
-function fmtISO(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+const DAY_ROLE_LABELS = { single: "Single day", starts: "Starts", ends: "Ends", ongoing: "Ongoing" };
 
 export function DailyTab({
   tasks,
@@ -26,33 +20,20 @@ export function DailyTab({
   onUpdate: (id: string, t: Task) => void;
   onDelete: (id: string) => void;
 }) {
-  const defaultDate = useMemo(() => {
-    const today = fmtISO(new Date());
-    const active = tasks.find((t) =>
-      t.startDate ? t.startDate <= today && (!t.endDate || today <= t.endDate) : t.endDate === today
-    );
-    if (active) return today;
-    const upcoming = [...tasks]
-      .filter((t) => t.startDate)
-      .sort((a, b) => a.startDate.localeCompare(b.startDate))
-      .find((t) => t.startDate >= today);
-    return upcoming?.startDate ?? today;
-  }, [tasks]);
+  const defaultDate = useMemo(() => firstDayToShow(tasks, todayIso()), [tasks]);
 
   const [selected, setSelected] = useState(defaultDate);
   const [editing, setEditing] = useState<Task | null>(null);
 
-  const dayTasks = tasks
-    .filter((t) => (t.startDate ? t.startDate <= selected && (!t.endDate || selected <= t.endDate) : t.endDate === selected))
-    .sort((a, b) => a.responsible[0]?.localeCompare(b.responsible[0] ?? "") ?? 0);
+  const dayTasks = tasksOnDay(tasks, selected).sort(
+    (a, b) => a.responsible[0]?.localeCompare(b.responsible[0] ?? "") ?? 0
+  );
 
-  const selDate = toDate(selected);
-  const isToday = selected === fmtISO(new Date());
+  const selDate = parseIso(selected);
+  const isToday = selected === todayIso();
 
   function shift(n: number) {
-    const d = toDate(selected);
-    d.setDate(d.getDate() + n);
-    setSelected(fmtISO(d));
+    setSelected(addDays(selected, n));
   }
 
   return (
@@ -79,7 +60,7 @@ export function DailyTab({
           ›
         </button>
         <button
-          onClick={() => setSelected(fmtISO(new Date()))}
+          onClick={() => setSelected(isoOf(new Date()))}
           className="ml-1 px-3 py-2 text-sm font-medium text-accent hover:bg-indigo-50 rounded-lg"
         >
           Today
@@ -103,15 +84,7 @@ export function DailyTab({
             }`}
           >
             <div className="w-16 shrink-0 pt-0.5 text-xs text-gray-400 font-medium">
-              {t.completed
-                ? "Done"
-                : t.startDate === t.endDate
-                ? "Single day"
-                : t.startDate === selected
-                ? "Starts"
-                : t.endDate === selected
-                ? "Ends"
-                : "Ongoing"}
+              {t.completed ? "Done" : DAY_ROLE_LABELS[dayRole(t, selected)]}
             </div>
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-medium text-gray-800 ${t.completed ? "line-through" : ""}`}>{t.task}</div>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTasks } from "@/lib/useTasks";
 import { KNOWN_NAMES } from "@/lib/types";
+import { namesInUse } from "@/lib/people";
 import { Sidebar, TabId } from "./Sidebar";
 import { TasksTab } from "./TasksTab";
 import { GanttTab } from "./GanttTab";
@@ -27,15 +28,7 @@ export default function App() {
     [tasks, showCompleted]
   );
 
-  const allNames = useMemo(() => {
-    const set = new Set<string>(KNOWN_NAMES);
-    tasks.forEach((t) => {
-      t.responsible.forEach((r) => set.add(r));
-      t.informed.forEach((p) => set.add(p.name));
-    });
-    set.delete("Full Team");
-    return Array.from(set).sort();
-  }, [tasks]);
+  const allNames = useMemo(() => namesInUse(tasks, KNOWN_NAMES), [tasks]);
 
   return (
     <div className="flex-1 flex">
@@ -76,6 +69,7 @@ export default function App() {
                 <TasksTab
                   subTab={tab === "operational" ? "general" : tab === "task-prospects" ? "prospects" : "clients"}
                   tasks={visibleTasks}
+                  allTasks={tasks}
                   allNames={allNames}
                   onAdd={addTask}
                   onUpdate={(id, t) => updateTask(id, t)}

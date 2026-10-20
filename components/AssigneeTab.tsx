@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Task } from "@/lib/types";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
+import { tasksForPerson } from "@/lib/planMath";
 
 export function AssigneeTab({
   tasks,
@@ -19,14 +20,8 @@ export function AssigneeTab({
   const [person, setPerson] = useState(allNames[0] ?? "");
   const [editing, setEditing] = useState<Task | null>(null);
 
-  const responsibleTasks = useMemo(
-    () => tasks.filter((t) => t.responsible.includes(person)),
-    [tasks, person]
-  );
-  const informedTasks = useMemo(
-    () => tasks.filter((t) => t.informed.some((p) => p.name === person)),
-    [tasks, person]
-  );
+  const { owned: responsibleTasks, informed } = useMemo(() => tasksForPerson(tasks, person), [tasks, person]);
+  const informedTasks = useMemo(() => informed.map((i) => i.task), [informed]);
 
   return (
     <div>

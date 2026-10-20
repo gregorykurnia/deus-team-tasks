@@ -6,6 +6,9 @@ import { useClientPipeline } from "@/lib/useClientPipeline";
 import { loadFieldOptions } from "@/lib/clientLocalConfig";
 import { useTaskGroups } from "@/lib/useTaskGroups";
 import { PipelineEntry } from "@/lib/clientTypes";
+import { companiesById, tasksOfKind, type Kind } from "@/lib/kinds";
+import { filterTasks, sortTasks, type TaskSortKey } from "@/lib/taskQueries";
+import { createTaskGroup, deleteTaskGroup, groupNameProblem, groupNamesInUse, setGroupStarred } from "@/lib/taskGroups";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
@@ -71,6 +74,15 @@ const LINKED_COL_DEFS: Record<(typeof LINKED_COLS)[number], { label: string; man
 
 const COL_VISIBILITY_STORAGE_KEY = "taskTableColumnVisibility";
 
+const SORT_KEYS: Record<"date" | "lastAction" | "daysSince" | "company" | "description" | "type", TaskSortKey> = {
+  date: "end",
+  lastAction: "last",
+  daysSince: "last",
+  company: "about",
+  description: "desc",
+  type: "type",
+};
+
 function loadHiddenCols(): Record<string, string[]> {
   const empty: Record<string, string[]> = {};
   if (typeof window === "undefined") return empty;
@@ -90,10 +102,6 @@ function loadColWidths(): Record<string, number> {
   } catch {
     return { ...DEFAULT_LINKED_COL_WIDTHS };
   }
-}
-
-function isDoneEntry(r: PipelineEntry) {
-  return r.status === "Client / Partner Done Deal";
 }
 
 function entryTableKey(r: PipelineEntry): "main" | "raw" | "hold" {
@@ -132,6 +140,7 @@ function ResizableTh({
 export function TasksTab({
   subTab,
   tasks,
+  allTasks,
   allNames,
   onAdd,
   onUpdate,
@@ -139,6 +148,7 @@ export function TasksTab({
 }: {
   subTab: SubTab;
   tasks: Task[];
+  allTasks: Task[]; // finished ones too, even while they're hidden
   allNames: string[];
   onAdd: (t: NewTask) => void;
   onUpdate: (id: string, t: NewTask) => void;
@@ -207,70 +217,43 @@ export function TasksTab({
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [groupError, setGroupError] = useState<string | null>(null);
-  const { groups, addGroup, deleteGroup, starredGroups, toggleStarGroup } = useTaskGroups();
+  const { groupDocs, starredGroups } = useTaskGroups();
 
   const { entries, saveEntry } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
-  const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
+  const entryById = useMemo(() => companiesById(entries), [entries]);
 
-  const generalTasks = useMemo(
-    () => tasks.filter((t) => t.linkedClientId == null || !entryById.has(t.linkedClientId)),
-    [tasks, entryById]
-  );
-  const prospectTasks = useMemo(
-    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && !isDoneEntry(entryById.get(t.linkedClientId)!)),
-    [tasks, entryById]
-  );
-  const clientTasks = useMemo(
-    () => tasks.filter((t) => t.linkedClientId != null && entryById.has(t.linkedClientId) && isDoneEntry(entryById.get(t.linkedClientId)!)),
-    [tasks, entryById]
-  );
-
-  const activeTasks = subTab === "general" ? generalTasks : subTab === "prospects" ? prospectTasks : clientTasks;
+  const kind: Kind = subTab === "general" ? "internal" : subTab === "prospects" ? "prospect" : "client";
+  const generalTasks = useMemo(() => tasksOfKind(tasks, "internal", entryById), [tasks, entryById]);
+  const activeTasks = useMemo(() => tasksOfKind(tasks, kind, entryById), [tasks, kind, entryById]);
   const isLinkedView = subTab !== "general";
 
   const filteredTasks = useMemo(() => {
     if (!isLinkedView) return activeTasks;
-    return activeTasks.filter((t) => {
-      if (typeFilter && t.taskType !== typeFilter) return false;
-      if (minDaysSince !== "") {
-        const ds = daysSince(t.lastActionDate);
-        if (ds === null || ds < Number(minDaysSince)) return false;
-      }
-      return true;
-    });
-  }, [activeTasks, isLinkedView, typeFilter, minDaysSince]);
+    return filterTasks(
+      activeTasks,
+      {
+        type: (typeFilter || null) as Task["taskType"] | null,
+        minIdleDays: minDaysSince === "" ? null : Number(minDaysSince),
+      },
+      { companies: entryById }
+    );
+  }, [activeTasks, isLinkedView, typeFilter, minDaysSince, entryById]);
 
   const sortedTasks = useMemo(() => {
     if (!sortState && subTab !== "prospects") return filteredTasks;
-    if (!sortState) {
-      return [...filteredTasks].sort(compareProspectTargetDates);
-    }
+    // Prospect work: latest deadline first, undated last (W14).
+    if (!sortState) return sortTasks(filteredTasks, "end", "desc", { companies: entryById });
     const { key, dir } = sortState;
-    const sorted = [...filteredTasks].sort((a, b) => {
-      if (key === "date") return a.endDate.localeCompare(b.endDate);
-      if (key === "lastAction") return (a.lastActionDate ?? "").localeCompare(b.lastActionDate ?? "");
-      if (key === "daysSince") {
-        const da = daysSince(a.lastActionDate) ?? -Infinity;
-        const db = daysSince(b.lastActionDate) ?? -Infinity;
-        return da - db;
-      }
-      if (key === "company") {
-        const ca = a.linkedClientId != null ? entryById.get(a.linkedClientId)?.company ?? "" : "";
-        const cb = b.linkedClientId != null ? entryById.get(b.linkedClientId)?.company ?? "" : "";
-        return ca.localeCompare(cb);
-      }
-      if (key === "type") return (a.taskType ?? "").localeCompare(b.taskType ?? "");
-      return a.task.localeCompare(b.task);
-    });
-    return dir === "asc" ? sorted : sorted.reverse();
+    // Days since the last action runs the other way from the last action's date.
+    const flip = key === "daysSince" ? (dir === "asc" ? "desc" : "asc") : dir;
+    return sortTasks(filteredTasks, SORT_KEYS[key], flip, { companies: entryById });
   }, [filteredTasks, sortState, entryById, subTab]);
 
-  const allGroups = useMemo(() => {
-    if (subTab !== "general") return [];
-    const used = new Set(generalTasks.map((t) => t.taskGroup).filter(Boolean) as string[]);
-    return Array.from(new Set([...groups, ...used]));
-  }, [groups, generalTasks, subTab]);
+  const allGroups = useMemo(
+    () => (subTab === "general" ? groupNamesInUse(groupDocs, generalTasks) : []),
+    [groupDocs, generalTasks, subTab]
+  );
 
   const sections = useMemo(() => {
     if (subTab !== "general") return [{ id: UNGROUPED, label: "", tasks: sortedTasks }];
@@ -302,16 +285,12 @@ export function TasksTab({
   }
 
   function submitAddTaskGroup() {
-    const name = newGroupName.trim();
-    if (!name) {
-      setGroupError("Enter a name.");
+    const problem = groupNameProblem(newGroupName, groupDocs);
+    if (problem) {
+      setGroupError(problem === "missing" ? "Enter a name." : "A group with that name already exists.");
       return;
     }
-    if (groups.includes(name)) {
-      setGroupError("A group with that name already exists.");
-      return;
-    }
-    addGroup(name)
+    createTaskGroup(newGroupName, groupDocs)
       .then(() => setAddingGroup(false))
       .catch((err) => {
         console.error("Failed to add task group:", err);
@@ -320,17 +299,16 @@ export function TasksTab({
   }
 
   function removeGroup(name: string) {
-    const affected = generalTasks.filter((t) => t.taskGroup === name);
+    const affected = allTasks.filter((t) => t.taskGroup === name);
     const msg =
       affected.length > 0
         ? `Delete group "${name}"? ${affected.length} task(s) in it will move to ${UNGROUPED_LABEL}.`
         : `Delete group "${name}"?`;
     if (!confirm(msg)) return;
-    deleteGroup(name).catch((err) => console.error("Failed to delete task group:", err));
-    affected.forEach((t) => {
-      const { id, ...rest } = t;
-      onUpdate(id, { ...rest, taskGroup: undefined });
-    });
+    const groupDoc = groupDocs.find((g) => g.name === name);
+    deleteTaskGroup({ id: groupDoc?.id, name }, allTasks).catch((err) =>
+      console.error("Failed to delete task group:", err)
+    );
     if (activeGroupId === name) setActiveGroupId(null);
   }
 
@@ -631,7 +609,10 @@ export function TasksTab({
                           {section.id !== UNGROUPED && (
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => toggleStarGroup(section.id)}
+                                onClick={() => {
+                                  const groupDoc = groupDocs.find((g) => g.name === section.id);
+                                  if (groupDoc) void setGroupStarred(groupDoc.id, !groupDoc.starred);
+                                }}
                                 title={starredGroups.has(section.id) ? "Unstar group" : "Star group"}
                                 className={`w-[20px] h-[20px] inline-flex items-center justify-center rounded-md hover:bg-amber-50 ${
                                   starredGroups.has(section.id) ? "text-amber-500" : "text-gray-300 hover:text-amber-500"
@@ -887,12 +868,6 @@ function fmtRange(start: string, end: string) {
   if (!s && !e) return "—";
   if (!s || !e || start === end) return s || e;
   return `${s} – ${e}`;
-}
-
-function compareProspectTargetDates(a: Task, b: Task) {
-  if (!a.endDate || !b.endDate) return !a.endDate && !b.endDate ? 0 : !a.endDate ? 1 : -1;
-  // Most recent target dates appear first; tasks without a target date remain at the bottom.
-  return b.endDate.localeCompare(a.endDate);
 }
 
 function PriorityFlag({ priority }: { priority?: Task["priority"] }) {

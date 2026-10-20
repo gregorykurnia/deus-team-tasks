@@ -69,7 +69,6 @@ test("W11: delete a task group after confirming", async ({ page }) => {
 });
 
 test("W11: deleting a task group leaves its tasks ungrouped", async ({ page }) => {
-  test.fail(true, "Known bug in the old UI: the tasks keep the group's name, so the group comes back. Fixed in 1.4.");
   acceptDialogs(page);
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
   await seedTasks([task("t1", { task: "Pack the archive", taskGroup: "Office move" })]);

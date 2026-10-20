@@ -5,6 +5,7 @@ import { Task } from "@/lib/types";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 import { GCalEvent } from "@/app/api/calendar/route";
+import { tasksByDay } from "@/lib/planMath";
 
 function fmtISO(d: Date) {
   const y = d.getFullYear();
@@ -60,26 +61,7 @@ export function CalendarTab({
 
   const { events: gcalEvents, error: gcalError, loading: gcalLoading } = useGCalEvents(cursor);
 
-  const tasksByDate = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    for (const t of tasks) {
-      if (!t.startDate && !t.endDate) continue;
-      const start = t.startDate || t.endDate;
-      const end = t.endDate || t.startDate;
-      const d = new Date(start + "T00:00:00");
-      const last = new Date(end + "T00:00:00");
-      let guard = 0;
-      while (d <= last && guard < 400) {
-        const key = fmtISO(d);
-        const arr = map.get(key) ?? [];
-        arr.push(t);
-        map.set(key, arr);
-        d.setDate(d.getDate() + 1);
-        guard++;
-      }
-    }
-    return map;
-  }, [tasks]);
+  const tasksByDate = useMemo(() => tasksByDay(tasks), [tasks]);
 
   const gcalByDate = useMemo(() => {
     const map = new Map<string, GCalEvent[]>();

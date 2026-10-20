@@ -144,7 +144,6 @@ test("D11: a task edited from another view is saved", async ({ page }) => {
 });
 
 test("D11: editing from another view writes no stray id field", async ({ page }) => {
-  test.fail(true, "Known bug in the old UI: the plan views save the whole task, id included. Fixed in 1.4.");
   await seedTasks([task("t1", { task: "Prepare the demo", startDate: isoDay(0), endDate: isoDay(0) })]);
   await page.goto("/");
   await openArea(page, "Daily View", "Views");
@@ -155,4 +154,15 @@ test("D11: editing from another view writes no stray id field", async ({ page })
 
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.keyPoints).toBe("Use the new deck");
   expect(await readFields("tasks", "tasks/t1")).not.toHaveProperty("id");
+});
+
+test("W7: clearing a task's type clears it", async ({ page }) => {
+  await seedTasks([task("t1", { task: "Draft the agenda", taskType: "Follow Up" })]);
+  await page.goto("/");
+  await taskRow(page, "Draft the agenda").click();
+  const modal = taskModal(page, "Edit Task");
+  await field(modal, "Task type").selectOption("");
+  await modal.getByRole("button", { name: "Save" }).click();
+
+  await expect.poll(async () => readFields("tasks", "tasks/t1")).not.toHaveProperty("taskType");
 });

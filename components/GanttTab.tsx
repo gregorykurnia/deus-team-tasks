@@ -5,7 +5,9 @@ import { Task } from "@/lib/types";
 import { colorFor } from "@/lib/colors";
 import { useTaskGroups } from "@/lib/useTaskGroups";
 import { useClientPipeline } from "@/lib/useClientPipeline";
-import { PipelineEntry } from "@/lib/clientTypes";
+import { companiesById, kindOf } from "@/lib/kinds";
+import { spanOf, taskRange } from "@/lib/planMath";
+import { parseIso, todayIso } from "@/lib/dates";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 
@@ -17,13 +19,6 @@ const PROSPECTS_LABEL = "Prospect Tasks";
 const CLIENTS = "__clients__";
 const CLIENTS_LABEL = "Client Tasks";
 
-function isDoneEntry(r: PipelineEntry) {
-  return r.status === "Client / Partner Done Deal";
-}
-
-function toDate(s: string) {
-  return new Date(s + "T00:00:00");
-}
 function diffDays(a: Date, b: Date) {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
@@ -34,12 +29,8 @@ function addDays(d: Date, n: number) {
 }
 
 function effectiveRange(t: Task): { s: Date; e: Date } | null {
-  const sValid = t.startDate && !isNaN(toDate(t.startDate).getTime());
-  const eValid = t.endDate && !isNaN(toDate(t.endDate).getTime());
-  if (sValid && eValid) return { s: toDate(t.startDate), e: toDate(t.endDate) };
-  if (eValid) return { s: toDate(t.endDate), e: toDate(t.endDate) };
-  if (sValid) return { s: toDate(t.startDate), e: toDate(t.startDate) };
-  return null;
+  const r = taskRange(t);
+  return r ? { s: parseIso(r.start), e: parseIso(r.end) } : null;
 }
 
 export function GanttTab({
@@ -56,7 +47,7 @@ export function GanttTab({
   const [editing, setEditing] = useState<Task | null>(null);
   const { groups } = useTaskGroups();
   const { entries } = useClientPipeline();
-  const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
+  const entryById = useMemo(() => companiesById(entries), [entries]);
   const [groupFilter, setGroupFilter] = useState<string>("");
 
   const usedGroups = useMemo(() => {
@@ -66,33 +57,18 @@ export function GanttTab({
     return Array.from(new Set([...groups, ...used]));
   }, [groups, tasks]);
 
-  function isProspectTask(t: Task) {
-    return t.linkedClientId != null && entryById.has(t.linkedClientId) && !isDoneEntry(entryById.get(t.linkedClientId)!);
-  }
-  function isClientTask(t: Task) {
-    return t.linkedClientId != null && entryById.has(t.linkedClientId) && isDoneEntry(entryById.get(t.linkedClientId)!);
-  }
-
   const filteredTasks = useMemo(() => {
     if (!groupFilter) return tasks;
-    if (groupFilter === PROSPECTS) return tasks.filter(isProspectTask);
-    if (groupFilter === CLIENTS) return tasks.filter(isClientTask);
+    if (groupFilter === PROSPECTS) return tasks.filter((t) => kindOf(t, entryById) === "prospect");
+    if (groupFilter === CLIENTS) return tasks.filter((t) => kindOf(t, entryById) === "client");
     if (groupFilter === UNGROUPED)
       return tasks.filter((t) => t.linkedClientId == null && (!t.taskGroup || !usedGroups.includes(t.taskGroup)));
     return tasks.filter((t) => t.linkedClientId == null && t.taskGroup === groupFilter);
   }, [tasks, groupFilter, usedGroups, entryById]);
 
   const { start, days } = useMemo(() => {
-    const ranges = filteredTasks.map(effectiveRange).filter((r): r is { s: Date; e: Date } => r !== null);
-    if (ranges.length === 0) {
-      const today = new Date();
-      return { start: addDays(today, -2), days: 30 };
-    }
-    const starts = ranges.map((r) => r.s.getTime());
-    const ends = ranges.map((r) => r.e.getTime());
-    const minStart = addDays(new Date(Math.min(...starts)), -2);
-    const maxEnd = addDays(new Date(Math.max(...ends)), 3);
-    return { start: minStart, days: Math.max(diffDays(minStart, maxEnd), 7) };
+    const span = spanOf(filteredTasks, todayIso());
+    return { start: parseIso(span.start), days: span.days };
   }, [filteredTasks]);
 
   const today = new Date();

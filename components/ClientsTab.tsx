@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { useTasks } from "@/lib/useTasks";
 import { KNOWN_NAMES } from "@/lib/types";
+import { namesInUse } from "@/lib/people";
 import { loadColConfig, loadFieldOptions, saveColConfig, saveFieldOptions } from "@/lib/clientLocalConfig";
 import { BUILTIN_COLS, ColumnDef, ColumnType, FIELD_TITLES, PipelineEntry, PipelineTab, PRIO_ORDER, TableKey } from "@/lib/clientTypes";
 import { daysSince } from "@/lib/clientHelpers";
@@ -74,15 +75,7 @@ export function ClientsTab({
     return () => clearTimeout(t);
   }, [toast]);
 
-  const allNames = useMemo(() => {
-    const set = new Set<string>(KNOWN_NAMES);
-    tasks.forEach((t) => {
-      t.responsible.forEach((r) => set.add(r));
-      t.informed.forEach((p) => set.add(p.name));
-    });
-    set.delete("Full Team");
-    return Array.from(set).sort();
-  }, [tasks]);
+  const allNames = useMemo(() => namesInUse(tasks, KNOWN_NAMES), [tasks]);
 
   function handleFollowUp(row: PipelineEntry) {
     setFollowUpRow(row);
