@@ -136,7 +136,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 
 | # | Task | Model · effort | Done |
 |---|---|---|---|
-| 0 | Create `redesign` from `main`, push it; confirm Vercel builds its preview | Haiku 5.5 Max | |
+| 0 | Create `redesign` from `main`, push it; confirm Vercel builds its preview | Haiku 5.5 Max | 2026-10-20 · `20afd0f` (first preview; a branch with no new commit isn't built) |
 | **1** | **Phase 1: safety net and data (no visual change)** | | |
 | 1.1 | Test harness: `npm ci`, Playwright config, Firestore emulator, Vitest, `npm run test:smoke` / `test:unit` | Opus 5.5 High | |
 | 1.2 | Smoke specs on the old UI: tasks, task groups, flows | Opus 5.5 High | |
