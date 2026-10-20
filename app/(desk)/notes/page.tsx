@@ -1,5 +1,4 @@
-import PageHeader from "@/desk/PageHeader";
-
+// The notes layout draws the screen; /notes has no prospect open.
 export default function Page() {
-  return <PageHeader title="Qualification notes" />;
+  return null;
 }

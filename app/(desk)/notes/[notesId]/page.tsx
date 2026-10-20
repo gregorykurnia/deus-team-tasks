@@ -1,5 +1,4 @@
-import PageHeader from "@/desk/PageHeader";
-
+// The notes layout draws the screen and opens the prospect named in the address.
 export default function Page() {
-  return <PageHeader title="Qualification notes" />;
+  return null;
 }

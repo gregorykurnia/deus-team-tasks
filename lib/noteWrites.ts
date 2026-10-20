@@ -1,7 +1,7 @@
 // Qualification notes writes. Notes keep writing with no connection (D-014):
 // Firestore queues them on the device and saves them when it's back.
-import { deleteDoc, doc, getDoc, getDocFromCache, setDoc, type DocumentSnapshot } from "firebase/firestore";
-import { getConnection } from "./connection";
+import { deleteDoc, deleteField, doc, getDoc, getDocFromCache, onSnapshot, setDoc, updateDoc, type DocumentSnapshot } from "firebase/firestore";
+import { assertOnline, getConnection } from "./connection";
 import { clientsDb } from "./firebaseClients";
 import { createEmptyProspectJournalEntry, type ProspectJournalEntry } from "./prospectJournalTypes";
 import type { PipelineEntry } from "./clientTypes";
@@ -42,8 +42,9 @@ export async function startNotesForCompany(c: PipelineEntry, notes: ProspectJour
   return id;
 }
 
-// Notes for someone not tracked yet (U6).
+// Notes for someone not tracked yet (U6). Starting, linking and deleting need the connection; only writing doesn't.
 export async function createNotes(prospectName = ""): Promise<string> {
+  assertOnline("No connection. The notes weren’t started.");
   const entry = { ...createEmptyProspectJournalEntry(crypto.randomUUID()), prospectName };
   await setDoc(notesRef(entry.id), entry);
   return entry.id;
@@ -54,10 +55,34 @@ export async function saveNotes(id: string, patch: Partial<Omit<ProspectJournalE
   await setDoc(notesRef(id), { ...patch, updatedAt: Date.now() }, { merge: true });
 }
 
-export async function linkNotes(entry: ProspectJournalEntry, c: PipelineEntry): Promise<void> {
-  await saveNotes(entry.id, { pipelineEntryId: c.id, prospectName: entry.prospectName || c.company });
+// Links notes for someone not tracked yet to a tracked company (U6). Returns the undo, which unlinks them again.
+// Saves what was written into notes that are there, and never brings deleted notes back as a half-empty set. With no
+// connection the change waits on the device and saves once it's back (D-014), so the promise only settles then.
+export async function writeNotes(id: string, patch: Partial<Omit<ProspectJournalEntry, "id" | "pipelineEntryId">>): Promise<void> {
+  await updateDoc(notesRef(id), { ...patch, updatedAt: Date.now() });
+}
+
+// Whether changes to these notes are still waiting on the device to reach the server: the save line (guide 4.15).
+export function watchNotesPending(id: string, onChange: (pending: boolean) => void): () => void {
+  return onSnapshot(
+    notesRef(id),
+    { includeMetadataChanges: true },
+    (snap) => onChange(snap.metadata.hasPendingWrites),
+    () => onChange(false)
+  );
+}
+
+export async function linkNotes(entry: ProspectJournalEntry, c: PipelineEntry): Promise<() => Promise<void>> {
+  assertOnline("No connection. The notes weren’t linked.");
+  const name = entry.prospectName;
+  await saveNotes(entry.id, { pipelineEntryId: c.id, prospectName: name || c.company });
+  return async () => {
+    assertOnline("No connection. The notes are still linked.");
+    await setDoc(notesRef(entry.id), { pipelineEntryId: deleteField(), prospectName: name, updatedAt: Date.now() }, { merge: true });
+  };
 }
 
 export async function deleteNotes(id: string): Promise<void> {
+  assertOnline("No connection. The notes weren’t deleted.");
   await deleteDoc(notesRef(id));
 }

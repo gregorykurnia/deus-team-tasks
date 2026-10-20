@@ -2,7 +2,8 @@
 // downloadCsv in exportCsv.ts turns them into a file.
 import { todayIso } from "./dates";
 import { companyGroup, COMPANY_GROUP_LABELS } from "./companies";
-import { HEADINGS, isTracked, likelihoodLabel } from "./notes";
+import { HEADINGS } from "./notes";
+import { companyOf, HEADING_LABELS, likelihoodWord, notesName } from "./notesView";
 import { buildGroups, sectorOf, sectorSpellings, type HistoricalClient } from "./pastClients";
 import { normalizeSectorKey } from "./historicalClientTypes";
 import { idleDays } from "./urgency";
@@ -38,18 +39,19 @@ export function companiesCsv(
   };
 }
 
-// The notes shown now, one row per prospect.
-export function notesCsv(entries: ProspectJournalEntry[], companies: CompaniesById, today: string = todayIso()): CsvExport {
+// The notes shown now, one row per prospect, named as the list names them. One prospect's notes on their own carry its
+// name in the file name.
+export function notesCsv(entries: ProspectJournalEntry[], companies: CompaniesById, today: string = todayIso(), one?: string): CsvExport {
   return {
-    filename: `qualification-notes-${today}.csv`,
-    headers: ["Prospect", "Tracked company", "Group", "Likelihood", ...HEADINGS.map((h) => h.label), "Remarks", "Last edited"],
+    filename: one ? `qualification-notes-${slug(one) || "prospect"}-${today}.csv` : `qualification-notes-${today}.csv`,
+    headers: ["Prospect", "Tracked company", "Group", "Likelihood", ...HEADINGS.map((h) => HEADING_LABELS[h.key]), "Remarks", "Last edited"],
     rows: entries.map((e) => {
-      const company = e.pipelineEntryId != null ? companies.get(e.pipelineEntryId) : undefined;
+      const company = companyOf(e, companies);
       return [
-        e.prospectName,
-        isTracked(e) && company ? "Yes" : "No",
+        notesName(e, companies),
+        company ? "Yes" : "No",
         company ? COMPANY_GROUP_LABELS[companyGroup(company)] : "",
-        likelihoodLabel(e),
+        likelihoodWord(e),
         ...HEADINGS.map((h) => e[h.key] ?? ""),
         e.detailedRemarks ?? "",
         e.updatedAt ? new Date(e.updatedAt).toISOString().slice(0, 16).replace("T", " ") : "",

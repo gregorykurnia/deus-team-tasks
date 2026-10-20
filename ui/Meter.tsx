@@ -13,7 +13,7 @@ export function LoadMeter({ load, total = 5 }: { load: number; total?: number })
 
 // 5 is Very High and 1 is Low, as the notes list them. null means not rated.
 export type Rating = 1 | 2 | 3 | 4 | 5;
-const WORDS: Record<Rating, string> = { 5: "Very High", 4: "High", 3: "Medium", 2: "Moderately Low", 1: "Low" };
+const WORDS: Record<Rating, string> = { 5: "Very high", 4: "High", 3: "Medium", 2: "Moderately low", 1: "Low" };
 
 export function LikelihoodMeter({ rating }: { rating: Rating | null }) {
   const unrated = rating === null;

@@ -8,6 +8,7 @@ import styles from "./FilterButton.module.css";
 
 interface FilterButtonProps {
   label: string; // "Due"
+  hideLabel?: boolean; // the value says it all on screen (Qualification notes' "All prospects"); screen readers still hear the label
   value?: string | null; // "Overdue": the filter is on when it has one
   summary?: string | null; // a choice that is always made and never "on": Sort's "Deadline, earliest first"
   icon?: IconName;
@@ -17,14 +18,14 @@ interface FilterButtonProps {
   ref?: Ref<HTMLButtonElement>;
 }
 
-export default function FilterButton({ label, value, summary, icon, expanded, onClick, onClear, ref }: FilterButtonProps) {
+export default function FilterButton({ label, hideLabel, value, summary, icon, expanded, onClick, onClear, ref }: FilterButtonProps) {
   const on = !!value;
   const shown = value ?? summary;
   return (
     <span className={on ? `${styles.filter} ${styles.on}` : styles.filter}>
       <button ref={ref} type="button" className={styles.main} aria-haspopup="menu" aria-expanded={expanded} onClick={onClick}>
         {icon && <Icon name={icon} size={15} />}
-        <span>{label}</span>
+        <span className={hideLabel ? "sr-only" : undefined}>{label}</span>
         {shown && <b className={styles.value}>{shown}</b>}
         <Icon name="down" size={15} />
       </button>
