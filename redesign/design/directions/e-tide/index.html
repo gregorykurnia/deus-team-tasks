@@ -58,6 +58,7 @@
   .icon-btn { display: none; }
 
   .hello { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: end; margin-top: 46px; }
+  .hello > div { min-width: 0; }
   .hello .date { font-weight: 600; opacity: .85; font-size: 15px; }
   .hello h1 { margin: 6px 0 0; font-size: 56px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
   .events { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
@@ -118,7 +119,7 @@
     .areas a { padding: 8px 11px; }
     .search { display: none; }
     .hello { grid-template-columns: 1fr; }
-    .alerts { grid-template-columns: repeat(3, 1fr); min-width: 0; }
+    .alerts { grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; }
     .cols { margin: -112px 28px 60px; gap: 14px; }
   }
 
@@ -133,7 +134,7 @@
     .hello h1 { font-size: 36px; }
     .events { flex-wrap: nowrap; overflow-x: auto; margin: 16px -20px 0; padding: 0 20px; scrollbar-width: none; }
     .event { flex: none; }
-    .alerts { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .alerts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .alert { grid-template-columns: 1fr; gap: 6px; padding: 10px; border-radius: 18px; }
     .alert b { width: 36px; height: 36px; border-radius: 12px; font-size: 17px; }
     .alert span { font-size: 12.5px; line-height: 1.25; }
