@@ -159,3 +159,16 @@ Owner: "Ooo yeah it's approved", after seeing the screenshots of groups 5 and 6 
 - **D-016:** subsidiaries have their own sector, filled in from the parent's. Every company not under another is a parent company. There is no "Add to past clients" action on Deal done companies.
 - **D-018:** the decision comes after the last step. Flows open to read, with "Edit flow". Removing a step or an outcome uses Undo.
 Any of these can still change at the owner's word; a change after the guide is frozen goes through `needs.md`. Stage 2 is done. Next: stage 3, the design guide, in a fresh session.
+
+## D-020 — Design guide: contrast raised to WCAG AA (2026-10-20)
+While writing the design guide (stage 3), the prototype's colours were checked against WCAG 2.2 AA. A few fell short, so the guide and `tokens.css` use slightly darker values. Each change is marked "Changed from the prototype" in the guide:
+- Muted text #6f7a90 → **#616a7d** (4.3:1 → 5.4:1). Faint #a3abbd → **#8e95a4**, and it's no longer used for words.
+- Coloured words on pale tints get their own darker "ink" shades: blue #2b62d7, red #c52b3d, amber #a65800, green #0c7a55, teal #0b776f. The fills, bars and dots keep the approved colours.
+- The main button's gradient ends on **#3f75cf** instead of #4a8af4, so its white label reaches 4.5:1.
+- The done circle's ring is at full colour instead of 60% (2.5:1 → 5.6:1), so it reads as a control.
+- The green option chip goes from #0c7d55 to #0c7a55.
+The look barely changes. The prototype hasn't been updated, so the rebuild follows `tokens.css`.
+
+**Owner to confirm** (proposals, not adopted silently):
+1. The contrast changes above.
+2. **Field outlines.** Today they're a very light grey (1.5px, 12% ink), below the 3:1 that AA asks for the edge of a control. Every field has a visible label and a white fill, so they're still easy to find. Option A: keep them light, as approved (quieter, matching "controls that stay quiet until you need them"). Option B: a 3:1 grey outline (#8e95a4), which is fully AA but makes forms visibly heavier. The designer leans to **B** for forms in sheets and dialogs, and A for fields that are edited in place in documents (notes, flows), which already show a strong outline on focus.
