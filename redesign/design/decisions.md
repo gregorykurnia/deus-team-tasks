@@ -172,3 +172,9 @@ The look barely changes. The prototype hasn't been updated, so the rebuild follo
 **Owner to confirm** (proposals, not adopted silently):
 1. The contrast changes above.
 2. **Field outlines.** Today they're a very light grey (1.5px, 12% ink), below the 3:1 that AA asks for the edge of a control. Every field has a visible label and a white fill, so they're still easy to find. Option A: keep them light, as approved (quieter, matching "controls that stay quiet until you need them"). Option B: a 3:1 grey outline (#8e95a4), which is fully AA but makes forms visibly heavier. The designer leans to **B** for forms in sheets and dialogs, and A for fields that are edited in place in documents (notes, flows), which already show a strong outline on focus.
+
+## D-021 — Owner's answers to D-020 (2026-10-20)
+Owner: "I'll go with ur reccs for the 2 points".
+1. **The contrast changes are approved**, as listed in D-020.
+2. **Field outlines take the designer's mix.** Form fields in sheets, dialogs and menus get a 3:1 grey outline (`--line-field` #8e95a4, #616a7d on hover). Fields edited in place in documents (qualification notes, flows) stay with no outline at rest, then a tint on hover and a blue outline on focus.
+The guide and `tokens.css` are updated to match. The prototype isn't updated, so the rebuild follows `tokens.css`.

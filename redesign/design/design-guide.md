@@ -47,6 +47,8 @@ All values are in `tokens.css`. Text colours are given for a white surface unles
 | `--surface-sheet` / `--surface-dialog` | white 94% / 97%, blur 30px | Sheets and dialogs. |
 | `--scrim` | #1c2848 at 22%, blur 3px | Behind sheets and dialogs. |
 | `--hair` / `--fill` | ink at 8% / 5% | Dividers and quiet outlines / quiet filled controls (chips, segmented track, person chips). |
+| `--line-field` | #8e95a4, 1.5px inset (hover #616a7d) | The outline of form fields in sheets, dialogs and menus, at 3:1. **Changed from the prototype** (ink at 12%), D-021. |
+| `--line-quiet` | ink at 12% | Choice chips, people pickers' person chips and other outlines where the words already show it's a control. |
 
 **Text**
 
@@ -375,12 +377,12 @@ A 52px field at the top of "Needs attention", with a dashed blue outline, a blue
 | **Headings written** | Nine small ticks, green when written, with "6 of 9 headings written". | |
 
 ### 4.13 Form fields
-- **Field**: a label above (13px 700 `--ink-2`) with "optional" in `--muted` beside it. The input is 46px, white, `--r-field`, with a 1.5px inset `--line-field` outline. On focus, a 2px blue outline plus a 4px soft blue halo. Placeholders use `--muted` and give an example ("Their part, like “backup”").
+- **Field**: a label above (13px 700 `--ink-2`) with "optional" in `--muted` beside it. The input is 46px, white, `--r-field`, with a 1.5px inset `--line-field` outline (3:1 grey, D-021), darker on hover. On focus, a 2px blue outline plus a 4px soft blue halo. Placeholders use `--muted` and give an example ("Their part, like “backup”").
 - **Variants**: single line · text box (92px minimum, grows; the big version at 17px 700 is for the task description) · select (a custom arrow) · date (tabular figures, with a round × to clear) · number · **switch** (42 × 26, blue when on) · **segmented** (priority, about) · **chip group** (touch point) · **search** (a pill with an icon).
 - **People picker** (W4): a field holding person chips, with a borderless input after them. Typing shows suggestions under it: "Names already in use", each with an avatar and its open-task count, then "Add “Nadia” as a new name". Arrow keys move the highlight, Enter picks, and Backspace in an empty field removes the last person.
 - **Informed list**: one white row per person (avatar, name, a "Their part" note field, ×), then an "Add someone to keep informed" line. On phones the note goes under the name.
 - **Sector picker** (R6): suggests sectors already in use, with how many companies use each. If what's typed matches one when case and spaces are ignored, a note says so before saving: "Same sector as “Retail”, so it’s saved that way." A new one says "“Agritech” will be a new sector."
-- **Editing in place** (notes headings, flow titles, the notes title): no visible box until hover (a 3% tint) or focus (a white field with a blue outline). It reads as a document, not a form.
+- **Editing in place** (notes headings, flow titles, the notes title): no visible box until hover (a 3% tint) or focus (a white field with a blue outline). It reads as a document, not a form, so it keeps the light treatment rather than the 3:1 field outline (D-021).
 - **Required missing**: a 2px red outline with a soft red halo, and under it a red line with an alert icon that says what to do ("Add a short description so the team knows what this is."). Focus moves to the field. The error clears as soon as it's fixed.
 - **Kept in step note** (B12): a blue-soft box with the sync icon: "The deadline and last action stay in step with Halcyon Logistics. Changing them here updates the company too." The fields it covers carry a small sync icon in the company record.
 
@@ -619,7 +621,7 @@ Plain, calm and specific, like a capable colleague. Short sentences. Say what ha
 
 Target: **WCAG 2.2 AA**.
 
-**Contrast.** Body text is at least 4.5:1 and large text and controls at least 3:1. The guide's text tokens meet this (2.1). These were raised from the prototype (D-020):
+**Contrast.** Body text is at least 4.5:1 and large text and controls at least 3:1. The guide's text tokens meet this (2.1). These were raised from the prototype (D-020, approved in D-021):
 
 | Pair | Prototype | Guide |
 |---|---|---|
@@ -632,8 +634,9 @@ Target: **WCAG 2.2 AA**.
 | White on the main button's light end | 3.4 | 4.5 (gradient ends on #3f75cf) |
 | Green option chip | 4.5 (4.48) | 4.7 |
 | Done circle ring (Internal, 60%) | 2.5 | full colour: 5.6 |
+| Form field outline | ink at 12%: about 1.3 | #8e95a4: 3.0 |
 
-Still open: field outlines are 1.5px at 12% ink, below the 3:1 asked for the boundary of a control. Fields always have a visible label and a white fill, and the 3:1 alternative is `#8e95a4`. This is the owner's call (D-020). Group badges, avatar initials and chart fills are decorative, because the name or the number is always shown next to them.
+Field outlines (D-021): form fields in sheets, dialogs and menus have a 3:1 grey outline (`--line-field`, #8e95a4). Fields edited in place in documents (notes, flows) have no outline at rest, as a deliberate exception: their heading labels them, and on hover and focus they show a tint and a strong blue outline. Group badges, avatar initials and chart fills are decorative, because the name or the number is always shown next to them.
 
 **Colour is never the only signal.** Urgency has words, kinds have names in legends and tags, informed people are outlined as well as paler, good and bad outcomes say "Good" or "Bad", "Not counted" has a tag, and likelihood has its word.
 
@@ -667,7 +670,6 @@ Still open: field outlines are 1.5px at 12% ink, below the 3:1 asked for the bou
 - Two people typing in the same notes heading at the same moment (D-014).
 
 **Open, for the owner**
-- **D-020:** confirm the contrast changes in section 8, and choose the field outline (keep it light, or the 3:1 grey).
 - **The app's name.** "Team desk" is a placeholder everywhere.
 - **The company logo** goes into the striped placeholder at the rebuild. If its colours clash with the calm blue, the owner decides then (brief).
 - The selecting-several job story (D-008) and the owner's earlier choices (D-012, D-016, D-018) are recorded in `decisions.md`. Any change after the freeze goes through `needs.md`.
