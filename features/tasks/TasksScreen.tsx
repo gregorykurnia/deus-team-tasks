@@ -2,7 +2,7 @@
 
 // All tasks and one task group (guide 6.2). The view (kind, open or done, filters, sort) lives in the address, so a link
 // from Today lands on the right list and a reload keeps it. Every source loads on its own; a task just marked done stays
-// in its list while it leaves.
+// in its list while it leaves. Select (?select=1) chooses several tasks to mark done, move or delete at once (guide 4.7).
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,14 +11,15 @@ import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/
 import PageHeader from "@/desk/PageHeader";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import QuickCapture from "@/features/today/QuickCapture";
-import { failureMessage, useConnection } from "@/lib/connection";
+import { assertOnline, failureMessage, useConnection } from "@/lib/connection";
 import { plural } from "@/lib/dates";
 import { groupNavItems, navCounts } from "@/lib/deskNav";
-import type { Kind } from "@/lib/kinds";
+import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
 import type { TaskSortKey } from "@/lib/taskQueries";
-import { addTask, setTasksDone } from "@/lib/taskWrites";
+import { chosenIds, headState, movedMessage, NO_SELECTION, selectAllOffer, selectedLine, toggleChosen, toggleHead, type Selection } from "@/lib/taskSelection";
+import { addTask, deleteTasks, moveTasksToGroup, setTasksDone } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
@@ -30,11 +31,13 @@ import Segmented from "@/ui/Segmented";
 import { LoadingLine, SkeletonRow } from "@/ui/Skeleton";
 import { useToast } from "@/ui/Toaster";
 import { useMediaQuery } from "@/ui/useMediaQuery";
+import { hasAnyLayer } from "@/ui/overlayStack";
 import { useToday } from "@/ui/useToday";
 import { useOverParam } from "@/desk/useOverParam";
 import GroupChips from "./GroupChips";
 import GroupDialog from "./GroupDialog";
 import GroupTools from "./GroupTools";
+import SelectionBar, { type BulkAction } from "./SelectionBar";
 import TaskFilters from "./TaskFilters";
 import TaskList from "./TaskList";
 import { useDetailsShown } from "./useDetailsShown";
@@ -78,6 +81,23 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
     const next = change(parseTaskView(current, inGroup));
     const query = viewParams(next, inGroup, current).toString();
     window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+  }
+
+  // Selecting several is in the address too (?select=1), so a reload keeps it; what's ticked is not.
+  const selecting = search.has("select");
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
+  const [bulkBusy, setBulkBusy] = useState<BulkAction | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [groupForMove, setGroupForMove] = useState(false);
+  const selectButton = useRef<HTMLButtonElement>(null);
+  function setSelecting(on: boolean) {
+    const current = new URLSearchParams(window.location.search);
+    if (on) current.set("select", "1");
+    else current.delete("select");
+    const query = current.toString();
+    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    setSelection(NO_SELECTION);
+    if (!on) selectButton.current?.focus();
   }
 
   // Search is typed as you go, and the address follows 180ms later. What's typed is never replaced by an older address.
@@ -142,6 +162,10 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
   const sort = effectiveSort(state, inGroup);
   const shownTasks = useMemo(() => (listing ? listing.sorted.slice(0, limit).map((t) => live.get(t.id) ?? t) : []), [listing, limit, live]);
   const hidden = listing ? listing.sorted.length - shownTasks.length : 0;
+  const listIds = useMemo(() => (listing ? listing.sorted.map((t) => t.id) : []), [listing]);
+  const shownIds = useMemo(() => shownTasks.map((t) => t.id), [shownTasks]);
+  const chosen = useMemo(() => chosenIds(selection, listIds), [selection, listIds]);
+  const chosenSet = useMemo(() => new Set(chosen), [chosen]);
 
   const groupItems = useMemo(() => groupNavItems(groups.rows, tasks.rows, byId), [groups.rows, tasks.rows, byId]);
   const groupLooks = useMemo(() => new Map<string, GroupLook>(groupItems.map((g) => [g.name, { badge: g.badge, hue: g.hue }])), [groupItems]);
@@ -175,6 +199,104 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
       stopLeaving(task.id);
       toast(failureMessage(err, `The task couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
     }
+  }
+
+  // Esc stops selecting, once every menu, sheet and dialog over the screen is closed.
+  const stopRef = useRef(() => setSelecting(false));
+  useEffect(() => {
+    stopRef.current = () => setSelecting(false);
+  });
+  useEffect(() => {
+    if (!selecting) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || hasAnyLayer() || bulkBusy) return;
+      stopRef.current();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selecting, bulkBusy]);
+
+  // The chosen tasks as they are now. Writes go in batches of 450 (lib/batches), so "Select all" can reach thousands.
+  const chosenTasks = () => chosen.map((id) => live.get(id)).filter((t): t is Task => !!t);
+  const internalChosen = useMemo(() => {
+    const isInternal = (id: string) => {
+      const t = live.get(id);
+      return !!t && kindOfTask(t, byId) === "internal";
+    };
+    return chosen.filter(isInternal).length;
+  }, [chosen, live, byId]);
+
+  async function bulk(action: BulkAction, run: () => Promise<void>) {
+    setBulkBusy(action);
+    try {
+      await run();
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  function bulkDone() {
+    const picked = chosenTasks();
+    const done = !finished;
+    void bulk(done ? "done" : "reopen", async () => {
+      try {
+        const undo = await setTasksDone(picked, done);
+        setSelecting(false);
+        toast(done ? `${plural(picked.length, "task")} marked done` : `${plural(picked.length, "task")} moved back to open tasks`, {
+          action: "Undo",
+          onAction: () => undo().catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+        });
+      } catch (err) {
+        toast(failureMessage(err, `The tasks couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
+      }
+    });
+  }
+
+  async function moveChosen(groupName: string | null, made?: boolean) {
+    const picked = chosenTasks();
+    const { skipped, undo } = await moveTasksToGroup(picked, groupName, byId);
+    setSelecting(false);
+    const count = picked.length - skipped;
+    const message = made ? `Group “${groupName}” created, and ${plural(count, "task")} moved into it` : movedMessage(count, groupName, skipped);
+    toast(message, {
+      action: "Undo",
+      onAction: () => undo().catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+    });
+  }
+
+  function bulkMove(groupName: string | null) {
+    void bulk("move", async () => {
+      try {
+        await moveChosen(groupName);
+      } catch (err) {
+        toast(failureMessage(err, "The tasks couldn't be moved. Check your connection and try again."), { error: true });
+      }
+    });
+  }
+
+  // With no connection the refusal comes first, rather than after a confirmation that can't be carried out.
+  function askToDelete() {
+    try {
+      assertOnline(`No connection. The ${chosen.length === 1 ? "task wasn't" : "tasks weren't"} deleted.`);
+      setConfirmingDelete(true);
+    } catch (err) {
+      toast(failureMessage(err, "The tasks couldn't be deleted."), { error: true });
+    }
+  }
+
+  function bulkDelete() {
+    const picked = chosenTasks();
+    void bulk("delete", async () => {
+      try {
+        await deleteTasks(picked.map((t) => t.id));
+        setConfirmingDelete(false);
+        setSelecting(false);
+        toast(`${plural(picked.length, "task")} deleted`);
+      } catch (err) {
+        setConfirmingDelete(false);
+        toast(failureMessage(err, "The tasks couldn't be deleted. Check your connection and try again."), { error: true });
+      }
+    });
   }
 
   // A sentence is a task: internal work, in this group when there is one. "Add details" opens it over this screen.
@@ -333,6 +455,16 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
           onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
           onToggleDone={toggleDone}
           onMore={() => setExtra({ key: viewKey, rows: (extra.key === viewKey ? extra.rows : 0) + PAGE_SIZE })}
+          selecting={
+            selecting
+              ? {
+                  head: headState(selection, shownIds, listIds),
+                  chosen: chosenSet,
+                  onHead: () => setSelection((now) => toggleHead(now, shownIds, listIds)),
+                  onToggle: (id) => setSelection((now) => toggleChosen(now, id, listIds)),
+                }
+              : undefined
+          }
         />
       </>
     );
@@ -378,12 +510,73 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
         />
       </div>
       <section className={styles.panel} aria-label={group?.name ?? "Tasks"}>
-        {ready && <TaskFilters state={state} inGroup={inGroup} sort={sort} shown={columns} onState={(next) => update(() => next)} onShown={setColumns} />}
-        {ready && !finished && (
+        {ready && (
+          <TaskFilters
+            state={state}
+            inGroup={inGroup}
+            sort={sort}
+            shown={columns}
+            onState={(next) => update(() => next)}
+            onShown={setColumns}
+            selecting={selecting}
+            onSelecting={() => setSelecting(!selecting)}
+            selectRef={selectButton}
+          />
+        )}
+        {ready && !finished && !selecting && (
           <QuickCapture id="capture" label="New task" placeholder={group ? `Add a task to ${group.name}` : undefined} onAdd={capture} />
         )}
         {body}
       </section>
+      {selecting && listing && (
+        <>
+          <div className={styles.barRoom} aria-hidden="true" />
+          <SelectionBar
+            line={selectedLine(chosen.length, selection.all)}
+            offer={selectAllOffer(chosen.length, selection.all, listIds.length)}
+            chosen={chosen.length}
+            finished={finished}
+            busy={bulkBusy}
+            groups={groupItems}
+            internal={internalChosen}
+            onSelectAll={() => setSelection({ ids: new Set(), all: true })}
+            onDone={bulkDone}
+            onMove={bulkMove}
+            onNewGroup={() => setGroupForMove(true)}
+            onDelete={askToDelete}
+            onStop={() => setSelecting(false)}
+          />
+        </>
+      )}
+      <Confirm
+        open={confirmingDelete && chosen.length > 0}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={bulkDelete}
+        title={`Delete ${plural(chosen.length, "task")}?`}
+        quote={chosen.length === 1 ? live.get(chosen[0])?.task : undefined}
+        confirmLabel={`Delete ${plural(chosen.length, "task")}`}
+        busy={bulkBusy === "delete"}
+        busyLabel="Deleting…"
+      >
+        {chosen.length === 1 ? "It" : "They"} will be removed for everyone on the team.
+      </Confirm>
+      {groupForMove && (
+        <GroupDialog
+          groups={groups.rows}
+          tasks={tasks.rows}
+          onClose={() => setGroupForMove(false)}
+          onCreated={(_id, name) => {
+            setGroupForMove(false);
+            void bulk("move", async () => {
+              try {
+                await moveChosen(name, true);
+              } catch (err) {
+                toast(failureMessage(err, `Group “${name}” was created, but the tasks couldn't be moved. Check your connection and try again.`), { error: true });
+              }
+            });
+          }}
+        />
+      )}
 
       {newGroup.open && (
         <GroupDialog

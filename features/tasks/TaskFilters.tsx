@@ -1,8 +1,9 @@
 "use client";
 
 // The filters, sort and details shown above the list (guide 6.2, 4.3, 5.6). A filter that's on shows its value and a
-// round × that clears it. Sort and Finished always have a choice, so they show it without being "on".
-import { useRef, useState } from "react";
+// round × that clears it. Sort and Finished always have a choice, so they show it without being "on". Select, beside
+// Details shown, turns selecting several on and off (guide 4.7).
+import { useRef, useState, type Ref } from "react";
 import { COLUMNS, DEFAULT_COLUMNS, toggleColumn, type ColumnId } from "@/lib/taskColumns";
 import type { SortDir, TaskSortKey } from "@/lib/taskQueries";
 import {
@@ -15,7 +16,7 @@ import {
   type TaskViewState,
 } from "@/lib/taskView";
 import { TASK_TYPES, type TaskType } from "@/lib/types";
-import FilterButton from "@/ui/FilterButton";
+import FilterButton, { FilterToggle } from "@/ui/FilterButton";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuNumber, MenuSeparator } from "@/ui/Menu";
 import styles from "./Tasks.module.css";
 
@@ -32,9 +33,12 @@ interface TaskFiltersProps {
   shown: ColumnId[];
   onState: (next: TaskViewState) => void;
   onShown: (shown: ColumnId[]) => void;
+  selecting: boolean;
+  onSelecting: () => void;
+  selectRef?: Ref<HTMLButtonElement>; // gets focus back when selecting stops
 }
 
-export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown }: TaskFiltersProps) {
+export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown, selecting, onSelecting, selectRef }: TaskFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const dueRef = useRef<HTMLButtonElement>(null);
   const rangeRef = useRef<HTMLButtonElement>(null);
@@ -86,6 +90,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
       )}
       <FilterButton ref={sortRef} icon="sort" label="Sort" summary={sortSummary(sort.key, sort.dir)} expanded={open === "sort"} onClick={() => toggle("sort")} />
       <span className={styles.spacer} />
+      <FilterToggle ref={selectRef} icon="checks" label={selecting ? "Selecting" : "Select"} pressed={selecting} onClick={onSelecting} />
       <FilterButton ref={detailsRef} icon="cols" label="Details shown" expanded={open === "details"} onClick={() => toggle("details")} />
 
       <Menu open={open === "due"} anchorRef={dueRef} onClose={close} label="Due">

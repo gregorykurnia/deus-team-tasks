@@ -30,6 +30,11 @@ export function hasLayer(kind: LayerKind): boolean {
   return stack.some((l) => l.kind === kind);
 }
 
+// Anything open at all: a screen's own Esc (stop selecting) waits until every overlay is closed.
+export function hasAnyLayer(): boolean {
+  return stack.length > 0;
+}
+
 export function lockCount(): number {
   return stack.filter((l) => l.lock).length;
 }

@@ -23,6 +23,11 @@
     border: 1px solid var(--glass-line);
     box-shadow: var(--shadow);
   }
+
+  /* The selection bar takes its place while selecting several tasks (guide 4.7). */
+  :global(body[data-selecting]) .tabbar {
+    display: none;
+  }
 }
 
 .tab {

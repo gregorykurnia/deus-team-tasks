@@ -119,6 +119,18 @@
   font-weight: var(--w-semibold);
 }
 
+/* Room under the list for the selection bar, so it never covers the last row or "Show 100 more". Phones already keep
+   room for the tab bar, whose place it takes. */
+.barRoom {
+  height: 72px;
+}
+
+@media (max-width: 900px) {
+  .barRoom {
+    display: none;
+  }
+}
+
 /* ---------- A task group's header ---------- */
 .star {
   display: grid;

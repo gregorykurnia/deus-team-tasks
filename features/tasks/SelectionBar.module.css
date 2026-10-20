@@ -1,0 +1,135 @@
+/* The selection bar (guide 4.7). Values are the prototype's (assets/app.css, "Selecting several"), taken from the tokens. */
+
+.bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: var(--z-selbar);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+  padding: 8px 8px 8px 22px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(47, 107, 234, 0.25), var(--shadow-pop);
+  transform: translateX(-50%);
+  animation: bar-in var(--dur-fade) var(--ease-out);
+}
+
+.count {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+.count b {
+  font-weight: var(--w-heavy);
+  font-variant-numeric: var(--num);
+}
+
+.all {
+  color: var(--blue-ink);
+  font-weight: var(--w-bold);
+}
+
+.all:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.action:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+.action:disabled {
+  opacity: 0.4;
+}
+
+.red {
+  color: var(--red);
+}
+
+.red:hover:not(:disabled, [aria-disabled="true"]) {
+  color: var(--red);
+}
+
+/* A group in the move menu: its badge, then its name on one line. */
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.groupName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phones (900px and under, where the tab bar shows): full width in the tab bar's place, the actions under the count. */
+@media (max-width: 900px) {
+  .bar {
+    right: 12px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 12px;
+    flex-wrap: wrap;
+    width: auto;
+    max-width: none;
+    padding: 10px 8px 8px 18px;
+    border-radius: 26px;
+    transform: none;
+  }
+
+  .count {
+    flex: 1;
+  }
+
+  .actions {
+    flex-basis: 100%;
+    order: 3;
+    justify-content: space-between;
+    padding-top: 6px;
+    border-top: 1px solid var(--hair);
+  }
+
+  .action {
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    height: auto;
+    padding: 6px 4px;
+    border-radius: 16px;
+    font-size: 11.5px;
+  }
+}
+
+@keyframes bar-in {
+  from {
+    opacity: 0;
+  }
+}
