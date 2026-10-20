@@ -65,7 +65,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Step 5b: design guide approved, versioned and imported (v1.0, D-025; imported 2026-10-20, d192070) — you approve, then **Haiku 5.5 High** · Claude on `<base>`
 
 **Implementation plan (sees repo and approved design)**
-- [ ] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop — **Opus 5.5 High** · Agent C
+- [x] Step 6: `ui-implementation-plan.md` with screen and component map, UI surfaces checklist and task table (model per task); gaps sent through the design-gap loop (2026-10-20; N1–N3 open in `needs.md`, Q1–Q8 for you in its §7) — **Opus 5.5 High** · Agent C
 - [ ] Plan approved — you
 
 **Rebuild (on `redesign`)**
