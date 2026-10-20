@@ -2,7 +2,7 @@
 
 | Stage | Status |
 |---|---|
-| 1. Three directions | Built: `a-calm-list`, `b-command`, `c-day-strip`. Waiting for `./shoot` and the owner's pick. |
+| 1. Three directions | Round 1 (A, B, C) rejected as too plain, see D-002; kept in `round-1/`. Round 2 built: `d-glass`, `e-tide`, `f-bento`. Waiting for `./shoot` and the owner's pick. |
 | 2. Full prototype | Not started |
 | 3. Design guide | Not started |
 | 4. Coverage | Not started |
