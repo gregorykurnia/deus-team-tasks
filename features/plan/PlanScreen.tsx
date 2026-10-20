@@ -1,9 +1,9 @@
 "use client";
 
 // Plan (guide 6.4): the coming weeks as a timeline (opens first), a month, one day, and who carries what. The view lives in
-// the address, so a link from Today lands on the right day and a reload keeps it. The Timeline, Month and Day are built;
-// People follows (3.7) and says so until it does. Every source loads on its own: tasks can show while the team calendar
-// is still loading, and the reverse.
+// the address, so a link from Today lands on the right day and a reload keeps it. People ranks who carries what and opens
+// one person's page. Every source loads on its own: tasks can show while the team calendar is still loading, and the
+// reverse.
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { over } from "@/desk/areas";
@@ -27,7 +27,7 @@ import {
   TIMELINE_DAYS,
   type PlanState,
 } from "@/lib/planView";
-import { isPerson } from "@/lib/people";
+import { isPerson, namesInUse } from "@/lib/people";
 import { setTasksDone } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
@@ -38,6 +38,7 @@ import { useToast } from "@/ui/Toaster";
 import { useToday } from "@/ui/useToday";
 import DayView from "./DayView";
 import MonthView from "./MonthView";
+import PeopleView from "./PeopleView";
 import PlanBar, { SMALL_SCREEN } from "./PlanBar";
 import PlanTools from "./PlanTools";
 import Timeline from "./Timeline";
@@ -142,6 +143,12 @@ export default function PlanScreen() {
   const people = useMemo(
     () => loadPerPerson(open, today ?? undefined).filter((p) => isPerson(p.name)).map((p) => ({ name: p.name, owned: p.owned })).sort((a, b) => a.name.localeCompare(b.name)),
     [open, today]
+  );
+  // People counts everyone named on a task, narrowed by Work only: a Person in the address is the page that opens.
+  const names = useMemo(() => namesInUse(tasks.rows), [tasks.rows]);
+  const peopleTasks = useMemo(
+    () => (ready && state.view === "people" ? planTasks(listed, { ...state, person: null }, byId) : []),
+    [ready, state, listed, byId]
   );
   const groupItems = useMemo(() => groupNavItems(groups.rows, tasks.rows, byId), [groups.rows, tasks.rows, byId]);
 
@@ -273,20 +280,24 @@ export default function PlanScreen() {
           onToggleDone={markDone}
           onClearFilters={clearFilters}
         />
-      ) : (
-        <section className={styles.panel} aria-label={state.view === "timeline" ? "Timeline" : state.view}>
-          {tools}
-          {today && (
-            <div className={styles.note}>
-              <div>
-                <Notice tone="info" title="People isn't built yet.">
-                  It arrives in the next step of the rebuild. The Timeline, Month and Day work now.
-                </Notice>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
+      ) : state.view === "people" && today ? (
+        <PeopleView
+          state={state}
+          today={today}
+          names={names}
+          tasks={peopleTasks}
+          loading={!ready}
+          tools={tools}
+          companies={byId}
+          leaving={leaving}
+          filtersOn={!!(state.kind || state.group)}
+          personHref={(name) => hrefFor({ ...state, view: "people", person: name })}
+          viewHref={(view, person) => hrefFor({ ...state, view, person, date: null })}
+          taskHref={taskHref}
+          onToggleDone={markDone}
+          onClearFilters={clearFilters}
+        />
+      ) : null}
     </>
   );
 }

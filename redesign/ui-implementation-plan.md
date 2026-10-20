@@ -164,7 +164,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 3.4 | Selecting several tasks (select all, bulk done/move/delete, Undo) | Opus 5.5 High | 2026-10-20 · this commit (`?select=1` replaces the address, no Back step; the head box ticks the rows shown) |
 | 3.5 | Plan: bar, filters, stepper, Timeline | Sonnet 5.5 High | 2026-10-20 · this commit (the view lives in the address; Month, Day and People say they aren't built until 3.6 and 3.7; bars run from the kind's ink to its colour so white words keep their contrast) |
 | 3.6 | Plan: Month and Day | Sonnet 5.5 High | 2026-10-20 · this commit (Month and Day share one ten-week run of events; Day lands in Plan, so Today and the stepper agree; People still says it isn't built until 3.7) |
-| 3.7 | Plan: People and one person | Sonnet 5.5 High | |
+| 3.7 | Plan: People and one person | Sonnet 5.5 High | 2026-10-20 · this commit (the ranking counts everyone named on any task, Work narrows it; Plan's four views are all built) |
 | 3.8 | Companies: tiles, where to act, filters, sort, search, list | Sonnet 5.5 High | |
 | 3.9 | Companies: editing in place, record, new, move, follow-up task, delete | Opus 5.5 High | |
 | 3.10 | Companies: fields sheet, options dialog, export | Opus 5.5 High | |

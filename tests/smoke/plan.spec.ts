@@ -1,6 +1,6 @@
-// Plan (tasks 3.5 and 3.6, guide 6.4, 4.12): the Timeline's bars by person with diamonds and fading bars, the summary, the
-// team calendar's counts, the Work, Person and Rows filters and the stepper; then Month and Day. Only marking a task done
-// from the Day view writes data.
+// Plan (tasks 3.5 to 3.7, guide 6.4, 4.12): the Timeline's bars by person with diamonds and fading bars, the summary, the
+// team calendar's counts, the Work, Person and Rows filters and the stepper; then Month, Day and People (task 3.7). Only
+// marking a task done from the Day view or a person's page writes data.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedTasks, storedById, task } from "./data";
@@ -167,11 +167,6 @@ test("D5: a link with a date and no view opens the Day view on that day", async 
   await page.goto(`/plan?date=${isoDay(2)}`);
   await expect(page.getByRole("group", { name: "View" }).getByRole("button", { name: "Day" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Tasks" }).getByRole("link", { name: "Due then" })).toBeVisible();
-});
-
-test("People still says it isn't built", async ({ page }) => {
-  await page.goto("/plan?view=people");
-  await expect(page.getByText("People isn't built yet.")).toBeVisible();
 });
 
 // ---------- Month ----------
@@ -350,5 +345,120 @@ test.describe("Day (D4, D5, D9)", () => {
     await expect(page.getByRole("button", { name: /^Next with something: / })).toBeVisible();
     await page.getByRole("button", { name: /^\d+ \w+$/ }).first().click();
     await expect(tasksPanel(page).getByRole("link", { name: "Due now" })).toBeVisible();
+  });
+});
+
+// ---------- People ----------
+
+const people = (page: Page) => page.getByRole("region", { name: "People" });
+
+test.describe("People (D1, D6)", () => {
+  test("ranks everyone by what they own, with the words for each bar, and a name opens their page", async ({ page, isMobile }) => {
+    await seedTasks([
+      task("a", { task: "Write the proposal", responsible: [MAYA], endDate: isoDay(2) }),
+      task("b", { task: "Send the quote", responsible: [MAYA], endDate: isoDay(-2) }),
+      task("c", { task: "Order chairs", responsible: [KEVIN], informed: [{ name: MAYA, note: "backup" }] }),
+      task("d", { task: "Done long ago", responsible: ["Nadia Putri"], completed: true }),
+    ]);
+    await page.goto("/plan?view=people");
+    await expect(page.getByRole("heading", { level: 1, name: "Plan" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "View" }).getByRole("button", { name: "People" })).toHaveAttribute("aria-pressed", "true");
+    const list = people(page);
+    const rows = list.getByRole("link");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0)).toContainText("Maya Chen");
+    await expect(rows.nth(0)).toContainText("Owns 2, kept informed on 1, 1 overdue");
+    await expect(rows.nth(0).getByRole("img", { name: "Owns 2, kept informed on 1" })).toBeVisible();
+    if (!isMobile) await expect(rows.nth(0).getByRole("img", { name: "1 deadline in the next two weeks" })).toBeAttached(); // phones drop the sparkline
+    await expect(rows.nth(1)).toContainText("Kevin Tan");
+    await expect(rows.nth(1)).toContainText("No deadlines");
+    await expect(rows.nth(2)).toContainText("Nothing open");
+    await expect(list.getByRole("searchbox", { name: "Find a person" })).toHaveCount(0); // only with more than eight people
+    await rows.nth(0).click();
+    await expect(page).toHaveURL("/plan?view=people&person=Maya+Chen");
+  });
+
+  test("a person's page has their figures, what they own, and what they're kept informed on with their part", async ({ page }) => {
+    await seedTasks([
+      task("a", { task: "Write the proposal", responsible: [MAYA], endDate: isoDay(2) }),
+      task("b", { task: "Send the quote", responsible: [MAYA], endDate: isoDay(-2) }),
+      task("c", { task: "Order chairs", responsible: [KEVIN], informed: [{ name: MAYA, note: "backup" }] }),
+      task("d", { task: "Review the plan", responsible: [KEVIN], informed: [{ name: MAYA }] }),
+    ]);
+    await page.goto("/plan?view=people&person=Maya+Chen");
+    await expect(page.getByRole("heading", { level: 2, name: "Maya Chen" })).toBeVisible();
+    await expect(page.getByText("Responsible for 2 open tasks and kept informed on 2.")).toBeVisible();
+    const figure = (label: string) => page.getByText(label, { exact: true }).locator("xpath=preceding-sibling::b");
+    await expect(figure("Owned")).toHaveText("2");
+    await expect(figure("Kept informed")).toHaveText("2");
+    await expect(figure("Due in 2 weeks")).toHaveText("1");
+    await expect(figure("Overdue")).toHaveText("1");
+    const owns = page.getByRole("region", { name: "Responsible for" });
+    await expect(owns.getByRole("link", { name: "Send the quote" })).toBeVisible();
+    await expect(owns.getByRole("link", { name: "Write the proposal" })).toBeVisible();
+    const informed = page.getByRole("region", { name: "Kept informed on" });
+    await expect(informed.getByText("Their part: backup")).toBeVisible();
+    await expect(informed.getByText("Kept informed, with no note on their part")).toBeVisible();
+
+    await page.getByRole("link", { name: "On the timeline" }).click();
+    await expect(page).toHaveURL("/plan?person=Maya+Chen");
+    await page.goBack();
+    await page.getByRole("link", { name: "Their day" }).click();
+    await expect(page).toHaveURL(/\/plan\?view=day&person=Maya\+Chen/);
+    await page.goBack();
+    await page.getByRole("link", { name: "Everyone" }).click();
+    await expect(page).toHaveURL("/plan?view=people");
+  });
+
+  test("a person with nothing open says so, and a task opens over their page", async ({ page }) => {
+    await seedTasks([task("d", { task: "Done long ago", responsible: ["Nadia Putri"], completed: true }), task("a", { task: "Write the proposal", responsible: [MAYA] })]);
+    await page.goto("/plan?view=people&person=Nadia+Putri");
+    await expect(page.getByRole("heading", { name: "Nothing open for Nadia Putri" })).toBeVisible();
+    await expect(page.getByText("Nadia isn't responsible for any open task and isn't kept informed on any.")).toBeVisible();
+    await page.getByRole("link", { name: "Everyone" }).last().click();
+    await expect(page).toHaveURL("/plan?view=people");
+    await people(page).getByRole("link", { name: /Maya Chen/ }).click();
+    await page.getByRole("region", { name: "Responsible for" }).getByRole("link", { name: "Write the proposal" }).click();
+    await expect(page).toHaveURL(/task=a/);
+    await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
+  });
+
+  test("a search finds people once there are more than eight, and Work narrows the counts", async ({ page }) => {
+    await seedCompanies([company(1, { company: "Pelita Foods", status: "Active" })]);
+    await seedTasks([
+      task("c1", { task: "Chase Pelita", responsible: [MAYA], endDate: isoDay(3), linkedClientId: 1 }),
+      task("i1", { task: "Order chairs", responsible: [MAYA] }),
+      ...Array.from({ length: 8 }, (_, i) => task(`p${i}`, { responsible: [`Person Number${i}`] })),
+    ]);
+    await page.goto("/plan?view=people");
+    const list = people(page);
+    await expect(list.getByRole("link")).toHaveCount(9);
+    const search = list.getByRole("searchbox", { name: "Find a person" });
+    await search.fill("number3");
+    await expect(list.getByRole("link")).toHaveCount(1);
+    await search.fill("zzz");
+    await expect(list.getByRole("heading", { name: "Nobody matches “zzz”" })).toBeVisible();
+    await search.fill("");
+
+    await page.getByRole("toolbar", { name: "Narrow the plan" }).getByRole("button", { name: "Work" }).click();
+    await page.getByRole("menuitemradio", { name: "Prospects" }).click();
+    await expect(page).toHaveURL("/plan?view=people&kind=prospect");
+    await expect(list.getByRole("link", { name: /Maya Chen/ })).toContainText("Owns 1");
+    await expect(list.getByText("Counting prospect work only.")).toBeVisible();
+    await list.getByRole("button", { name: "Clear filter" }).click();
+    await expect(list.getByRole("link", { name: /Maya Chen/ })).toContainText("Owns 2");
+  });
+
+  test("the done circle on a person's page marks the task done, and Undo brings it back", async ({ page }) => {
+    await seedTasks([task("t1", { task: "Order the new chairs", responsible: [MAYA], endDate: isoDay(1) })]);
+    await page.goto("/plan?view=people&person=Maya+Chen");
+    await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+    const owns = page.getByRole("region", { name: "Responsible for" });
+    await owns.getByRole("button", { name: "Mark done: Order the new chairs" }).click();
+    await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(true);
+    await expect(owns.getByText("Order the new chairs")).toHaveCount(0);
+    await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
+    await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(false);
+    await expect(owns.getByText("Order the new chairs")).toBeVisible();
   });
 });
