@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { HistoricalClient } from "./historicalClientTypes";
-
-const COLLECTION = "historicalClients";
+import { PAST_CLIENTS } from "./pastClientWrites";
 
 export function useHistoricalClients() {
   const [clients, setClients] = useState<HistoricalClient[]>([]);
@@ -13,9 +12,9 @@ export function useHistoricalClients() {
 
   useEffect(() => {
     return onSnapshot(
-      collection(clientsDb, COLLECTION),
+      collection(clientsDb, PAST_CLIENTS),
       (snapshot) => {
-        setClients(snapshot.docs.map((item) => item.data() as HistoricalClient));
+        setClients(snapshot.docs.map((item) => ({ ...(item.data() as HistoricalClient), id: item.id })));
         setLoading(false);
       },
       (error) => {
@@ -25,18 +24,5 @@ export function useHistoricalClients() {
     );
   }, []);
 
-  async function addClient(input: Omit<HistoricalClient, "id" | "createdAt">) {
-    const client: HistoricalClient = { ...input, id: crypto.randomUUID(), createdAt: Date.now() };
-    await setDoc(doc(clientsDb, COLLECTION, client.id), client);
-  }
-
-  async function updateClient(id: string, patch: Partial<Omit<HistoricalClient, "id" | "createdAt">>) {
-    await updateDoc(doc(clientsDb, COLLECTION, id), patch);
-  }
-
-  async function deleteClient(id: string) {
-    await deleteDoc(doc(clientsDb, COLLECTION, id));
-  }
-
-  return { clients, loading, addClient, updateClient, deleteClient };
+  return { clients, loading };
 }

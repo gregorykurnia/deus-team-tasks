@@ -18,6 +18,14 @@ import { colorFor } from "@/lib/colors";
 import { downloadCsv } from "@/lib/exportCsv";
 import { ClientTextPopup } from "./clients/ClientTextPopup";
 import { HistoricalClientDialog, MoveClientDialog } from "./clients/HistoricalClientDialogs";
+import {
+  addPastClient,
+  deletePastClient,
+  movePastClient,
+  renamePastClient,
+  setCounted,
+  setPastClientSector,
+} from "@/lib/pastClientWrites";
 
 type Dialog = { kind: "addHead" } | { kind: "addSub"; head: HistoricalClient } | { kind: "move"; sub: HistoricalClient };
 
@@ -82,7 +90,7 @@ const ACTION_BUTTON = "w-[30px] h-[30px] flex items-center justify-center rounde
 const DELETE_BUTTON = "w-[30px] h-[30px] flex items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-700";
 
 export function ClientsHistoricalTab() {
-  const { clients, loading, addClient, updateClient, deleteClient } = useHistoricalClients();
+  const { clients, loading } = useHistoricalClients();
   const [search, setSearch] = useState("");
   // Heads start expanded. This set holds only the heads the user has collapsed.
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
@@ -146,7 +154,7 @@ export function ClientsHistoricalTab() {
   }
 
   // Runs a Firestore write. Shows a toast and returns false if it fails.
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<unknown>) {
     try {
       await action();
       return true;
@@ -161,12 +169,12 @@ export function ClientsHistoricalTab() {
     const trimmed = value.trim();
     if (target.field === "name") {
       if (!trimmed || trimmed === target.client.name) return;
-      await run(() => updateClient(target.client.id, { name: trimmed }));
+      await run(() => renamePastClient(target.client, trimmed));
       return;
     }
     const next = canonicalSector(trimmed, labels);
     if (next === (target.client.sector ?? null)) return;
-    await run(() => updateClient(target.client.id, { sector: next }));
+    await run(() => setPastClientSector(target.client, trimmed, labels));
   }
 
   function openPopup(client: HistoricalClient, field: Popup["field"], el: HTMLElement) {
@@ -179,12 +187,12 @@ export function ClientsHistoricalTab() {
       return;
     }
     if (!window.confirm(`Delete "${group.head.name}"?`)) return;
-    await run(() => deleteClient(group.head.id));
+    await run(() => deletePastClient(group.head, clients));
   }
 
   async function removeSub(sub: HistoricalClient) {
     if (!window.confirm(`Delete "${sub.name}"?`)) return;
-    await run(() => deleteClient(sub.id));
+    await run(() => deletePastClient(sub, clients));
   }
 
   function exportCsv() {
@@ -350,7 +358,7 @@ export function ClientsHistoricalTab() {
                     <input
                       type="checkbox"
                       checked={head.countHead}
-                      onChange={() => run(() => updateClient(head.id, { countHead: !head.countHead }))}
+                      onChange={() => run(() => setCounted(head, !head.countHead))}
                       aria-label={`Count ${head.name} in total`}
                       className="h-4 w-4 accent-accent cursor-pointer"
                     />
@@ -469,7 +477,7 @@ export function ClientsHistoricalTab() {
           onClose={() => setDialog(null)}
           onSave={async (values) => {
             const saved = await run(() =>
-              addClient({
+              addPastClient({
                 name: values.name,
                 parentId: null,
                 sector: canonicalSector(values.sector, labels),
@@ -489,7 +497,7 @@ export function ClientsHistoricalTab() {
           onClose={() => setDialog(null)}
           onSave={async (values) => {
             const saved = await run(() =>
-              addClient({ name: values.name, parentId: dialog.head.id, sector: null, countHead: true })
+              addPastClient({ name: values.name, parentId: dialog.head.id, sector: null, countHead: true })
             );
             if (saved) setDialog(null);
           }}
@@ -502,7 +510,7 @@ export function ClientsHistoricalTab() {
           heads={groups.map((group) => group.head).filter((head) => head.id !== dialog.sub.parentId)}
           onClose={() => setDialog(null)}
           onSave={async (headId) => {
-            const saved = await run(() => updateClient(dialog.sub.id, { parentId: headId }));
+            const saved = await run(() => movePastClient(dialog.sub, headId));
             if (saved) setDialog(null);
           }}
         />

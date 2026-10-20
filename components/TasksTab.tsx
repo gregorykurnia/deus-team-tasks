@@ -9,6 +9,7 @@ import { PipelineEntry } from "@/lib/clientTypes";
 import { companiesById, tasksOfKind, type Kind } from "@/lib/kinds";
 import { filterTasks, sortTasks, type TaskSortKey } from "@/lib/taskQueries";
 import { createTaskGroup, deleteTaskGroup, groupNameProblem, groupNamesInUse, setGroupStarred } from "@/lib/taskGroups";
+import { saveTaskKeptInStep, updateCompanyKeptInStep } from "@/lib/companyWrites";
 import { Chip } from "./Chip";
 import { TaskModal } from "./TaskModal";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
@@ -219,7 +220,7 @@ export function TasksTab({
   const [groupError, setGroupError] = useState<string | null>(null);
   const { groupDocs, starredGroups } = useTaskGroups();
 
-  const { entries, saveEntry } = useClientPipeline();
+  const { entries } = useClientPipeline();
   const fieldOptions = useMemo(() => loadFieldOptions(), []);
   const entryById = useMemo(() => companiesById(entries), [entries]);
 
@@ -816,13 +817,8 @@ export function TasksTab({
           }
           onClose={() => setEditing(null)}
           onSave={(t) => {
-            onUpdate(editing.id, t);
-            if (t.linkedClientId != null) {
-              const linkedEntry = entryById.get(t.linkedClientId);
-              if (linkedEntry && (linkedEntry.date !== t.lastActionDate || linkedEntry.target !== t.endDate)) {
-                saveEntry({ ...linkedEntry, date: t.lastActionDate ?? linkedEntry.date, target: t.endDate || linkedEntry.target });
-              }
-            }
+            // A company task's dates reach its company, and its other open tasks (B12).
+            void saveTaskKeptInStep(editing, t, entryById, allTasks);
             setEditing(null);
           }}
           onDelete={() => {
@@ -850,7 +846,7 @@ export function TasksTab({
           prefill={null}
           fieldOptions={fieldOptions}
           onSave={async (patch) => {
-            await saveEntry({ ...openClientRow, ...patch } as PipelineEntry);
+            await updateCompanyKeptInStep(openClientRow, patch, allTasks);
             setOpenClientRow(null);
           }}
           onClose={() => setOpenClientRow(null)}

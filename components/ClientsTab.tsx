@@ -6,7 +6,7 @@ import { useTasks } from "@/lib/useTasks";
 import { KNOWN_NAMES } from "@/lib/types";
 import { namesInUse } from "@/lib/people";
 import { loadColConfig, loadFieldOptions, saveColConfig, saveFieldOptions } from "@/lib/clientLocalConfig";
-import { BUILTIN_COLS, ColumnDef, ColumnType, FIELD_TITLES, PipelineEntry, PipelineTab, PRIO_ORDER, TableKey } from "@/lib/clientTypes";
+import { BUILTIN_COLS, ColumnDef, ColumnType, FIELD_TITLES, PipelineEntry, PipelineTab, TableKey } from "@/lib/clientTypes";
 import { daysSince } from "@/lib/clientHelpers";
 import { ClientTable } from "./clients/ClientTable";
 import { ClientEntryModal } from "./clients/ClientEntryModal";
@@ -17,8 +17,10 @@ import { ClientDropdownPopup } from "./clients/ClientDropdownPopup";
 import { ClientMovePopup } from "./clients/ClientMovePopup";
 import { ClientColumnManager } from "./clients/ClientColumnManager";
 import { useProspectJournal } from "@/lib/useProspectJournal";
-import { createEmptyProspectJournalEntry } from "@/lib/prospectJournalTypes";
 import { downloadCsv } from "@/lib/exportCsv";
+import { addCompany, deleteCompany, moveCompany, replaceFieldValue, updateCompanyKeptInStep } from "@/lib/companyWrites";
+import { startNotesForCompany } from "@/lib/noteWrites";
+import { DEAL_DONE_STATUS, matchesCompanySearch, sortCompanies, whereToActCounts, type CompanyGroup } from "@/lib/companies";
 
 const TABS: { id: PipelineTab; label: string; icon: string }[] = [
   { id: "prospect", label: "Prospects & Active", icon: "📈" },
@@ -63,9 +65,9 @@ export function ClientsTab({
   onEntryOpened?: () => void;
   onOpenJournal?: (pipelineEntryId: number) => void;
 } = {}) {
-  const { entries, loading, nextId, saveEntry, deleteEntry } = useClientPipeline();
-  const { entries: journalEntries, saveEntry: saveJournalEntry } = useProspectJournal();
-  const { tasks, addTask, updateTask } = useTasks();
+  const { entries, loading, maxId } = useClientPipeline();
+  const { entries: journalEntries } = useProspectJournal();
+  const { tasks, addTask } = useTasks();
   const [toast, setToast] = useState<string | null>(null);
   const [followUpRow, setFollowUpRow] = useState<PipelineEntry | null>(null);
 
@@ -146,15 +148,11 @@ export function ClientsTab({
   }, [entries, initialEntryId, onEntryOpened]);
 
   async function handleJournal(row: PipelineEntry) {
-    const existing = journalEntries.find((entry) => entry.pipelineEntryId === row.id);
-    if (!existing) {
-      const journalEntry = createEmptyProspectJournalEntry(`pipeline-${row.id}`);
-      await saveJournalEntry({ ...journalEntry, pipelineEntryId: row.id, prospectName: row.company });
-    }
+    await startNotesForCompany(row, journalEntries);
     onOpenJournal?.(row.id);
   }
 
-  const isDone = (r: PipelineEntry) => r.status === "Client / Partner Done Deal";
+  const isDone = (r: PipelineEntry) => r.status === DEAL_DONE_STATUS;
   const isRaw = (r: PipelineEntry) => r._raw === true;
   const isHold = (r: PipelineEntry) => r._hold === true;
 
@@ -166,73 +164,32 @@ export function ClientsTab({
   const statuses = useMemo(() => Array.from(new Set(entries.map((d) => d.status).filter(Boolean))) as string[], [entries]);
   const products = useMemo(() => Array.from(new Set(entries.map((d) => d.product).filter(Boolean))) as string[], [entries]);
 
-  function sortMain(rows: PipelineEntry[]): PipelineEntry[] {
-    const cols = colConfig.main;
-    return [...rows].sort((a, b) => {
-      if (sortKey === "priority") {
-        const d = (PRIO_ORDER[a.priority ?? ""] ?? 3) - (PRIO_ORDER[b.priority ?? ""] ?? 3);
-        return d !== 0 ? d * sortDir : new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime();
-      }
-      if (sortKey === "company") return (a.company ?? "").localeCompare(b.company ?? "") * sortDir;
-      if (sortKey === "date" || sortKey === "since") return (new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime()) * sortDir;
-      if (sortKey === "target") return ((a.target || "9999") < (b.target || "9999") ? -1 : 1) * sortDir;
-      const col = cols.find((c) => c.key === sortKey);
-      if (col && col.type === "number") return ((parseFloat(String(a[sortKey])) || 0) - (parseFloat(String(b[sortKey])) || 0)) * sortDir;
-      return String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")) * sortDir;
-    });
-  }
-  function sortRaw(rows: PipelineEntry[]): PipelineEntry[] {
-    const cols = colConfig.raw;
-    return [...rows].sort((a, b) => {
-      if (sortKey === "priority") {
-        const d = (PRIO_ORDER[a.priority ?? ""] ?? 3) - (PRIO_ORDER[b.priority ?? ""] ?? 3);
-        return d !== 0 ? d * sortDir : 0;
-      }
-      if (sortKey === "company") return (a.company ?? "").localeCompare(b.company ?? "") * sortDir;
-      if (sortKey === "reach") return ((a.reach || "9999") < (b.reach || "9999") ? -1 : 1) * sortDir;
-      const col = cols.find((c) => c.key === sortKey);
-      if (col && col.type === "number") return ((parseFloat(String(a[sortKey])) || 0) - (parseFloat(String(b[sortKey])) || 0)) * sortDir;
-      return String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")) * sortDir;
-    });
-  }
-  function sortHold(rows: PipelineEntry[]): PipelineEntry[] {
-    const cols = colConfig.hold;
-    return [...rows].sort((a, b) => {
-      const col = cols.find((c) => c.key === sortKey);
-      if (col && col.type === "number") return ((parseFloat(String(a[sortKey])) || 0) - (parseFloat(String(b[sortKey])) || 0)) * sortDir;
-      return String(a[sortKey] ?? "").localeCompare(String(b[sortKey] ?? "")) * sortDir;
-    });
+  // The old arrows: ▲ on the last action date means most recent first. Empty values go last.
+  function sortRows(rows: PipelineEntry[], table: TableKey): PipelineEntry[] {
+    const newestFirst = sortKey === "date";
+    const fewestDaysFirst = sortKey === "since";
+    const dir = (newestFirst ? sortDir === 1 : sortDir === -1) ? "desc" : "asc";
+    const numeric = colConfig[table].find((c) => c.key === sortKey)?.type === "number";
+    return sortCompanies(rows, sortKey, fewestDaysFirst ? (sortDir === 1 ? "asc" : "desc") : dir, { numeric });
   }
 
   let visibleRows: PipelineEntry[];
   let summaryRows: PipelineEntry[];
   if (tab === "rawlist") {
-    let rows = [...rawList];
-    if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) => `${r.company}${r.sourcing}${r.industry}${r.notes}`.toLowerCase().includes(q));
-    }
+    let rows = rawList.filter((r) => matchesCompanySearch(r, search));
     if (filterPriority) rows = rows.filter((r) => r.priority === filterPriority);
-    visibleRows = sortRaw(rows);
+    visibleRows = sortRows(rows, "raw");
     summaryRows = rawList;
   } else if (tab === "holdreject") {
-    let rows = [...holdList];
-    if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) => `${r.company}${r.reason}`.toLowerCase().includes(q));
-    }
-    visibleRows = sortHold(rows);
+    const rows = holdList.filter((r) => matchesCompanySearch(r, search));
+    visibleRows = sortRows(rows, "hold");
     summaryRows = holdList;
   } else {
-    let rows = tab === "done" ? doneDeals : prospects;
-    if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) => `${r.company}${r.pic}${r.sourcing}${r.product}`.toLowerCase().includes(q));
-    }
+    let rows = (tab === "done" ? doneDeals : prospects).filter((r) => matchesCompanySearch(r, search));
     if (filterStatus) rows = rows.filter((r) => r.status === filterStatus);
     if (filterProduct) rows = rows.filter((r) => r.product === filterProduct);
     if (filterPriority) rows = rows.filter((r) => r.priority === filterPriority);
-    visibleRows = sortMain(rows);
+    visibleRows = sortRows(rows, "main");
     summaryRows = tab === "done" ? doneDeals : prospects;
   }
 
@@ -266,21 +223,11 @@ export function ClientsTab({
     }));
   }
 
-  async function persist(entry: PipelineEntry) {
-    await saveEntry(entry);
-    const linkedTasks = tasks.filter((t) => t.linkedClientId === entry.id);
-    await Promise.all(
-      linkedTasks
-        .filter((t) => t.lastActionDate !== entry.date || t.endDate !== (entry.target ?? t.endDate))
-        .map((t) => {
-          const { id, ...rest } = t;
-          return updateTask(id, {
-            ...rest,
-            lastActionDate: entry.date,
-            ...(entry.target ? { startDate: entry.target, endDate: entry.target } : {}),
-          });
-        })
-    );
+  // Saves only the fields that change; the company's open tasks follow its dates (B12).
+  // An emptied field is cleared.
+  async function change(row: PipelineEntry, patch: Partial<PipelineEntry>) {
+    const cleaned = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === "" ? undefined : v]));
+    await updateCompanyKeptInStep(row, cleaned, tasks);
   }
 
   function openTextPopup(field: string, row: PipelineEntry, el: HTMLElement, multiline = false, isNumber = false) {
@@ -334,13 +281,16 @@ export function ClientsTab({
 
   async function handleSaveModal(patch: Partial<PipelineEntry>) {
     if (!modal) return;
-    const id = modal.editing ? modal.editing.id : modal.moveId ?? nextId();
-    const entry: PipelineEntry = {
-      id,
-      ...patch,
-      ...(modal.editing?.trial !== undefined ? { trial: modal.editing.trial } : {}),
-    } as PipelineEntry;
-    await persist(entry);
+    const moving = modal.moveId != null ? entries.find((e) => e.id === modal.moveId) : undefined;
+    if (modal.editing) {
+      await change(modal.editing, patch);
+    } else if (moving) {
+      const to: CompanyGroup =
+        modal.kind === "raw" ? "toApproach" : modal.kind === "hold" ? "noOrNotNow" : patch.status === DEAL_DONE_STATUS ? "dealDone" : "active";
+      await moveCompany(moving, to, patch, tasks);
+    } else {
+      await addCompany(patch, maxId);
+    }
     setModal(null);
   }
 
@@ -351,7 +301,7 @@ export function ClientsTab({
       hold: "Remove this entry?",
     };
     if (!confirm(messages[rowTableKey(row)])) return;
-    await deleteEntry(row.id);
+    await deleteCompany(row, tasks, journalEntries);
   }
 
   function getFieldTitle(field: string): string {
@@ -363,10 +313,11 @@ export function ClientsTab({
     return field;
   }
 
-  const total = summaryRows.length;
-  const highPrio = summaryRows.filter((r) => r.priority === "High").length;
-  const overdue = summaryRows.filter((r) => (r.date ? daysSince(r.date) > 14 : false)).length;
-  const followUp = summaryRows.filter((r) => r.status === "To Follow Up").length;
+  const whereToAct = whereToActCounts(summaryRows);
+  const total = whereToAct.of;
+  const highPrio = whereToAct.highPriority;
+  const overdue = whereToAct.goneCold;
+  const followUp = whereToAct.followUp;
 
   const isRawOrHoldTab = tab === "rawlist" || tab === "holdreject";
   const emptyTitles: Record<PipelineTab, { title: string; sub: string }> = {
@@ -525,7 +476,7 @@ export function ClientsTab({
           isNumber={textPopup.isNumber}
           anchorRect={textPopup.anchorRect}
           onSave={(value) => {
-            persist({ ...textPopup.row, [textPopup.field]: value });
+            void change(textPopup.row, { [textPopup.field]: value });
           }}
           onClose={() => setTextPopup(null)}
         />
@@ -537,7 +488,7 @@ export function ClientsTab({
           value={String(datePopup.row[datePopup.field] ?? "")}
           anchorRect={datePopup.anchorRect}
           onSave={(value) => {
-            persist({ ...datePopup.row, [datePopup.field]: value });
+            void change(datePopup.row, { [datePopup.field]: value });
           }}
           onClose={() => setDatePopup(null)}
         />
@@ -550,7 +501,7 @@ export function ClientsTab({
           current={String(dropdownPopup.row[dropdownPopup.field] ?? "")}
           anchorRect={dropdownPopup.anchorRect}
           onSelect={(label) => {
-            persist({ ...dropdownPopup.row, [dropdownPopup.field]: label });
+            void change(dropdownPopup.row, { [dropdownPopup.field]: label });
             setDropdownPopup(null);
           }}
           onOptionsChange={(options) => {
@@ -561,11 +512,7 @@ export function ClientsTab({
             if (options.length === oldOptions.length) {
               for (let i = 0; i < options.length; i++) {
                 if (oldOptions[i]?.label !== options[i]?.label) {
-                  const oldLabel = oldOptions[i].label;
-                  const newLabel = options[i].label;
-                  entries.forEach((r) => {
-                    if (r[field] === oldLabel) persist({ ...r, [field]: newLabel });
-                  });
+                  void replaceFieldValue(entries, field, oldOptions[i].label, options[i].label);
                 }
               }
             }

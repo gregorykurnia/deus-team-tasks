@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, setDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, setDoc, doc } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { PipelineEntry } from "./clientTypes";
 import { SEED_PIPELINE } from "./clientSeedData";
-
-const COLLECTION = "pipeline";
+import { PIPELINE } from "./companyWrites";
 
 export function useClientPipeline() {
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
@@ -15,14 +14,18 @@ export function useClientPipeline() {
 
   useEffect(() => {
     const unsub = onSnapshot(
-      collection(clientsDb, COLLECTION),
+      collection(clientsDb, PIPELINE),
       async (snap) => {
         if (snap.empty && !seeded) {
           setSeeded(true);
-          await Promise.all(SEED_PIPELINE.map((e) => setDoc(doc(clientsDb, COLLECTION, String(e.id)), e)));
+          await Promise.all(SEED_PIPELINE.map((e) => setDoc(doc(clientsDb, PIPELINE, String(e.id)), e)));
           return;
         }
-        const rows = snap.docs.map((d) => d.data() as PipelineEntry);
+        // Each company also stores its id inside; the document's own id backs it up.
+        const rows = snap.docs.map((d) => {
+          const data = d.data() as PipelineEntry;
+          return typeof data.id === "number" ? data : { ...data, id: Number(d.id) };
+        });
         setEntries(rows);
         setLoading(false);
       },
@@ -34,17 +37,8 @@ export function useClientPipeline() {
     return () => unsub();
   }, [seeded]);
 
-  function nextId() {
-    return entries.length ? Math.max(...entries.map((d) => d.id)) + 1 : 1;
-  }
+  // The highest id in use: new ids are allocated above it (companyWrites.addCompany).
+  const maxId = entries.reduce((m, e) => Math.max(m, e.id), 0);
 
-  async function saveEntry(entry: PipelineEntry) {
-    await setDoc(doc(clientsDb, COLLECTION, String(entry.id)), entry);
-  }
-
-  async function deleteEntry(id: number) {
-    await deleteDoc(doc(clientsDb, COLLECTION, String(id)));
-  }
-
-  return { entries, loading, nextId, saveEntry, deleteEntry };
+  return { entries, loading, maxId };
 }

@@ -10,5 +10,9 @@ service cloud.firestore {
     match /taskGroups/{groupId} {
       allow read, write: if true;
     }
+    // Shared settings: the next company id, and the company options and fields (task 1.7).
+    match /settings/{docId} {
+      allow read, write: if true;
+    }
   }
 }

@@ -186,7 +186,6 @@ test("B14: delete a company after confirming", async ({ page }) => {
 });
 
 test("B10 C1: editing a company keeps the values of its own fields", async ({ page }) => {
-  test.fail(true, "Known bug in the old UI: saving the record overwrites the whole company, own fields included. Fixed in 1.5.");
   await seedCompanies([company(1, { company: "Pelita Foods", cx_region: "North" })]);
   await openCompanies(page);
   await companyRow(page, "Pelita Foods").getByTitle("Edit").click();
@@ -199,7 +198,6 @@ test("B10 C1: editing a company keeps the values of its own fields", async ({ pa
 });
 
 test("B1 B14: a new company never takes a deleted company's id", async ({ page }) => {
-  test.fail(true, "Known bug in the old UI: new ids are the highest id plus one, so a deleted id comes back. Fixed in 1.5.");
   acceptDialogs(page);
   // The baseline company is 900, so 950 is the highest id, and 949 is the next one down.
   await seedCompanies([company(949, { company: "Pelita Foods" }), company(950, { company: "Gone Corp" })]);

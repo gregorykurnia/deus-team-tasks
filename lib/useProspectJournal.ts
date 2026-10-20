@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, deleteDoc, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { clientsDb } from "./firebaseClients";
 import { ProspectJournalEntry } from "./prospectJournalTypes";
-
-const COLLECTION = "prospectJournal";
+import { NOTES } from "./noteWrites";
 
 export function useProspectJournal() {
   const [entries, setEntries] = useState<ProspectJournalEntry[]>([]);
@@ -13,13 +12,14 @@ export function useProspectJournal() {
 
   useEffect(() => {
     return onSnapshot(
-      collection(clientsDb, COLLECTION),
+      collection(clientsDb, NOTES),
       (snapshot) => {
         const rows = snapshot.docs
           .map((item) => {
             const entry = item.data() as ProspectJournalEntry;
             return {
               ...entry,
+              id: item.id,
               detailedRemarks: entry.detailedRemarks ?? "",
             };
           })
@@ -34,13 +34,5 @@ export function useProspectJournal() {
     );
   }, []);
 
-  async function saveEntry(entry: ProspectJournalEntry) {
-    await setDoc(doc(clientsDb, COLLECTION, entry.id), entry);
-  }
-
-  async function deleteEntry(id: string) {
-    await deleteDoc(doc(clientsDb, COLLECTION, id));
-  }
-
-  return { entries, loading, saveEntry, deleteEntry };
+  return { entries, loading };
 }

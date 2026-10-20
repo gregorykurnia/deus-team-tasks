@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  createEmptyProspectJournalEntry,
-  PROSPECT_JOURNAL_FIELDS,
-  ProspectJournalEntry,
-} from "@/lib/prospectJournalTypes";
+import { PROSPECT_JOURNAL_FIELDS, ProspectJournalEntry } from "@/lib/prospectJournalTypes";
+import { createNotes, deleteNotes, saveNotes } from "@/lib/noteWrites";
 import { useProspectJournal } from "@/lib/useProspectJournal";
 import { useClientPipeline } from "@/lib/useClientPipeline";
 import { PipelineEntry } from "@/lib/clientTypes";
@@ -21,7 +18,7 @@ function JournalRow({
   pipelineEntries,
 }: {
   entry: ProspectJournalEntry;
-  onSave: (entry: ProspectJournalEntry) => Promise<void>;
+  onSave: (patch: Partial<ProspectJournalEntry>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onOpenClient: (pipelineEntryId: number) => void;
   pipelineEntries: PipelineEntry[];
@@ -41,11 +38,16 @@ function JournalRow({
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
+  // Saves only the fields written here, so a colleague's change elsewhere in
+  // the same notes isn't overwritten.
   async function persist() {
-    if (JSON.stringify(draft) === JSON.stringify(entry)) return;
+    const changed = Object.fromEntries(
+      Object.entries(draft).filter(([k, v]) => k !== "updatedAt" && v !== entry[k as keyof ProspectJournalEntry])
+    ) as Partial<ProspectJournalEntry>;
+    if (Object.keys(changed).length === 0) return;
     setSaving(true);
     try {
-      await onSave({ ...draft, updatedAt: Date.now() });
+      await onSave(changed);
     } finally {
       setSaving(false);
     }
@@ -95,14 +97,9 @@ function JournalRow({
               const pipelineEntryId = Number(event.target.value);
               const pipelineEntry = pipelineEntries.find((item) => item.id === pipelineEntryId);
               if (!pipelineEntry) return;
-              const next = {
-                ...draft,
-                pipelineEntryId,
-                prospectName: draft.prospectName || pipelineEntry.company,
-                updatedAt: Date.now(),
-              };
-              setDraft(next);
-              void onSave(next);
+              const link = { pipelineEntryId, prospectName: draft.prospectName || pipelineEntry.company };
+              setDraft({ ...draft, ...link });
+              void onSave(link);
             }}
             className="ml-2 mt-2 block max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-gray-500 outline-none hover:border-accent/30 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
           >
@@ -160,9 +157,8 @@ function JournalRow({
             <select
               value={draft[field.key]}
               onChange={(event) => {
-                const next = { ...draft, [field.key]: event.target.value };
-                setDraft(next);
-                void onSave({ ...next, updatedAt: Date.now() });
+                setDraft({ ...draft, [field.key]: event.target.value });
+                void onSave({ [field.key]: event.target.value });
               }}
               aria-label={`${field.label} for ${draft.prospectName || "prospect"}`}
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
@@ -197,7 +193,7 @@ export function ProspectJournalTab({
   onEntryFocused?: () => void;
   onOpenClient: (pipelineEntryId: number) => void;
 }) {
-  const { entries, loading, saveEntry, deleteEntry } = useProspectJournal();
+  const { entries, loading } = useProspectJournal();
   const { entries: pipelineEntries } = useClientPipeline();
   const [search, setSearch] = useState("");
 
@@ -218,12 +214,11 @@ export function ProspectJournalTab({
   }, [entries, search]);
 
   async function addRow() {
-    const entry = createEmptyProspectJournalEntry(crypto.randomUUID());
-    await saveEntry(entry);
+    await createNotes();
   }
 
   async function removeRow(id: string) {
-    if (window.confirm("Delete this prospect journal row?")) await deleteEntry(id);
+    if (window.confirm("Delete this prospect journal row?")) await deleteNotes(id);
   }
 
   function exportCsv() {
@@ -296,7 +291,7 @@ export function ProspectJournalTab({
                 <JournalRow
                   key={`${entry.id}-${entry.updatedAt}`}
                   entry={entry}
-                  onSave={saveEntry}
+                  onSave={(patch) => saveNotes(entry.id, patch)}
                   onDelete={removeRow}
                   onOpenClient={onOpenClient}
                   pipelineEntries={pipelineEntries}
