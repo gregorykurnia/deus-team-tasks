@@ -69,7 +69,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Plan approved — you (2026-10-20; Q1–Q9 answered in its §7)
 
 **Rebuild (on `redesign`)**
-- [ ] `redesign` branch created and pushed — **Haiku 5.5 Max**
+- [x] `redesign` branch created and pushed (2026-10-20, from `726731c`) — **Haiku 5.5 Max**
 - [ ] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
 - [ ] Phase 2: tokens, base styles, app shell, shared components; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
 - [ ] Phase 3: every screen with all its states, phone and desktop; review passed — each task's pick from the plan's task table; review **Opus 5.5 High**
