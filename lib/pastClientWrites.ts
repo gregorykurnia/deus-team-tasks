@@ -56,10 +56,14 @@ export class HasSubsidiariesError extends Error {
   }
 }
 
-// A parent company with subsidiaries can't be deleted (R8).
-export async function deletePastClient(c: HistoricalClient, clients: HistoricalClient[]): Promise<void> {
+// A parent company with subsidiaries can't be deleted (R8). Undo puts it back as it was.
+export async function deletePastClient(c: HistoricalClient, clients: HistoricalClient[]): Promise<Undo> {
   const subs = clients.filter((x) => x.parentId === c.id).length;
   if (subs > 0) throw new HasSubsidiariesError(subs);
   assertOnline("No connection. It wasn't deleted.");
   await deleteDoc(ref(c.id));
+  return async () => {
+    assertOnline("No connection. It wasn't brought back.");
+    await setDoc(ref(c.id), c);
+  };
 }

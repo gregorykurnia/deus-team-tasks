@@ -170,7 +170,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 3.10 | Companies: fields sheet, options dialog, export | Opus 5.5 High | 2026-10-20 · this commit (Fields is `?fields=<group>`; High, Not now and No locked like the statuses, gap N9 provisional; menus opened in a dialog sit above it) |
 | 3.11 | Qualification notes (autosave, offline writing, live, link, export) | Opus 5.5 High | 2026-10-20 · this commit (New notes is `?newNotes=1`; starting, linking and deleting need the connection; gap N10 provisional) |
 | 3.12 | Past clients: totals, by sector, tree, search, order | Sonnet 5.5 High | 2026-10-20 · this commit (read only: no Add a past client, Export, ⋯ menus or add lines until 3.13; the "Just added" live tag waits for 4.2; a matching parent shows the subsidiaries that match, with "Show its other n") |
-| 3.13 | Past clients: add, subsidiary, rename, sector, move, not counted, delete, failures, export | Opus 5.5 High | |
+| 3.13 | Past clients: add, subsidiary, rename, sector, move, not counted, delete, failures, export | Opus 5.5 High | 2026-10-20 · this commit (add is a dialog and Export sits in the record's toolbar, as in the prototype; a delete also offers Undo; gap N11) |
 | 3.14 | Flows: read and edit (autosave, steps, roles, decision, outcomes, loop back) | Opus 5.5 High | |
 | R3 | **Phase 3 review** | Opus 5.5 High | |
 | **4** | **Phase 4: edge surfaces and launch** | | |
@@ -287,6 +287,7 @@ Until the merge, production is untouched: `main` keeps the old UI. Phase 1 data 
 | N8 | A company that's gone (3.9): opened from a link after it was deleted, or deleted by a colleague while its record is open. Provisional, as N6: an error toast ("This company isn't there any more. Someone may have deleted it.") and the record closes; nothing typed is lost, as each change saves itself. | nothing (provisional built) |
 | N9 | Locked choices beyond the guide's two (3.10, from R1): Where to act counts priority "High", a follow-up task takes its priority from it, and the answers "Not now" / "No" tell on hold from rejected. Provisional: these three are locked like Deal done and Follow-up due (a lock and the reason, recolour only, named in the options dialog's notice). | nothing (provisional built) |
 | N10 | Qualification notes that are gone (3.11): opened from a link after they were deleted, or deleted by a colleague while open. Provisional, as N8: an error toast ("These notes aren’t there any more. Someone may have deleted them.") and the list shows; what was typed in the last moment before is not saved, so deleted notes never come back half empty. | nothing (provisional built) |
+| N11 | Adding the first subsidiary to a parent company with none (3.13): the quick add line sits inside an opened parent, but a parent with no subsidiaries can't be opened, so "Add a subsidiary" in its ⋯ menu has nowhere to go. Provisional: it opens the parent with only its add line, which closes again when left empty. | nothing (provisional built) |
 
 **Questions for the owner** (all answered 2026-10-20: the recommendation for each, and Q5 as below)
 

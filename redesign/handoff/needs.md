@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11
 
 # Needs
 
@@ -16,3 +16,4 @@ Design gaps found after the design was approved, written as job stories.
 | N8 | When I open a company from a link after someone deleted it, or a colleague deletes a company while I have it open, I want to be told it is gone, so that I am not left wondering whether my changes to it were saved. | Task 3.9 | open |
 | N9 | When I tidy up the choices for a company's priority, or for the answer a company gave (no, or not now), I want to know which of those choices the team's counts and follow-ups depend on, and be kept from renaming or removing them, so that where to act, follow-up tasks and the split between on hold and rejected keep working. | Task 3.10 | open |
 | N10 | When I open a prospect's qualification notes from a link after someone deleted them, or a colleague deletes the notes while I am writing in them, I want to be told they are gone and what happened to what I was writing, so that I don't keep writing into notes nobody will see, or wonder where my writing went. | Task 3.11 | open |
+| N11 | When I record the first subsidiary of a parent company that has none yet, I want to add it in the same quick way as the ones after it, with just its name, so that I don't have to go through the full form for the first one. | Task 3.13 | open |

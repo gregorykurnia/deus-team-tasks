@@ -250,6 +250,15 @@ describe("past clients", () => {
     expect(await readAll("clients", "historicalClients")).toHaveLength(2);
   });
 
+  it("deletes a subsidiary, and Undo brings it back as it was", async () => {
+    const clients = [pc("p"), pc("s", { parentId: "p", sector: "Retail", name: "Nusa Outlet" })];
+    await seed("clients", "historicalClients", clients, { keepIdField: true });
+    const undo = await deletePastClient(clients[1], clients);
+    expect(await readAll("clients", "historicalClients")).toHaveLength(1);
+    await undo();
+    expect(await readFields("clients", "historicalClients/s")).toMatchObject({ name: "Nusa Outlet", parentId: "p", sector: "Retail", countHead: true });
+  });
+
   it("saves a sector in the spelling in use, and undoes not counted", async () => {
     const c = pc("p");
     await seed("clients", "historicalClients", [c], { keepIdField: true });
