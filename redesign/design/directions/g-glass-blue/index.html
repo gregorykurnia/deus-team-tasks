@@ -106,11 +106,11 @@
   .weeks h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
   .callout { margin-left: auto; padding: 5px 12px; border-radius: 99px; background: var(--amber-soft); color: var(--amber); font-size: 12.5px; font-weight: 700; }
   .chart { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 132px; margin-top: 18px; }
-  .bar { display: flex; flex-direction: column-reverse; gap: 3px; height: 100%; position: relative; }
-  .bar i { display: block; border-radius: 6px; }
-  .bar .p { background: var(--pro); } .bar .c { background: #27b07f; } .bar .t { background: #8d9ab1; } .bar .e { background: #d3deef; }
-  .bar.today::after { content: ""; position: absolute; inset: -6px -3px -6px; border-radius: 10px; border: 2px solid var(--pro); }
-  .bar.we { background: repeating-linear-gradient(-45deg, transparent 0 4px, rgba(27,31,59,.04) 4px 8px); border-radius: 6px; height: 24px; align-self: end; }
+  .cbar { display: flex; flex-direction: column-reverse; gap: 3px; height: 100%; position: relative; }
+  .cbar i { display: block; border-radius: 6px; }
+  .cbar .p { background: var(--pro); } .cbar .c { background: #27b07f; } .cbar .t { background: #8d9ab1; } .cbar .e { background: #d3deef; }
+  .cbar.today::after { content: ""; position: absolute; inset: -6px -3px -6px; border-radius: 10px; border: 2px solid var(--pro); }
+  .cbar.we { background: repeating-linear-gradient(-45deg, transparent 0 4px, rgba(27,31,59,.04) 4px 8px); border-radius: 6px; height: 24px; align-self: end; }
   .days { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--muted); }
   .days .td { color: var(--pro); }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
@@ -284,7 +284,7 @@
   </aside>
 
   <main>
-    <div class="bar">
+    <div class="cbar">
       <div>
         <div style="display:flex;align-items:baseline;gap:6px"><h1>Today</h1><span class="date">Tuesday, 20 October</span></div>
         <p class="mob-date">Tuesday, 20 October</p>
@@ -316,20 +316,20 @@
           <span class="callout">Fri 23 is the busiest, with 7 deadlines</span>
         </div>
         <div class="chart" role="img" aria-label="Deadlines per day for the next 14 days. Friday 23 October is the busiest with 7.">
-          <div class="bar today"><i class="p" style="height:16px"></i><i class="t" style="height:16px"></i><i class="e" style="height:28px"></i></div>
-          <div class="bar"><i class="t" style="height:16px"></i><i class="e" style="height:10px"></i></div>
-          <div class="bar"><i class="p" style="height:16px"></i><i class="t" style="height:16px"></i><i class="e" style="height:10px"></i></div>
-          <div class="bar busy"><i class="p" style="height:34px"></i><i class="c" style="height:34px"></i><i class="t" style="height:34px"></i><i class="e" style="height:10px"></i></div>
-          <div class="bar we"></div>
-          <div class="bar we"></div>
-          <div class="bar"><i class="t" style="height:16px"></i></div>
-          <div class="bar"><i class="p" style="height:8px"></i></div>
-          <div class="bar"><i class="c" style="height:16px"></i><i class="e" style="height:10px"></i></div>
-          <div class="bar"><i class="t" style="height:16px"></i><i class="e" style="height:20px"></i></div>
-          <div class="bar"><i class="p" style="height:34px"></i><i class="t" style="height:16px"></i></div>
-          <div class="bar we"></div>
-          <div class="bar we"></div>
-          <div class="bar"><i class="c" style="height:16px"></i><i class="p" style="height:16px"></i></div>
+          <div class="cbar today"><i class="p" style="height:16px"></i><i class="t" style="height:16px"></i><i class="e" style="height:28px"></i></div>
+          <div class="cbar"><i class="t" style="height:16px"></i><i class="e" style="height:10px"></i></div>
+          <div class="cbar"><i class="p" style="height:16px"></i><i class="t" style="height:16px"></i><i class="e" style="height:10px"></i></div>
+          <div class="cbar busy"><i class="p" style="height:34px"></i><i class="c" style="height:34px"></i><i class="t" style="height:34px"></i><i class="e" style="height:10px"></i></div>
+          <div class="cbar we"></div>
+          <div class="cbar we"></div>
+          <div class="cbar"><i class="t" style="height:16px"></i></div>
+          <div class="cbar"><i class="p" style="height:8px"></i></div>
+          <div class="cbar"><i class="c" style="height:16px"></i><i class="e" style="height:10px"></i></div>
+          <div class="cbar"><i class="t" style="height:16px"></i><i class="e" style="height:20px"></i></div>
+          <div class="cbar"><i class="p" style="height:34px"></i><i class="t" style="height:16px"></i></div>
+          <div class="cbar we"></div>
+          <div class="cbar we"></div>
+          <div class="cbar"><i class="c" style="height:16px"></i><i class="p" style="height:16px"></i></div>
         </div>
         <div class="days"><span class="td">Today</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span><span>1</span><span>2</span></div>
         <div class="legend"><span><i style="background:var(--pro)"></i>Prospects</span><span><i style="background:var(--cli)"></i>Clients</span><span><i style="background:var(--int)"></i>Internal</span><span><i style="background:#c9d6ea"></i>Calendar events</span></div>
