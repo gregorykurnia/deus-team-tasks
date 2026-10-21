@@ -73,7 +73,7 @@ When a step finishes, Claude ticks its box here in the same commit, never before
 - [x] Phase 1: smoke tests for every data-writing flow; data logic in `lib/`; no visual change; review passed (2026-10-20, `redesign/reviews/phase-1.md`) — each task's pick from the plan's task table; review **Opus 5.5 High**
 - [x] Phase 2: tokens, base styles, app shell, shared components; review passed (2026-10-20, `redesign/reviews/phase-2.md`, fixes in R2.1) — each task's pick from the plan's task table; review **Opus 5.5 High**
 - [x] Phase 3: every screen with all its states, phone and desktop; review passed (2026-10-20, `redesign/reviews/phase-3.md`, fixes in R3.1) — each task's pick from the plan's task table; review **Opus 5.5 High**
-- [ ] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed (R4 done 2026-10-21, `redesign/reviews/phase-4.md`; the box waits for 4.8's export and live run, left for you) — each task's pick from the plan's task table; review **Opus 5.5 High**
+- [x] Phase 4: edge surfaces, smoke tests rewritten and passing, screenshots match, accessibility, real-phone check, old files deleted, old-names check clean; review passed (R4 done 2026-10-21, `redesign/reviews/phase-4.md`; 4.8's live run done 2026-10-21) — each task's pick from the plan's task table; review **Opus 5.5 High**
 - [ ] Merged to `<base>` (on your say); `CLAUDE.md` updated to the new UI — **Sonnet 5.5 High**
 
 ---
