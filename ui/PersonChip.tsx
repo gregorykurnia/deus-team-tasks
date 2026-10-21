@@ -9,11 +9,12 @@ interface PersonChipProps {
   current?: boolean; // the person whose page this is
   removable?: boolean; // shows the ×; onRemove wires it up in a client component
   onRemove?: () => void;
+  compact?: boolean; // the smaller read-only pill in a flow's roles (prototype .fp)
 }
 
-export default function PersonChip({ name, current = false, removable = false, onRemove }: PersonChipProps) {
+export default function PersonChip({ name, current = false, removable = false, onRemove, compact = false }: PersonChipProps) {
   return (
-    <span className={current ? `${styles.person} ${styles.current}` : styles.person} data-current={current || undefined}>
+    <span className={[styles.person, current && styles.current, compact && styles.compact].filter(Boolean).join(" ")} data-current={current || undefined}>
       <Avatar name={name} size="chip" />
       <span className={styles.name}>{name}</span>
       {(removable || onRemove) && (

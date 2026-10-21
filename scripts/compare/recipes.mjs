@@ -154,17 +154,17 @@ export function recipe(p, ctx = {}) {
     case "past:delete": S(click(/^More for Garuda Air/), click(/Delete/)); break;
     case "past:export": S(tool(/Export/)); break;
 
-    case "flows:edit": r.path = "/flows/f1"; P("edit"); break;
-    case "flows:names": r.path = "/flows/f1"; P("edit"); S(async (page) => { await page.getByPlaceholder("Type a name").first().fill("a"); await sleep(500); }); break;
+    case "flows:edit": r.path = "/flows/f3"; P("edit"); break; // the prototype opens the first flow A to Z (Expense claims) unless the link names one
+    case "flows:names": r.path = "/flows/f1"; P("edit"); S(async (page) => { await page.getByLabel(/^People in/).first().fill("a"); await sleep(500); }); break;
     case "flows:decision-new": r.path = "/flows/f5"; P("edit"); S(click(/Add a decision|Decision/)); break;
     case "flows:no-steps": r.path = "/flows/f6"; break;
     case "flows:new": P("newFlow"); break;
     case "flows:new-required": P("newFlow"); S(click(/Create flow/)); break;
-    case "flows:menu": r.path = "/flows/f1"; S(click(/More for this flow/)); break;
-    case "flows:delete": r.path = "/flows/f1"; S(click(/More for this flow/), click(/Delete flow/)); break;
+    case "flows:menu": r.path = "/flows/f3"; S(click(/More for this flow/)); break;
+    case "flows:delete": r.path = "/flows/f3"; S(click(/More for this flow/), click(/Delete flow/)); break;
   }
   // The state's own conditions that need a click.
-  if (p.state === "saving" && p.page === "flows") { r.path = "/flows/f1"; P("edit"); }
+  if (p.state === "saving" && p.page === "flows") { r.path = "/flows/f3"; P("edit"); }
   // Past clients: the add dialog filled in as the prototype's own state does (a subsidiary of Kencana Healthcare Group), then the save.
   if ((p.state === "saving" || p.state === "save-fail") && p.page === "past" && !open) {
     P("add");
@@ -203,8 +203,8 @@ export async function colleagueChange(p, seed, converted) {
     const n = c.journal.find((x) => x.id === "n3") ?? c.journal[0];
     await seed("clients", "prospectJournal", [{ ...n, clientNeed: n.clientNeed + " Updated." }]);
   } else if (p.page === "flows") {
-    const f = c.flows[0];
-    await seed("tasks", "flows", [{ ...f, steps: f.steps.map((s, i) => (i === 1 ? { ...s, title: s.title + " (edited)" } : s)), updatedAt: Date.now() }]);
+    const f = c.flows.find((x) => x.id === "f1") ?? c.flows[0]; // as the prototype: the third step of Onboarding gets a longer description
+    await seed("tasks", "flows", [{ ...f, steps: f.steps.map((s, i) => (i === 2 ? { ...s, description: "Agree the go-live date, who the client’s champion is, and how we’ll keep in touch. Send the summary the same day." } : s)), updatedAt: new Date("2026-10-20T09:00:00+07:00").getTime() }]); // the shooting day, so it reads "Edited today"
   } else if (p.page === "past") {
     await seed("clients", "historicalClients", [{ id: "pnew", name: "Kencana Clinic Medan", parentId: "p8", sector: null, countHead: true, createdAt: Date.now() }]);
   }

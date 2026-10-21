@@ -60,27 +60,29 @@ export default function NewFlowDialog({ onClose, onCreate }: NewFlowDialogProps)
         </>
       }
     >
-      <p className={styles.dialogText}>Name the process, like “New client onboarding”. Then add its steps.</p>
-      <Field label="Name" error={missing ? "Give the flow a name, so the team can find it." : undefined} focusKey={tries}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={name}
-            placeholder="Flow name"
-            autoComplete="off"
-            onChange={(e) => {
-              setName(e.target.value);
-              if (e.target.value.trim()) setMissing(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                void submit();
-              }
-            }}
-          />
-        )}
-      </Field>
+      <p>Name the process, like “New client onboarding”. Then add its steps.</p>
+      <div className={styles.dialogField}>
+        <Field label="Name" error={missing ? "Give the flow a name, so the team can find it." : undefined} focusKey={tries}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={name}
+              placeholder="Flow name"
+              autoComplete="off"
+              onChange={(e) => {
+                setName(e.target.value);
+                if (e.target.value.trim()) setMissing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  void submit();
+                }
+              }}
+            />
+          )}
+        </Field>
+      </div>
     </Dialog>
   );
 }

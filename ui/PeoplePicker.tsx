@@ -78,9 +78,10 @@ interface PeoplePickerProps extends ControlProps {
   onChange: (names: string[]) => void;
   suggestions: NameCount[];
   placeholder?: string;
+  morePlaceholder?: string; // once someone is in the field
 }
 
-export default function PeoplePicker({ value, onChange, suggestions, placeholder, ...aria }: PeoplePickerProps) {
+export default function PeoplePicker({ value, onChange, suggestions, placeholder, morePlaceholder = "Add someone else", ...aria }: PeoplePickerProps) {
   return (
     <div className={styles.people}>
       {value.map((name) => (
@@ -90,7 +91,7 @@ export default function PeoplePicker({ value, onChange, suggestions, placeholder
         {...aria}
         suggestions={suggestions}
         chosen={value}
-        placeholder={value.length ? (placeholder ? "Add someone else" : "") : placeholder}
+        placeholder={value.length ? (placeholder ? morePlaceholder : "") : placeholder}
         onPick={(name) => onChange([...value, name])}
         onBackspaceEmpty={() => onChange(value.slice(0, -1))}
       />

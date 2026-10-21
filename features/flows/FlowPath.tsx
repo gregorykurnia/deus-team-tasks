@@ -115,7 +115,7 @@ function Roles({ roles }: { roles: FlowRole[] }) {
         <div key={i} className={styles.role}>
           <span className={styles.roleLabel}>{r.label.trim() || "Role"}</span>
           <span className={styles.roleNames}>
-            {r.names.length ? r.names.map((n) => <PersonChip key={n} name={n} />) : <span className={styles.noNames}>No names yet</span>}
+            {r.names.length ? r.names.map((n) => <PersonChip key={n} name={n} compact />) : <span className={styles.noNames}>No names yet</span>}
           </span>
         </div>
       ))}

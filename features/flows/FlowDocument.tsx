@@ -296,7 +296,7 @@ function DocTop({ name, onBack, menu, children }: { name: string; onBack: () => 
 function OfflineNotice() {
   return (
     <div className={styles.docNotice}>
-      <Notice tone="warning" title="No connection.">
+      <Notice tone="warning" icon="wifi" title="No connection.">
         You can read every flow loaded before. Changes can be made once you’re back online.
       </Notice>
     </div>

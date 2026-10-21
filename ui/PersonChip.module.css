@@ -12,6 +12,19 @@
   font-weight: var(--w-semibold);
 }
 
+.compact {
+  height: 28px;
+  padding: 0 10px 0 2px;
+  font-size: 13px;
+  font-weight: var(--w-semibold);
+}
+
+.compact > :first-child {
+  width: 24px;
+  height: 24px;
+  font-size: 9.5px;
+}
+
 .current {
   background: var(--blue-soft);
   color: var(--blue-ink);

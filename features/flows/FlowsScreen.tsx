@@ -19,6 +19,7 @@ import type { Flow } from "@/lib/types";
 import Button from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
 import EmptyState from "@/ui/EmptyState";
+import Icon from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
 import { useToast } from "@/ui/Toaster";
@@ -146,7 +147,7 @@ export default function FlowsScreen() {
   let content;
   if (failed) {
     content = (
-      <div className={styles.screenNote}>
+      <div className={styles.failedNote}>
         <Notice tone="error" title="Couldn't load flows.">
           Check your connection and reload the page.
         </Notice>
@@ -154,7 +155,7 @@ export default function FlowsScreen() {
     );
   } else if (offlineEmpty) {
     content = (
-      <div className={styles.screenNote}>
+      <div className={`${styles.screenNote} ${styles.noteNarrow}`}>
         <EmptyState icon="wifi" title="No connection">
           Flows will appear once you are back online.
         </EmptyState>
@@ -184,6 +185,7 @@ export default function FlowsScreen() {
           title="No flows yet"
           actions={
             <Button variant="main" onClick={() => router.push(newHref, { scroll: false })}>
+              <Icon name="plus" size={16} />
               New flow
             </Button>
           }
@@ -254,7 +256,7 @@ export default function FlowsScreen() {
       ) : (
         <PageHeader
           title="Flows"
-          subtitle={settled || flows.rows.length ? plural(flows.rows.length, "flow") : undefined}
+          subtitle={(settled && !offlineEmpty) || flows.rows.length ? plural(flows.rows.length, "flow") : undefined}
           action={{ label: "New flow", href: newHref }}
         />
       )}

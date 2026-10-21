@@ -385,6 +385,7 @@ function RolesEditor({ part, partName, editing, labels, names, then }: RolesEdit
               <PeoplePicker
                 aria-label={`People in ${label}`}
                 placeholder="Type a name"
+                morePlaceholder="Add someone"
                 value={r.names}
                 suggestions={names}
                 onChange={(next) => editing.change((x) => setRoleNames(x, part.id, ref, next))}
