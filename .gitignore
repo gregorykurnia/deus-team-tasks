@@ -52,3 +52,6 @@ firebase-debug.log
 # screenshots against the prototype (task 4.4)
 /redesign/compare/
 /redesign/a11y/
+
+# launch data step backups (task 4.8): they hold client data, so never committed
+/launch-data/

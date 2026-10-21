@@ -1,0 +1,11 @@
+[
+  { "id": "p-bank", "data": { "name": "Sample Bank Group", "parentId": null, "sector": "Banking", "countHead": true, "createdAt": 1 } },
+  { "id": "s-bank-1", "data": { "name": "Sample Bank Syariah", "parentId": "p-bank", "sector": null, "countHead": true, "createdAt": 2 } },
+  { "id": "s-bank-2", "data": { "name": "Sample Bank Finance", "parentId": "p-bank", "sector": "  ", "countHead": true, "createdAt": 3 } },
+  { "id": "s-bank-3", "data": { "name": "Sample Bank Insurance", "parentId": "p-bank", "sector": "Insurance", "countHead": true, "createdAt": 4 } },
+  { "id": "p-retail", "data": { "name": "Sample Retail Holdings", "parentId": null, "sector": "  Retail  ", "countHead": false, "createdAt": 5 } },
+  { "id": "s-retail-1", "data": { "name": "Sample Mart", "parentId": "p-retail", "countHead": true, "createdAt": 6 } },
+  { "id": "p-none", "data": { "name": "Sample Group Without Sector", "parentId": null, "sector": null, "countHead": true, "createdAt": 7 } },
+  { "id": "s-none-1", "data": { "name": "Sample Unit", "parentId": "p-none", "sector": null, "countHead": true, "createdAt": 8 } },
+  { "id": "s-orphan", "data": { "name": "Sample Orphan", "parentId": "p-gone", "sector": null, "countHead": true, "createdAt": 9 } }
+]

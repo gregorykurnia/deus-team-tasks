@@ -1,0 +1,58 @@
+{
+  "exportedAt": "2026-10-21T00:00:00.000Z",
+  "from": "sample (made up for the emulator dry run)",
+  "options": {
+    "type": [
+      { "label": "Client", "bg": "#EFF6FF", "color": "#1E40AF" },
+      { "label": "Partner", "bg": "#ECFDF5", "color": "#065F46" },
+      { "label": "Individual Partner", "bg": "#FDF4FF", "color": "#6B21A8" }
+    ],
+    "status": [
+      { "label": "Client / Partner Done Deal", "bg": "#ECFDF5", "color": "#065F46" },
+      { "label": "To Follow Up", "bg": "#EFF6FF", "color": "#1E40AF" },
+      { "label": "Waiting For Our Actions", "bg": "#FFFBEB", "color": "#92400E" },
+      { "label": "Scheduling In Progress", "bg": "#F5F3FF", "color": "#4C1D95" },
+      { "label": "Meeting Soon", "bg": "#FFE4F0", "color": "#9D174D" },
+      { "label": "Proposal Sent", "bg": "#E0F2FE", "color": "#075985" },
+      { "label": "Raw List", "bg": "#F9FAFB", "color": "#374151" }
+    ],
+    "priority": [
+      { "label": "High", "bg": "#FEF2F2", "color": "#991B1B" },
+      { "label": "Medium", "bg": "#FFFBEB", "color": "#92400E" },
+      { "label": "Low", "bg": "#F0FDF4", "color": "#14532D" }
+    ],
+    "cx_1700000000000": [
+      { "label": "Yes", "bg": "#ECFDF5", "color": "#065F46" },
+      { "label": "No", "bg": "#FEF2F2", "color": "#991B1B" }
+    ],
+    "cx_1600000000000": [{ "label": "Left over", "bg": "#EFF6FF", "color": "#1E40AF" }]
+  },
+  "columns": {
+    "main": [
+      { "key": "company", "label": "Company", "type": "text", "width": null, "sortKey": "company", "visible": true, "custom": false },
+      { "key": "type", "label": "Type", "type": "dropdown", "width": null, "sortKey": "type", "visible": true, "custom": false },
+      { "key": "date", "label": "Last Action", "type": "date", "width": null, "sortKey": "date", "visible": true, "custom": false },
+      { "key": "since", "label": "Since", "type": "computed", "width": null, "sortKey": "since", "visible": true, "custom": false },
+      { "key": "status", "label": "Status", "type": "dropdown", "width": null, "sortKey": "status", "visible": true, "custom": false },
+      { "key": "pic", "label": "PIC", "type": "text", "width": null, "sortKey": "pic", "visible": false, "custom": false },
+      { "key": "sourcing", "label": "Sourcing", "type": "text", "width": null, "sortKey": "sourcing", "visible": true, "custom": false },
+      { "key": "product", "label": "Products offered", "type": "text", "width": 140, "sortKey": "product", "visible": true, "custom": false },
+      { "key": "trial", "label": "Trial", "type": "text", "width": 140, "sortKey": "trial", "visible": true, "custom": false },
+      { "key": "priority", "label": "Priority", "type": "dropdown", "width": null, "sortKey": "priority", "visible": true, "custom": false },
+      { "key": "industry", "label": "Industry", "type": "text", "width": 140, "sortKey": "industry", "visible": true, "custom": false },
+      { "key": "notes", "label": "Next Actions", "type": "textarea", "width": 180, "sortKey": "notes", "visible": true, "custom": false },
+      { "key": "target", "label": "Target Date", "type": "date", "width": 120, "sortKey": "target", "visible": true, "custom": false },
+      { "key": "cx_1700000000000", "label": "Signed NDA", "type": "dropdown", "width": null, "sortKey": "cx_1700000000000", "visible": true, "custom": true },
+      { "key": "cx_1700000000001", "label": "Deal size", "type": "number", "width": null, "sortKey": "cx_1700000000001", "visible": false, "custom": true }
+    ],
+    "raw": [
+      { "key": "company", "label": "Company", "type": "text", "width": null, "sortKey": "company", "visible": true, "custom": false },
+      { "key": "type", "label": "Type", "type": "dropdown", "width": null, "sortKey": "type", "visible": true, "custom": false },
+      { "key": "reach", "label": "Planned Reach Out", "type": "date", "width": 140, "sortKey": "reach", "visible": true, "custom": false },
+      { "key": "industry", "label": "Industry", "type": "text", "width": null, "sortKey": "industry", "visible": true, "custom": false },
+      { "key": "sourcing", "label": "Sourcing", "type": "text", "width": null, "sortKey": "sourcing", "visible": false, "custom": false },
+      { "key": "priority", "label": "Priority", "type": "dropdown", "width": null, "sortKey": "priority", "visible": true, "custom": false },
+      { "key": "notes", "label": "Remarks", "type": "textarea", "width": 200, "sortKey": "notes", "visible": true, "custom": false }
+    ]
+  }
+}

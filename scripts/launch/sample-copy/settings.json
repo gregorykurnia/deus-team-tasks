@@ -1,0 +1,10 @@
+[
+  { "id": "companyIds", "data": { "next": 7 } },
+  {
+    "id": "companies",
+    "data": {
+      "options": { "status": [{ "name": "Tried on the preview", "colour": "pink" }] },
+      "fields": { "toApproach": [{ "key": "cx_1800000000000", "label": "Preview test", "type": "text", "shown": true, "own": true }] }
+    }
+  }
+]

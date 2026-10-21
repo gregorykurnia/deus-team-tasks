@@ -1,0 +1,7 @@
+[
+  { "id": "1", "data": { "id": 1, "company": "Sample Prospect", "status": "To Follow Up", "priority": "High", "type": "Client" } },
+  { "id": "2", "data": { "id": 2, "company": "Sample Client", "status": "Client / Partner Done Deal", "type": "Partner" } },
+  { "id": "3", "data": { "id": 3, "company": "Sample Lead", "_raw": true, "priority": "Low", "type": "Client" } },
+  { "id": "4", "data": { "id": 4, "company": "Sample Dropped", "status": "Drop", "cx_1700000000000": "Yes" } },
+  { "id": "5", "data": { "id": 5, "company": "Sample Old Status", "status": "Pitched (old)" } }
+]
