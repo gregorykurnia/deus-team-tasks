@@ -237,6 +237,7 @@ export default function FieldsSheet({ group, settings, companies, online, onGrou
         open
         onClose={onClose}
         title="Fields"
+        size="wide"
         initialFocus="[data-done]"
         footer={
           <>

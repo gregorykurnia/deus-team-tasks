@@ -155,7 +155,7 @@ async function runOne(browser, entry, sizeName, report) {
   await page.addStyleTag({ content: "nextjs-portal{display:none!important}" }); // the dev server's own badge
   await settle(page);
   for (const step of r.steps) {
-    try { await step(page, { sleep, phone: sizeName === "phone" }); } catch (e) { errors.push("step: " + String(e.message).split("\n")[0].slice(0, 160)); }
+    try { await step(page, { sleep, phone: sizeName === "phone" }); } catch (e) { errors.push("step: " + String(e.message).slice(0, 700)); }
   }
   if (p.net === "live") { await colleagueChange(p, seed, current.converted); seeded = null; await sleep(900); }
   await sleep(300);

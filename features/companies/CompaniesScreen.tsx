@@ -6,6 +6,7 @@
 // editor, ⋯ opens the row menu, and a company opens its record over the list (?company=, so a reload keeps it). New
 // company is ?newCompany=1, and the Fields sheet ?fields=<group>. Options open from a field or a choice editor, and Export
 // says what the file holds before it downloads.
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompanies, useCompaniesById, useCompanyOptions, useNotes, useTasks } from "@/desk/DeskData";
@@ -48,7 +49,8 @@ import {
 } from "@/lib/companyView";
 import { plural } from "@/lib/dates";
 import EmptyState from "@/ui/EmptyState";
-import Button from "@/ui/Button";
+import Icon from "@/ui/Icon";
+import Button, { buttonClass } from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
 import Sheet from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
@@ -269,6 +271,12 @@ export default function CompaniesScreen() {
 
   const searchField = <SearchField label="Search companies" value={typed} onChange={onSearch} placeholder="Search name, contact, source, product" />;
 
+  const newCompanyLink = (variant: "main" | "secondary") => (
+    <Link href={over(pathname, search, "newCompany=1")} scroll={false} className={buttonClass(variant)}>
+      <Icon name="plus" size={16} />
+      {variant === "main" ? "New company" : "Add a company here"}
+    </Link>
+  );
   let body;
   if (failed) {
     body = (
@@ -299,14 +307,14 @@ export default function CompaniesScreen() {
     const which = emptyCase(listing.scoped.length, total);
     if (which === "nothingYet") {
       body = (
-        <EmptyState icon="building" title="No companies yet">
+        <EmptyState icon="building" title="No companies yet" actions={newCompanyLink("main")}>
           Record the first company you’re talking to, or one you plan to approach. Only the name is needed.
         </EmptyState>
       );
     } else if (which === "groupEmpty") {
       const [title, text] = GROUP_EMPTY_COPY[state.group];
       body = (
-        <EmptyState icon={look.icon} title={title}>
+        <EmptyState icon={look.icon} title={title} actions={newCompanyLink("secondary")}>
           {text}
         </EmptyState>
       );

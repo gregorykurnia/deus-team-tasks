@@ -257,7 +257,8 @@ export function deleteBlocked(tasks: SourceState, notes: SourceState, online: bo
 
 // The fields the new company sheet asks for: what the group's list shows, and the contact person.
 export function newCompanyFields(settings: CompanySettings, group: CompanyGroup): CompanyField[] {
-  return settings.fields[group].filter((f) => f.shown || f.key === "pic");
+  const shown = settings.fields[group].filter((f) => f.shown || f.key === "pic");
+  return [...shown.filter((f) => f.key === "pic"), ...shown.filter((f) => f.key !== "pic")]; // the contact comes first, as in the prototype
 }
 
 export const NAME_MISSING = "Add the company’s name. It’s the only thing needed.";

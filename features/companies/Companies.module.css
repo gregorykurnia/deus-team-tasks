@@ -237,7 +237,7 @@
 }
 
 .result {
-  margin: 0;
+  margin: 13px 0;
   padding: 0 14px 8px;
   color: var(--muted);
   font-size: 13px;
@@ -690,9 +690,8 @@
     font-weight: var(--w-semibold);
   }
 
-  /* Chips and date pills say what they are on their own. */
-  .choice .lbl,
-  .pillCell .lbl {
+  /* Status, answer, type and the target and outreach dates say what they are on their own. */
+  .bare .lbl {
     display: none;
   }
 
@@ -1130,9 +1129,11 @@
   font-weight: var(--w-bold);
 }
 
-.bigName {
-  font-size: 17px;
+.newForm .bigName {
+  height: 54px;
+  font-size: 18px;
   font-weight: var(--w-bold);
+  letter-spacing: -0.01em;
 }
 
 /* Phones: one group option to a line, when moving and for a new company (as the prototype does), and the record's labels

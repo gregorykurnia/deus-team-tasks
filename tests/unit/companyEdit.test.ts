@@ -172,7 +172,7 @@ describe("deleting (B14)", () => {
 
 describe("new company (B1, B3)", () => {
   it("asks for what the group's list shows, and the contact person", () => {
-    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["status", "priority", "date", "target", "product", "notes", "pic"]);
+    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "status", "priority", "date", "target", "product", "notes"]);
     expect(newCompanyFields(settings, "noOrNotNow").map((f) => f.key)).toContain("pic");
   });
 });

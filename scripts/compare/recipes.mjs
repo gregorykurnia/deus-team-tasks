@@ -116,7 +116,7 @@ export function recipe(p, ctx = {}) {
     case "companies:record-lead": r.params.set("group", "to-approach"); P("company", num("bal")); break;
     case "companies:record-hold": r.params.set("group", "no-or-not-now"); P("company", num("jas")); break;
     case "companies:followup": S(click(/^More for /), click(/follow-up task/i)); break;
-    case "companies:delete": P("company", num("hal")); S(click(/^More for Halcyon/), click(/Delete company/)); break;
+    case "companies:delete": S(click(/^More for Halcyon/), click(/Delete company/)); break;
     case "companies:new": P("newCompany"); break;
     case "companies:new-required": P("newCompany"); S(click(/^(Add company|Create|Add|Save)/, { within: '[role="dialog"]' })); break;
     case "companies:move": r.params.set("group", "to-approach"); S(click(/^More for Lumen/), click(/^Move/)); break;
@@ -125,7 +125,7 @@ export function recipe(p, ctx = {}) {
     case "companies:field-new": P("fields", "active"); S(click(/Add a field/)); break;
     case "companies:field-remove": P("fields", "active"); S(click(/Remove field|^Remove/, { nth: "last" })); break;
     case "companies:options": P("fields", "active"); S(click(/Options/)); break;
-    case "companies:option-remove": P("fields", "active"); S(click(/Options/), click(/^Remove /, { role: "button" })); break;
+    case "companies:option-remove": P("fields", "active"); S(click(/Options/), click(/^Remove /, { role: "button", within: '[role="dialog"]' })); break;
     case "companies:export": S(tool(/Export/)); break;
 
     case "notes:remarks": r.path = "/notes/n1"; S(click(/Show all remarks/)); break;

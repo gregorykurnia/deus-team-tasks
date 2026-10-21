@@ -86,7 +86,9 @@ export default function CompanyFilters({ state, fields, options, products, onSta
         <MenuChoice checked={sort.dir === "desc"} onSelect={() => onState({ ...state, sort: sort.key, dir: "desc" })}>
           {dirs[1]}
         </MenuChoice>
-        <MenuFoot>Companies without a value always go last.</MenuFoot>
+        <MenuFoot>
+          Companies without a value always go last. {state.group === "toApproach" ? "Normally: planned outreach, soonest first." : "Normally: most recent action first."}
+        </MenuFoot>
       </Menu>
       <FilterAction icon="sliders" label="Fields" opens="dialog" onClick={onFields} />
       <FilterAction icon="download" label="Export" opens="dialog" onClick={onExport} />

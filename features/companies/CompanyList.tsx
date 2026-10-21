@@ -77,6 +77,9 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
   }
 }
 
+// On phones these say what they are on their own, so they drop their label; Priority and Last action keep theirs (guide 5.13).
+const BARE_ON_PHONE = new Set(["status", "answer", "target", "reach", "type"]);
+
 export default function CompanyList(props: CompanyListProps) {
   const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu } = props;
   const grid = gridOf(fields);
@@ -135,7 +138,7 @@ export default function CompanyList(props: CompanyListProps) {
                   </div>
                   {fields.map((f) => {
                     const cell = cellOf(c, f, group, settings, today);
-                    const classes = [styles.cell, f.type === "long" && styles.long, f.type === "choice" && styles.choice, cell.kind === "date" && cell.pill && styles.pillCell, cell.kind === "empty" && styles.emptyCell];
+                    const classes = [styles.cell, f.type === "long" && styles.long, cell.kind === "empty" && styles.emptyCell, BARE_ON_PHONE.has(f.key) && styles.bare];
                     return (
                       <button
                         key={f.key}
