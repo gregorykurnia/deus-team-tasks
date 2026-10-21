@@ -903,3 +903,15 @@
     padding: 14px 12px 12px;
   }
 }
+
+@media (max-width: 760px) {
+  /* The filters scroll sideways in one row, as Companies' and Past clients' do. */
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+}

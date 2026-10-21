@@ -128,18 +128,22 @@ export function recipe(p, ctx = {}) {
     case "companies:option-remove": P("fields", "active"); S(click(/Options/), click(/^Remove /, { role: "button", within: '[role="dialog"]' })); break;
     case "companies:export": S(tool(/Export/)); break;
 
-    case "notes:remarks": r.path = "/notes/n1"; S(click(/Show all remarks/)); break;
+    case "notes:remarks": { // the first prospect with long remarks, as the prototype opens; the normal data has none, so it opens the first prospect and there is nothing to unfold
+      const long = ctx.db?.notes.find((x) => (x.remarks || "").length > 280);
+      if (long) { r.path = `/notes/${long.id}`; S(click(/Show all remarks/)); }
+      break;
+    }
     case "notes:link": r.path = "/notes/n9"; S(click(/Link to a tracked company|Link/)); break;
     case "notes:new": P("newNotes"); break;
     case "notes:new-untracked": P("newNotes"); S(click(/Not tracked yet/)); break;
     case "notes:new-required": P("newNotes"); S(click(/Not tracked yet/), click(/^Start notes/)); break;
-    case "notes:delete": r.path = "/notes/n1"; S(click(/More for these notes/), click(/Delete these notes/)); break;
+    case "notes:delete": r.path = `/notes/${[...(ctx.db?.notes ?? [])].sort((a, b) => String(b.edited).localeCompare(String(a.edited)))[0]?.id ?? "n1"}`; S(click(/More for these notes/), click(/Delete these notes/)); break; // the one the prototype lists first
     case "notes:export": S(tool(/Export/)); break;
 
     case "past:sort": S(tool(/Order/)); break;
     case "past:add": P("add"); break;
-    case "past:add-sub": P("add"); S(click(/A subsidiary of/)); break;
-    case "past:add-sector": P("add"); S(type(/Company name/, "Nusa Outlet"), async (page) => { await page.getByPlaceholder(/Pick a sector/).fill(" retail"); await sleep(500); }); break;
+    case "past:add-sub": P("add"); S(click(/A subsidiary of/), click(/Meridian Bank/, { within: '[role="dialog"]' })); break;
+    case "past:add-sector": P("add"); S(type(/^Name/, "Nusa Outlet"), async (page) => { await page.getByPlaceholder(/Pick a sector/).fill(" retail"); await sleep(500); }); break;
     case "past:add-required": P("add"); S(click(/^Add past client/, { within: '[role="dialog"]' })); break;
     case "past:sector": S(click(/Show the subsidiaries of Nusantara/), click(/Change the sector of Nusa Mart/)); break;
     case "past:rename": S(click(/^Rename Meridian Bank/)); break;
@@ -161,6 +165,12 @@ export function recipe(p, ctx = {}) {
   }
   // The state's own conditions that need a click.
   if (p.state === "saving" && p.page === "flows") { r.path = "/flows/f1"; P("edit"); }
+  // Past clients: the add dialog filled in as the prototype's own state does (a subsidiary of Kencana Healthcare Group), then the save.
+  if ((p.state === "saving" || p.state === "save-fail") && p.page === "past" && !open) {
+    P("add");
+    S(type(/^Name/, "Kencana Clinic Medan"), click(/A subsidiary of/), click(/Kencana Healthcare Group/, { within: '[role="dialog"]' }), goOffline,
+      click(/^Add past client/, { within: '[role="dialog"]' }), wait(p.state === "saving" ? 300 : 1500));
+  }
   return r;
 }
 

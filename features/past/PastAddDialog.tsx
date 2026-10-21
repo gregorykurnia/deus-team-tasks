@@ -109,7 +109,7 @@ export default function PastAddDialog({ clients, sectors, labelOf, subsOf, onClo
       {failed && (
         <div className={styles.dialogNotice} role="alert">
           <Notice tone="error" title={`Couldn’t save ${name.trim() || "the company"}.`}>
-            {failed}
+            {failed.includes("still here") ? failed : `${failed} What you typed is still here.`}
           </Notice>
         </div>
       )}

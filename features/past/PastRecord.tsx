@@ -185,6 +185,7 @@ export default function PastRecord({ entries, labelOf, state, figures, choices, 
         ref={orderRef}
         icon="sort"
         label="Order"
+        hideLabel
         summary={PAST_SORTS[state.sort]}
         expanded={menu === "order"}
         onClick={() => setMenu(menu === "order" ? null : "order")}

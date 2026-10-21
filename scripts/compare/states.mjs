@@ -87,7 +87,7 @@ export function plan(entry) {
       break;
     case "notes":
       p.path = get("n") ? `/notes/${get("n")}` : "/notes";
-      for (const k of ["lk", "q", "sort", "track"]) set(k, get(k));
+      for (const k of ["lk", "q", "sort", "track"]) set(k, k === "lk" && get(k) === "-" ? "none" : get(k)); // "none" is the app's own word for not rated
       if (get("co")) p.company = get("co");
       break;
     case "past":
