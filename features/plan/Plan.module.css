@@ -784,10 +784,21 @@ button.insight:hover {
   background: linear-gradient(180deg, rgba(255, 236, 204, 0.9), rgba(255, 243, 224, 0.7));
 }
 
-/* Days of the neighbouring months are quieter (4.5: the whole cell at 50% put their numbers under 4.5:1, so only what's in them fades). */
-.monthCell[data-outside] .cellItems,
-.monthCell[data-outside] .dots {
+/* Days of the neighbouring months are quieter. Their words stay at 4.5:1 (R4: fading them by opacity didn't), so only
+   the dots and marks fade, and the words take --muted. */
+.monthCell[data-outside] .dots,
+.monthCell[data-outside] .cellTask i {
   opacity: 0.5;
+}
+
+.monthCell[data-outside] .cellTask:not([data-late]),
+.monthCell[data-outside] .cellEvent,
+.monthCell[data-outside] .cellMore {
+  color: var(--muted);
+}
+
+.monthCell[data-outside] .cellEvent {
+  background: none;
 }
 
 .monthCell[data-outside] .dayNumber {

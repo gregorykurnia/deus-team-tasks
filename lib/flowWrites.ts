@@ -2,6 +2,7 @@
 // change records when the flow was last edited.
 import { addDoc, collection, deleteDoc, deleteField, doc, runTransaction, updateDoc } from "firebase/firestore";
 import { assertOnline } from "./connection";
+import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
 import { applyChange, type FlowChange } from "./flows";
 import type { NewFlow } from "./types";
@@ -49,6 +50,7 @@ export function changeFlow(id: string, change: FlowChange): Promise<number | nul
     return Promise.reject(err);
   }
   const ref = doc(db, FLOWS, id);
+  expectOwnWrite("flows", id);
   const run = (queued.get(id) ?? Promise.resolve())
     .catch(() => undefined)
     .then(() =>

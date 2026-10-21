@@ -5,7 +5,7 @@
 // in its list while it leaves. Select (?select=1) chooses several tasks to mark done, move or delete at once (guide 4.7).
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { groupHref, over } from "@/desk/areas";
 import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
@@ -56,9 +56,11 @@ const KIND_WHY: Record<Kind, string> = {
   internal: "Tasks that aren't about a company show up here.",
 };
 
-export default function TasksScreen({ groupId }: { groupId?: string }) {
-  const inGroup = groupId !== undefined;
+export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }) {
+  // With no connection the device's copy of /tasks answers for a group's address too, so the address says the group.
   const pathname = usePathname();
+  const groupId = fromRoute ?? pathname.match(/^\/tasks\/groups\/([^/]+)/)?.[1];
+  const inGroup = groupId !== undefined;
   const search = useSearchParams();
   const router = useRouter();
   const toast = useToast();
@@ -355,19 +357,29 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
     }
   }
 
-  async function removeGroup() {
-    if (!group) return;
+  // Try again can be pressed later, maybe on another screen: it works on the tasks as they are then.
+  const rowsRef = useRef(tasks.rows);
+  useLayoutEffect(() => {
+    rowsRef.current = tasks.rows;
+  }, [tasks.rows]);
+
+  async function removeGroup(target = group) {
+    if (!target) return;
+    const page = window.location.pathname;
     setDeleting(true);
     try {
-      await deleteTaskGroup(group, tasks.rows);
-      setGoneGroup(true);
-      setDialog(null);
-      router.replace("/tasks?kind=internal");
-      toast(`Group “${group.name}” deleted. Its tasks are now ungrouped.`);
+      await deleteTaskGroup(target, rowsRef.current);
+      // Only the group's own page goes to Internal; from anywhere else the toast says it.
+      if (window.location.pathname === page) {
+        setGoneGroup(true);
+        setDialog(null);
+        router.replace("/tasks?kind=internal");
+      }
+      toast(`Group “${target.name}” deleted. Its tasks are now ungrouped.`);
     } catch (err) {
       setDialog(null);
       // Part way: the tasks done are ungrouped already, and deleting again finishes the rest (N13).
-      if (err instanceof PartlyChanged) toast(partlyGroupChange("delete", err), { error: true, action: "Try again", onAction: () => void removeGroup() });
+      if (err instanceof PartlyChanged) toast(partlyGroupChange("delete", err), { error: true, action: "Try again", onAction: () => void removeGroup(target) });
       else toast(failureMessage(err, "The group couldn't be deleted. Check your connection and try again."), { error: true });
     } finally {
       setDeleting(false);
@@ -637,7 +649,7 @@ export default function TasksScreen({ groupId }: { groupId?: string }) {
       <Confirm
         open={dialog === "delete" && !!group}
         onClose={() => setDialog(null)}
-        onConfirm={removeGroup}
+        onConfirm={() => removeGroup()}
         title={`Delete “${group?.name ?? ""}”?`}
         confirmLabel="Delete group"
         busy={deleting}

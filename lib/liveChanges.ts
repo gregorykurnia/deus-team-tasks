@@ -67,6 +67,24 @@ function mark(k: string, tag: "changed" | "added" | null) {
   }
 }
 
+// A write made in a transaction has no pending stage on this device: it arrives only with the server's snapshot, looking
+// like anyone's. Such a write says so first, so its change counts as this device's for a short while.
+const OWN_WINDOW_MS = 15_000;
+const expected = new Map<string, number>(); // source:id → until when
+
+export function expectOwnWrite(source: Source, id: string): void {
+  const now = Date.now();
+  expected.forEach((until, k) => {
+    if (until < now) expected.delete(k);
+  });
+  expected.set(key(source, id), now + OWN_WINDOW_MS);
+}
+
+export function isExpectedOwn(source: Source, id: string): boolean {
+  const until = expected.get(key(source, id));
+  return until !== undefined && until >= Date.now();
+}
+
 // The documents of one snapshot that changed. A bulk change marks nothing: a hundred rows lighting up says less than one
 // toast.
 export function noteChanges(source: Source, changes: { own: string[]; added: string[]; changed: string[] }): void {
@@ -166,5 +184,6 @@ export function resetLiveChanges(): void {
   burst = 0;
   lastToast = -Infinity;
   manyListeners.clear();
+  expected.clear();
   notify();
 }

@@ -13,7 +13,7 @@ import Icon, { type IconName } from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
-import { isAppleTouchDevice, promptInstall, useCanPrompt } from "./installPrompt";
+import { isAppleTouchDevice, promptInstall, useCanPrompt, useOfferSpent } from "./installPrompt";
 import styles from "./Install.module.css";
 
 const NAME = "DEUS Team Space";
@@ -32,6 +32,7 @@ export default function InstallHost() {
 export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const installed = useInstalled();
   const canPrompt = useCanPrompt();
+  const spent = useOfferSpent();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   // Read in the browser only: the sheet is never open during the server's render.
@@ -133,7 +134,14 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
           </Notice>
         </div>
       )}
-      {kind === "unavailable" && (
+      {kind === "unavailable" && spent && (
+        <div className={styles.ok}>
+          <Notice tone="info" title="The browser’s install offer was closed.">
+            To install it now, use Install in the browser’s menu, or reload the page to be offered it again.
+          </Notice>
+        </div>
+      )}
+      {kind === "unavailable" && !spent && (
         <div className={styles.ok}>
           <Notice tone="info" title="This browser can’t install it from here.">
             In Chrome or Edge, use the install button at the end of the address bar. On iPhone or iPad, open this page in Safari.

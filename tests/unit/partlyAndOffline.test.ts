@@ -65,7 +65,12 @@ describe("what else a search finds (N3)", () => {
 
   it("counts the companies and the notes that mention the words", () => {
     const found = alsoFound("pelita", [company(1, "Pelita Foods"), company(2, "Tirta Water")], [notes("n1", "Pelita Foods"), notes("n2", "Other", "met pelita staff"), notes("n3", "Nobody")]);
-    expect(found).toEqual({ companies: 1, notes: 2 });
+    expect(found).toEqual({ companies: 1, notes: 2, companiesHref: "/companies?q=pelita" });
+  });
+  it("links to the group where most of the companies are", () => {
+    const raw = (id: number, name: string) => ({ id, company: name, _raw: true }) as PipelineEntry;
+    const found = alsoFound("pelita", [company(1, "Pelita Foods"), raw(2, "Pelita Air"), raw(3, "Pelita Gas")], []);
+    expect(found?.companiesHref).toBe("/companies?group=to-approach&q=pelita");
   });
   it("says nothing when neither mentions them, or the search is empty", () => {
     expect(alsoFound("zzz", [company(1, "Pelita Foods")], [notes("n1", "Pelita Foods")])).toBeNull();

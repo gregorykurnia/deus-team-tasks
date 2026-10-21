@@ -31,7 +31,7 @@ export default function LinkMenu({ anchorRef, companies, notes, onClose, onPick 
       <div className={styles.menuSearch}>
         <TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search companies" aria-label="Search companies" autoComplete="off" />
       </div>
-      <div className={styles.menuList}>
+      <div className={styles.menuList} role="menu" aria-label="Tracked companies">
         {hits.slice(0, SHOWN).map((c) => {
           const group = companyGroup(c);
           const has = !!notesOfCompany(notes, c.id);

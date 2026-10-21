@@ -15,10 +15,25 @@
     gap: 16px;
     background: var(--backdrop);
     transition: opacity 0.25s var(--ease-out);
+    /* If the app's scripts never run (a broken copy offline), the screen still goes, and the page shows what it can. */
+    animation: launch-out 0.25s 3s forwards;
+  }
+
+  /* A page opened again in the same visit (screen changes with no connection are full page loads). */
+  :global(html[data-warm]) .launch {
+    display: none;
   }
 
   .leaving {
     opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@keyframes launch-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
     pointer-events: none;
   }
 }

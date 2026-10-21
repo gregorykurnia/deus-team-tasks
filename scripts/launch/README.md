@@ -11,13 +11,14 @@ Two changes to live data, made once, right before `redesign` merges into `main`:
 
 Nothing is written without `--write`. Every write saves a backup of `settings` and `historicalClients` (and the
 companies, read only) in `launch-data/` first, which stays on this machine and out of git. A live write asks you to
-type `live`.
+type `live`. Every read comes from the server, so with no connection the step stops instead of backing up an empty copy.
 
 ## Steps for the owner
 
 **1. Export the settings** (on the main computer, in the browser you use the old app in). Open the live app, open the
 console (Chrome: ⌥⌘J on a Mac), paste all of `scripts/launch/export-settings.js` and press Enter. It saves
-`company-settings.json` to Downloads; it only reads. Copy it to the server:
+`company-settings.json` to Downloads; it only reads. If the console says the export is empty, you're in the wrong
+browser or on the wrong address (the import refuses an empty export unless you add `--allow-empty`). Copy it to the server:
 
 ```sh
 scp -i ~/.ssh/oracle_vm2.key ~/Downloads/company-settings.json ubuntu@100.118.18.29:deus-team-tasks/launch-data/
@@ -48,7 +49,8 @@ npm run launch-data:dry -- launch-data/company-settings.json launch-data/live-<t
 npm run launch-data -- import --live --settings launch-data/company-settings.json --write
 ```
 
-**Undo**, if needed (puts back the settings record and only the sectors, so other changes since stay):
+**Undo**, if needed. It undoes only what that import changed: the settings record while it still holds what the import
+wrote, and the sectors the import filled that nobody has changed since; it says what it leaves alone, and backs up first.
 
 ```sh
 npm run launch-data -- restore --live launch-data/live-<the backup the live run printed> --write

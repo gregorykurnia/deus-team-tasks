@@ -92,9 +92,9 @@ const num = (n: number) => n.toLocaleString("en-GB");
 export function partlyGroupChange(verb: "rename" | "delete", err: PartlyChanged): string {
   const total = err.changed + err.left;
   const tasks = `${num(total)} ${total === 1 ? "task" : "tasks"}`;
-  const done = verb === "rename" ? "renamed the group" : "removed from the group";
+  const done = verb === "rename" ? "moved to the new name" : "removed from the group";
   if (err.left === 0) return `The group’s ${tasks} ${verb === "rename" ? "follow its new name" : "are now ungrouped"}, but the group itself wasn’t ${verb === "rename" ? "renamed" : "deleted"}. Check your connection and try again to finish.`;
-  return `${num(err.changed)} of ${tasks} ${done}. Couldn’t ${verb === "rename" ? "rename" : "remove"} the other ${num(err.left)}. Check your connection and try again to finish.`;
+  return `${num(err.changed)} of ${tasks} ${done}. Couldn’t ${verb === "rename" ? "move" : "remove"} the other ${num(err.left)}. Check your connection and try again to finish.`;
 }
 
 // Renames the group and every task in it. Returns how many tasks moved with it.

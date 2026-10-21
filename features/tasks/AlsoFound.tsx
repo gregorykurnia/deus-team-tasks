@@ -18,7 +18,7 @@ export default function AlsoFound({ query }: { query: string }) {
     <p className={styles.alsoFound} role="status">
       Also mentioned in
       {found.companies > 0 && (
-        <Link href={`/companies?q=${q}`} className={styles.linkButton}>
+        <Link href={found.companiesHref} className={styles.linkButton}>
           {companiesFound(found.companies)}
         </Link>
       )}

@@ -30,7 +30,10 @@ async function seedAll() {
       ] },
     }),
   ]);
-  await seed("clients", "prospectJournal", [{ id: "n1", prospectName: "Pelita Foods", pipelineEntryId: 1, updatedAt: Date.now(), clientNeed: "Faster onboarding", opportunityStatus: "High", detailedRemarks: "" }]);
+  await seed("clients", "prospectJournal", [
+    { id: "n1", prospectName: "Pelita Foods", pipelineEntryId: 1, updatedAt: Date.now(), clientNeed: "Faster onboarding", opportunityStatus: "High", detailedRemarks: "" },
+    { id: "n2", prospectName: "Nusa Agro", pipelineEntryId: null, updatedAt: Date.now() - 1000, clientNeed: "", opportunityStatus: "", detailedRemarks: "" },
+  ]);
   await seed("clients", "historicalClients", [
     { id: "p1", name: "Meridian Bank", parentId: null, sector: "Banking", countHead: true, createdAt: 1 },
     { id: "p2", name: "Meridian Leasing", parentId: "p1", sector: null, countHead: true, createdAt: 2 },
@@ -176,6 +179,50 @@ test("keyboard: a sheet keeps Tab inside, Esc closes it, and focus goes back to 
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
   await expect(opener).toBeFocused();
+});
+
+// Menus and the quick editors (R4: these are where roles nest, a menu's items inside a dialog).
+const filterButton = (page: Page, name: RegExp) => page.getByRole("toolbar", { name: "Filter and sort" }).getByRole("button", { name });
+
+test("axe: a menu with a number field has no serious or critical issues, and the arrow keys move out of the field", async ({ page }) => {
+  await page.goto("/tasks");
+  await loaded(page);
+  await filterButton(page, /^No action for/).click();
+  const menu = page.getByRole("menu", { name: "No action for" });
+  await expect(menu).toBeVisible();
+  expect(await serious(page)).toEqual([]);
+  const field = menu.getByRole("spinbutton");
+  await field.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(field).not.toBeFocused();
+  expect(await menu.evaluate((el) => el.contains(document.activeElement) && /^menuitem/.test(document.activeElement!.getAttribute("role") ?? ""))).toBe(true);
+});
+
+test("axe: a company's quick date editor has no serious or critical issues", async ({ page, isMobile }) => {
+  test.skip(isMobile, "The same editor; the desktop list has the cell to open it from.");
+  await page.goto("/companies");
+  await loaded(page);
+  await page.getByRole("article", { name: "Pelita Foods" }).getByRole("button", { name: /^Target date:/ }).click();
+  await expect(page.getByRole("dialog", { name: "Target date" })).toBeVisible();
+  expect(await serious(page)).toEqual([]);
+});
+
+test("axe: linking notes to a tracked company has no serious or critical issues", async ({ page }) => {
+  await page.goto("/notes/n2");
+  await loaded(page);
+  await page.getByRole("button", { name: "Link to a tracked company" }).first().click();
+  const editor = page.getByRole("dialog", { name: "Link to a tracked company" });
+  await expect(editor.getByRole("menuitem", { name: /Halcyon Labs/ })).toBeVisible();
+  expect(await serious(page)).toEqual([]);
+});
+
+test("axe: a past client's sector editor has no serious or critical issues", async ({ page }) => {
+  await page.goto("/past");
+  await loaded(page);
+  await page.getByRole("button", { name: /Change the sector of Meridian Bank/ }).first().click();
+  const editor = page.getByRole("dialog", { name: "Sector of Meridian Bank" });
+  await expect(editor.getByRole("menuitemradio", { name: /Banking/ })).toBeVisible();
+  expect(await serious(page)).toEqual([]);
 });
 
 test("keyboard: a menu opens with Enter, arrows move, Esc closes and focus returns", async ({ page }) => {

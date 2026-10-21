@@ -138,8 +138,9 @@ export function stepLabel(state: PlanState, today: string): string {
 function rangeWithYear(state: PlanState, today: string): string {
   const from = timelineFrom(state, today);
   const to = addDays(from, TIMELINE_DAYS - 1);
-  const sameYear = to.slice(0, 4) === today.slice(0, 4);
-  return `${shortDate(from, today)} to ${shortDate(to, today)}${sameYear ? ` ${to.slice(0, 4)}` : ""}`;
+  // The year once, at the end; the start gives its own only when it's another year and not this one.
+  const fromLabel = from.slice(0, 4) === today.slice(0, 4) ? shortDate(from, today) : shortDate(from, to);
+  return `${fromLabel} to ${shortDate(to, to)} ${to.slice(0, 4)}`;
 }
 
 export function planSubtitle(state: PlanState, today: string): string {

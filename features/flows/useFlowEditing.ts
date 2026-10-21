@@ -11,7 +11,10 @@
 //
 // Flows are read only with no connection: typing kept when the connection goes is held until it's back, then saved.
 // A write that's refused or fails says what wasn't saved and keeps what was typed, with Try again; the save line says
-// "Not saved" until it's made. Undo or Try again pressed once the editor has closed still saves, on the newest version.
+// "Not saved" until it's made. The editor's Undo toasts go when it closes; a Try again for typing pressed after that
+// still saves, on the newest version, unless newer typing in that field has saved since (then it's taken back).
+// A write that fails after a later write already carried newer typing for the same field doesn't bring its older
+// words back, so they can never be saved over the newer ones.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { failureMessage } from "@/lib/connection";
 import { applyChange, contentOf, replayable, textAt, withText, type FlowChange, type FlowTextKey } from "@/lib/flows";
@@ -76,6 +79,7 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
   const [ahead, setAhead] = useState<Flow | null>(null);
   const aheadRef = useRef<Flow | null>(null);
   const writes = useRef(0);
+  const lastCarried = useRef(new Map<FlowTextKey, number>()); // the newest write that carried each field's typing
   const caughtUp = useRef<{ write: number; at: number } | null>(null); // saved, shown until the data has it
   const [inFlight, setInFlight] = useState(0);
   const [failures, setFailures] = useState<Failure[]>([]);
@@ -117,6 +121,7 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
       aheadRef.current = next;
       setAhead(next);
       const mine = ++writes.current;
+      for (const k of typed) lastCarried.current.set(k, mine);
       setInFlight((n) => n + 1);
       const latest = () => writes.current === mine;
       const drop = () => {
@@ -137,29 +142,42 @@ export function useFlowEditing(flow: Flow, online: boolean): FlowEditing {
           if (latest()) drop();
           if (isGone(err)) return;
           console.error("The flow couldn't be saved", err);
+          // Fields a later write carried hold newer typing: that write saves it, or fails with its own Try again.
+          const own = typed.filter((k) => (lastCarried.current.get(k) ?? 0) <= mine);
+          if (!mutate && !own.length) return;
           // What was typed comes back into its field, still to be saved.
-          if (typed.length) {
+          if (own.length) {
             const back = { ...draftsRef.current };
-            for (const k of typed) {
+            for (const k of own) {
               const v = textAt(next, k);
               if (v !== undefined && !(k in back)) back[k] = v;
               if (v !== undefined) dirty.current.add(k);
             }
             setDraftsBoth(back);
           }
-          // Pressed while editing, Try again saves what's typed now; once the editor has closed, this change.
+          // Pressed while editing, Try again saves what's typed now; once the editor has closed, this change, with only
+          // the typing no later write carried.
+          const ownValues = own.flatMap((k) => {
+            const v = textAt(next, k);
+            return v === undefined ? [] : [[k, v] as const];
+          });
+          const retryChange: FlowChange = (f) => {
+            let out = f;
+            for (const [k, v] of ownValues) out = withText(out, k, v);
+            return mutate ? mutate(out) : out;
+          };
           const failure: Failure = {
             after: writes.current,
             typedOnly: !mutate,
             retry: () => {
-              if (!mounted.current) saveAway(flowId, change, toast);
+              if (!mounted.current) saveAway(flowId, retryChange, toast);
               else if (mutate) changeRef.current(mutate, failure);
               else flushRef.current();
             },
           };
           setFailures((list) => [...list, failure]);
           const id = toast(failureMessage(err, FAILED), { error: true, keep: true, action: "Try again", onAction: failure.retry });
-          if (typed.length) offerTyping(flowId, typed, () => toast.dismiss(id));
+          if (own.length) offerTyping(flowId, own, () => toast.dismiss(id));
         })
         .finally(() => setInFlight((n) => n - 1));
     },

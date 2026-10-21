@@ -1,7 +1,7 @@
 // Live changes (A1, guide 3 and 5.8): what just arrived glows and a colleague's change is tagged, each for its own time,
 // and a burst of a colleague's changes makes one toast.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BULK_LIMIT, BURST_MS, GLOW_MS, MANY_CHANGES, noteChanges, onManyChanges, resetLiveChanges, subscribeLive, TAG_MS, TOAST_GAP_MS } from "@/lib/liveChanges";
+import { BULK_LIMIT, BURST_MS, expectOwnWrite, GLOW_MS, isExpectedOwn, MANY_CHANGES, noteChanges, onManyChanges, resetLiveChanges, subscribeLive, TAG_MS, TOAST_GAP_MS } from "@/lib/liveChanges";
 import { nextOfferOrder, offerTyping, resetOffers, supersede } from "@/lib/staleOffers";
 
 beforeEach(() => {
@@ -128,5 +128,16 @@ describe("stale offers of typing", () => {
     offerTyping("flow1", ["step1.title"], takeBack);
     supersede("flow1", ["step1.title"], since);
     expect(takeBack).not.toHaveBeenCalled();
+  });
+});
+
+describe("own writes made in a transaction", () => {
+  it("count as this device's for a short while after they're announced, per source and id", () => {
+    expectOwnWrite("flows", "f1");
+    expect(isExpectedOwn("flows", "f1")).toBe(true);
+    expect(isExpectedOwn("flows", "f2")).toBe(false);
+    expect(isExpectedOwn("companies", "f1")).toBe(false);
+    vi.advanceTimersByTime(15_001);
+    expect(isExpectedOwn("flows", "f1")).toBe(false);
   });
 });

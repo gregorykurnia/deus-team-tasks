@@ -4,6 +4,7 @@
 import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
 import { assertOnline } from "./connection";
+import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
@@ -66,6 +67,7 @@ export async function addCompany(fields: CompanyPatch, knownMaxId: number): Prom
   let floor = knownMaxId;
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = await allocateCompanyId(floor);
+    expectOwnWrite("companies", String(id));
     const created = await runTransaction(clientsDb, async (tx) => {
       const ref = companyRef(id);
       if ((await tx.get(ref)).exists()) return false;

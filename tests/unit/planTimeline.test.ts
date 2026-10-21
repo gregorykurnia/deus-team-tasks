@@ -227,6 +227,8 @@ describe("what the bar says", () => {
     expect(planSubtitle(read("view=day&date=2026-10-23"), TODAY)).toBe("Friday, 23 October");
     expect(planSubtitle(read(""), TODAY)).toBe("19 Oct to 15 Nov 2026");
     expect(planSubtitle(read("from=2026-12-21"), TODAY)).toBe("21 Dec to 17 Jan 2027");
+    expect(planSubtitle(read("from=2027-03-01"), TODAY)).toBe("1 Mar to 28 Mar 2027");
+    expect(planSubtitle(read("from=2025-12-29"), "2026-01-05")).toBe("29 Dec 2025 to 25 Jan 2026");
     expect(planSubtitle(read("view=day&date=2031-03-04"), TODAY)).toBe("Tuesday, 4 March 2031");
     expect(planSubtitle(read("view=people"), TODAY)).toBe("Who carries what");
     expect(planSubtitle(read("view=people&person=Maya%20Chen"), TODAY)).toBe("Maya Chen");

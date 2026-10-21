@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { clientsDb } from "@/lib/firebaseClients";
 import { DEFAULT_COMPANY_SETTINGS, readCompanySettings } from "@/lib/companySettings";
 import { droppedByImport, sectorBackfill, settingsFromOldDevice, valuesWithoutOption, type OldDeviceExport } from "@/scripts/launch/launchData";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { backfillFor, readBackup, restore, restorePlan, seedCopy, stable, writeSectors, writeSettings, type Backup } from "@/scripts/launch/launchWrites";
 import { clearAll, readFields } from "../support/emulator";
 
@@ -140,6 +141,39 @@ describe("import and restore on the emulator", () => {
     expect(await restore(before)).toEqual({ settings: true, sectors: 1 });
     expect(stable(await readBackup())).toBe(stable(copy));
     expect(await restorePlan(before)).toMatchObject({ settingsChanged: false, sectors: [] });
+  });
+
+  it("with the import's record, undoes only what the import changed and nobody changed since", async () => {
+    const twoSubs: Backup = {
+      ...copy,
+      historicalClients: [
+        ...copy.historicalClients,
+        { id: "t", data: { name: "Sub 2", parentId: "p", countHead: true, createdAt: 3 } }, // no sector field at all
+        { id: "u", data: { name: "Sub 3", parentId: "p", sector: null, countHead: true, createdAt: 4 } },
+      ],
+    };
+    await seedCopy(twoSubs);
+    const before = await readBackup();
+    const { settings } = settingsFromOldDevice(none);
+    const sectors = backfillFor(before);
+    const record = { settings: JSON.parse(JSON.stringify(settings)), sectors };
+    await writeSettings(settings);
+    expect(await writeSectors(sectors)).toBe(3);
+
+    // After launch, someone corrects one filled sector: the undo leaves it.
+    await updateDoc(doc(clientsDb, "historicalClients", "u"), { sector: "Insurance" });
+    const plan = await restorePlan(before, record);
+    expect(plan.sectors.map((x) => x.id).sort()).toEqual(["s", "t"]);
+    expect(plan.sectorsChangedSince).toBe(1);
+    expect(await restore(before, record)).toEqual({ settings: true, sectors: 2 });
+    expect((await readFields("clients", "historicalClients/s"))?.sector).toBeNull();
+    expect(await readFields("clients", "historicalClients/t")).not.toHaveProperty("sector"); // removed, as it was
+    expect((await readFields("clients", "historicalClients/u"))?.sector).toBe("Insurance");
+
+    // Settings changed after the import stay as they are.
+    await writeSettings(settings);
+    await setDoc(doc(db, "settings", "companies"), { ...record.settings, extra: 1 });
+    expect(await restorePlan(before, record)).toMatchObject({ settingsChanged: false, settingsChangedSince: true });
   });
 
   it("removes the settings record on restore when there was none", async () => {

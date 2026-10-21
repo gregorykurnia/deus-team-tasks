@@ -108,23 +108,25 @@ export function SectorEditor({ anchorRef, onClose, name, sector, own, sectors, o
         />
       </div>
       {hits.length > 0 && (
-        <div className={styles.secList} role="group" aria-label="Sectors already in use">
+        <div className={styles.secList}>
           <MenuHeading>Sectors already in use</MenuHeading>
-          {hits.map((s) => (
-            <button
-              key={s.name}
-              type="button"
-              role="menuitemradio"
-              aria-checked={normalizeSectorKey(s.name) === current}
-              className={styles.secPick}
-              onClick={() => save(s.name)}
-            >
-              <span className={styles.secPickName}>
-                <Highlight text={s.name} query={draft.trim()} />
-              </span>
-              <small>{s.count === 1 ? "1 company" : `${s.count.toLocaleString("en-GB")} companies`}</small>
-            </button>
-          ))}
+          <div role="menu" aria-label="Sectors already in use">
+            {hits.map((s) => (
+              <button
+                key={s.name}
+                type="button"
+                role="menuitemradio"
+                aria-checked={normalizeSectorKey(s.name) === current}
+                className={styles.secPick}
+                onClick={() => save(s.name)}
+              >
+                <span className={styles.secPickName}>
+                  <Highlight text={s.name} query={draft.trim()} />
+                </span>
+                <small>{s.count === 1 ? "1 company" : `${s.count.toLocaleString("en-GB")} companies`}</small>
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {note && (

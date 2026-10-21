@@ -16,5 +16,7 @@
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
   link.download = "company-settings.json";
   link.click();
+  if (!data.options || !data.columns)
+    console.warn("This browser kept no company options or columns here. Is this the browser and the address where the old app's companies are used?");
   console.log("Saved company-settings.json", data);
 })();

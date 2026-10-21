@@ -2,11 +2,12 @@
 // each subsidiary with no sector its parent's. Steps for the owner: scripts/launch/README.md.
 //
 //   npm run launch-data -- backup  --live | --emulator
-//   npm run launch-data -- import  --live | --emulator  --settings FILE  [--write]
+//   npm run launch-data -- import  --live | --emulator  --settings FILE  [--write]  [--allow-empty]
 //   npm run launch-data -- restore --live | --emulator  DIR | --latest  [--write]
 //   npm run launch-data -- seed    --emulator  DIR      (puts a backup into the emulator, as the copy to dry-run on)
 //
-// Nothing is written without --write. Every import with --write saves a backup first, in launch-data/.
+// Nothing is written without --write. Every import or restore with --write saves a backup first, in launch-data/;
+// an import's backup also keeps what it wrote (import.json), so its restore undoes only that.
 // A live write asks to type "live" (or takes --yes when there's no terminal).
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -57,11 +58,13 @@ async function confirmLive() {
   if (answer.trim() !== "live") fail("Stopped. Nothing was written.");
 }
 
-async function latestBackup(): Promise<string> {
+// The backup the newest import took (a later plain backup, or a restore's, would already hold the imported data).
+async function latestImportBackup(): Promise<string> {
   const prefix = live ? "live-" : "emulator-";
-  const dirs = (await readdir(BACKUPS).catch(() => [] as string[])).filter((d) => d.startsWith(prefix)).sort();
-  if (!dirs.length) fail(`No ${prefix}* backup in ${BACKUPS}.`);
-  return path.join(BACKUPS, dirs[dirs.length - 1]);
+  const dirs = (await readdir(BACKUPS).catch(() => [] as string[])).filter((d) => d.startsWith(prefix)).sort().reverse();
+  const { loadMeta } = await import("./launchWrites");
+  for (const d of dirs) if ((await loadMeta(path.join(BACKUPS, d))).command === "import") return path.join(BACKUPS, d);
+  fail(`No ${prefix}* backup taken by an import in ${BACKUPS}.`);
 }
 
 function list(title: string, lines: string[]) {
@@ -104,6 +107,7 @@ async function main() {
 
   if (command === "seed") {
     const dir = positional[0] ?? fail("Say which backup to load: seed --emulator DIR.");
+    // Any backup can be the copy to dry-run on, live ones included: seed only ever writes the emulator.
     const backup = await w.loadBackup(path.resolve(dir));
     const { clearAll } = await import("../../tests/support/emulator");
     await clearAll();
@@ -115,16 +119,31 @@ async function main() {
   }
 
   if (command === "restore") {
-    const dir = has("--latest") ? await latestBackup() : path.resolve(positional[0] ?? fail("Say which backup: DIR or --latest."));
+    const dir = has("--latest") ? await latestImportBackup() : path.resolve(positional[0] ?? fail("Say which backup: DIR or --latest."));
+    const target = (await w.loadMeta(dir)).target;
+    if (target !== (live ? "live" : "emulator")) fail(`Stopped: ${path.relative(ROOT, dir)} is a backup of ${target ?? "unknown data"}, not of ${live ? "the live data" : "the emulator"}.`);
     const backup = await w.loadBackup(dir);
-    const plan = await w.restorePlan(backup);
-    console.log(`\nFrom ${path.relative(ROOT, dir)}:`);
-    console.log(`  settings/companies: ${plan.settingsChanged ? (plan.before ? "put back as it was" : "removed (there was none)") : "already as it was"}`);
+    const record = await w.loadImportRecord(dir);
+    const plan = await w.restorePlan(backup, record);
+    console.log(`\nFrom ${path.relative(ROOT, dir)}${record ? " (undoes only what that import changed)" : ""}:`);
+    console.log(
+      `  settings/companies: ${
+        plan.settingsChangedSince
+          ? "changed since the import, so it's left as it is"
+          : plan.settingsChanged
+            ? plan.before
+              ? "put back as it was"
+              : "removed (there was none)"
+            : "already as it was"
+      }`
+    );
     console.log(`  past clients whose sector goes back: ${plan.sectors.length}`);
+    if (plan.sectorsChangedSince) console.log(`  sectors the import gave that someone changed since, left as they are: ${plan.sectorsChangedSince}`);
     if (!write) return;
     await confirmLive();
-    const done = await w.restore(backup);
-    const after = await w.restorePlan(backup);
+    await backupNow();
+    const done = await w.restore(backup, record);
+    const after = await w.restorePlan(backup, record);
     if (after.settingsChanged || after.sectors.length) fail(`Restore checked and NOT complete: ${after.sectors.length} sectors still differ.`);
     console.log(`\nRestored and checked: settings ${done.settings ? "put back" : "unchanged"}, ${done.sectors} sectors put back.`);
     return;
@@ -134,9 +153,16 @@ async function main() {
   const file = valueOf("--settings") ?? fail("Say which settings file: --settings FILE (made by export-settings.js).");
   const exported = JSON.parse(await readFile(path.resolve(file), "utf8")) as import("./launchData").OldDeviceExport;
   if (!("options" in exported) || !("columns" in exported)) fail(`${file} isn't an export from export-settings.js.`);
+  // The old Companies screen saves both as soon as it opens, so an empty one is almost always the wrong browser or site.
+  const empty = [exported.options ? "" : "options", exported.columns ? "" : "columns"].filter(Boolean);
+  if (empty.length && !has("--allow-empty"))
+    fail(
+      `Stopped: ${file} has no ${empty.join(" and no ")} (exported from ${exported.from ?? "an unknown address"}). ` +
+        "Export again in the browser and on the site where the old app's companies are used, or add --allow-empty to import the defaults."
+    );
   const plan = d.settingsFromOldDevice(exported);
   const current = await w.readBackup();
-  const backfill = w.backfillFor(current);
+  const backfill = w.backfillFor(current); // for the report; the write uses the backup taken right before it
   console.log(`\nSettings from ${file}${exported.from ? ` (exported from ${exported.from} at ${exported.exportedAt})` : ""}`);
   list("What the import keeps from that computer", plan.notes);
   list("Look at these first", plan.warnings);
@@ -148,9 +174,11 @@ async function main() {
   if (!write) return;
 
   await confirmLive();
-  const { dir } = await backupNow();
+  const { dir, backup } = await backupNow();
+  const toFill = w.backfillFor(backup); // a sector typed while the prompt was open is left alone
+  await w.saveImportRecord(dir, { settings: JSON.parse(JSON.stringify(plan.settings)), sectors: toFill });
   await w.writeSettings(plan.settings);
-  const sectors = await w.writeSectors(backfill);
+  const sectors = await w.writeSectors(toFill);
 
   // Read back and check.
   const stored = await w.storedSettingsNow();
@@ -158,10 +186,10 @@ async function main() {
   const after = await w.readBackup();
   const left = w.backfillFor(after);
   const byId = new Map(after.historicalClients.map((c) => [c.id, c.data]));
-  const wrong = backfill.filter((b) => byId.get(b.id)?.sector !== b.sector);
+  const wrong = toFill.filter((b) => byId.get(b.id)?.sector !== b.sector);
   if (left.length || wrong.length) fail(`Check failed: ${left.length} subsidiaries still without a sector, ${wrong.length} with the wrong one.`);
   console.log(`\nDone and checked: settings/companies written, ${sectors} subsidiaries given their parent's sector.`);
-  console.log(`To undo: npm run launch-data -- restore ${live ? "--live" : "--emulator"} ${path.relative(ROOT, dir)} --write`);
+  console.log(`To undo (only what this import changed): npm run launch-data -- restore ${live ? "--live" : "--emulator"} ${path.relative(ROOT, dir)} --write`);
 }
 
 main().then(

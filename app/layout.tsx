@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { EARLY_SCRIPT } from "@/features/install/earlyScript";
 import LaunchScreen from "@/features/install/LaunchScreen";
 import ServiceWorker from "@/features/install/ServiceWorker";
 import "./globals.css";
@@ -38,8 +39,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
+    // The early script marks <html> with data-warm on a page opened again in the same visit.
+    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: EARLY_SCRIPT }} />
         <LaunchScreen />
         {children}
         <ServiceWorker />
