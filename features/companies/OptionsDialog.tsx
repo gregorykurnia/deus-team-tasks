@@ -217,7 +217,7 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
         <p>Renaming changes it on every company that uses it. Removing clears it from them.</p>
         {locked.length > 0 && (
           <div className={styles.noticeGap}>
-            <Notice tone="info">
+            <Notice tone="info" icon="lock">
               <b>{andList(locked.map((o) => o.name))}</b> can’t be renamed or removed: {LOCKED_DEPEND[field.key] ?? "the groups depend on"} {locked.length === 1 ? "it" : "them"}.{" "}
               {locked.length === 1 ? "Its" : "Their"} colour can change.
             </Notice>

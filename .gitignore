@@ -48,3 +48,6 @@ firebase-debug.log
 # playwright
 /test-results/
 /playwright-report/
+
+# screenshots against the prototype (task 4.4)
+/redesign/compare/

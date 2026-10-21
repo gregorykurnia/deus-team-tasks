@@ -526,6 +526,11 @@
   font-weight: var(--w-bold);
 }
 
+.coldIcon {
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
 .amberWords {
   color: var(--amber-ink);
   font-weight: var(--w-bold);
@@ -1130,10 +1135,11 @@
   font-weight: var(--w-bold);
 }
 
-/* Phones: one group option to a line when moving (the four of a new company stay two by two), and the record's labels
+/* Phones: one group option to a line, when moving and for a new company (as the prototype does), and the record's labels
    above their values. */
 @media (max-width: 760px) {
-  .gopts:not(.four) {
+  .gopts,
+  .gopts.four {
     grid-template-columns: minmax(0, 1fr);
   }
 

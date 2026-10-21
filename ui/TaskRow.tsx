@@ -223,7 +223,8 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   const label = id === "about" ? (row.badge.kind === "company" ? "Company" : "Group") : columnLabel(column, row.done);
   return (
     <span className={classes.join(" ")} data-col={id}>
-      <span className={styles.label}>{label}</span>
+      {/* "No action for 15 days" already names the detail: "Last action No action for 15 days" would say it twice. */}
+      <span className={id === "last" && row.lastAction?.tone === "red" ? "sr-only" : styles.label}>{label}</span>
       {empty ? (
         <>
           <span aria-hidden="true" className={styles.none}>

@@ -45,7 +45,8 @@ function openFromRow(e: MouseEvent<HTMLElement>) {
   e.currentTarget.querySelector<HTMLAnchorElement>("a[data-row-link]")?.click();
 }
 
-export function CellValue({ cell, query, searched }: { cell: Cell; query: string; searched: boolean }) {
+// coldIcon: a last action that has gone cold carries the snowflake (the record shows it; the list keeps just the words).
+export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; query: string; searched: boolean; coldIcon?: boolean }) {
   switch (cell.kind) {
     case "empty":
       return null;
@@ -61,6 +62,7 @@ export function CellValue({ cell, query, searched }: { cell: Cell; query: string
       }
       return (
         <span className={cell.tone === "red" ? styles.redWords : cell.tone === "amber" ? styles.amberWords : styles.dv} title={cell.title}>
+          {coldIcon && cell.tone === "red" && cell.title.endsWith("Gone cold") && <Icon name="snow" size={14} className={styles.coldIcon} />}
           {cell.label}
         </span>
       );

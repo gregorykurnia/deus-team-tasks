@@ -88,7 +88,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
           ) : cell.kind === "text" ? (
             <span className={styles.pvText}>{cell.label}</span>
           ) : (
-            <CellValue cell={cell} query="" searched={false} />
+            <CellValue cell={cell} query="" searched={false} coldIcon />
           )}
         </button>
       </div>
@@ -160,7 +160,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
               </Notice>
             )}
             {alerts.map((a) => (
-              <Notice key={a.title} tone={a.tone} title={a.title}>
+              <Notice key={a.title} tone={a.tone} title={a.title} icon={a.icon}>
                 {a.text}
               </Notice>
             ))}

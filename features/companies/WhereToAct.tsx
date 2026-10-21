@@ -17,7 +17,7 @@ export default function WhereToAct({ counts, current, onPick }: WhereToActProps)
   return (
     <section className={styles.wta} aria-label="Where to act">
       <h2 className={styles.wtaHead}>
-        Where to act<span>Choose one to see only those</span>
+        Where to act<span>Tap one to see only those</span>
       </h2>
       <div className={styles.wtaGrid}>
         {ACT_CARDS.map((a) => {

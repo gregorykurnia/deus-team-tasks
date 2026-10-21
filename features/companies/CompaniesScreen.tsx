@@ -267,7 +267,7 @@ export default function CompaniesScreen() {
   const total = companies.rows.length;
   const filtered = filtersOn(state, fields);
 
-  const searchField = <SearchField label="Search companies" value={typed} onChange={onSearch} placeholder="Search companies" />;
+  const searchField = <SearchField label="Search companies" value={typed} onChange={onSearch} placeholder="Search name, contact, source, product" />;
 
   let body;
   if (failed) {

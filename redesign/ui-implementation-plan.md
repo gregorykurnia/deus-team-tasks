@@ -178,12 +178,17 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 4.1 | Install and PWA: install sheet, manifest, icons, launch screen, service worker, offline first open | Sonnet 5.5 High | 2026-10-20 · this commit (install sheet is `?install=1`; short name "DEUS Space"; iPhone launch screen is in-app, no startup images; gap N16 provisional; Android install and the iPhone steps need a real-device check, left to 4.4) |
 | 4.2 | Live changes and the rest of the §4 checklist (needs N1–N3 built here once designed) | Sonnet 5.5 High | 2026-10-20 · this commit (one live store, `lib/liveChanges.ts`, fed by every source's snapshots; N2 and N3 built provisional, N1 stays as 3.3 and 3.14 left it; the plan's one open §4 row, Today's search, is N3) |
 | 4.3 | Smoke tests rewritten for the new UI, all passing | Opus 5.5 High | 2026-10-21 · this commit (old-UI stories already guarded by the screen specs point there; `jakarta` project runs Plan, Today and tasks at UTC+7; two full runs 494/494) |
-| 4.4 | Screenshots against the prototype, every state on `map.html`, phone and desktop | Sonnet 5.5 High | |
+| 4.4 | Screenshots against the prototype, every state on `map.html`, phone and desktop | Sonnet 5.5 High | 2026-10-21 · this commit (split: the tool, one run of every state and the first fixes; the rest by area in 4.4a–4.4e) |
+| 4.4a | Screenshot fixes: Today, All tasks, task groups, task details, selecting several, moving around, install | Sonnet 5.5 High | |
+| 4.4b | Screenshot fixes: Plan | Sonnet 5.5 High | |
+| 4.4c | Screenshot fixes: Companies, company record, fields and options, new company, export | Sonnet 5.5 High | |
+| 4.4d | Screenshot fixes: Qualification notes and past clients | Sonnet 5.5 High | |
+| 4.4e | Screenshot fixes: Flows | Sonnet 5.5 High | |
 | 4.5 | Accessibility check (axe, keyboard pass, screen-reader labels) | Sonnet 5.5 High | |
 | 4.6 | Real-phone check on the preview (you, with a helper session) | Haiku 5.5 Max | |
 | 4.7 | Delete old UI files, old-names check, remove unused deps | Haiku 5.5 Max | |
 | 4.8 | Data step for launch: settings import, sector backfill, dry run (Q3, Q4) | Opus 5.5 High | |
-| R4 | **Phase 4 review** | Opus 5.5 High | |
+| R4 | **Phase 4 review** (plus one full `npm run compare`, see 4.4a–4.4e) | Opus 5.5 High | |
 | M | Merge `redesign` into `main` on your say; update `CLAUDE.md` | Sonnet 5.5 High | |
 
 Done cells: date and commit, plus a short phrase only if something changed from the plan.
@@ -258,7 +263,9 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.3 Smoke tests for the new UI.** Rewrite every 1.2/1.3 spec's steps and selectors (roles and labels from the design) keeping the same behaviours, and drop `OLD_UI` (`/old`) from them; add selecting several, quick capture, options rename, notes offline writing, and the company delete cascade (tasks become internal, notes not tracked; R1). From R3: one project run in the team's time zone (`timezoneId: "Asia/Jakarta"`), for Plan, Today and the deadline pills. **Done when** the full suite passes twice in a row on a free machine.
 
-**4.4 Screenshots.** A Playwright script shoots each `map.html` state from the prototype and the matching new route at 1440 and 390, side by side, into `redesign/compare/` (git-ignored). Fix differences or log deliberate ones (guide "Changed from the prototype"). Coverage G-2: check phones state by state.
+**4.4 Screenshots.** A Playwright script shoots each `map.html` state from the prototype and the matching new route at 1440 and 390, side by side, into `redesign/compare/` (git-ignored). Fix differences or log deliberate ones (guide "Changed from the prototype"). Coverage G-2: check phones state by state. Split on 2026-10-21 after the session looped full runs for 3.5 hours: 4.4 built the tool (`scripts/compare/`, `npm run compare`), shot every state once and made the first fixes; 4.4a–4.4e fix the rest, one area each.
+
+**4.4a–4.4e Screenshot fixes by area.** Shoot only the task's area, once: `npm run compare -- --only '<regex>' --stress no --force`, then the same with `--stress yes` (the big data set gets its own run). Regexes: 4.4a `^\d+-(today|all-tasks|task-|selecting|moving|installing)`, 4.4b `^\d+-plan-`, 4.4c `^\d+-(compan|fields-and|new-company|export)`, 4.4d `^\d+-(qualification|past-clients)`, 4.4e `^\d+-flows-`. Read `redesign/compare/report.json` and the side-by-sides in `redesign/compare/both/`, phone and desktop. A state that didn't shoot is a recipe to fix in `scripts/compare/recipes.mjs`. Fix differences or log deliberate ones, as in 4.4. After a fix, rerun only the states it touched (`--only '<their ids>' --force`), never the whole area or every state: at most about 30 minutes waiting on the script in all. R4 runs the whole tool once.
 
 **4.5 Accessibility.** `@axe-core/playwright` on every screen and open sheet, keyboard-only pass of each job, labels from guide 8, 320px reflow and 200% zoom. **Done when** no serious or critical axe issues remain.
 

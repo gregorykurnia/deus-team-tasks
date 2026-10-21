@@ -187,6 +187,7 @@ export interface RecordAlert {
   tone: "error" | "warning";
   title: string;
   text: string;
+  icon?: "snow" | "flag"; // gone cold and a missed outreach have their own icons, as on their tiles
 }
 
 // What needs doing about this company, at the top of its record (guide 5.1).
@@ -195,7 +196,7 @@ export function recordAlerts(c: PipelineEntry, fields: CompanyField[], today: st
   const alerts: RecordAlert[] = [];
   if (group === "active" && c.date) {
     const idle = daysBetween(c.date, today);
-    if (idle >= GONE_COLD_DAYS) alerts.push({ tone: "error", title: "Gone cold.", text: `No action for ${plural(idle, "day")}.` });
+    if (idle >= GONE_COLD_DAYS) alerts.push({ tone: "error", icon: "snow", title: "Gone cold.", text: `No action for ${plural(idle, "day")}.` });
   }
   if (hasField(fields, "target") && c.target) {
     const late = daysBetween(c.target, today);
@@ -203,7 +204,7 @@ export function recordAlerts(c: PipelineEntry, fields: CompanyField[], today: st
   }
   if (group === "toApproach" && c.reach) {
     const late = daysBetween(c.reach, today);
-    if (late > 0) alerts.push({ tone: "warning", title: `Outreach was planned ${plural(late, "day")} ago.`, text: "Reach out, or plan a new date." });
+    if (late > 0) alerts.push({ tone: "warning", icon: "flag", title: `Outreach was planned ${plural(late, "day")} ago.`, text: "Reach out, or plan a new date." });
   }
   return alerts;
 }

@@ -12,10 +12,11 @@ interface NoticeProps {
   title?: string; // the bold lead-in
   children?: ReactNode;
   action?: ReactNode;
+  icon?: IconName; // in place of the tone's own
 }
 
-export default function Notice({ tone = "info", title, children, action }: NoticeProps) {
-  const icon = ICONS[tone];
+export default function Notice({ tone = "info", title, children, action, icon: own }: NoticeProps) {
+  const icon = own ?? ICONS[tone];
   return (
     <div className={`${styles.notice} ${styles[tone]}`} role={tone === "error" ? "alert" : undefined}>
       {icon && <Icon name={icon} size={18} />}

@@ -90,7 +90,7 @@ export default function PeoplePicker({ value, onChange, suggestions, placeholder
         {...aria}
         suggestions={suggestions}
         chosen={value}
-        placeholder={value.length ? "" : placeholder}
+        placeholder={value.length ? (placeholder ? "Add someone else" : "") : placeholder}
         onPick={(name) => onChange([...value, name])}
         onBackspaceEmpty={() => onChange(value.slice(0, -1))}
       />
