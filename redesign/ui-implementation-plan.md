@@ -186,8 +186,8 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 4.4e | Screenshot fixes: Flows | Sonnet 5.5 High | |
 | 4.5 | Accessibility check (axe, keyboard pass, screen-reader labels) | Sonnet 5.5 High | |
 | 4.6 | Real-phone check on the preview (you, with a helper session) | Haiku 5.5 Max | |
+| 4.8 | Data step for launch: settings import, sector backfill, dry run (Q3, Q4); runs before 4.7 | Opus 5.5 High | |
 | 4.7 | Delete old UI files, old-names check, remove unused deps | Haiku 5.5 Max | |
-| 4.8 | Data step for launch: settings import, sector backfill, dry run (Q3, Q4) | Opus 5.5 High | |
 | R4 | **Phase 4 review** (plus one full `npm run compare`, see 4.4a–4.4e) | Opus 5.5 High | |
 | M | Merge `redesign` into `main` on your say; update `CLAUDE.md` | Sonnet 5.5 High | |
 
@@ -273,9 +273,9 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.6 Real-phone check.** You use the preview on your phone (install it, go offline, write notes offline, come back). A helper session writes the findings as fix tasks.
 
-**4.7 Old files out.** Delete the `/old` route (`app/old/`), every file in the "Replaces" column of §3 and old helpers no longer used (`clientLocalConfig.ts` after 4.8, `clientColumnResize.ts`, `colors.ts`, seed files), drop Geist. `scripts/old-names-check.sh` greps `app/ desk/ ui/ features/ styles/` for the old component and file names; it must print nothing.
+**4.8 Data step for launch** (runs before 4.7, while the old local-settings code still exists). A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). It must not depend on `lib/clientLocalConfig.ts`, which 4.7 deletes: copy the storage keys and shapes it needs into the script. Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections.
 
-**4.8 Data step for launch.** A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections.
+**4.7 Old files out** (after 4.8). Delete the `/old` route (`app/old/`), every file in the "Replaces" column of §3 and old helpers no longer used (`clientLocalConfig.ts`, `clientColumnResize.ts`, `colors.ts`, seed files), drop Geist. Keep the 4.8 import script working. `scripts/old-names-check.sh` greps `app/ desk/ ui/ features/ styles/` for the old component and file names; it must print nothing.
 
 ## 6. Rollback
 
