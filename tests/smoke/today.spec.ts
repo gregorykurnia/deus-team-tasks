@@ -142,12 +142,22 @@ test("D2: a task row opens its details over Today", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
 });
 
-test("D4: the two-week chart has a column for each day, and a day opens Plan", async ({ page }) => {
+test("D4: the two-week chart has a column for each day, and a day opens Plan", async ({ page, isMobile }) => {
   await seedTasks([task("a", { endDate: isoDay(2) }), task("b", { endDate: isoDay(2) }), task("c", { endDate: isoDay(2) })]);
   await page.goto("/");
+  await expect(hero(page).getByText(/is the busiest, with 3 deadlines/)).toBeVisible();
+  if (isMobile) {
+    // 4.5: on phones the columns are too narrow to tap (24px needed), so they are pictures and one link opens Plan.
+    const columns = hero(page).getByRole("img", { name: /: \d+ deadlines?/ });
+    await expect(columns).toHaveCount(14);
+    await expect(columns.nth(2)).toHaveAttribute("aria-label", /: 3 deadlines$/);
+    await expect(hero(page).locator('a[href^="/plan?view=day&date="]')).toHaveCount(0);
+    await hero(page).getByRole("link", { name: "Open Plan" }).click();
+    await expect(page).toHaveURL("/plan");
+    return;
+  }
   const columns = hero(page).locator('a[href^="/plan?view=day&date="]');
   await expect(columns).toHaveCount(14);
-  await expect(hero(page).getByText(/is the busiest, with 3 deadlines/)).toBeVisible();
   const busy = columns.nth(2);
   await expect(busy).toHaveAttribute("aria-label", /: 3 deadlines$/);
   await expect(busy).toHaveAttribute("href", `/plan?view=day&date=${isoDay(2)}`);

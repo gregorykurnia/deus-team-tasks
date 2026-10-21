@@ -20,7 +20,7 @@ interface MenuProps {
   onClose: () => void;
   label: string; // what the menu is for, as a screen reader hears it: "Due"
   alignRight?: boolean;
-  form?: boolean; // a quick editor: Tab moves between its field and buttons instead of closing it, and it is 340px wide
+  form?: boolean; // a quick editor: Tab moves between its field and buttons instead of closing it, and it is 340px wide. It holds a field and buttons, not items, so it is a dialog (ARIA lets a menu hold only items)
   initialFocus?: string[]; // selectors for what gets focus, in place of the chosen item, the first item or the field
   children: ReactNode;
 }
@@ -90,10 +90,13 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, 
       if (!form) onClose();
       return;
     }
-    // A field keeps its own arrow keys.
-    if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return;
+    // A field keeps its own arrow keys, except the number field of a menu row (4.5), where they move between items.
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+      if (!active.closest('[role^="menuitem"]') || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+    }
     const items = [...panel.current!.querySelectorAll<HTMLElement>(ITEMS)];
-    const at = items.indexOf(document.activeElement as HTMLElement);
+    const at = items.findIndex((el) => el === active || el.contains(active));
     const go = (i: number) => {
       e.preventDefault();
       items[(i + items.length) % items.length]?.focus();
@@ -107,7 +110,7 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, 
   return (
     <MenuContext.Provider value={{ close: onClose }}>
       <div className={overDialog ? `${styles.catcher} ${styles.overDialog}` : styles.catcher} onClick={onClose} aria-hidden="true" />
-      <div ref={panel} className={[styles.menu, form && styles.form, overDialog && styles.overDialog].filter(Boolean).join(" ")} role="menu" aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
+      <div ref={panel} className={[styles.menu, form && styles.form, overDialog && styles.overDialog].filter(Boolean).join(" ")} role={form ? "dialog" : "menu"} aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
         {children}
       </div>
     </MenuContext.Provider>
@@ -196,7 +199,15 @@ export function MenuNumber({ label, unit, initial, onApply }: { label: string; u
     close();
   }
   return (
-    <div className={styles.number}>
+    // A row of a menu is an item, so the menu holds only items (ARIA); focusing it by arrow keys puts the cursor in the field.
+    <div
+      className={styles.number}
+      role="menuitem"
+      tabIndex={-1}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) e.currentTarget.querySelector("input")?.focus();
+      }}
+    >
       <label>
         {label}
         <input

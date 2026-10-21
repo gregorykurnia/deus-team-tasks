@@ -77,8 +77,8 @@ test("B10, C1: a change in the record keeps the values of the company's own fiel
   await seedCompanies([company(1, { company: "Pelita Foods", cx_region: "North" })]);
   await page.goto("/companies?company=1");
   await waitUntilLive(page);
-  await page.getByRole("dialog", { name: "Pelita Foods" }).getByRole("button", { name: "Products: empty. Change" }).click();
-  const box = page.getByRole("menu", { name: "Products" }).getByRole("textbox", { name: "Products" });
+  await page.getByRole("dialog", { name: "Pelita Foods" }).getByRole("button", { name: "Products: empty. Add" }).click();
+  const box = page.getByRole("dialog", { name: "Products" }).getByRole("textbox", { name: "Products" });
   await box.fill("Fleet tracking");
   await box.press("Enter");
   await expect(toasts(page).getByText("Products updated")).toBeVisible();

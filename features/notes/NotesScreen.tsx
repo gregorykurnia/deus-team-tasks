@@ -389,6 +389,7 @@ export default function NotesScreen() {
   return (
     <>
       {/* A prospect open full screen on a phone has no page header, but still says when there's no connection. */}
+      {hideHeader && <h1 className="sr-only">Qualification notes</h1>}
       {hideHeader && <ConnectionBanner />}
       {!hideHeader && (
         <>

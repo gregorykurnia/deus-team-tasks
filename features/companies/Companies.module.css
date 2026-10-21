@@ -926,7 +926,7 @@
 }
 
 .ph {
-  color: var(--faint);
+  color: var(--muted); /* 4.5: "Add" is a word, --faint is 3:1 */
   font-weight: var(--w-medium);
 }
 

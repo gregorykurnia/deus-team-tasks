@@ -149,7 +149,7 @@ export default function CompanyList(props: CompanyListProps) {
                       >
                         <span className={styles.lbl} aria-hidden="true">
                           {f.label}
-                        </span>
+                        </span>{" "}
                         {cell.kind === "empty" ? (
                           <span className={styles.none} aria-hidden="true">
                             –

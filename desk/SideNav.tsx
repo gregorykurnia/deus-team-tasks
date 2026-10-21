@@ -81,7 +81,7 @@ export default function SideNav() {
                   <Link className={styles.group} href={href} aria-current={pathname === href ? "page" : undefined} title={g.name}>
                     <span
                       className={styles.badge}
-                      style={{ background: `var(--grp-${g.hue}-bg)`, color: `var(--grp-${g.hue})` }}
+                      style={{ background: `var(--grp-${g.hue}-bg)`, color: `color-mix(in srgb, var(--grp-${g.hue}) 80%, #000)` }} /* 4.5: a shade darker than the token so the initials reach 4.5:1 */
                       aria-hidden="true"
                     >
                       {g.badge}

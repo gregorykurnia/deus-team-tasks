@@ -14,7 +14,7 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import { fieldText, hasField, isKeptInStep, keptInStepNote, recordAlerts, recordSections } from "@/lib/companyEdit";
 import { COMPANY_GROUP_LABELS, companyGroup } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
-import { cellOf } from "@/lib/companyView";
+import { cellOf, type Cell } from "@/lib/companyView";
 import { initials } from "@/lib/people";
 import { plural } from "@/lib/dates";
 import type { Task } from "@/lib/types";
@@ -46,6 +46,14 @@ interface CompanyRecordProps {
 // Open tasks by deadline, the undated last; finished ones most recent first.
 const byDeadline = (a: Task, b: Task) => (a.endDate || "9999").localeCompare(b.endDate || "9999");
 const byFinished = (a: Task, b: Task) => (b.completedAt ?? 0) - (a.completedAt ?? 0);
+
+// A value's button name keeps the words it shows (WCAG 2.5.3): "Add" when empty, and the shown words when they differ
+// from the stored value (a date pill reads "Missed 17 Oct", the value is "17 Oct 2026").
+function valueName(label: string, text: string, cell: Cell) {
+  if (cell.kind === "empty") return `${label}: empty. Add`;
+  const said = text || "empty";
+  return `${label}: ${said}${said.includes(cell.label) ? "" : `, ${cell.label}`}. Change`;
+}
 
 export default function CompanyRecord({ company: c, settings, today, online, actions, onClose, onEdit, onRename, onMove, onDelete, deleteBlocked }: CompanyRecordProps) {
   const tasks = useTasks();
@@ -82,7 +90,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
             </span>
           )}
         </span>
-        <button type="button" className={styles.pv} aria-label={`${f.label}: ${text || "empty"}. Change`} onClick={(e) => onEdit(e.currentTarget, c, f)}>
+        <button type="button" className={styles.pv} aria-label={valueName(f.label, text, cell)} onClick={(e) => onEdit(e.currentTarget, c, f)}>
           {cell.kind === "empty" ? (
             <span className={styles.ph}>Add</span>
           ) : cell.kind === "text" ? (

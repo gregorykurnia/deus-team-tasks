@@ -148,7 +148,7 @@ test("U6: new notes for someone not tracked yet need a name, then link to a trac
   expect(await storedNotes(id)).toMatchObject({ prospectName: "Nusa Agro" });
 
   await doc(page).getByRole("button", { name: "Link to a tracked company" }).click();
-  const menu = page.getByRole("menu", { name: "Link to a tracked company" });
+  const menu = page.getByRole("dialog", { name: "Link to a tracked company" });
   await expect(menu.getByRole("menuitem", { name: /Borneo Retail.*Has notes/ })).toBeDisabled();
   await menu.getByRole("textbox", { name: "Search companies" }).fill("pelita");
   await menu.getByRole("menuitem", { name: /Pelita Foods/ }).click();

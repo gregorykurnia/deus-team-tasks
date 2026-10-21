@@ -105,7 +105,7 @@ test("R2: a name is changed in place with Undo, and can't be emptied", async ({ 
   await seedAll();
   await page.goto("/past");
   await parent(page, "Pelita Foods").getByRole("button", { name: "Rename Pelita Foods" }).click();
-  const editor = page.getByRole("menu", { name: "Company name" });
+  const editor = page.getByRole("dialog", { name: "Company name" });
   const box = editor.getByRole("textbox", { name: "Company name" });
   await expect(box).toBeFocused();
   await box.fill("");
@@ -124,7 +124,7 @@ test("R6: the sector editor offers the sectors in use and saves another spelling
   await seedAll();
   await page.goto("/past");
   await parent(page, "Halcyon Group").getByRole("button", { name: "Add sector: Halcyon Group" }).click();
-  const editor = page.getByRole("menu", { name: "Sector of Halcyon Group" });
+  const editor = page.getByRole("dialog", { name: "Sector of Halcyon Group" });
   await expect(editor.getByRole("menuitemradio", { name: /Retail\s*2 companies/ })).toBeVisible();
   await editor.getByRole("textbox", { name: "Sector" }).fill("RETAIL");
   await expect(editor.getByText("Same sector as “Retail”, so it’s saved that way.")).toBeVisible();
@@ -133,7 +133,7 @@ test("R6: the sector editor offers the sectors in use and saves another spelling
   await expect.poll(async () => (await stored()).find((d) => d.id === "halcyon")?.sector).toBe("Retail");
 
   await parent(page, "Halcyon Group").getByRole("button", { name: /^Sector Retail\. Change the sector of Halcyon Group/ }).click();
-  await page.getByRole("menu", { name: "Sector of Halcyon Group" }).getByRole("button", { name: "Clear" }).click();
+  await page.getByRole("dialog", { name: "Sector of Halcyon Group" }).getByRole("button", { name: "Clear" }).click();
   await expect(toasts(page).getByText("Sector cleared")).toBeVisible();
   await expect.poll(async () => (await stored()).find((d) => d.id === "halcyon")?.sector).toBeNull();
 });
@@ -253,7 +253,7 @@ test("R9: offline, adding keeps what was typed and says so, and Try again adds i
 
   await context.setOffline(true);
   await parent(page, "Pelita Foods").getByRole("button", { name: "Rename Pelita Foods" }).click();
-  const box = page.getByRole("menu", { name: "Company name" }).getByRole("textbox", { name: "Company name" });
+  const box = page.getByRole("dialog", { name: "Company name" }).getByRole("textbox", { name: "Company name" });
   await box.fill("Pelita Group");
   await box.press("Enter");
   await expect(toasts(page).getByText("No connection. The change wasn't saved.")).toBeVisible();

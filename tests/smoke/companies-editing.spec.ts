@@ -36,7 +36,7 @@ test("B10, B12: a quick date pick saves, and the company's open tasks follow it"
   await seedAll();
   await page.goto("/companies");
   await cell(page, "Pelita Foods", /^Target date:/).click();
-  const menu = page.getByRole("menu", { name: "Target date" });
+  const menu = page.getByRole("dialog", { name: "Target date" });
   await expect(menu.getByText("Linked tasks follow this date.")).toBeVisible();
   await menu.getByRole("button", { name: "In a week" }).click();
   await expect(toasts(page).getByText("Target date updated. 1 linked task now matches")).toBeVisible();
@@ -48,7 +48,7 @@ test("B10: text is changed in place: Enter saves, and Clear empties it", async (
   await seedAll();
   await page.goto("/companies");
   await cell(page, "Pelita Foods", /^Next actions: Send the quote/).click();
-  const box = page.getByRole("menu", { name: "Next actions" }).getByRole("textbox", { name: "Next actions" });
+  const box = page.getByRole("dialog", { name: "Next actions" }).getByRole("textbox", { name: "Next actions" });
   await expect(box).toBeFocused();
   await box.fill("Send the revised quote");
   await box.press("Control+Enter");
@@ -56,7 +56,7 @@ test("B10: text is changed in place: Enter saves, and Clear empties it", async (
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.notes).toBe("Send the revised quote");
 
   await cell(page, "Pelita Foods", /^Next actions: Send the revised quote/).click();
-  await page.getByRole("menu", { name: "Next actions" }).getByRole("button", { name: "Clear" }).click();
+  await page.getByRole("dialog", { name: "Next actions" }).getByRole("button", { name: "Clear" }).click();
   await expect(toasts(page).getByText("Next actions cleared")).toBeVisible();
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.notes).toBeUndefined();
 });
@@ -207,7 +207,7 @@ test("B1, B10, B12: the record shows what's urgent, edits in place, and lists th
   // Rename, from ⋯: the name is required.
   await record.getByRole("button", { name: "More for Pelita Foods" }).click();
   await page.getByRole("menuitem", { name: "Rename" }).click();
-  const name = page.getByRole("menu", { name: "Company name" }).getByRole("textbox", { name: "Company name" });
+  const name = page.getByRole("dialog", { name: "Company name" }).getByRole("textbox", { name: "Company name" });
   await name.fill(" ");
   await name.press("Enter");
   await expect(page.getByText("A company needs a name.")).toBeVisible();
@@ -253,8 +253,8 @@ test("4.9, 5.8: offline, a quick editor keeps what was typed, and Delete company
   await expect(record).toBeVisible();
   await context.setOffline(true);
   await expect(record.getByText("Offline. Changes can’t be saved.")).toBeVisible();
-  await record.getByRole("button", { name: "Products: empty. Change" }).click();
-  const editor = page.getByRole("menu", { name: "Products" });
+  await record.getByRole("button", { name: "Products: empty. Add" }).click();
+  const editor = page.getByRole("dialog", { name: "Products" });
   await editor.getByRole("textbox", { name: "Products" }).fill("Point of sale");
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(toasts(page).getByText("No connection. The change wasn't saved.")).toBeVisible();

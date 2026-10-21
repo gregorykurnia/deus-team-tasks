@@ -252,7 +252,10 @@ export default function FlowsScreen() {
     <>
       {/* A flow open full screen on a phone has no header, but the no-connection banner stays. */}
       {hideHeader ? (
-        <ConnectionBanner />
+        <>
+          <h1 className="sr-only">Flows</h1>
+          <ConnectionBanner />
+        </>
       ) : (
         <PageHeader
           title="Flows"

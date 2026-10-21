@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:smoke": "playwright test",
+    "a11y": "node scripts/a11y/axe.mjs --servers --distinct",
     "compare": "JAVA_TOOL_OPTIONS=-Xmx2g node scripts/compare/run.mjs --servers",
     "test:unit": "firebase emulators:exec --only firestore --project demo-deus --log-verbosity QUIET \"vitest run\""
   },
@@ -19,6 +20,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

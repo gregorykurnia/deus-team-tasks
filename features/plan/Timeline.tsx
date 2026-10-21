@@ -144,11 +144,11 @@ export default function Timeline(props: TimelineProps) {
               data-today={i === model.todayIndex || undefined}
               data-weekend={isWeekendDay(iso) || undefined}
               title={longDay(iso)}
-              aria-label={`Open ${longDay(iso)}`}
               aria-current={i === model.todayIndex ? "date" : undefined}
             >
               <span aria-hidden="true">{WEEKDAY_LETTER[parseIso(iso).getDay()]}</span>
               <b aria-hidden="true">{Number(iso.slice(8))}</b>
+              <span className="sr-only">Open {longDay(iso)}</span>
             </Link>
           ))}
         </div>

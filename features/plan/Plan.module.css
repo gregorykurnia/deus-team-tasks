@@ -409,7 +409,7 @@ button.insight:hover {
 
 .day[data-weekend] span,
 .day[data-weekend] b {
-  color: var(--faint);
+  color: var(--muted); /* 4.5: --faint is 3:1, and these are words */
 }
 
 .day[data-today] span {
@@ -784,8 +784,14 @@ button.insight:hover {
   background: linear-gradient(180deg, rgba(255, 236, 204, 0.9), rgba(255, 243, 224, 0.7));
 }
 
-.monthCell[data-outside] {
+/* Days of the neighbouring months are quieter (4.5: the whole cell at 50% put their numbers under 4.5:1, so only what's in them fades). */
+.monthCell[data-outside] .cellItems,
+.monthCell[data-outside] .dots {
   opacity: 0.5;
+}
+
+.monthCell[data-outside] .dayNumber {
+  color: var(--muted);
 }
 
 .monthCell[data-today] {

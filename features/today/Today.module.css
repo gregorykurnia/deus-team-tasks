@@ -286,6 +286,18 @@
   color: var(--muted);
 }
 
+/* Phones only: the chart's columns are pictures there (4.5), so this opens Plan. */
+.planLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  margin-top: 6px;
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: var(--w-bold);
+  text-decoration: none;
+}
+
 /* ---------- Board ---------- */
 .board {
   display: grid;

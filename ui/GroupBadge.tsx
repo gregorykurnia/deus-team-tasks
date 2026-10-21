@@ -13,7 +13,7 @@ interface GroupBadgeProps extends GroupLook {
 }
 
 export default function GroupBadge({ badge, hue, size = "small" }: GroupBadgeProps) {
-  const style = { "--badge-bg": `var(--grp-${hue}-bg)`, "--badge-ink": `var(--grp-${hue})` } as CSSProperties;
+  const style = { "--badge-bg": `var(--grp-${hue}-bg)`, "--badge-ink": `color-mix(in srgb, var(--grp-${hue}) 80%, #000)` } as CSSProperties;
   return (
     <span className={`${styles.badge} ${styles[size]}`} style={style} aria-hidden="true">
       {badge}

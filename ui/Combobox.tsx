@@ -109,8 +109,9 @@ export default function Combobox({
         onBlur={() => setOpen(false)}
       />
       {shown && (
-        // The mouse-down keeps focus in the field, so a click on an option still lands.
-        <div className={styles.list} onMouseDown={(e) => e.preventDefault()}>
+        // The mouse-down keeps focus in the field, so a click on an option still lands. The list is read and scrolled by keys through
+        // the field (aria-activedescendant), so it has no tab stop of its own: the a11y checks skip axe's scrollable-region rule for it.
+        <div className={styles.list} data-keys-via-input onMouseDown={(e) => e.preventDefault()}>
           {heading && <div className={styles.heading}>{heading}</div>}
           <div id={listId} role="listbox" aria-label={heading ?? "Suggestions"}>
             {options.map((o, i) => (

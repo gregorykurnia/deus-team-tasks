@@ -93,9 +93,9 @@ export default function DayView(props: DayViewProps) {
               data-selected={d.iso === iso || undefined}
               data-today={d.iso === today || undefined}
               aria-pressed={d.iso === iso}
-              aria-label={`${dayHeading(d.iso, today)}: ${d.deadlines} ${d.deadlines === 1 ? "deadline" : "deadlines"}, ${d.events} ${d.events === 1 ? "event" : "events"}`}
               onClick={() => props.onDate(d.iso)}
             >
+              <span className="sr-only">{`${dayHeading(d.iso, today)}: ${d.deadlines} ${d.deadlines === 1 ? "deadline" : "deadlines"}, ${d.events} ${d.events === 1 ? "event" : "events"}`}</span>
               <span aria-hidden="true">{parseIso(d.iso).toLocaleDateString("en-GB", { weekday: "short" })}</span>
               <b aria-hidden="true">{Number(d.iso.slice(8))}</b>
               <span className={styles.stripCounts} aria-hidden="true">

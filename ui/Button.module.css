@@ -65,12 +65,12 @@
 .quietRed {
   background: none;
   box-shadow: none;
-  color: var(--red);
+  color: var(--red-ink); /* 4.5: --red measured 4.48 on the sheet */
 }
 
 .quietRed:hover:not(:disabled, [aria-disabled="true"]) {
   background: var(--fill);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 /* 34px: inside rows, panel footers and empty states. */

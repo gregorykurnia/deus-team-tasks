@@ -46,7 +46,7 @@
 .count {
   font-size: 12px;
   font-weight: var(--w-semibold);
-  color: var(--muted);
+  color: var(--ink-2); /* 4.5: muted measured 4.46 on the track */
   font-variant-numeric: var(--num);
 }
 
