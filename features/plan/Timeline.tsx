@@ -368,7 +368,7 @@ export default function Timeline(props: TimelineProps) {
           <Legend person={!!state.person} crunch={model.crunch.size > 0} />
         </div>
       )}
-      <section className={styles.panel} aria-label="Timeline">
+      <section className={`${styles.panel} ${styles.tlPanel}`} aria-label="Timeline">
         {props.tools}
         {eventsOnly && events.status !== "ok" && events.status !== "loading" && (
           <div className={styles.note}>
@@ -407,7 +407,7 @@ function workWords(state: PlanState): string | null {
 
 function NewTaskLink({ href }: { href: string }) {
   return (
-    <Link href={href} scroll={false} className={buttonClass("main", true)}>
+    <Link href={href} scroll={false} className={buttonClass("secondary")}>
       <Icon name="plus" size={16} />
       New task
     </Link>

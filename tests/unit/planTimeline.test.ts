@@ -148,7 +148,7 @@ describe("the timeline", () => {
     const m = timelineOf({ ...base, tasks: busy });
     expect([...m.crunch]).toEqual(["2026-10-23"]);
     const [busiest, quiet, before, undated] = m.insights;
-    expect(busiest).toMatchObject({ key: "busiest", bold: "Fri 23", tail: ", 3 deadlines", day: "2026-10-23" });
+    expect(busiest).toMatchObject({ key: "busiest", bold: "Fri 23 Oct", tail: ", 3 deadlines", day: "2026-10-23" });
     expect(quiet.key).toBe("quiet");
     expect(before).toMatchObject({ key: "before", bold: "1 overdue task", href: "/tasks?due=overdue" });
     expect(before.tail).toBe(" ended before 19 Oct");
@@ -225,6 +225,9 @@ describe("what the bar says", () => {
     expect(stepLabel(read("view=month"), TODAY)).toBe("October 2026");
     expect(stepLabel(read("view=day&date=2026-10-23"), TODAY)).toBe("Fri 23 Oct");
     expect(planSubtitle(read("view=day&date=2026-10-23"), TODAY)).toBe("Friday, 23 October");
+    expect(planSubtitle(read(""), TODAY)).toBe("19 Oct to 15 Nov 2026");
+    expect(planSubtitle(read("from=2026-12-21"), TODAY)).toBe("21 Dec to 17 Jan 2027");
+    expect(planSubtitle(read("view=day&date=2031-03-04"), TODAY)).toBe("Tuesday, 4 March 2031");
     expect(planSubtitle(read("view=people"), TODAY)).toBe("Who carries what");
     expect(planSubtitle(read("view=people&person=Maya%20Chen"), TODAY)).toBe("Maya Chen");
   });

@@ -131,6 +131,8 @@ async function runOne(browser, entry, sizeName, report) {
     await page.waitForFunction(() => !/Loading (tasks|companies|task groups|past clients|flows|qualification notes|prospects|notes)/i.test(document.body.innerText), null, { timeout: 90000 }).catch(() => errors.push("still loading after 90s"));
   }
   if (["online", "live", "drop", "back"].includes(p.net)) {
+    // Plan draws grey rows, not a "Loading" line, while its tasks arrive: wait until those rows are gone.
+    if (p.page === "plan") await page.waitForFunction(() => !document.querySelector('[class*="lane"] [class*="Skeleton"], [aria-label="Loading tasks"] [class*="Skeleton"]'), null, { timeout: 90000 }).catch(() => errors.push("plan rows still loading after 90s"));
     // The sources arrive one after another (3,200 companies come after the tasks): wait until the words stop changing.
     let last = "", same = 0;
     for (let i = 0; i < 80 && same < 4; i++) {

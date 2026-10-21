@@ -2,7 +2,7 @@
 // counts per day, and lanes of bars, one lane for each person or kind of work. Pure, so every placement and wording is
 // tested. Open tasks only: the caller leaves finished ones out.
 import type { CalendarEvent } from "./calendarEvents";
-import { dayLabel, daysBetween, isIsoDay, plural, shortDate } from "./dates";
+import { daysBetween, isIsoDay, plural, shortDate, weekdayDate } from "./dates";
 import { kindOf, KIND_LABELS, KINDS, type CompaniesById, type Kind } from "./kinds";
 import { isPerson } from "./people";
 import { busiestDay, crunchDays, daysFrom, deadlinesPerDay, quietStretch } from "./planMath";
@@ -10,6 +10,9 @@ import { eventOnDay } from "./today";
 import type { PlanRows, PlanState } from "./planView";
 import { TIMELINE_DAYS } from "./planView";
 import type { Task } from "./types";
+
+// A row per kind of work is named as the prototype names it: "Prospect work", not the filter's "Prospects".
+const LANE_NAMES: Record<Kind, string> = { prospect: "Prospect work", client: "Client work", internal: KIND_LABELS.internal };
 
 export const LANE_CAP = 4; // rows of bars a lane shows before "Show more"
 export const NOBODY = "";
@@ -186,7 +189,7 @@ export function timelineOf({ tasks, events, from, today, rows, person, companies
   if (person) {
     lanes = [lanesOf(person, person, bars, { person })];
   } else if (rows === "kind") {
-    lanes = KINDS.map((kind) => lanesOf(KIND_LABELS[kind], kind, bars.filter((b) => b.kind === kind), { kind })).filter((l) => l.bars.length);
+    lanes = KINDS.map((kind) => lanesOf(LANE_NAMES[kind], kind, bars.filter((b) => b.kind === kind), { kind })).filter((l) => l.bars.length);
   } else {
     const byPerson = new Map<string, typeof bars>();
     for (const bar of bars) {
@@ -204,7 +207,7 @@ export function timelineOf({ tasks, events, from, today, rows, person, companies
     if (busiest) {
       const i = index(busiest);
       const events = eventCounts[i] ? ` and ${plural(eventCounts[i], "event")}` : "";
-      insights.push({ key: "busiest", tone: "warm", lead: "Busiest: ", bold: dayLabel(busiest), tail: `, ${plural(deadlines[i], "deadline")}${events}`, day: busiest });
+      insights.push({ key: "busiest", tone: "warm", lead: "Busiest: ", bold: weekdayDate(busiest, today), tail: `, ${plural(deadlines[i], "deadline")}${events}`, day: busiest });
     }
     const quiet = quietStretch(days, tasks, eventCounts, today);
     if (quiet) {

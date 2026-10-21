@@ -57,7 +57,8 @@
     width: 100%;
   }
 
-  .option {
+  .option,
+  .full .option {
     flex: 1;
     padding: 7px 4px;
   }

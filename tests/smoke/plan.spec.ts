@@ -100,7 +100,7 @@ test("D4: Work, Person and Rows narrow the timeline, and the × clears each", as
   await bar.getByRole("button", { name: /^Rows/ }).click();
   await page.getByRole("menuitemradio", { name: "Kind of work" }).click();
   await expect(page).toHaveURL("/plan?rows=kind");
-  await expect(tl.getByText("Prospects, 1 task")).toBeAttached();
+  await expect(tl.getByText("Prospect work, 1 task")).toBeAttached();
   await expect(tl.getByText("Internal, 2 tasks")).toBeAttached();
 });
 

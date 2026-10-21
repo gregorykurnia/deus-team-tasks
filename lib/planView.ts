@@ -1,6 +1,6 @@
 // What Plan shows (guide 6.4): the view held in the address, so a link from Today lands on the right day and a reload
 // keeps it. The address holds only Plan's own params, so ?task= passes. Defaults stay out of the address.
-import { addDays, isIsoDay, isoOf, longDayLabel, monthTitle, parseIso, shortDate, weekdayDate } from "./dates";
+import { addDays, longDayLabel, isIsoDay, isoOf, monthTitle, parseIso, shortDate, weekdayDate } from "./dates";
 import { KINDS, type Kind } from "./kinds";
 
 export type PlanViewName = "timeline" | "month" | "day" | "people";
@@ -134,9 +134,21 @@ export function stepLabel(state: PlanState, today: string): string {
   return `${shortDate(from, today)} to ${shortDate(addDays(from, TIMELINE_DAYS - 1), today)}`;
 }
 
+// The header's version of the timeline range: the prototype always gives the end date its year.
+function rangeWithYear(state: PlanState, today: string): string {
+  const from = timelineFrom(state, today);
+  const to = addDays(from, TIMELINE_DAYS - 1);
+  const sameYear = to.slice(0, 4) === today.slice(0, 4);
+  return `${shortDate(from, today)} to ${shortDate(to, today)}${sameYear ? ` ${to.slice(0, 4)}` : ""}`;
+}
+
 export function planSubtitle(state: PlanState, today: string): string {
-  if (state.view === "day") return longDayLabel(state.date ?? today);
+  if (state.view === "day") {
+    const day = state.date ?? today;
+    return day.slice(0, 4) === today.slice(0, 4) ? longDayLabel(day) : `${longDayLabel(day)} ${day.slice(0, 4)}`;
+  }
   if (state.view === "people") return state.person ?? "Who carries what";
+  if (state.view === "timeline") return rangeWithYear(state, today);
   return stepLabel(state, today);
 }
 
