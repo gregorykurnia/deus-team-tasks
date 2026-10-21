@@ -106,6 +106,10 @@ async function runOne(browser, entry, sizeName, report) {
   const ctx = await browser.newContext(r.iphone ? { ...opts, userAgent: IPHONE } : opts);
   if (r.standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
   await ctx.clock.install({ time: TODAY }); // time keeps flowing from this day: a frozen clock would stop the app's own timeouts
+  if (r.offer) await ctx.addInitScript(() => { // a browser that offers its own install (headless Chromium never does)
+    const send = () => { const e = new Event("beforeinstallprompt", { cancelable: true }); e.prompt = async () => {}; e.userChoice = new Promise(() => {}); window.dispatchEvent(e); };
+    for (const ms of [800, 1600, 2600, 4000]) setTimeout(send, ms);
+  });
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));

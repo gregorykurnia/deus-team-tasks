@@ -74,7 +74,7 @@ export function recipe(p, ctx = {}) {
   if (p.page === "notes" && p.company) { r.params.delete("company"); P("company", String(num(p.company))); }
 
   switch (p.page + ":" + open) {
-    case "index:install": P("install"); break;
+    case "index:install": P("install"); r.offer = true; break;
     case "index:install-ios": P("install"); r.iphone = true; break;
     case "index:install-done": P("install"); r.standalone = true; break;
     case "index:more": P("more"); break;
@@ -165,9 +165,11 @@ export function recipe(p, ctx = {}) {
 }
 
 const selectRows = (n) => async (page) => {
+  // Desktop has the head's tick-all box first; phones have none, so the first row is the first box.
   const boxes = page.getByRole("checkbox");
-  const count = Math.min(await boxes.count(), n + 1);
-  for (let i = 1; i < count; i++) await boxes.nth(i).click().catch(() => {});
+  const head = (await boxes.count()) && /^Select every/i.test((await boxes.first().getAttribute("aria-label")) || "") ? 1 : 0;
+  const count = Math.min(await boxes.count(), n + head);
+  for (let i = head; i < count; i++) await boxes.nth(i).click().catch(() => {});
   await sleep(400);
 };
 // No connection, as the app sees it: the server stops answering and the browser says it's offline.

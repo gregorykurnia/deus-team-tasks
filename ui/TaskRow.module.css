@@ -231,6 +231,19 @@
   display: none;
 }
 
+/* In tables the title is 14.5, the meta 12.5 and the pill a little tighter (guide 2.3, "14.5 in tables"). */
+.list .title {
+  font-size: 14.5px;
+}
+
+.list .meta {
+  font-size: var(--t-label);
+}
+
+.list .pillBox > * {
+  padding: 4px 10px;
+}
+
 /* A two-line cell: informed people and key points. */
 .wrap {
   display: -webkit-box;

@@ -98,6 +98,15 @@
 
 /* 640px and under (--bp-phone): phone type sizes. */
 @media (max-width: 640px) {
+  /* Takes the room left of the round buttons, so a group's star and menu stay on the title's row, with the count below. */
+  .titles {
+    flex: 1 1 0;
+  }
+
+  .spacer {
+    display: none;
+  }
+
   .title {
     font-size: 28px;
   }
