@@ -1,93 +1,40 @@
-// Task groups on the old UI: create, star, delete.
+// Task groups (the 1.2 job stories, on the new UI since 4.3): a starred group comes first, and a task moves into a group
+// from its details. The other 1.2 stories are guarded in tasks-screen.spec (create, a new name needed, star, a group's
+// own page, delete with its tasks left ungrouped) and selecting.spec (several tasks moved at once).
+import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { acceptDialogs, seedBaseline, seedGroups, seedTasks, stored, storedById, task } from "./data";
-import { OLD_UI, taskRow } from "./old-ui";
+import { seedGroups, seedTasks, storedById, task } from "./data";
 
-test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
+const waitUntilLive = (page: Page) => expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+// The side bar lists the groups on large screens; phones have a row of chips under the title instead.
+const groupLinks = (page: Page, isMobile: boolean) =>
+  (isMobile ? page.getByRole("navigation", { name: "Task groups" }) : page.getByRole("region", { name: "Task groups" }))
+    .getByRole("link")
+    .filter({ hasText: /Hiring|Office move/ });
 
-test.beforeEach(async () => {
-  await seedBaseline();
-});
-
-function groupHeader(page: import("@playwright/test").Page, name: string) {
-  return page.locator("tbody tr").filter({ has: page.getByRole("button", { name: new RegExp(`^▸\\s*${name}`) }) });
-}
-
-test("W8: create a task group", async ({ page }) => {
-  await page.goto(OLD_UI);
-  await page.getByRole("button", { name: "+ Add Task Group" }).click();
-  await page.getByPlaceholder("Group name").fill("Office move");
-  await page.getByRole("button", { name: "Create" }).click();
-
-  await expect(groupHeader(page, "Office move")).toBeVisible();
-  await expect
-    .poll(async () => (await stored("tasks", "taskGroups")).map((g) => ({ name: g.name, starred: g.starred })))
-    .toEqual([{ name: "Office move", starred: false }]);
-});
-
-test("W8: a task group's name must be new", async ({ page }) => {
-  await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await page.goto(OLD_UI);
-  await page.getByRole("button", { name: "+ Add Task Group" }).click();
-  await page.getByPlaceholder("Group name").fill("Office move");
-  await page.getByRole("button", { name: "Create" }).click();
-
-  await expect(page.getByText("A group with that name already exists.")).toBeVisible();
-  expect(await stored("tasks", "taskGroups")).toHaveLength(1);
-});
-
-test("W9: star a task group so it comes first", async ({ page }) => {
+test("W9: a starred task group comes first", async ({ page, isMobile }) => {
   await seedGroups([
     { id: "g1", name: "Hiring", order: 1 },
     { id: "g2", name: "Office move", order: 2 },
   ]);
-  await page.goto(OLD_UI);
-  await groupHeader(page, "Office move").getByTitle("Star group").click();
-
+  await page.goto("/tasks/groups/g2");
+  await waitUntilLive(page);
+  await expect(groupLinks(page, isMobile)).toHaveText([/Hiring/, /Office move/]);
+  await page.getByRole("button", { name: "Important" }).click();
   await expect.poll(async () => (await storedById("tasks", "taskGroups", "g2"))?.starred).toBe(true);
-  await expect(page.locator("tbody tr").first()).toContainText("Office move");
+  await expect(groupLinks(page, isMobile)).toHaveText([/Office move/, /Hiring/]);
 });
 
-test("W10: one task group's work on its own", async ({ page }) => {
-  await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await seedTasks([task("t1", { task: "Pack the archive", taskGroup: "Office move" })]);
-  await page.goto(OLD_UI);
-  await page.getByRole("button", { name: /^Office move\s*1$/ }).click();
-
-  await expect(taskRow(page, "Pack the archive")).toBeVisible();
-  await expect(taskRow(page, "Baseline task")).toHaveCount(0);
-});
-
-test("W11: delete a task group after confirming", async ({ page }) => {
-  acceptDialogs(page);
-  await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await page.goto(OLD_UI);
-  await groupHeader(page, "Office move").getByTitle("Delete group").click();
-
-  await expect.poll(() => stored("tasks", "taskGroups")).toEqual([]);
-  await expect(groupHeader(page, "Office move")).toHaveCount(0);
-});
-
-test("W11: deleting a task group leaves its tasks ungrouped", async ({ page }) => {
-  acceptDialogs(page);
-  await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
-  await seedTasks([task("t1", { task: "Pack the archive", taskGroup: "Office move" })]);
-  await page.goto(OLD_UI);
-  await groupHeader(page, "Office move").getByTitle("Delete group").click();
-
-  await expect.poll(() => stored("tasks", "taskGroups")).toEqual([]);
-  await expect(taskRow(page, "Pack the archive")).toBeVisible();
-  await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.taskGroup, { timeout: 5000 }).toBeUndefined();
-  await expect(groupHeader(page, "Office move")).toHaveCount(0);
-});
-
-test("W11: move a task to a task group", async ({ page }) => {
+test("W11: a task moves to a task group from its details", async ({ page }) => {
   await seedGroups([{ id: "g1", name: "Office move", order: 1 }]);
   await seedTasks([task("t1", { task: "Pack the archive" })]);
-  await page.goto(OLD_UI);
-  await taskRow(page, "Pack the archive").click();
-  await page.locator("select").filter({ hasText: "— Ungrouped" }).selectOption("Office move");
-  await page.getByRole("button", { name: "Save" }).click();
-
+  await page.goto("/tasks?task=t1");
+  await waitUntilLive(page);
+  const sheet = page.getByRole("dialog", { name: "Task" });
+  await sheet.getByRole("combobox", { name: "Task group" }).selectOption("Office move");
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet).toHaveCount(0);
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.taskGroup).toBe("Office move");
+  await page.goto("/tasks/groups/g1");
+  await expect(page.getByRole("article").filter({ hasText: "Pack the archive" })).toHaveCount(1);
 });

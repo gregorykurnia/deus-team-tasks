@@ -23,6 +23,12 @@ export default defineConfig({
       name: "phone",
       use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
+    // The team's time zone (UTC+7), for what depends on which day it is: Plan, Today and the deadline pills.
+    {
+      name: "jakarta",
+      testMatch: /[\\/](plan|today|tasks)\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, timezoneId: "Asia/Jakarta" },
+    },
   ],
   webServer: [
     {

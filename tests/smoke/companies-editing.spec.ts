@@ -3,7 +3,7 @@
 // task (and Try again), and deleting with what stays. Each checks the stored data as well as the screen.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { company, isoDay, seedCompanies, seedTasks, storedById, stored, task } from "./data";
+import { company, isoDay, seedCompanies, seedTasks, settledOnline, storedById, stored, task } from "./data";
 
 const row = (page: Page, name: string) => page.getByRole("article", { name });
 const cell = (page: Page, name: string, label: RegExp) => row(page, name).getByRole("button", { name: label });
@@ -159,6 +159,7 @@ test("B11, 5.8: a follow-up task that can't be created says so, and Try again ma
   await expect(toasts(page).getByText("Couldn’t create the follow-up task. Check your connection and try again.")).toBeVisible();
   await context.setOffline(false);
   await expect(page.getByRole("status").getByText(/Back online/)).toBeVisible();
+  await settledOnline(page);
   await toasts(page).getByRole("button", { name: "Try again" }).click();
   await expect(toasts(page).getByText("Follow-up task created for Borneo Retail")).toBeVisible();
   expect((await stored("tasks", "tasks")).filter((t) => t.task === "Follow up with Borneo Retail")).toHaveLength(1);

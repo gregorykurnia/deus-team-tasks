@@ -1,98 +1,20 @@
-// Tasks on the old UI: capture, edit, mark done, delete, kinds of work.
+// Tasks (the 1.2 job stories, on the new UI since 4.3): the kinds of work, editing a task from its details and from
+// another screen, clearing a value, and opening on empty data without sample tasks. The other 1.2 stories are guarded
+// where the new screens are tested: capture with every detail, a description needed, delete, and adding refused offline
+// in task-sheet.spec; done, finished tasks and not done in tasks-screen.spec; quick capture in today.spec; days without
+// action and sorting with empty values last in tasks-screen.spec.
+import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { acceptDialogs, company, isoDay, seedBaseline, seedCompanies, seedTasks, storedById, stored, task } from "./data";
-import { OLD_UI, addPerson, field, openArea, taskModal, taskRow } from "./old-ui";
-import { clearAll, readFields } from "../support/emulator";
+import { company, isoDay, seedCompanies, seedTasks, storedById, stored, task } from "./data";
+import { readFields } from "../support/emulator";
 
-test.skip(({ isMobile }) => isMobile, "The old UI is checked on desktop; 4.3 adds phone runs for the new UI.");
+// Writes are refused until the app has reached the server. The live status sits in the side bar (hidden on phones).
+const waitUntilLive = (page: Page) => expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+const sheet = (page: Page) => page.getByRole("dialog", { name: "Task" });
+const rows = (page: Page) => page.getByRole("article");
+const kind = (page: Page, name: string) => page.getByRole("group", { name: "Kind of work" }).getByRole("button", { name: new RegExp(`^${name}`) });
 
-test.beforeEach(async () => {
-  await seedBaseline();
-});
-
-test("W1 W2 W3: capture a task with its details, owner and informed people", async ({ page }) => {
-  await page.goto(OLD_UI);
-  await page.getByRole("button", { name: "+ Add task", exact: true }).click();
-  const modal = taskModal(page, "New Task");
-  await modal.getByPlaceholder("Describe the task…").fill("Send the trial summary");
-  await field(modal, "Priority").selectOption("High");
-  await field(modal, "Task type").selectOption("Send Proposal/Quote");
-  await field(modal, "Touch Point").fill("Email");
-  await field(modal, "Start date").fill(isoDay(1));
-  await field(modal, "End date").fill(isoDay(4));
-  await addPerson(field(modal, "Responsible"), "Ana");
-  await addPerson(field(modal, "Informed"), "Ben (backup)");
-  await field(modal, "Key points").fill("Attach the pricing sheet");
-  await modal.getByRole("button", { name: "Save" }).click();
-
-  await expect(taskRow(page, "Send the trial summary")).toBeVisible();
-  await expect
-    .poll(async () => (await stored("tasks", "tasks")).find((t) => t.task === "Send the trial summary"))
-    .toMatchObject({
-      priority: "High",
-      taskType: "Send Proposal/Quote",
-      touchPoint: "Email",
-      startDate: isoDay(1),
-      endDate: isoDay(4),
-      responsible: ["Ana"],
-      informed: [{ name: "Ben", note: "backup" }],
-      keyPoints: "Attach the pricing sheet",
-    });
-});
-
-test("W1: a task needs a description", async ({ page }) => {
-  const alerts: string[] = [];
-  page.on("dialog", (d) => {
-    alerts.push(d.message());
-    void d.accept();
-  });
-  await page.goto(OLD_UI);
-  await page.getByRole("button", { name: "+ Add task", exact: true }).click();
-  await taskModal(page, "New Task").getByRole("button", { name: "Save" }).click();
-  expect(alerts).toEqual(["Task description is required."]);
-  expect(await stored("tasks", "tasks")).toHaveLength(1); // only the baseline
-});
-
-test("W7: edit a task's details", async ({ page }) => {
-  await seedTasks([task("t1", { task: "Draft the agenda", responsible: ["Ana"] })]);
-  await page.goto(OLD_UI);
-  await taskRow(page, "Draft the agenda").click();
-  const modal = taskModal(page, "Edit Task");
-  await modal.getByPlaceholder("Describe the task…").fill("Draft the workshop agenda");
-  await field(modal, "End date").fill(isoDay(2));
-  await modal.getByRole("button", { name: "Save" }).click();
-
-  await expect(taskRow(page, "Draft the workshop agenda")).toBeVisible();
-  await expect
-    .poll(() => storedById("tasks", "tasks", "t1"))
-    .toMatchObject({ task: "Draft the workshop agenda", endDate: isoDay(2), responsible: ["Ana"] });
-});
-
-test("W5 W6: mark a task done, find it among finished tasks, mark it not done", async ({ page }) => {
-  await seedTasks([task("t1", { task: "Book the room" })]);
-  await page.goto(OLD_UI);
-  await taskRow(page, "Book the room").getByRole("checkbox").click();
-
-  await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(true);
-  await expect(taskRow(page, "Book the room")).toHaveCount(0);
-  await page.getByRole("button", { name: /Show completed\s*\(1\)/ }).click();
-  await expect(taskRow(page, "Book the room")).toBeVisible();
-
-  await taskRow(page, "Book the room").getByRole("checkbox").click();
-  await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.completed).toBe(false);
-});
-
-test("W7: delete a task after confirming", async ({ page }) => {
-  acceptDialogs(page);
-  await seedTasks([task("t1", { task: "Old reminder" })]);
-  await page.goto(OLD_UI);
-  await taskRow(page, "Old reminder").getByTitle("Delete").click();
-
-  await expect(taskRow(page, "Old reminder")).toHaveCount(0);
-  await expect.poll(() => storedById("tasks", "tasks", "t1")).toBeUndefined();
-});
-
-test("W12: a company task is prospect work, and client work once the deal is done", async ({ page }) => {
+test("W12: a company task is prospect work, client work once the deal is done, and anything else is internal", async ({ page }) => {
   await seedCompanies([
     company(1, { company: "Pelita Foods", status: "To Follow Up" }),
     company(2, { company: "Arunika Labs", status: "Client / Partner Done Deal" }),
@@ -102,99 +24,82 @@ test("W12: a company task is prospect work, and client work once the deal is don
     task("c", { task: "Renewal for Arunika", linkedClientId: 2 }),
     task("i", { task: "Tidy the shared drive" }),
   ]);
-  await page.goto(OLD_UI);
-  await expect(taskRow(page, "Tidy the shared drive")).toBeVisible();
-  await expect(taskRow(page, "Call Pelita about the trial")).toHaveCount(0);
-
-  await openArea(page, "Prospects");
-  await expect(taskRow(page, "Call Pelita about the trial")).toBeVisible();
-  await expect(taskRow(page, "Renewal for Arunika")).toHaveCount(0);
-
-  await openArea(page, "Clients");
-  await expect(taskRow(page, "Renewal for Arunika")).toBeVisible();
-  await expect(taskRow(page, "Tidy the shared drive")).toHaveCount(0);
+  await page.goto("/tasks");
+  await expect(rows(page)).toHaveCount(3);
+  for (const [name, title] of [
+    ["Prospects", "Call Pelita about the trial"],
+    ["Clients", "Renewal for Arunika"],
+    ["Internal", "Tidy the shared drive"],
+  ]) {
+    await kind(page, name).click();
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page)).toContainText(title);
+  }
 });
 
-test("W14: prospect work comes latest deadline first, undated last, and narrows by days without action", async ({ page }) => {
-  await seedCompanies([company(1, { company: "Pelita Foods" })]);
-  await seedTasks([
-    task("a", { task: "Early deadline", linkedClientId: 1, endDate: isoDay(1), lastActionDate: isoDay(-2) }),
-    task("b", { task: "Undated follow-up", linkedClientId: 1, lastActionDate: isoDay(-20) }),
-    task("c", { task: "Late deadline", linkedClientId: 1, endDate: isoDay(9), lastActionDate: isoDay(-15) }),
-  ]);
-  await page.goto(OLD_UI);
-  await openArea(page, "Prospects");
-  const rows = page.locator("tbody tr");
-  await expect(rows).toHaveText([/Late deadline/, /Early deadline/, /Undated follow-up/]);
-
-  await page.getByRole("spinbutton").fill("14");
-  await expect(rows).toHaveText([/Late deadline/, /Undated follow-up/]);
+test("W7: a task's details are changed and saved, keeping what wasn't touched", async ({ page }) => {
+  await seedTasks([task("t1", { task: "Draft the agenda", responsible: ["Ana"] })]);
+  await page.goto("/tasks?task=t1");
+  await waitUntilLive(page);
+  await sheet(page).getByLabel("Description").fill("Draft the workshop agenda");
+  await sheet(page).getByLabel("Deadline").fill(isoDay(2));
+  await sheet(page).getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet(page)).toHaveCount(0);
+  await expect(rows(page).filter({ hasText: "Draft the workshop agenda" })).toHaveCount(1);
+  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ task: "Draft the workshop agenda", endDate: isoDay(2), responsible: ["Ana"] });
 });
 
-test("D11: a task edited from another view is saved", async ({ page }) => {
+test("D11: a task changed from the Plan's day is saved, with no stray id field", async ({ page }) => {
   await seedTasks([task("t1", { task: "Prepare the demo", startDate: isoDay(0), endDate: isoDay(0), responsible: ["Ana"] })]);
-  await page.goto(OLD_UI);
-  await openArea(page, "Daily View", "Views");
-  await page.getByText("Prepare the demo").click();
-  const modal = taskModal(page, "Edit Task");
-  await field(modal, "Key points").fill("Use the new deck");
-  await modal.getByRole("button", { name: "Save" }).click();
-
+  await page.goto(`/plan?view=day&date=${isoDay(0)}`);
+  await page.getByRole("region", { name: "Tasks" }).getByRole("link", { name: "Prepare the demo" }).click();
+  await expect(page).toHaveURL(/\/plan\?.*task=t1/);
+  await waitUntilLive(page);
+  await sheet(page).getByLabel("Key points").fill("Use the new deck");
+  await sheet(page).getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet(page)).toHaveCount(0);
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.keyPoints).toBe("Use the new deck");
+  const fields = await readFields("tasks", "tasks/t1");
+  expect(fields).not.toHaveProperty("id");
+  expect(fields).toMatchObject({ responsible: ["Ana"], endDate: isoDay(0) });
 });
 
-test("D11: editing from another view writes no stray id field", async ({ page }) => {
-  await seedTasks([task("t1", { task: "Prepare the demo", startDate: isoDay(0), endDate: isoDay(0) })]);
-  await page.goto(OLD_UI);
-  await openArea(page, "Daily View", "Views");
-  await page.getByText("Prepare the demo").click();
-  const modal = taskModal(page, "Edit Task");
-  await field(modal, "Key points").fill("Use the new deck");
-  await modal.getByRole("button", { name: "Save" }).click();
-
-  await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.keyPoints).toBe("Use the new deck");
-  expect(await readFields("tasks", "tasks/t1")).not.toHaveProperty("id");
-});
-
-test("W7: clearing a task's type clears it", async ({ page }) => {
+test("W7: clearing a task's type removes it from the stored task", async ({ page }) => {
   await seedTasks([task("t1", { task: "Draft the agenda", taskType: "Follow Up" })]);
-  await page.goto(OLD_UI);
-  await taskRow(page, "Draft the agenda").click();
-  const modal = taskModal(page, "Edit Task");
-  await field(modal, "Task type").selectOption("");
-  await modal.getByRole("button", { name: "Save" }).click();
-
-  await expect.poll(async () => readFields("tasks", "tasks/t1")).not.toHaveProperty("taskType");
+  await page.goto("/tasks?task=t1");
+  await waitUntilLive(page);
+  await expect(sheet(page).getByLabel("Task type")).toHaveValue("Follow Up");
+  await sheet(page).getByLabel("Task type").selectOption("");
+  await sheet(page).getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet(page)).toHaveCount(0);
+  await expect.poll(() => readFields("tasks", "tasks/t1")).not.toHaveProperty("taskType");
 });
 
-test.describe("on empty data", () => {
-  test("Q7: the app opens without adding sample data", async ({ page }) => {
-    await clearAll();
-    await page.goto(OLD_UI);
-    await expect(page.getByText("No tasks yet. Add your first one.")).toBeVisible();
-    await page.waitForTimeout(1500); // the old app added its samples as soon as it saw nothing
-    expect(await stored("tasks", "tasks")).toEqual([]);
-    expect(await stored("clients", "pipeline")).toEqual([]);
-  });
+test("Q7: the app opens on empty data without adding sample data", async ({ page }) => {
+  await page.goto("/");
+  await waitUntilLive(page);
+  await expect(page.getByRole("region", { name: "Today at a glance" }).getByRole("heading", { level: 2 })).toHaveText("Nothing on the list yet");
+  await page.goto("/companies");
+  await expect(page.getByRole("heading", { name: "No companies yet" })).toBeVisible();
+  await page.goto("/flows");
+  await waitUntilLive(page);
+  await page.waitForTimeout(1500); // the old app added its samples as soon as it saw nothing
+  expect(await stored("tasks", "tasks")).toEqual([]);
+  expect(await stored("tasks", "flows")).toEqual([]);
+  expect(await stored("clients", "pipeline")).toEqual([]);
 });
 
-test("A3: with no connection a new task is refused, and nothing is stored", async ({ page, context }) => {
-  await page.goto(OLD_UI);
-  await expect(taskRow(page, "Baseline task")).toBeVisible();
-  await context.setOffline(true);
-  await page.getByRole("button", { name: "+ Add task", exact: true }).click();
-  const modal = taskModal(page, "New Task");
-  await modal.getByPlaceholder("Describe the task…").fill("Written offline");
-  // The alert is dismissed in its handler. If it opens while the click is still being acknowledged, the click can't
-  // finish until the dialog closes, so waiting for the click first would hang.
-  const messages: string[] = [];
-  page.once("dialog", (dialog) => {
-    messages.push(dialog.message());
-    void dialog.dismiss();
-  });
-  await modal.getByRole("button", { name: "Save" }).click();
-  await expect.poll(() => messages).toEqual(["No connection. The task wasn't added."]);
-  // Refused before reaching Firestore, so nothing is queued to arrive later.
-  await context.setOffline(false);
-  expect((await stored("tasks", "tasks")).map((t) => t.task)).toEqual(["Baseline task"]);
+test("5.1: deadline pills count whole days from today, wherever the team is", async ({ page }) => {
+  await seedTasks([
+    task("late", { task: "Chase the invoice", endDate: isoDay(-2) }),
+    task("today", { task: "Send the quote", endDate: isoDay(0) }),
+    task("tomorrow", { task: "Book the room", endDate: isoDay(1) }),
+    task("later", { task: "Plan the offsite", endDate: isoDay(12) }),
+  ]);
+  await page.goto("/tasks");
+  const pill = (title: string) => rows(page).filter({ hasText: title });
+  await expect(pill("Chase the invoice")).toContainText("2 days late");
+  await expect(pill("Send the quote")).toContainText("Today");
+  await expect(pill("Book the room")).toContainText("Tomorrow");
+  await expect(pill("Plan the offsite")).toContainText("In 12 days");
 });

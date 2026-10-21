@@ -177,7 +177,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | **4** | **Phase 4: edge surfaces and launch** | | |
 | 4.1 | Install and PWA: install sheet, manifest, icons, launch screen, service worker, offline first open | Sonnet 5.5 High | 2026-10-20 · this commit (install sheet is `?install=1`; short name "DEUS Space"; iPhone launch screen is in-app, no startup images; gap N16 provisional; Android install and the iPhone steps need a real-device check, left to 4.4) |
 | 4.2 | Live changes and the rest of the §4 checklist (needs N1–N3 built here once designed) | Sonnet 5.5 High | 2026-10-20 · this commit (one live store, `lib/liveChanges.ts`, fed by every source's snapshots; N2 and N3 built provisional, N1 stays as 3.3 and 3.14 left it; the plan's one open §4 row, Today's search, is N3) |
-| 4.3 | Smoke tests rewritten for the new UI, all passing | Opus 5.5 High | |
+| 4.3 | Smoke tests rewritten for the new UI, all passing | Opus 5.5 High | 2026-10-21 · this commit (old-UI stories already guarded by the screen specs point there; `jakarta` project runs Plan, Today and tasks at UTC+7; two full runs 494/494) |
 | 4.4 | Screenshots against the prototype, every state on `map.html`, phone and desktop | Sonnet 5.5 High | |
 | 4.5 | Accessibility check (axe, keyboard pass, screen-reader labels) | Sonnet 5.5 High | |
 | 4.6 | Real-phone check on the preview (you, with a helper session) | Haiku 5.5 Max | |

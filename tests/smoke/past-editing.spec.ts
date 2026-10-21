@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
+import { settledOnline } from "./data";
 import { readAll, seed } from "../support/emulator";
 
 type Doc = { id: string; name: string; parentId: string | null; sector: string | null; countHead: boolean; createdAt: number };
@@ -245,6 +246,7 @@ test("R9: offline, adding keeps what was typed and says so, and Try again adds i
 
   await context.setOffline(false);
   await expect(page.getByRole("status").getByText(/Back online/)).toBeVisible();
+  await settledOnline(page);
   await dialog.getByRole("button", { name: "Try again" }).click();
   await expect(toasts(page).getByText("Borneo Agro added")).toBeVisible();
   await expect.poll(() => storedNamed("Borneo Agro")).toBeTruthy();
@@ -257,6 +259,7 @@ test("R9: offline, adding keeps what was typed and says so, and Try again adds i
   await expect(toasts(page).getByText("No connection. The change wasn't saved.")).toBeVisible();
   await context.setOffline(false);
   await expect(page.getByRole("status").getByText(/Back online/)).toBeVisible();
+  await settledOnline(page);
   await toasts(page).getByRole("button", { name: "Try again" }).click();
   await expect.poll(async () => (await stored()).find((d) => d.id === "pelita")?.name).toBe("Pelita Group");
 });

@@ -49,15 +49,6 @@ export const seedFlows = (docs: ReturnType<typeof flow>[]) => seed("tasks", "flo
 export const seedCompanies = (docs: ReturnType<typeof company>[]) =>
   seed("clients", "pipeline", docs, { keepIdField: true });
 
-// One record in each of tasks, companies and flows, which some specs count on.
-export async function seedBaseline() {
-  await Promise.all([
-    seedTasks([task("baseline", { task: "Baseline task" })]),
-    seedCompanies([company(900, { company: "Baseline company" })]),
-    seedFlows([flow("baseline", { name: "Baseline flow" })]),
-  ]);
-}
-
 export async function stored(project: ProjectKey, collection: string) {
   return readAll(project, collection);
 }
@@ -67,7 +58,20 @@ export async function storedById(project: ProjectKey, collection: string, id: st
   return docs.find((d) => d.id === String(id)) as StoredDoc | undefined;
 }
 
-// The old app asks with window.confirm; these tests always say yes.
-export function acceptDialogs(page: Page) {
-  page.on("dialog", (dialog) => void dialog.accept());
+// Once the browser is back online, Firestore restarts its streams, which can turn the app offline again for a moment
+// right after "Back online". A test that presses Try again waits until the app has stayed live for a while, as a person
+// glancing at the live status would.
+export async function settledOnline(page: Page, forMs = 1500) {
+  await page.evaluate(() => delete (window as { notLiveAt?: number }).notLiveAt);
+  await page.waitForFunction(
+    (ms) => {
+      const w = window as { notLiveAt?: number };
+      const now = performance.now();
+      const live = [...document.querySelectorAll('[role="status"]')].some((el) => el.textContent?.includes("Live, everyone's up to date"));
+      if (!live || w.notLiveAt === undefined) w.notLiveAt = now;
+      return live && now - w.notLiveAt >= ms;
+    },
+    forMs,
+    { polling: 100 }
+  );
 }

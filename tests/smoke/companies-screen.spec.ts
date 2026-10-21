@@ -176,14 +176,13 @@ test("5.13: on a phone the tiles go two by two and each company is a card with l
   await seedAll();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/companies");
-  const a = await tile(page, "To approach").boundingBox();
-  const b = await tile(page, "Active").boundingBox();
-  const c = await tile(page, "Deal done").boundingBox();
-  expect(a!.y).toBe(b!.y); // two across
-  expect(c!.y).toBeGreaterThan(a!.y);
-  await expect(search(page)).toBeVisible(); // under the title
   const card = row(page, "Pelita Foods");
   await expect(card.getByText("Last action", { exact: true })).toBeVisible(); // the label shows
+  // Measured once the page has settled: the tiles can still move a pixel or two while it loads.
+  const top = async (name: string) => (await tile(page, name).boundingBox())!.y;
+  await expect.poll(async () => (await top("To approach")) === (await top("Active"))).toBe(true); // two across
+  expect(await top("Deal done")).toBeGreaterThan(await top("To approach"));
+  await expect(search(page)).toBeVisible(); // under the title
   await expect(card.getByText("Missed by 2 days")).toBeVisible();
   const box = await card.boundingBox();
   expect(box!.width).toBeLessThanOrEqual(390);
