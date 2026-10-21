@@ -1,6 +1,6 @@
 # Real-phone check of the preview (task 4.6)
 
-**Status: open.** Written by the runner on 2026-10-21 (the commit that adds this file). The check needs your phone, so 4.6's Done cell in `redesign/ui-implementation-plan.md` stays empty until you have done it and the helper session has written the findings as fix tasks.
+**Status: done (2026-10-21).** The owner ran the check on their phone and reported that it looks good, with no findings, so no fix tasks and no helper session were needed. Written by the runner on 2026-10-21.
 
 ## Before you start
 
@@ -29,7 +29,7 @@ One row per problem. **Blocks**: the step can't be done. **Should fix**: it work
 
 | # | Step | Screen | What happened | What should happen | Severity | Outcome (helper) |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| — | all | all | Nothing to report: the owner found the preview good on the phone (2026-10-21). | — | — | No fix task needed |
 
 ## Dry run (runner, 2026-10-21)
 
