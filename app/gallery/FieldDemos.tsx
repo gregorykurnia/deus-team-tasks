@@ -4,7 +4,7 @@
 // buttons and the pickers. They are live, so keyboard use can be tried here.
 import { useRef, useState, type ReactNode } from "react";
 import Button from "@/ui/Button";
-import { Chip, ChipGroup } from "@/ui/ChipGroup";
+import { ChoiceChip, ChipGroup } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
 import FilterButton from "@/ui/FilterButton";
 import { DateInput, InPlaceField, NumberInput, QuickDates, SearchField, SelectInput, Switch, TextArea, TextInput } from "@/ui/Inputs";
@@ -134,9 +134,9 @@ export default function FieldDemos() {
             </span>
           </label>
           <div>
-            <Chip pressed={important} icon="star" onClick={() => setImportant((v) => !v)}>
+            <ChoiceChip pressed={important} icon="star" onClick={() => setImportant((v) => !v)}>
               Mark as important
-            </Chip>
+            </ChoiceChip>
           </div>
           <SearchField label="Search tasks" value={search} onChange={setSearch} placeholder="Search tasks" className="!w-full" />
           <div className="rounded-m p-2">

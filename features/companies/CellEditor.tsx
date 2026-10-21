@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 
 import { parseValue, quickPicks, sameValue, type FieldValue } from "@/lib/companyEdit";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import Button from "@/ui/Button";
-import { Chip } from "@/ui/ChipGroup";
+import { ChoiceChip } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
 import Icon from "@/ui/Icon";
 import { DateInput, NumberInput, TextArea, TextInput } from "@/ui/Inputs";
@@ -130,9 +130,9 @@ function DateEditor({ field, value, synced, today, onSave, onClose }: CellEditor
       </div>
       <div className={styles.qeQuick} role="group" aria-label="Quick dates">
         {quickPicks(field.key, today).map((p) => (
-          <Chip key={p.label} pressed={stored === p.iso} onClick={() => save(p.iso)}>
+          <ChoiceChip key={p.label} pressed={stored === p.iso} onClick={() => save(p.iso)}>
             {p.label}
-          </Chip>
+          </ChoiceChip>
         ))}
       </div>
       {synced && (

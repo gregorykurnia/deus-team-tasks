@@ -2,18 +2,12 @@
 @import "../styles/tokens.css";
 @import "../styles/base.css";
 
-/* Still used by the old screens on this branch, which Phase 4 deletes. */
-:root {
-  --accent: #4f46e5;
-}
-
 /* Tokens as Tailwind theme values, so utilities such as bg-glass, text-ink and rounded-panel work.
-   Tailwind's own names are not overridden: rounded-xl and rounded-2xl are in use by the old screens, and
+   Tailwind's own names are not overridden: rounded-xl and rounded-2xl keep Tailwind's sizes, and
    rounded-l and rounded-s are Tailwind's side utilities, which would clash. So the design's r-xl, r-l, r-s
    and r-xs are registered as rounded-sheet, rounded-panel, rounded-small and rounded-cell. */
 @theme inline {
   --font-sans: var(--font);
-  --color-accent: var(--accent);
 
   --color-page: var(--page);
   --color-glass: var(--glass);

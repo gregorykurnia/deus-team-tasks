@@ -7,7 +7,7 @@ import { PartlyChanged } from "@/lib/taskWrites";
 import { createTaskGroup, GroupNameError, groupNameProblem, partlyGroupChange, renameTaskGroup, type GroupNameProblem, type GroupRef } from "@/lib/taskGroups";
 import type { Task } from "@/lib/types";
 import Button from "@/ui/Button";
-import { Chip } from "@/ui/ChipGroup";
+import { ChoiceChip } from "@/ui/ChipGroup";
 import Dialog from "@/ui/Dialog";
 import Field from "@/ui/Field";
 import { TextInput } from "@/ui/Inputs";
@@ -107,9 +107,9 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
       </Field>
       {!group && (
         <div className={styles.dialogField}>
-          <Chip pressed={important} icon={important ? "star" : "starline"} onClick={() => setImportant(!important)}>
+          <ChoiceChip pressed={important} icon={important ? "star" : "starline"} onClick={() => setImportant(!important)}>
             Mark as important
-          </Chip>
+          </ChoiceChip>
           <p className={styles.help}>Important groups sit at the top of the list.</p>
         </div>
       )}

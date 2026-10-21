@@ -1,9 +1,6 @@
 import { google, type calendar_v3 } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
-import { TEAM_TIME_ZONE, toCalendarEvents, type CalendarEvent, type CalendarResponse } from "@/lib/calendarEvents";
-
-// The old calendar screen reads this name. Phase 4 (task 4.7) removes it.
-export type GCalEvent = CalendarEvent;
+import { TEAM_TIME_ZONE, toCalendarEvents, type CalendarResponse } from "@/lib/calendarEvents";
 
 // Google sends at most 2,500 events a page. Plan asks for ten weeks, so a few pages at most; the cap only guards a loop.
 const PAGE_SIZE = 2500;

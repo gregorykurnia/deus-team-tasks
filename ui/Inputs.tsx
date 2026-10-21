@@ -2,7 +2,7 @@
 // search, and the field that edits in place. They sit in a Field, which gives them their id and aria wiring.
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, Ref } from "react";
 import { addDays, todayIso } from "@/lib/dates";
-import { Chip } from "./ChipGroup";
+import { ChoiceChip } from "./ChipGroup";
 import Icon from "./Icon";
 import styles from "./Inputs.module.css";
 
@@ -54,9 +54,9 @@ export function QuickDates({ value, onPick, today = todayIso() }: { value: strin
   return (
     <div className={styles.quick} role="group" aria-label="Quick dates">
       {picks.map((p) => (
-        <Chip key={p.label} pressed={value === p.iso} onClick={() => onPick(p.iso)}>
+        <ChoiceChip key={p.label} pressed={value === p.iso} onClick={() => onPick(p.iso)}>
           {p.label}
-        </Chip>
+        </ChoiceChip>
       ))}
     </div>
   );

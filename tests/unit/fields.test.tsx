@@ -6,7 +6,7 @@ import Field from "@/ui/Field";
 import { DateInput, InPlaceField, QuickDates, SearchField, Switch, TextArea, TextInput } from "@/ui/Inputs";
 import Segmented from "@/ui/Segmented";
 import FilterButton from "@/ui/FilterButton";
-import { Chip, ChipGroup } from "@/ui/ChipGroup";
+import { ChoiceChip, ChipGroup } from "@/ui/ChipGroup";
 import PeoplePicker, { InformedList } from "@/ui/PeoplePicker";
 import SectorPicker from "@/ui/SectorPicker";
 
@@ -110,7 +110,7 @@ describe("segmented, filters and chips (guide 4.2, 4.3, 4.4)", () => {
   });
 
   it("choice chips say whether they are pressed", () => {
-    expect(html(<Chip pressed onClick={none}>Call</Chip>)).toContain('aria-pressed="true"');
+    expect(html(<ChoiceChip pressed onClick={none}>Call</ChoiceChip>)).toContain('aria-pressed="true"');
     const group = html(<ChipGroup label="Touch point" options={[{ value: "call", label: "Call" }, { value: "mail", label: "Email" }]} value="mail" onChange={none} />);
     expect(group).toContain('aria-label="Touch point"');
     expect(group.split('aria-pressed="true"').length - 1).toBe(1);

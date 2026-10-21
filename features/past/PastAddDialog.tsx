@@ -11,7 +11,7 @@ import { initials } from "@/lib/people";
 import type { HistoricalClient } from "@/lib/pastClients";
 import type { SectorCount } from "@/lib/sectors";
 import Button from "@/ui/Button";
-import { Chip } from "@/ui/ChipGroup";
+import { ChoiceChip } from "@/ui/ChipGroup";
 import Dialog from "@/ui/Dialog";
 import Field from "@/ui/Field";
 import Icon from "@/ui/Icon";
@@ -152,9 +152,9 @@ export default function PastAddDialog({ clients, sectors, labelOf, subsOf, onClo
           />
           {mode === "parent" ? (
             <div className={styles.where}>
-              <Chip pressed={counted} icon={counted ? "check" : "minus"} disabled={busy} onClick={() => setCounted(!counted)}>
+              <ChoiceChip pressed={counted} icon={counted ? "check" : "minus"} disabled={busy} onClick={() => setCounted(!counted)}>
                 Count it in the totals
-              </Chip>
+              </ChoiceChip>
               <p className={styles.help}>{countHelp(counted)}</p>
             </div>
           ) : parent ? (

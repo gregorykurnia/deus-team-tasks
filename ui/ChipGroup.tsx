@@ -4,12 +4,12 @@ import type { ComponentPropsWithRef } from "react";
 import Icon, { type IconName } from "./Icon";
 import styles from "./ChipGroup.module.css";
 
-interface ChipProps extends Omit<ComponentPropsWithRef<"button">, "type"> {
+interface ChoiceChipProps extends Omit<ComponentPropsWithRef<"button">, "type"> {
   pressed: boolean;
   icon?: IconName;
 }
 
-export function Chip({ pressed, icon, children, ...props }: ChipProps) {
+export function ChoiceChip({ pressed, icon, children, ...props }: ChoiceChipProps) {
   return (
     <button {...props} type="button" className={styles.chip} aria-pressed={pressed}>
       {icon && <Icon name={icon} size={15} />}
@@ -36,9 +36,9 @@ export function ChipGroup<T extends string>({ label, options, value, onChange, a
   return (
     <div className={styles.group} role="group" aria-label={label}>
       {options.map((o) => (
-        <Chip key={o.value} icon={o.icon} pressed={value === o.value} onClick={() => onChange(allowClear && value === o.value ? null : o.value)}>
+        <ChoiceChip key={o.value} icon={o.icon} pressed={value === o.value} onClick={() => onChange(allowClear && value === o.value ? null : o.value)}>
           {o.label}
-        </Chip>
+        </ChoiceChip>
       ))}
     </div>
   );

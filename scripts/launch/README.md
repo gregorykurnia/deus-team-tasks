@@ -56,7 +56,7 @@ npm run launch-data -- restore --live launch-data/live-<the backup the live run 
 
 ## For the build
 
-- `launchData.ts`: the pure part (old shapes copied in, so task 4.7 can delete `lib/clientLocalConfig.ts`).
+- `launchData.ts`: the pure part (old shapes copied in, so deleting `lib/clientLocalConfig.ts` in task 4.7 doesn't break it).
 - `launchWrites.ts`: backup, import writes, restore, the emulator copy; uses the app's own Firestore handles.
 - `data.ts`: the command. `dry-run.sh` with no arguments runs on `sample-settings.json` and `sample-copy/`, both made up.
 - Tests: `tests/unit/launchData.test.ts`.
