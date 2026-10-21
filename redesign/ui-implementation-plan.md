@@ -271,7 +271,7 @@ Every screen task: build every state listed in its guide section at desktop and 
 
 **4.5 Accessibility.** `@axe-core/playwright` on every screen and open sheet, keyboard-only pass of each job, labels from guide 8, 320px reflow and 200% zoom. **Done when** no serious or critical axe issues remain.
 
-**4.6 Real-phone check.** You use the preview on your phone (install it, go offline, write notes offline, come back). A helper session writes the findings as fix tasks.
+**4.6 Real-phone check.** You use the preview on your phone (install it, go offline, write notes offline, come back). A helper session writes the findings as fix tasks. Steps, the emulator dry run and the helper brief: `redesign/reviews/phone-check.md`.
 
 **4.8 Data step for launch** (runs before 4.7, while the old local-settings code still exists). A script imports the chosen device's company options and fields (Q4) into `settings/companies` (colours mapped to the nearest `--opt-*` pair, own fields kept), and backfills each subsidiary's sector from its parent where empty (D-016). It must not depend on `lib/clientLocalConfig.ts`, which 4.7 deletes: copy the storage keys and shapes it needs into the script. Dry run first against the emulator with a copy, then live right before the merge, with a JSON backup of both collections.
 
