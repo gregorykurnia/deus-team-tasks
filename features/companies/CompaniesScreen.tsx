@@ -6,7 +6,7 @@
 // editor, ⋯ opens the row menu, and a company opens its record over the list (?company=, so a reload keeps it). New
 // company is ?newCompany=1, and the Fields sheet ?fields=<group>. Options open from a field or a choice editor, and Export
 // says what the file holds before it downloads. Active switches between the companies in play and those parked (N20,
-// ?view=parked); Where to act counts only those in play.
+// ?view=parked); Where to act counts only those in play. Select (?select=1, Active only) parks or brings back several.
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -76,6 +76,9 @@ import MoveDialog from "./MoveDialog";
 import NewCompanySheet from "./NewCompanySheet";
 import OptionsDialog, { type OptionChanges } from "./OptionsDialog";
 import RowMenu from "./RowMenu";
+import { chosenIds, headState, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
+import { hasAnyLayer } from "@/ui/overlayStack";
+import CompanySelectionBar from "./CompanySelectionBar";
 import { COMPANY_PARK_MENU, notesLink, useCompanyActions } from "./useCompanyActions";
 import WhereToAct from "./WhereToAct";
 import styles from "./Companies.module.css";
@@ -134,8 +137,24 @@ export default function CompaniesScreen() {
   }
 
   // A group's own filters and order don't carry over to another group; the search does.
-  const pickGroup = (group: CompanyGroup) =>
+  const pickGroup = (group: CompanyGroup) => {
+    if (group !== "active") setSelecting(false); // Select is Active's only
     update((now) => ({ ...now, group, status: null, priority: null, product: null, act: null, parked: false, sort: null, dir: null }));
+  };
+  // Selecting several, on Active only (N20): ?select=1, so a reload keeps it; what's ticked is not.
+  const selecting = search.has("select") && state.group === "active";
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selectButton = useRef<HTMLButtonElement>(null);
+  function setSelecting(on: boolean) {
+    const current = new URLSearchParams(window.location.search);
+    if (on) current.set("select", "1");
+    else current.delete("select");
+    const query = current.toString();
+    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    setSelection(NO_SELECTION);
+  }
+
   // In play or parked: Where to act is for those in play, and each view opens on its own order.
   const pickParked = (parked: boolean) => update((now) => ({ ...now, parked, act: parked ? null : now.act, sort: null, dir: null }));
 
@@ -277,6 +296,43 @@ export default function CompaniesScreen() {
   const products = useMemo(() => (listing ? productOptions(listing.scoped) : []), [listing]);
   const shownRows = listing ? listing.sorted.slice(0, limit) : [];
   const hidden = listing ? listing.sorted.length - shownRows.length : 0;
+  const listIds = useMemo(() => (listing ? listing.sorted.map((c) => String(c.id)) : []), [listing]);
+  const shownIds = shownRows.map((c) => String(c.id));
+  const chosen = useMemo(() => chosenIds(selection, listIds), [selection, listIds]);
+
+  // Another view never widens "Select all" to companies it didn't take in.
+  const [selectedIn, setSelectedIn] = useState(viewKey);
+  if (selectedIn !== viewKey) {
+    setSelectedIn(viewKey);
+    setSelection(viewChanged);
+  }
+
+  // Esc stops selecting, once every menu, sheet and dialog over the screen is closed.
+  const stopRef = useRef(() => setSelecting(false));
+  useEffect(() => {
+    stopRef.current = () => {
+      setSelecting(false);
+      selectButton.current?.focus();
+    };
+  });
+  useEffect(() => {
+    if (!selecting) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || hasAnyLayer() || bulkBusy) return;
+      stopRef.current();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selecting, bulkBusy]);
+
+  // Parks the chosen companies, or brings them back; selecting stops once it's done.
+  async function parkChosen(park: boolean, until: string | null = null) {
+    const picked = chosen.map((id) => byId.get(Number(id))).filter((c): c is PipelineEntry => !!c);
+    setBulkBusy(true);
+    const done = park ? await actions.park(picked, until) : await actions.bringBack(picked);
+    setBulkBusy(false);
+    if (done) stopRef.current();
+  }
   const look = lookOf(state.group);
   const total = companies.rows.length;
   const filtered = filtersOn(state, fields);
@@ -410,6 +466,16 @@ export default function CompaniesScreen() {
           onEdit={edit}
           onRowMenu={openRowMenu}
           comesBack={state.parked}
+          selecting={
+            selecting
+              ? {
+                  head: headState(selection, shownIds, listIds),
+                  chosen: new Set(chosen),
+                  onHead: () => setSelection((now) => toggleHead(now, shownIds, listIds)),
+                  onToggle: (id) => setSelection((now) => toggleChosen(now, id, listIds)),
+                }
+              : undefined
+          }
         />
       </>
     );
@@ -460,10 +526,30 @@ export default function CompaniesScreen() {
             onState={(next) => update(() => next)}
             onFields={() => actions.openOver(`fields=${state.group}`)}
             onExport={() => setExporting(true)}
+            selecting={state.group === "active" ? selecting : undefined}
+            onSelecting={() => setSelecting(!selecting)}
+            selectRef={selectButton}
           />
         )}
         {body}
       </section>
+      {selecting && listing && today && (
+        <>
+          <div className={styles.barRoom} aria-hidden="true" />
+          <CompanySelectionBar
+            line={selectedLine(chosen.length, selection.all, "companies")}
+            offer={selectAllOffer(chosen.length, selection.all, listIds.length)}
+            chosen={chosen.length}
+            parked={state.parked}
+            today={today}
+            busy={bulkBusy}
+            onSelectAll={() => setSelection(selectAll(listIds))}
+            onPark={(until) => void parkChosen(true, until)}
+            onBringBack={() => void parkChosen(false)}
+            onStop={() => stopRef.current()}
+          />
+        </>
+      )}
 
       {record.open && !recordCompany && !recordMissing && (
         <Sheet open onClose={record.close} title="Company" size="wide">
@@ -547,7 +633,7 @@ export default function CompaniesScreen() {
               ? {
                   parked: isCompanyParked(live(rowMenu), today),
                   onPark: () => setParking(live(rowMenu)),
-                  onBringBack: () => void actions.bringBack(live(rowMenu)),
+                  onBringBack: () => void actions.bringBack([live(rowMenu)]),
                 }
               : undefined
           }
@@ -563,7 +649,7 @@ export default function CompaniesScreen() {
           onClose={() => setParking(null)}
           count={1}
           today={today}
-          onPark={(until) => void actions.park(live(parking), until)}
+          onPark={(until) => void actions.park([live(parking)], until)}
           {...COMPANY_PARK_MENU}
         />
       )}

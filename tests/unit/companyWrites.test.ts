@@ -9,9 +9,11 @@ import {
   addCompany,
   addTaskKeptInStep,
   allocateCompanyId,
+  bringBackCompanies,
   bringBackCompany,
   deleteCompany,
   moveCompany,
+  parkCompanies,
   parkCompany,
   replaceFieldValue,
   saveTaskKeptInStep,
@@ -182,6 +184,26 @@ describe("changing a company", () => {
     await parkCompany(c, null, tasks, 2000);
     await moveCompany({ ...c, parkedAt: 2000 }, "noOrNotNow", { answer: "Not now" }, tasks);
     expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("parkedAt");
+  });
+
+  it("N20: parks several companies at once with their open tasks, and Undo or Bring back puts each as it was", async () => {
+    const rows = [co(1), co(2, { parkedAt: 7, parkedUntil: "2026-12-01" }), co(3)];
+    const tasks = [task("a", { linkedClientId: 1 }), task("b", { linkedClientId: 3 }), task("c", { linkedClientId: 4 })];
+    await seedCompanies(rows);
+    await seedTasks(tasks);
+    const parked = await parkCompanies(rows, "2026-11-03", tasks, 1000);
+    expect(parked.tasksChanged).toBe(2);
+    expect((await readAll("clients", "pipeline")).map((r) => r.parkedUntil)).toEqual(["2026-11-03", "2026-11-03", "2026-11-03"]);
+    expect(await readFields("tasks", "tasks/c")).not.toHaveProperty("parkedAt");
+    await parked.undo();
+    expect((await readAll("clients", "pipeline")).map((r) => r.parkedUntil)).toEqual([undefined, "2026-12-01", undefined]);
+
+    await parkCompanies(rows, null, tasks, 1000);
+    const now = rows.map((c) => ({ ...c, parkedAt: 1000 }));
+    const back = await bringBackCompanies(now, tasks.map((t) => ({ ...t, parkedAt: 1000 })));
+    expect(back.tasksChanged).toBe(2);
+    expect((await readAll("clients", "pipeline")).every((r) => r.parkedAt === undefined)).toBe(true);
+    expect(await readFields("tasks", "tasks/a")).not.toHaveProperty("parkedAt");
   });
 
   it("renames or clears an option's value on every company using it", async () => {

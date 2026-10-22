@@ -1,8 +1,9 @@
 "use client";
 
 // The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, then
-// Sort, Fields and Export. A filter that's on shows its value and a round × that clears it.
-import { useRef, useState } from "react";
+// Sort, Select (Active only, to park several, N20), Fields and Export. A filter that's on shows its value and a round ×
+// that clears it.
+import { useRef, useState, type Ref } from "react";
 import { NO_VALUE, type ProductOption } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import {
@@ -15,7 +16,7 @@ import {
   sortSummary,
   type CompanyViewState,
 } from "@/lib/companyView";
-import FilterButton, { FilterAction } from "@/ui/FilterButton";
+import FilterButton, { FilterAction, FilterToggle } from "@/ui/FilterButton";
 import Menu, { MenuChoice, MenuFoot, MenuHeading, MenuSeparator } from "@/ui/Menu";
 import OptionChip from "@/ui/OptionChip";
 import styles from "./Companies.module.css";
@@ -30,9 +31,12 @@ interface CompanyFiltersProps {
   onState: (next: CompanyViewState) => void;
   onFields: () => void;
   onExport: () => void;
+  selecting?: boolean; // Active only: undefined leaves Select out
+  onSelecting: () => void;
+  selectRef?: Ref<HTMLButtonElement>; // gets focus back when selecting stops
 }
 
-export default function CompanyFilters({ state, fields, options, products, onState, onFields, onExport }: CompanyFiltersProps) {
+export default function CompanyFilters({ state, fields, options, products, onState, onFields, onExport, selecting, onSelecting, selectRef }: CompanyFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const productRef = useRef<HTMLButtonElement>(null);
   const sortRef = useRef<HTMLButtonElement>(null);
@@ -91,6 +95,7 @@ export default function CompanyFilters({ state, fields, options, products, onSta
           {state.parked ? "Normally: the soonest to come back first." : state.group === "toApproach" ? "Normally: planned outreach, soonest first." : "Normally: most recent action first."}
         </MenuFoot>
       </Menu>
+      {selecting !== undefined && <FilterToggle ref={selectRef} icon="checks" label={selecting ? "Selecting" : "Select"} pressed={selecting} onClick={onSelecting} />}
       <FilterAction icon="sliders" label="Fields" opens="dialog" onClick={onFields} />
       <FilterAction icon="download" label="Export" opens="dialog" onClick={onExport} />
     </div>

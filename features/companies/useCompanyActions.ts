@@ -10,9 +10,9 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import { changeMessage, isKeptInStep, moveMessage, movesToDealDone, type CompanyPatch, type FieldValue } from "@/lib/companyEdit";
 import { followUpTaskFor, type CompanyGroup } from "@/lib/companies";
 import type { CompanyField } from "@/lib/companySettings";
-import { addTaskKeptInStep, bringBackCompany, deleteCompany, moveCompany, parkCompany, updateCompany, updateCompanyKeptInStep } from "@/lib/companyWrites";
+import { addTaskKeptInStep, bringBackCompanies, deleteCompany, moveCompany, parkCompanies, updateCompany, updateCompanyKeptInStep } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
-import { weekdayDate } from "@/lib/dates";
+import { plural, weekdayDate } from "@/lib/dates";
 import { putBackDone, setTasksDone, type Undo } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useToast } from "@/ui/Toaster";
@@ -106,26 +106,31 @@ export function useCompanyActions() {
     [toast, openOver]
   );
 
-  // Parks an Active company with its open tasks (N20), or brings it back with the tasks parked along with it.
+  // Parks Active companies with their open tasks (N20), or brings them back with the tasks parked along with them. Says
+  // whether it worked, so selecting can stop.
   const park = useCallback(
-    async (c: PipelineEntry, until: string | null) => {
+    async (cs: PipelineEntry[], until: string | null): Promise<boolean> => {
       try {
-        const { undo, tasksChanged } = await parkCompany(c, until, latest.current.tasks);
-        toast(`${c.company} parked${until ? ` until ${weekdayDate(until)}` : ""}${withTasks(tasksChanged)}`, { action: "Undo", onAction: undoing(undo) });
+        const { undo, tasksChanged } = await parkCompanies(cs, until, latest.current.tasks);
+        toast(`${who(cs)} parked${until ? ` until ${weekdayDate(until)}` : ""}${withTasks(tasksChanged, cs.length)}`, { action: "Undo", onAction: undoing(undo) });
+        return true;
       } catch (err) {
-        toast(failureMessage(err, `${c.company} couldn't be parked. Check your connection and try again.`), { error: true });
+        toast(failureMessage(err, `${who(cs)} couldn't be parked. Check your connection and try again.`), { error: true });
+        return false;
       }
     },
     [toast, undoing]
   );
 
   const bringBack = useCallback(
-    async (c: PipelineEntry) => {
+    async (cs: PipelineEntry[]): Promise<boolean> => {
       try {
-        const { undo, tasksChanged } = await bringBackCompany(c, latest.current.tasks);
-        toast(`${c.company} brought back${withTasks(tasksChanged)}`, { action: "Undo", onAction: undoing(undo) });
+        const { undo, tasksChanged } = await bringBackCompanies(cs, latest.current.tasks);
+        toast(`${who(cs)} brought back${withTasks(tasksChanged, cs.length)}`, { action: "Undo", onAction: undoing(undo) });
+        return true;
       } catch (err) {
-        toast(failureMessage(err, `${c.company} couldn't be brought back. Check your connection and try again.`), { error: true });
+        toast(failureMessage(err, `${who(cs)} couldn't be brought back. Check your connection and try again.`), { error: true });
+        return false;
       }
     },
     [toast, undoing]
@@ -163,9 +168,17 @@ export function useCompanyActions() {
 
 export type CompanyActions = ReturnType<typeof useCompanyActions>;
 
-// ", with its open task" or ", with its 3 open tasks", after a company is parked or brought back.
-function withTasks(n: number): string {
-  return n === 0 ? "" : n === 1 ? ", with its open task" : `, with its ${n.toLocaleString("en-GB")} open tasks`;
+// The company's name, or "3 companies".
+function who(cs: PipelineEntry[]): string {
+  return cs.length === 1 ? cs[0].company : plural(cs.length, "company", "companies");
+}
+
+// ", with its open task" or ", with its 3 open tasks" after one company is parked or brought back; ", and 5 open tasks"
+// after several.
+function withTasks(n: number, companies: number): string {
+  if (n === 0) return "";
+  if (companies > 1) return `, and ${plural(n, "open task")}`;
+  return n === 1 ? ", with its open task" : `, with its ${n.toLocaleString("en-GB")} open tasks`;
 }
 
 // The company wording of the park menu (features/tasks/ParkMenu).

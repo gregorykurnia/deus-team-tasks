@@ -38,3 +38,31 @@ test("N20: a company parked for two weeks leaves the list in play with its task,
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.parkedAt).toBeUndefined();
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.parkedAt).toBeUndefined();
 });
+
+test("N20: several companies are chosen with Select and parked together, then brought back together from Parked", async ({ page }) => {
+  await seedCompanies([
+    company(1, { company: "Pelita Foods", status: "To Follow Up", date: isoDay(-20) }),
+    company(2, { company: "Borneo Retail", status: "Meeting Soon", date: isoDay(-1) }),
+    company(3, { company: "Sinar Logistik", status: "Meeting Soon", date: isoDay(-3) }),
+  ]);
+  await page.goto("/companies");
+  await page.getByRole("button", { name: "Select", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Select: Pelita Foods" }).click();
+  await page.getByRole("checkbox", { name: "Select: Borneo Retail" }).click();
+  const bar = page.getByRole("region", { name: "Selected companies" });
+  await expect(bar).toContainText("2 selected");
+  await bar.getByRole("button", { name: "Park" }).click();
+  await page.getByRole("menu", { name: "Park" }).getByRole("menuitem", { name: "Until I bring it back" }).click();
+  await expect(toasts(page).getByText("2 companies parked")).toBeVisible();
+  await expect(bar).toHaveCount(0);
+  await expect.poll(async () => (await storedById("clients", "pipeline", 2))?.parkedAt).toBeDefined();
+  await expect(page.getByRole("article")).toHaveCount(1);
+
+  await views(page).getByRole("button", { name: /Parked/ }).click();
+  await page.getByRole("button", { name: "Select", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Select every company shown" }).click();
+  await page.getByRole("region", { name: "Selected companies" }).getByRole("button", { name: "Bring back" }).click();
+  await expect(toasts(page).getByText("2 companies brought back")).toBeVisible();
+  await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.parkedAt).toBeUndefined();
+  await expect(page.getByText("Nothing parked")).toBeVisible();
+});

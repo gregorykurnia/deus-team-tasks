@@ -216,6 +216,17 @@
 }
 
 /* ---------- The panel: filters, results line, list ---------- */
+/* Room under the list for the selection bar, so it never covers the last company. */
+.barRoom {
+  height: 72px;
+}
+
+@media (max-width: 900px) {
+  .barRoom {
+    display: none;
+  }
+}
+
 /* In play or parked, on Active (N20): right of the page, above the panel. */
 .viewBar {
   display: flex;

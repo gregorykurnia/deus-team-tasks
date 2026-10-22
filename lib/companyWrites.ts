@@ -260,37 +260,41 @@ export async function moveCompany(
 
 /* ---------- Parking (N20) ---------- */
 
-// Parks an Active company until a day, or until brought back when `until` is null. Its open tasks that aren't parked
-// already are parked with it, stamped with the same time, so bringing the company back brings back just those.
-export async function parkCompany(
-  current: PipelineEntry,
+// Parks Active companies until a day, or until brought back when `until` is null. Their open tasks that aren't parked
+// already are parked with them, stamped with the same time, so bringing a company back brings back just those.
+export async function parkCompanies(
+  companies: PipelineEntry[],
   until: string | null,
   tasks: Task[],
   now = Date.now()
 ): Promise<{ undo: Undo; tasksChanged: number }> {
-  assertOnline("No connection. The company wasn't parked.");
-  const parking: Partial<NewTask> = { parkedAt: now, parkedUntil: until ?? undefined };
-  const changes = openTasksOf(current.id, tasks)
-    .filter((t) => !isParked(t))
-    .map((t) => ({ t, p: parking }));
-  return writeParking(current, { parkedAt: now, parkedUntil: until ?? undefined }, changes);
+  assertOnline(`No connection. The ${companies.length === 1 ? "company wasn't" : "companies weren't"} parked.`);
+  const parking = { parkedAt: now, parkedUntil: until ?? undefined };
+  const ids = new Set(companies.map((c) => c.id));
+  const changes = tasks
+    .filter((t) => t.linkedClientId != null && ids.has(t.linkedClientId) && !t.completed && !isParked(t))
+    .map((t) => ({ t, p: parking as Partial<NewTask> }));
+  return writeParking(companies, parking, changes);
 }
 
-// Brings a parked company back, with the tasks that were parked along with it.
-export async function bringBackCompany(current: PipelineEntry, tasks: Task[]): Promise<{ undo: Undo; tasksChanged: number }> {
-  assertOnline("No connection. The company wasn't brought back.");
-  const cleared: Partial<NewTask> = { parkedAt: undefined, parkedUntil: undefined };
-  const changes = current.parkedAt
-    ? openTasksOf(current.id, tasks)
-        .filter((t) => t.parkedAt === current.parkedAt)
-        .map((t) => ({ t, p: cleared }))
-    : [];
-  return writeParking(current, { parkedAt: undefined, parkedUntil: undefined }, changes);
+// Brings parked companies back, with the tasks that were parked along with them.
+export async function bringBackCompanies(companies: PipelineEntry[], tasks: Task[]): Promise<{ undo: Undo; tasksChanged: number }> {
+  assertOnline(`No connection. The ${companies.length === 1 ? "company wasn't" : "companies weren't"} brought back.`);
+  const parkedAt = new Map(companies.filter((c) => c.parkedAt).map((c) => [c.id, c.parkedAt]));
+  const cleared = { parkedAt: undefined, parkedUntil: undefined };
+  const changes = tasks
+    .filter((t) => t.linkedClientId != null && !t.completed && t.parkedAt !== undefined && parkedAt.get(t.linkedClientId) === t.parkedAt)
+    .map((t) => ({ t, p: cleared as Partial<NewTask> }));
+  return writeParking(companies, cleared, changes);
 }
 
-// Tasks first, then the company; if the company can't be written, the tasks go back as they were.
+export const parkCompany = (c: PipelineEntry, until: string | null, tasks: Task[], now = Date.now()) => parkCompanies([c], until, tasks, now);
+export const bringBackCompany = (c: PipelineEntry, tasks: Task[]) => bringBackCompanies([c], tasks);
+
+// Tasks first, then the companies; if the companies can't be written, the tasks go back as they were. Undo puts each
+// company's parking and each task's back as they were.
 async function writeParking(
-  current: PipelineEntry,
+  companies: PipelineEntry[],
   patch: CompanyPatch,
   changes: { t: Task; p: Partial<NewTask> }[]
 ): Promise<{ undo: Undo; tasksChanged: number }> {
@@ -298,16 +302,21 @@ async function writeParking(
     db,
     changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
   );
-  let undoCompany: Undo;
+  const writeCompanies = (patchOf: (c: PipelineEntry) => CompanyPatch) =>
+    commitInChunks(
+      clientsDb,
+      companies.map((c) => (b) => b.update(companyRef(c.id), toCompanyUpdate(patchOf(c))))
+    );
   try {
-    undoCompany = await updateCompany(current, patch);
+    await writeCompanies(() => patch);
   } catch (err) {
     return rollBack(err, () => restoreTasks(changes));
   }
   return {
     tasksChanged: changes.length,
     undo: async () => {
-      await undoCompany();
+      assertOnline("No connection. The change wasn't undone.");
+      await writeCompanies((c) => ({ parkedAt: c.parkedAt, parkedUntil: c.parkedUntil }));
       await restoreTasks(changes);
     },
   };

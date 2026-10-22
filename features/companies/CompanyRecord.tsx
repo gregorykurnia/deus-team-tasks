@@ -157,7 +157,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
             </Button>
             {group === "active" &&
               (parked ? (
-                <Button small onClick={() => void actions.bringBack(c)}>
+                <Button small onClick={() => void actions.bringBack([c])}>
                   <Icon name="undo" size={16} />
                   Bring back
                 </Button>
@@ -247,7 +247,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
         onClose={() => setParking(false)}
         count={1}
         today={today}
-        onPark={(until) => void actions.park(c, until)}
+        onPark={(until) => void actions.park([c], until)}
         {...COMPANY_PARK_MENU}
       />
       <Menu open={menu} anchorRef={menuButton} onClose={() => setMenu(false)} label={`More for ${c.company}`} alignRight>

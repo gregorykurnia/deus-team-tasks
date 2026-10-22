@@ -1,5 +1,6 @@
-// Selecting several tasks (guide 4.7, D-008). What's chosen is the ids ticked that are still in the list, or every task
-// matching the view once "Select all" is used, so a filter change never acts on tasks that can't be seen.
+// Selecting several tasks (guide 4.7, D-008), and Active companies to park (N20). What's chosen is the ids ticked that
+// are still in the list, or every task matching the view once "Select all" is used, so a filter change never acts on
+// tasks that can't be seen.
 import { plural } from "./dates";
 
 export interface Selection {
@@ -44,9 +45,9 @@ export function toggleHead(selection: Selection, shownIds: string[], listIds: st
 
 const num = (n: number) => n.toLocaleString("en-GB");
 
-// "Choose tasks", "3 selected", "All 1,579 selected".
-export function selectedLine(chosen: number, all: boolean): string {
-  if (chosen === 0) return "Choose tasks";
+// "Choose tasks", "3 selected", "All 1,579 selected". Companies use it too, with their own word.
+export function selectedLine(chosen: number, all: boolean, many = "tasks"): string {
+  if (chosen === 0) return `Choose ${many}`;
   return all && chosen > 1 ? `All ${num(chosen)} selected` : `${num(chosen)} selected`;
 }
 

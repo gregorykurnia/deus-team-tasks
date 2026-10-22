@@ -4,7 +4,8 @@
 // group's colour, the name, and the contact or industry under it) stays pinned when the list scrolls sideways. Every shown
 // field is a cell, and every cell is a button that opens its quick editor. The name opens the record, and so does a click
 // anywhere else on the row; ⋯ opens the row menu. On phones the head goes and each row becomes a card with labelled details.
-// Parked companies (N20) get a Comes back column, a ringed pill like a parked task's.
+// Parked companies (N20) get a Comes back column, a ringed pill like a parked task's. While selecting several (Active), a
+// checkbox leads each row, the head's ticks every row shown, the name is plain text and a row's click ticks it.
 import Link from "next/link";
 import type { CSSProperties, MouseEvent } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
@@ -19,6 +20,7 @@ import Button from "@/ui/Button";
 import Highlight from "@/ui/Highlight";
 import Icon from "@/ui/Icon";
 import OptionChip from "@/ui/OptionChip";
+import SelectBox from "@/ui/SelectBox";
 import Pill from "@/ui/Pill";
 import { LiveTag } from "@/ui/Tag";
 import styles from "./Companies.module.css";
@@ -41,6 +43,7 @@ interface CompanyListProps {
   onEdit: (anchor: HTMLElement, company: PipelineEntry, field: CompanyField) => void;
   onRowMenu: (anchor: HTMLElement, company: PipelineEntry) => void;
   comesBack?: boolean; // the parked companies: when each comes back
+  selecting?: { head: boolean | "mixed"; chosen: ReadonlySet<string>; onHead: () => void; onToggle: (id: string) => void };
 }
 
 // A click on the row that isn't on a cell, the menu or the name opens the record, as the name's link would.
@@ -85,7 +88,7 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
 const BARE_ON_PHONE = new Set(["status", "answer", "target", "reach", "type"]);
 
 export default function CompanyList(props: CompanyListProps) {
-  const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu, comesBack } = props;
+  const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu, comesBack, selecting } = props;
   const grid = gridOf(fields, comesBack);
   const arrivals = useArrivals("companies");
   const searchedKeys = new Set(searchedFields(group));
@@ -108,7 +111,10 @@ export default function CompanyList(props: CompanyListProps) {
       <div className={styles.wrap}>
         <div className={styles.table} style={{ "--cols": grid.columns, "--minw": `${grid.minWidth}px` } as CSSProperties}>
           <div className={styles.head}>
-            <div className={styles.name}>{head("Company", "company")}</div>
+            <div className={styles.name}>
+              {selecting && <SelectBox checked={selecting.head} label="Select every company shown" onClick={selecting.onHead} />}
+              {head("Company", "company")}
+            </div>
             {fields.map((f) => head(f.label, f.key))}
             {comesBack && head(COMES_BACK_LABEL, COMES_BACK)}
             <span />
@@ -118,16 +124,30 @@ export default function CompanyList(props: CompanyListProps) {
               const sub = subline(c, group);
               const arrival = arrivals.get(String(c.id)) ?? "none";
               return (
-                <article key={c.id} className={styles.row} aria-label={c.company} onClick={openFromRow} data-new={arrival !== "none" || undefined}>
+                <article
+                  key={c.id}
+                  className={styles.row}
+                  aria-label={c.company}
+                  onClick={(e) => {
+                    if (!selecting) openFromRow(e);
+                    else if (e.target instanceof Element && !e.target.closest("a, button, input")) selecting.onToggle(String(c.id));
+                  }}
+                  data-new={arrival !== "none" || undefined}
+                >
                   <div className={styles.name}>
+                    {selecting && <SelectBox checked={selecting.chosen.has(String(c.id))} label={`Select: ${c.company}`} onClick={() => selecting.onToggle(String(c.id))} />}
                     <span className={`${styles.mono} ${styles[group]}`} aria-hidden="true">
                       {initials(c.company)}
                     </span>
                     <div className={styles.who}>
                       <p className={styles.title}>
-                        <Link href={recordHref(c.id)} scroll={false} className={styles.nameLink} data-row-link>
+                        {selecting ? (
                           <Highlight text={c.company} query={query} />
-                        </Link>
+                        ) : (
+                          <Link href={recordHref(c.id)} scroll={false} className={styles.nameLink} data-row-link>
+                            <Highlight text={c.company} query={query} />
+                          </Link>
+                        )}
                       </p>
                       {(sub || isTagged(arrival)) && (
                         <p className={styles.meta}>
