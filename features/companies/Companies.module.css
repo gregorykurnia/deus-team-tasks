@@ -216,6 +216,13 @@
 }
 
 /* ---------- The panel: filters, results line, list ---------- */
+/* In play or parked, on Active (N20): right of the page, above the panel. */
+.viewBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
 .panel {
   min-width: 0;
   margin-top: 18px;

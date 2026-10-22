@@ -2,7 +2,7 @@
 // carries over and asks for, what the record warns about, and what a deletion leaves behind. Pure; the writes are in
 // companyWrites.ts and the screen draws the rest.
 import type { PipelineEntry } from "./clientTypes";
-import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
+import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, isCompanyParked, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
 import type { ChoiceOption, CompanyField, CompanySettings } from "./companySettings";
 import { addDays, daysBetween, plural, shortDate, todayIso } from "./dates";
 import { GONE_COLD_DAYS } from "./urgency";
@@ -194,6 +194,7 @@ export interface RecordAlert {
 export function recordAlerts(c: PipelineEntry, fields: CompanyField[], today: string = todayIso()): RecordAlert[] {
   const group = companyGroup(c);
   const alerts: RecordAlert[] = [];
+  if (isCompanyParked(c, today)) return alerts; // a parked company shows no urgency, only that it's parked (N20)
   if (group === "active" && c.date) {
     const idle = daysBetween(c.date, today);
     if (idle >= GONE_COLD_DAYS) alerts.push({ tone: "error", icon: "snow", title: "Gone cold.", text: `No action for ${plural(idle, "day")}.` });

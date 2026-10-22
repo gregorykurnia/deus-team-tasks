@@ -4,12 +4,15 @@
 // group's colour, the name, and the contact or industry under it) stays pinned when the list scrolls sideways. Every shown
 // field is a cell, and every cell is a button that opens its quick editor. The name opens the record, and so does a click
 // anywhere else on the row; ⋯ opens the row menu. On phones the head goes and each row becomes a card with labelled details.
+// Parked companies (N20) get a Comes back column, a ringed pill like a parked task's.
 import Link from "next/link";
 import type { CSSProperties, MouseEvent } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { searchedFields, type CompanyGroup, type CompanySortDir } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
-import { cellOf, cellWords, gridOf, subline, type Cell } from "@/lib/companyView";
+import { COMES_BACK } from "@/lib/companies";
+import { cellOf, cellWords, COMES_BACK_LABEL, gridOf, subline, type Cell } from "@/lib/companyView";
+import { parkedLabel } from "@/lib/parking";
 import { isTagged, useArrivals } from "@/lib/liveChanges";
 import { initials } from "@/lib/people";
 import Button from "@/ui/Button";
@@ -37,6 +40,7 @@ interface CompanyListProps {
   recordHref: (id: number) => string; // opens the company record over the list
   onEdit: (anchor: HTMLElement, company: PipelineEntry, field: CompanyField) => void;
   onRowMenu: (anchor: HTMLElement, company: PipelineEntry) => void;
+  comesBack?: boolean; // the parked companies: when each comes back
 }
 
 // A click on the row that isn't on a cell, the menu or the name opens the record, as the name's link would.
@@ -81,8 +85,8 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
 const BARE_ON_PHONE = new Set(["status", "answer", "target", "reach", "type"]);
 
 export default function CompanyList(props: CompanyListProps) {
-  const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu } = props;
-  const grid = gridOf(fields);
+  const { companies, hidden, pageSize, group, fields, settings, query, today, sort, onSort, onMore, recordHref, onEdit, onRowMenu, comesBack } = props;
+  const grid = gridOf(fields, comesBack);
   const arrivals = useArrivals("companies");
   const searchedKeys = new Set(searchedFields(group));
   const head = (label: string, key: string) => {
@@ -106,6 +110,7 @@ export default function CompanyList(props: CompanyListProps) {
           <div className={styles.head}>
             <div className={styles.name}>{head("Company", "company")}</div>
             {fields.map((f) => head(f.label, f.key))}
+            {comesBack && head(COMES_BACK_LABEL, COMES_BACK)}
             <span />
           </div>
           <div className={styles.list}>
@@ -160,6 +165,14 @@ export default function CompanyList(props: CompanyListProps) {
                       </button>
                     );
                   })}
+                  {comesBack && (
+                    <div className={`${styles.cell} ${styles.bare}`}>
+                      <span className={styles.lbl}>{COMES_BACK_LABEL}</span>{" "}
+                      <Pill tone="none">
+                        {parkedLabel({ parkedAt: c.parkedAt, parkedUntil: c.parkedUntil }, today)}
+                      </Pill>
+                    </div>
+                  )}
                   <button
                     type="button"
                     className={styles.rowMenu}

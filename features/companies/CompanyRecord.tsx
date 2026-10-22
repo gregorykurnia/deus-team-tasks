@@ -4,7 +4,7 @@
 // group and the contact; then Follow-up task, Last action: today, the qualification notes and Move. A notice for anything
 // urgent, every field the group has in sections, each opening its quick editor in place, and the company's tasks with the
 // kept-in-step note. There is no Save: each change saves itself, as the foot says. Edit fields opens the group's Fields
-// sheet over it.
+// sheet over it. An Active company can be parked from here (N20); a parked one says until when, with Bring back.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
@@ -12,11 +12,11 @@ import { useCompaniesById, useNotes, useTasks } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { fieldText, hasField, isKeptInStep, keptInStepNote, recordAlerts, recordSections } from "@/lib/companyEdit";
-import { COMPANY_GROUP_LABELS, companyGroup } from "@/lib/companies";
+import { COMPANY_GROUP_LABELS, companyGroup, isCompanyParked } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
 import { cellOf, type Cell } from "@/lib/companyView";
 import { initials } from "@/lib/people";
-import { plural } from "@/lib/dates";
+import { ago, isoOf, plural, weekdayDate } from "@/lib/dates";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import Icon from "@/ui/Icon";
@@ -25,8 +25,9 @@ import Notice from "@/ui/Notice";
 import Sheet from "@/ui/Sheet";
 import { GroupTag } from "@/ui/Tag";
 import { TaskRecordRow } from "@/ui/TaskRow";
+import ParkMenu from "@/features/tasks/ParkMenu";
 import { CellValue } from "./CompanyList";
-import { notesLink, type CompanyActions } from "./useCompanyActions";
+import { COMPANY_PARK_MENU, notesLink, type CompanyActions } from "./useCompanyActions";
 import styles from "./Companies.module.css";
 
 interface CompanyRecordProps {
@@ -64,6 +65,8 @@ export default function CompanyRecord({ company: c, settings, today, online, act
   const [showDone, setShowDone] = useState(false);
   const [menu, setMenu] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const [parking, setParking] = useState(false);
+  const parkButton = useRef<HTMLButtonElement>(null);
   const deleteReasonId = useId();
 
   const group = companyGroup(c);
@@ -72,6 +75,7 @@ export default function CompanyRecord({ company: c, settings, today, online, act
   const open = useMemo(() => own.filter((t) => !t.completed).sort(byDeadline), [own]);
   const done = useMemo(() => own.filter((t) => t.completed).sort(byFinished), [own]);
   const alerts = recordAlerts(c, fields, today);
+  const parked = isCompanyParked(c, today);
   const syncNote = keptInStepNote(fields, open.length);
   const notesTo = notesLink(c, notes.rows);
   const contact = String(c.pic ?? "").trim(); // the contact person, in every group
@@ -151,6 +155,18 @@ export default function CompanyRecord({ company: c, settings, today, online, act
               <Icon name="swap" size={16} />
               Move
             </Button>
+            {group === "active" &&
+              (parked ? (
+                <Button small onClick={() => void actions.bringBack(c)}>
+                  <Icon name="undo" size={16} />
+                  Bring back
+                </Button>
+              ) : (
+                <Button small ref={parkButton} aria-haspopup="menu" aria-expanded={parking} onClick={() => setParking(true)}>
+                  <Icon name="pause" size={16} />
+                  Park
+                </Button>
+              ))}
           </>
         }
         footer={
@@ -160,11 +176,17 @@ export default function CompanyRecord({ company: c, settings, today, online, act
           </span>
         }
       >
-        {(!online || alerts.length > 0) && (
+        {(!online || alerts.length > 0 || parked) && (
           <div className={styles.recordNotices}>
             {!online && (
               <Notice tone="warning" title="No connection.">
                 You can read this record, but changes can’t be saved until you’re back online.
+              </Notice>
+            )}
+            {parked && (
+              <Notice tone="info" title={c.parkedUntil ? `Parked until ${weekdayDate(c.parkedUntil)}` : "Parked until someone brings it back"}>
+                {c.parkedAt ? `Parked ${ago(isoOf(new Date(c.parkedAt)), today)}. ` : ""}It&rsquo;s out of Where to act and never shows as gone cold or late
+                {c.parkedUntil ? ", and comes back by itself on that day" : ""}. Bring it back to work on it now.
               </Notice>
             )}
             {alerts.map((a) => (
@@ -219,6 +241,15 @@ export default function CompanyRecord({ company: c, settings, today, online, act
           )}
         </section>
       </Sheet>
+      <ParkMenu
+        open={parking}
+        anchorRef={parkButton}
+        onClose={() => setParking(false)}
+        count={1}
+        today={today}
+        onPark={(until) => void actions.park(c, until)}
+        {...COMPANY_PARK_MENU}
+      />
       <Menu open={menu} anchorRef={menuButton} onClose={() => setMenu(false)} label={`More for ${c.company}`} alignRight>
         <MenuItem icon="edit" onSelect={() => menuButton.current && onRename(menuButton.current, c)}>
           Rename

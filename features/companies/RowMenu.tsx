@@ -1,7 +1,8 @@
 "use client";
 
-// The row menu (guide 4.9): Open company, Create a follow-up task, Last action: today, Move to another group, the
-// qualification notes (or start them), and Delete company in red, disabled with its reason until it can run.
+// The row menu (guide 4.9): Open company, Create a follow-up task, Last action: today, Park or Bring back (Active, N20),
+// Move to another group, the qualification notes (or start them), and Delete company in red, disabled with its reason
+// until it can run.
 import { useRouter } from "next/navigation";
 import { useId, type RefObject } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
@@ -17,11 +18,12 @@ interface RowMenuProps {
   onFollowUp: () => void;
   onToday: () => void;
   onMove: () => void;
+  parking?: { parked: boolean; onPark: () => void; onBringBack: () => void }; // Active only
   onDelete: () => void;
   deleteBlocked: string | null; // why Delete company can't run yet
 }
 
-export default function RowMenu({ company, anchorRef, hasLastAction, notes, onClose, onOpen, onFollowUp, onToday, onMove, onDelete, deleteBlocked }: RowMenuProps) {
+export default function RowMenu({ company, anchorRef, hasLastAction, notes, onClose, onOpen, onFollowUp, onToday, onMove, parking, onDelete, deleteBlocked }: RowMenuProps) {
   const router = useRouter();
   const reasonId = useId();
   return (
@@ -37,6 +39,16 @@ export default function RowMenu({ company, anchorRef, hasLastAction, notes, onCl
           Last action: today
         </MenuItem>
       )}
+      {parking &&
+        (parking.parked ? (
+          <MenuItem icon="undo" onSelect={parking.onBringBack}>
+            Bring back
+          </MenuItem>
+        ) : (
+          <MenuItem icon="pause" onSelect={parking.onPark}>
+            Park
+          </MenuItem>
+        ))}
       <MenuItem icon="swap" onSelect={onMove}>
         Move to another group
       </MenuItem>

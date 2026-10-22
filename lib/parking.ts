@@ -1,6 +1,7 @@
 // Parked tasks (N19): out of the open work, so Today, Plan and the open lists leave them out and they never show as
 // late, until someone brings them back or the day they were parked until comes round. Coming back on that day needs no
-// write: from then on the task simply counts as open again. A finished task is never parked.
+// write: from then on the task simply counts as open again. A finished task is never parked. Active companies park the
+// same way (N20, lib/companies).
 import { addDays, shortDate, todayIso } from "./dates";
 import type { Task } from "./types";
 

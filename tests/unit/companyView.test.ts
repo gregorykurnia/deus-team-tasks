@@ -28,7 +28,7 @@ const state = (query: string) => parseCompanyView(new URLSearchParams(query));
 
 describe("the view in the address (guide 6.5)", () => {
   it("opens on Active with nothing narrowed", () => {
-    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, act: null, sort: null, dir: null });
+    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, act: null, parked: false, sort: null, dir: null });
     expect(viewParams(state("")).toString()).toBe("");
   });
 
@@ -192,5 +192,32 @@ describe("cells (guide 4.9, 5.1)", () => {
     const grid = gridOf([field("active", "status"), field("active", "notes")]);
     expect(grid.columns).toBe("minmax(230px, 1.5fr) 150px minmax(220px, 1.6fr) 40px");
     expect(grid.minWidth).toBe(230 + 150 + 220 + 40 + 14 * 3 + 28);
+  });
+});
+
+describe("parked companies (N20)", () => {
+  const companies = [
+    co(1, { company: "In play", date: "2026-09-01", target: "2026-10-01" }),
+    co(2, { company: "Back later", date: "2026-09-01", target: "2026-10-01", parkedAt: 1, parkedUntil: "2026-11-03" }),
+    co(3, { company: "Waiting", parkedAt: 1 }),
+    co(4, { company: "Back today", parkedAt: 1, parkedUntil: TODAY }),
+    co(5, { company: "Deal", status: "Client / Partner Done Deal", parkedAt: 1 }),
+  ];
+  const names = (query: string) => listCompanies(companies, state(query), settings, TODAY).sorted.map((c) => c.company);
+
+  it("keeps Active's parked companies apart, soonest back first, and counts one parked until today as in play", () => {
+    expect(state("view=parked").parked).toBe(true);
+    expect(state("group=deal-done&view=parked").parked).toBe(false);
+    expect(names("")).toEqual(["In play", "Back today"]);
+    expect(names("view=parked")).toEqual(["Back later", "Waiting"]);
+    expect(names("group=deal-done")).toEqual(["Deal"]);
+    expect(viewParams(state("view=parked")).toString()).toBe("view=parked");
+  });
+
+  it("shows a parked company's dates without urgency", () => {
+    expect(cellOf(companies[0], field("active", "date"), "active", settings, TODAY)).toMatchObject({ tone: "red" });
+    expect(cellOf(companies[1], field("active", "date"), "active", settings, TODAY)).toMatchObject({ tone: "plain" });
+    expect(cellOf(companies[1], field("active", "target"), "active", settings, TODAY)).toMatchObject({ tone: "plain" });
+    expect(gridOf(fieldsOf("active"), true).columns.split(" ").length).toBe(gridOf(fieldsOf("active")).columns.split(" ").length + 1);
   });
 });

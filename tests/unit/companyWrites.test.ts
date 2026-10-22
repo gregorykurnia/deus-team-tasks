@@ -9,8 +9,10 @@ import {
   addCompany,
   addTaskKeptInStep,
   allocateCompanyId,
+  bringBackCompany,
   deleteCompany,
   moveCompany,
+  parkCompany,
   replaceFieldValue,
   saveTaskKeptInStep,
   updateCompany,
@@ -145,6 +147,41 @@ describe("changing a company", () => {
     // Leaving Deal done for any group lets go of its status.
     await moveCompany({ ...c, status: DEAL_DONE_STATUS }, "noOrNotNow", {}, tasks);
     expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("status");
+  });
+
+  it("N20: parks a company with its open tasks, brings back only those, and leaving Active ends parking", async () => {
+    const c = co(1, { status: "To Follow Up" });
+    const tasks = [
+      task("open", { linkedClientId: 1 }),
+      task("own", { linkedClientId: 1, parkedAt: 5, parkedUntil: "2026-12-01" }), // parked on its own already
+      task("done", { linkedClientId: 1, completed: true }),
+      task("other", { linkedClientId: 2 }),
+    ];
+    await seedCompanies([c]);
+    await seedTasks(tasks);
+    const parked = await parkCompany(c, "2026-11-03", tasks, 1000);
+    expect(parked.tasksChanged).toBe(1);
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ parkedAt: 1000, parkedUntil: "2026-11-03" });
+    expect(await readFields("tasks", "tasks/open")).toMatchObject({ parkedAt: 1000, parkedUntil: "2026-11-03" });
+    expect(await readFields("tasks", "tasks/own")).toMatchObject({ parkedAt: 5, parkedUntil: "2026-12-01" });
+    expect(await readFields("tasks", "tasks/done")).not.toHaveProperty("parkedAt");
+
+    await parked.undo();
+    expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("parkedAt");
+    expect(await readFields("tasks", "tasks/open")).not.toHaveProperty("parkedAt");
+
+    await parkCompany(c, null, tasks, 1000);
+    const now = { ...c, parkedAt: 1000 };
+    const withParked = tasks.map((t) => (t.id === "open" ? { ...t, parkedAt: 1000 } : t));
+    const back = await bringBackCompany(now, withParked);
+    expect(back.tasksChanged).toBe(1);
+    expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("parkedAt");
+    expect(await readFields("tasks", "tasks/open")).not.toHaveProperty("parkedAt");
+    expect(await readFields("tasks", "tasks/own")).toMatchObject({ parkedAt: 5 });
+
+    await parkCompany(c, null, tasks, 2000);
+    await moveCompany({ ...c, parkedAt: 2000 }, "noOrNotNow", { answer: "Not now" }, tasks);
+    expect(await readFields("clients", "pipeline/1")).not.toHaveProperty("parkedAt");
   });
 
   it("renames or clears an option's value on every company using it", async () => {

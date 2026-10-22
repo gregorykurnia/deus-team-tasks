@@ -1,6 +1,7 @@
-// Companies: their four groups (B2), search, filters, sorting, where to act (B6)
+// Companies: their four groups (B2), parking in Active (N20), search, filters, sorting, where to act (B6)
 // and the follow-up task (B11). Pure functions; writes are in companyWrites.ts.
 import { todayIso } from "./dates";
+import { isParked } from "./parking";
 import { idleDays, isGoneCold, isTargetClose } from "./urgency";
 import type { PipelineEntry, TableKey } from "./clientTypes";
 import type { NewTask } from "./types";
@@ -53,6 +54,14 @@ export function groupSizes(companies: PipelineEntry[]): Record<CompanyGroup, num
   const sizes: Record<CompanyGroup, number> = { toApproach: 0, active: 0, dealDone: 0, noOrNotNow: 0 };
   for (const c of companies) sizes[companyGroup(c)]++;
   return sizes;
+}
+
+/* ---------- Parked (N20) ---------- */
+
+// An Active company someone has set aside: it stays Active, but leaves Where to act and never shows as gone cold or
+// late, until it's brought back or the day it was parked until comes round. Moving it to another group ends it.
+export function isCompanyParked(c: PipelineEntry, today: string = todayIso()): boolean {
+  return companyGroup(c) === "active" && isParked({ parkedAt: c.parkedAt, parkedUntil: c.parkedUntil }, today);
 }
 
 /* ---------- Products (D-012): free text, comma separated ---------- */
@@ -193,8 +202,12 @@ export function sortCompanies(
     .map((x) => x.c);
 }
 
-// Most recent action first; To approach opens on the soonest planned outreach.
-export function defaultCompanySort(group: CompanyGroup): { key: string; dir: CompanySortDir } {
+// The day a parked company comes back, as a sort key; one waiting to be brought back has none, so goes last.
+export const COMES_BACK = "parkedUntil";
+
+// Most recent action first; To approach opens on the soonest planned outreach, and parked companies on the soonest back.
+export function defaultCompanySort(group: CompanyGroup, parked = false): { key: string; dir: CompanySortDir } {
+  if (parked) return { key: COMES_BACK, dir: "asc" };
   return group === "toApproach" ? { key: "reach", dir: "asc" } : { key: "date", dir: "desc" };
 }
 

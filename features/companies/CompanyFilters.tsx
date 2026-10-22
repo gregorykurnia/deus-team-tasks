@@ -74,7 +74,7 @@ export default function CompanyFilters({ state, fields, options, products, onSta
       <FilterButton ref={sortRef} icon="sort" label="Sort" summary={sortSummary(sort, fields)} expanded={open === "sort"} onClick={() => toggle("sort")} />
       <Menu open={open === "sort"} anchorRef={sortRef} onClose={close} label="Sort by">
         <MenuHeading>Sort by</MenuHeading>
-        {sortChoices(fields).map((c) => (
+        {sortChoices(fields, state.parked).map((c) => (
           <MenuChoice key={c.key} checked={sort.key === c.key} onSelect={() => onState({ ...state, sort: c.key, dir: null })}>
             {c.label}
           </MenuChoice>
@@ -87,7 +87,8 @@ export default function CompanyFilters({ state, fields, options, products, onSta
           {dirs[1]}
         </MenuChoice>
         <MenuFoot>
-          Companies without a value always go last. {state.group === "toApproach" ? "Normally: planned outreach, soonest first." : "Normally: most recent action first."}
+          Companies without a value always go last.{" "}
+          {state.parked ? "Normally: the soonest to come back first." : state.group === "toApproach" ? "Normally: planned outreach, soonest first." : "Normally: most recent action first."}
         </MenuFoot>
       </Menu>
       <FilterAction icon="sliders" label="Fields" opens="dialog" onClick={onFields} />

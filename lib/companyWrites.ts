@@ -9,6 +9,7 @@ import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
 import { NOTES } from "./noteWrites";
+import { isParked } from "./parking";
 import { addTask, PartlyChanged, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
 import type { CompaniesById } from "./kinds";
 import type { PipelineEntry } from "./clientTypes";
@@ -248,11 +249,68 @@ export async function moveCompany(
   if (to === "dealDone") patch.status = DEAL_DONE_STATUS;
   // Leaving Deal done lets go of its status, so the company never reads as a client again by mistake.
   if (to !== "dealDone" && ("status" in patch ? patch.status : current.status) === DEAL_DONE_STATUS) patch.status = undefined;
+  // Only Active companies are parked: leaving Active ends it (N20). Its tasks keep theirs.
+  if (current.parkedAt && to !== "active") Object.assign(patch, { parkedAt: undefined, parkedUntil: undefined });
   const from = companyGroup(current);
   const crossesDealDone = (from === "dealDone") !== (to === "dealDone");
   const tasksSwitchKind = crossesDealDone ? openTasksOf(current.id, tasks).length : 0;
   const { undo, tasksChanged } = await updateCompanyKeptInStep(current, patch, tasks);
   return { undo, tasksSwitchKind, tasksChanged };
+}
+
+/* ---------- Parking (N20) ---------- */
+
+// Parks an Active company until a day, or until brought back when `until` is null. Its open tasks that aren't parked
+// already are parked with it, stamped with the same time, so bringing the company back brings back just those.
+export async function parkCompany(
+  current: PipelineEntry,
+  until: string | null,
+  tasks: Task[],
+  now = Date.now()
+): Promise<{ undo: Undo; tasksChanged: number }> {
+  assertOnline("No connection. The company wasn't parked.");
+  const parking: Partial<NewTask> = { parkedAt: now, parkedUntil: until ?? undefined };
+  const changes = openTasksOf(current.id, tasks)
+    .filter((t) => !isParked(t))
+    .map((t) => ({ t, p: parking }));
+  return writeParking(current, { parkedAt: now, parkedUntil: until ?? undefined }, changes);
+}
+
+// Brings a parked company back, with the tasks that were parked along with it.
+export async function bringBackCompany(current: PipelineEntry, tasks: Task[]): Promise<{ undo: Undo; tasksChanged: number }> {
+  assertOnline("No connection. The company wasn't brought back.");
+  const cleared: Partial<NewTask> = { parkedAt: undefined, parkedUntil: undefined };
+  const changes = current.parkedAt
+    ? openTasksOf(current.id, tasks)
+        .filter((t) => t.parkedAt === current.parkedAt)
+        .map((t) => ({ t, p: cleared }))
+    : [];
+  return writeParking(current, { parkedAt: undefined, parkedUntil: undefined }, changes);
+}
+
+// Tasks first, then the company; if the company can't be written, the tasks go back as they were.
+async function writeParking(
+  current: PipelineEntry,
+  patch: CompanyPatch,
+  changes: { t: Task; p: Partial<NewTask> }[]
+): Promise<{ undo: Undo; tasksChanged: number }> {
+  await commitInChunks(
+    db,
+    changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
+  );
+  let undoCompany: Undo;
+  try {
+    undoCompany = await updateCompany(current, patch);
+  } catch (err) {
+    return rollBack(err, () => restoreTasks(changes));
+  }
+  return {
+    tasksChanged: changes.length,
+    undo: async () => {
+      await undoCompany();
+      await restoreTasks(changes);
+    },
+  };
 }
 
 /* ---------- Choice options (C3) ---------- */

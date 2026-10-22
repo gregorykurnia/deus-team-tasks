@@ -2,11 +2,13 @@
 // filters, sort and empty states, and what each cell says. Pure; the screen only draws it. The address holds only the
 // view's own params, so ?company= and ?task= pass.
 import {
+  COMES_BACK,
   COMPANY_GROUP_LABELS,
   COMPANY_GROUPS,
   companiesInGroup,
   defaultCompanySort,
   filterCompanies,
+  isCompanyParked,
   matchesCompanySearch,
   NO_VALUE,
   sortCompanies,
@@ -29,12 +31,13 @@ export interface CompanyViewState {
   priority: string | null; // the same
   product: string | null; // a product's merged key
   act: WhereToAct | null; // Active only
+  parked: boolean; // Active only: the parked companies rather than those in play (N20)
   sort: string | null; // "company" or a field's key; null is the group's default
   dir: CompanySortDir | null;
 }
 
 export const DEFAULT_GROUP: CompanyGroup = "active";
-export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "act", "sort", "dir"] as const;
+export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "act", "view", "sort", "dir"] as const;
 
 const GROUP_SLUGS: Record<CompanyGroup, string> = {
   toApproach: "to-approach",
@@ -62,6 +65,7 @@ export function parseCompanyView(params: URLSearchParams): CompanyViewState {
     priority: params.get("priority") || null,
     product: params.get("product") || null,
     act: group === "active" ? fromSlug(ACT_SLUGS, params.get("act")) : null,
+    parked: group === "active" && params.get("view") === "parked",
     sort,
     dir: sort && (dir === "asc" || dir === "desc") ? dir : null,
   };
@@ -78,6 +82,7 @@ export function viewParams(state: CompanyViewState, current: URLSearchParams = n
   put("priority", state.priority);
   put("product", state.product);
   if (state.group === "active" && state.act) put("act", ACT_SLUGS[state.act]);
+  if (state.group === "active" && state.parked) put("view", "parked");
   if (state.sort) {
     put("sort", state.sort);
     put("dir", state.dir ?? naturalDir(state.sort));
@@ -150,16 +155,19 @@ export interface SortChoice {
   label: string;
 }
 
-// The sort menu: the company's name, then every field the group has.
-export function sortChoices(fields: CompanyField[]): SortChoice[] {
-  return [{ key: "company", label: "Company" }, ...fields.map((f) => ({ key: f.key, label: f.label }))];
+export const COMES_BACK_LABEL = "Comes back";
+
+// The sort menu: the company's name, then every field the group has, and when parked companies come back.
+export function sortChoices(fields: CompanyField[], parked = false): SortChoice[] {
+  const choices = [{ key: "company", label: "Company" }, ...fields.map((f) => ({ key: f.key, label: f.label }))];
+  return parked ? [...choices, { key: COMES_BACK, label: COMES_BACK_LABEL }] : choices;
 }
 
 export function effectiveSort(state: CompanyViewState, fields: CompanyField[]): { key: string; dir: CompanySortDir } {
-  if (state.sort && (state.sort === "company" || hasField(fields, state.sort))) {
+  if (state.sort && (state.sort === "company" || hasField(fields, state.sort) || (state.parked && state.sort === COMES_BACK))) {
     return { key: state.sort, dir: state.dir ?? naturalDir(state.sort) };
   }
-  return defaultCompanySort(state.group);
+  return defaultCompanySort(state.group, state.parked);
 }
 
 // Direction labels are in words (guide 5.6): [ascending, descending].
@@ -167,6 +175,7 @@ export function directionLabels(key: string, field: CompanyField | undefined): [
   if (key === "company") return ["A to Z", "Z to A"];
   if (key === "date") return ["Longest ago first", "Most recent first"];
   if (key === "priority") return ["High first", "Low first"];
+  if (key === COMES_BACK) return ["Soonest first", "Latest first"];
   switch (field?.type) {
     case "date":
       return ["Earliest first", "Latest first"];
@@ -180,6 +189,7 @@ export function directionLabels(key: string, field: CompanyField | undefined): [
 }
 
 export function sortLabel(key: string, fields: CompanyField[]): string {
+  if (key === COMES_BACK) return COMES_BACK_LABEL;
   return key === "company" ? "Company" : (fields.find((f) => f.key === key)?.label ?? key);
 }
 
@@ -198,7 +208,7 @@ export function sortedByHead(state: CompanyViewState, fields: CompanyField[], ke
 /* ---------- The list ---------- */
 
 export interface CompanyListing {
-  scoped: PipelineEntry[]; // everyone in the group
+  scoped: PipelineEntry[]; // everyone in the group (in Active, those in play or those parked, as the view says)
   sorted: PipelineEntry[]; // narrowed, then in order
   elsewhere: { group: CompanyGroup; count: number }[]; // other groups the search finds something in
 }
@@ -210,7 +220,8 @@ export function listCompanies(
   today: string = todayIso()
 ): CompanyListing {
   const fields = groupFields(settings, state.group);
-  const scoped = companiesInGroup(companies, state.group);
+  const inGroup = companiesInGroup(companies, state.group);
+  const scoped = state.group === "active" ? inGroup.filter((c) => isCompanyParked(c, today) === state.parked) : inGroup;
   const narrowed = filterCompanies(scoped, appliedFilters(state, fields), today);
   const sort = effectiveSort(state, fields);
   const field = fields.find((f) => f.key === sort.key);
@@ -266,8 +277,8 @@ export const GROUP_LOOKS: GroupLook[] = [
 
 export const lookOf = (group: CompanyGroup): GroupLook => GROUP_LOOKS.find((g) => g.id === group)!;
 
-export function countNoun(group: CompanyGroup, n: number): string {
-  const [one, many] = lookOf(group).noun;
+export function countNoun(group: CompanyGroup, n: number, parked = false): string {
+  const [one, many] = parked ? ["parked prospect", "parked prospects"] : lookOf(group).noun;
   return `${n.toLocaleString("en-GB")} ${n === 1 ? one : many}`;
 }
 
@@ -286,6 +297,15 @@ export const GROUP_EMPTY_COPY: Record<CompanyGroup, [string, string]> = {
   dealDone: ["No deals done yet", "When a deal is done, the company moves here and its tasks count as client work."],
   noOrNotNow: ["Nobody has said no or not now", "Companies that say no or not now go here with the reason, so the team can learn from it and revisit later."],
 };
+
+// Active's two views when one is empty (N20): nothing parked, or everyone is.
+export const PARKED_EMPTY_COPY: [string, string] = [
+  "Nothing parked",
+  "Park an active prospect from its ⋯ menu or its record when it can wait. It leaves Where to act and never shows as gone cold until it comes back.",
+];
+export function allParkedCopy(parked: number): [string, string] {
+  return ["Nothing in play", `${parked === 1 ? "The only active prospect is" : `All ${parked.toLocaleString("en-GB")} active prospects are`} parked.`];
+}
 
 // What Search looks at in this group, for the nothing-matches line.
 export function searchedWords(group: CompanyGroup): string {
@@ -310,17 +330,19 @@ function fullDate(iso: string): string {
   return shortDate(iso, "0000-01-01"); // always with the year
 }
 
-// The last action in words: "Today", "Yesterday", "12 days ago". Amber from 7 days and red from 14 in Active and Deal done.
-function lastActionCell(iso: string, group: CompanyGroup, today: string): Cell {
+// The last action in words: "Today", "Yesterday", "12 days ago". Amber from 7 days and red from 14 in Active and Deal done,
+// but never on a parked company.
+function lastActionCell(iso: string, group: CompanyGroup, today: string, calm: boolean): Cell {
   const n = daysBetween(iso, today);
   const label = n === 0 ? "Today" : n === 1 ? "Yesterday" : n < 0 ? shortDate(iso, today) : `${n.toLocaleString("en-GB")} days ago`;
-  const warm = group === "active" || group === "dealDone";
+  const warm = !calm && (group === "active" || group === "dealDone");
   const tone: CellTone = warm && n >= GONE_COLD_DAYS ? "red" : warm && n >= 7 ? "amber" : "plain";
   return { kind: "date", label, tone, title: `Last action ${fullDate(iso)}${tone === "red" ? ". Gone cold" : ""}`, pill: false };
 }
 
-// A target date in words, the same tones as a task's deadline; a missed planned outreach is amber, not red.
-function pillCell(iso: string, outreach: boolean, today: string): Cell {
+// A target date in words, the same tones as a task's deadline; a missed planned outreach is amber, not red. A parked
+// company's stays plain.
+function pillCell(iso: string, outreach: boolean, today: string, calm: boolean): Cell {
   const n = daysBetween(today, iso);
   let label: string;
   let tone: CellTone;
@@ -332,7 +354,7 @@ function pillCell(iso: string, outreach: boolean, today: string): Cell {
   else if (n <= 3) [label, tone] = [`In ${n} days`, "amber"];
   else if (n <= 30) [label, tone] = [`In ${n} days`, "plain"];
   else [label, tone] = [shortDate(iso, today), "plain"];
-  return { kind: "date", label, tone, title: `${outreach ? "Planned outreach" : "Target date"} ${fullDate(iso)}`, pill: true };
+  return { kind: "date", label, tone: calm ? "plain" : tone, title: `${outreach ? "Planned outreach" : "Target date"} ${fullDate(iso)}`, pill: true };
 }
 
 export function optionOf(settings: CompanySettings, key: string, name: string): ChoiceOption | undefined {
@@ -348,8 +370,8 @@ export function cellOf(c: PipelineEntry, field: CompanyField, group: CompanyGrou
       // A value that isn't one of the options any more still shows, in grey.
       return { kind: "choice", label: text, colour: optionOf(settings, field.key, text)?.colour ?? "slate" };
     case "date":
-      if (field.key === "date") return lastActionCell(text, group, today);
-      if (field.key === "target" || field.key === "reach") return pillCell(text, field.key === "reach", today);
+      if (field.key === "date") return lastActionCell(text, group, today, isCompanyParked(c, today));
+      if (field.key === "target" || field.key === "reach") return pillCell(text, field.key === "reach", today, isCompanyParked(c, today));
       return { kind: "date", label: fullDate(text), tone: "plain", title: fullDate(text), pill: false };
     case "number": {
       const n = parseFloat(text);
@@ -380,10 +402,11 @@ const COLUMN_WIDTH: Record<CompanyField["type"], { css: string; min: number }> =
   number: { css: "120px", min: 120 },
 };
 
-// The columns: the pinned name, then each shown field, then the row menu's.
-export function gridOf(fields: CompanyField[]): { columns: string; minWidth: number } {
+// The columns: the pinned name, then each shown field, then Comes back for parked companies, then the row menu's.
+export function gridOf(fields: CompanyField[], comesBack = false): { columns: string; minWidth: number } {
+  const widths = [...fields.map((f) => COLUMN_WIDTH[f.type]), ...(comesBack ? [COLUMN_WIDTH.date] : [])];
   return {
-    columns: ["minmax(230px, 1.5fr)", ...fields.map((f) => COLUMN_WIDTH[f.type].css), "40px"].join(" "),
-    minWidth: 230 + fields.reduce((n, f) => n + COLUMN_WIDTH[f.type].min, 0) + 40 + 14 * (fields.length + 1) + 28,
+    columns: ["minmax(230px, 1.5fr)", ...widths.map((w) => w.css), "40px"].join(" "),
+    minWidth: 230 + widths.reduce((n, w) => n + w.min, 0) + 40 + 14 * (widths.length + 1) + 28,
   };
 }

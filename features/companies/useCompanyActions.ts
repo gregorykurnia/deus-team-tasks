@@ -10,8 +10,9 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import { changeMessage, isKeptInStep, moveMessage, movesToDealDone, type CompanyPatch, type FieldValue } from "@/lib/companyEdit";
 import { followUpTaskFor, type CompanyGroup } from "@/lib/companies";
 import type { CompanyField } from "@/lib/companySettings";
-import { addTaskKeptInStep, deleteCompany, moveCompany, updateCompany, updateCompanyKeptInStep } from "@/lib/companyWrites";
+import { addTaskKeptInStep, bringBackCompany, deleteCompany, moveCompany, parkCompany, updateCompany, updateCompanyKeptInStep } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
+import { weekdayDate } from "@/lib/dates";
 import { putBackDone, setTasksDone, type Undo } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useToast } from "@/ui/Toaster";
@@ -105,6 +106,31 @@ export function useCompanyActions() {
     [toast, openOver]
   );
 
+  // Parks an Active company with its open tasks (N20), or brings it back with the tasks parked along with it.
+  const park = useCallback(
+    async (c: PipelineEntry, until: string | null) => {
+      try {
+        const { undo, tasksChanged } = await parkCompany(c, until, latest.current.tasks);
+        toast(`${c.company} parked${until ? ` until ${weekdayDate(until)}` : ""}${withTasks(tasksChanged)}`, { action: "Undo", onAction: undoing(undo) });
+      } catch (err) {
+        toast(failureMessage(err, `${c.company} couldn't be parked. Check your connection and try again.`), { error: true });
+      }
+    },
+    [toast, undoing]
+  );
+
+  const bringBack = useCallback(
+    async (c: PipelineEntry) => {
+      try {
+        const { undo, tasksChanged } = await bringBackCompany(c, latest.current.tasks);
+        toast(`${c.company} brought back${withTasks(tasksChanged)}`, { action: "Undo", onAction: undoing(undo) });
+      } catch (err) {
+        toast(failureMessage(err, `${c.company} couldn't be brought back. Check your connection and try again.`), { error: true });
+      }
+    },
+    [toast, undoing]
+  );
+
   // Deletes a company (B14). Throws when it fails, so the confirmation can stay.
   const remove = useCallback(
     async (c: PipelineEntry) => {
@@ -130,12 +156,23 @@ export function useCompanyActions() {
   );
 
   return useMemo(
-    () => ({ setValue, rename, logToday, followUp, move, remove, setTaskDone, openOver }),
-    [setValue, rename, logToday, followUp, move, remove, setTaskDone, openOver]
+    () => ({ setValue, rename, logToday, followUp, move, park, bringBack, remove, setTaskDone, openOver }),
+    [setValue, rename, logToday, followUp, move, park, bringBack, remove, setTaskDone, openOver]
   );
 }
 
 export type CompanyActions = ReturnType<typeof useCompanyActions>;
+
+// ", with its open task" or ", with its 3 open tasks", after a company is parked or brought back.
+function withTasks(n: number): string {
+  return n === 0 ? "" : n === 1 ? ", with its open task" : `, with its ${n.toLocaleString("en-GB")} open tasks`;
+}
+
+// The company wording of the park menu (features/tasks/ParkMenu).
+export const COMPANY_PARK_MENU = {
+  heading: "Park this company",
+  foot: "It stays in Active but leaves Where to act and never shows as gone cold or late. Its open tasks are parked with it. Find it under Parked.",
+};
 
 // Where a company's qualification notes are: its notes when it has some, or a start on new ones (3.11 reads ?company=).
 export function notesLink(c: PipelineEntry, notes: { id: string; pipelineEntryId?: number }[]): { href: string; label: string } {

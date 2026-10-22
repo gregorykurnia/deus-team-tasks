@@ -5,7 +5,8 @@
 // loads on its own. Search covers the group you are in and says where else it found something. Every cell opens its quick
 // editor, ⋯ opens the row menu, and a company opens its record over the list (?company=, so a reload keeps it). New
 // company is ?newCompany=1, and the Fields sheet ?fields=<group>. Options open from a field or a choice editor, and Export
-// says what the file holds before it downloads.
+// says what the file holds before it downloads. Active switches between the companies in play and those parked (N20,
+// ?view=parked); Where to act counts only those in play.
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +23,7 @@ import {
   companiesInGroup,
   companyGroup,
   groupSizes,
+  isCompanyParked,
   productOptions,
   whereToActCounts,
   type CompanyGroup,
@@ -29,6 +31,7 @@ import {
 import type { CompanyField } from "@/lib/companySettings";
 import { failureMessage, useConnection } from "@/lib/connection";
 import {
+  allParkedCopy,
   clearedFilters,
   countNoun,
   emptyCase,
@@ -40,6 +43,7 @@ import {
   narrowedBeyondSearch,
   PAGE_SIZE,
   parseCompanyView,
+  PARKED_EMPTY_COPY,
   searchedWords,
   shownFields,
   sortedByHead,
@@ -57,7 +61,9 @@ import { useToast } from "@/ui/Toaster";
 import { SearchField } from "@/ui/Inputs";
 import Notice from "@/ui/Notice";
 import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
+import Segmented from "@/ui/Segmented";
 import { useMediaQuery } from "@/ui/useMediaQuery";
+import ParkMenu from "@/features/tasks/ParkMenu";
 import { useToday } from "@/ui/useToday";
 import CellEditor from "./CellEditor";
 import CompanyFilters from "./CompanyFilters";
@@ -70,7 +76,7 @@ import MoveDialog from "./MoveDialog";
 import NewCompanySheet from "./NewCompanySheet";
 import OptionsDialog, { type OptionChanges } from "./OptionsDialog";
 import RowMenu from "./RowMenu";
-import { notesLink, useCompanyActions } from "./useCompanyActions";
+import { COMPANY_PARK_MENU, notesLink, useCompanyActions } from "./useCompanyActions";
 import WhereToAct from "./WhereToAct";
 import styles from "./Companies.module.css";
 
@@ -128,7 +134,10 @@ export default function CompaniesScreen() {
   }
 
   // A group's own filters and order don't carry over to another group; the search does.
-  const pickGroup = (group: CompanyGroup) => update((now) => ({ ...now, group, status: null, priority: null, product: null, act: null, sort: null, dir: null }));
+  const pickGroup = (group: CompanyGroup) =>
+    update((now) => ({ ...now, group, status: null, priority: null, product: null, act: null, parked: false, sort: null, dir: null }));
+  // In play or parked: Where to act is for those in play, and each view opens on its own order.
+  const pickParked = (parked: boolean) => update((now) => ({ ...now, parked, act: parked ? null : now.act, sort: null, dir: null }));
 
   /* ---------- Changing companies (task 3.9) ---------- */
 
@@ -138,6 +147,7 @@ export default function CompaniesScreen() {
   const menuAnchor = useRef<HTMLElement | null>(null);
   const [editing, setEditing] = useState<{ company: PipelineEntry; field: EditField } | null>(null);
   const [rowMenu, setRowMenu] = useState<PipelineEntry | null>(null);
+  const [parking, setParking] = useState<PipelineEntry | null>(null); // the park menu, opened from the row menu
   const [moving, setMoving] = useState<{ company: PipelineEntry; to?: CompanyGroup } | null>(null);
   const [deleting, setDeleting] = useState<PipelineEntry | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -261,6 +271,8 @@ export default function CompaniesScreen() {
   const sizes = useMemo(() => (waiting || failed ? null : groupSizes(companies.rows)), [waiting, failed, companies.rows]);
   const listing = useMemo(() => (ready && today ? listCompanies(companies.rows, state, settings, today) : null), [ready, today, companies.rows, state, settings]);
   const active = useMemo(() => companiesInGroup(companies.rows, "active"), [companies.rows]);
+  const inPlay = useMemo(() => (today ? active.filter((c) => !isCompanyParked(c, today)) : active), [active, today]);
+  const parkedCount = active.length - inPlay.length;
   const sort = effectiveSort(state, fields);
   const products = useMemo(() => (listing ? productOptions(listing.scoped) : []), [listing]);
   const shownRows = listing ? listing.sorted.slice(0, limit) : [];
@@ -311,6 +323,20 @@ export default function CompaniesScreen() {
           Record the first company you’re talking to, or one you plan to approach. Only the name is needed.
         </EmptyState>
       );
+    } else if (which === "groupEmpty" && state.parked) {
+      const [title, text] = PARKED_EMPTY_COPY;
+      body = (
+        <EmptyState icon="pause" title={title}>
+          {text}
+        </EmptyState>
+      );
+    } else if (which === "groupEmpty" && state.group === "active" && parkedCount > 0) {
+      const [title, text] = allParkedCopy(parkedCount);
+      body = (
+        <EmptyState icon="pause" title={title} actions={<Button onClick={() => pickParked(true)}>Show parked</Button>}>
+          {text}
+        </EmptyState>
+      );
     } else if (which === "groupEmpty") {
       const [title, text] = GROUP_EMPTY_COPY[state.group];
       body = (
@@ -359,13 +385,13 @@ export default function CompaniesScreen() {
         <p className={styles.result} role="status">
           {filtered ? (
             <>
-              <b>{listing.sorted.length.toLocaleString("en-GB")}</b> of {countNoun(state.group, listing.scoped.length)} match
+              <b>{listing.sorted.length.toLocaleString("en-GB")}</b> of {countNoun(state.group, listing.scoped.length, state.parked)} match
               <button type="button" className={styles.linkButton} onClick={() => update(clearedFilters)}>
                 Clear filters
               </button>
             </>
           ) : (
-            <b>{countNoun(state.group, listing.sorted.length)}</b>
+            <b>{countNoun(state.group, listing.sorted.length, state.parked)}</b>
           )}
         </p>
         <CompanyList
@@ -383,6 +409,7 @@ export default function CompaniesScreen() {
           recordHref={(id) => over(pathname, search, `company=${id}`)}
           onEdit={edit}
           onRowMenu={openRowMenu}
+          comesBack={state.parked}
         />
       </>
     );
@@ -398,8 +425,22 @@ export default function CompaniesScreen() {
       />
       {phone && <div className={styles.phoneSearch}>{searchField}</div>}
       <GroupTiles counts={sizes} current={state.group} onPick={pickGroup} />
-      {ready && state.group === "active" && active.length > 0 && today && (
-        <WhereToAct counts={whereToActCounts(active, today)} current={state.act} onPick={(act) => update((now) => ({ ...now, act }))} />
+      {ready && state.group === "active" && inPlay.length > 0 && today && (
+        <WhereToAct counts={whereToActCounts(inPlay, today)} current={state.act} onPick={(act) => update((now) => ({ ...now, act, parked: act ? false : now.parked }))} />
+      )}
+      {ready && state.group === "active" && active.length > 0 && (
+        <div className={styles.viewBar}>
+          <Segmented<"inPlay" | "parked">
+            label="In play or parked"
+            full={phone}
+            value={state.parked ? "parked" : "inPlay"}
+            onChange={(v) => v && pickParked(v === "parked")}
+            options={[
+              { value: "inPlay", label: "In play" },
+              { value: "parked", label: "Parked", count: parkedCount || undefined },
+            ]}
+          />
+        </div>
       )}
       <section className={styles.panel} aria-label={look.label}>
         {settingsError && !failed && (
@@ -501,8 +542,29 @@ export default function CompaniesScreen() {
           onFollowUp={() => void actions.followUp(live(rowMenu), today)}
           onToday={() => void actions.logToday(live(rowMenu), today)}
           onMove={() => setMoving({ company: live(rowMenu) })}
+          parking={
+            companyGroup(live(rowMenu)) === "active"
+              ? {
+                  parked: isCompanyParked(live(rowMenu), today),
+                  onPark: () => setParking(live(rowMenu)),
+                  onBringBack: () => void actions.bringBack(live(rowMenu)),
+                }
+              : undefined
+          }
           onDelete={() => setDeleting(live(rowMenu))}
           deleteBlocked={cantDelete}
+        />
+      )}
+      {parking && today && (
+        <ParkMenu
+          open
+          anchorRef={menuAnchor}
+          alignRight
+          onClose={() => setParking(null)}
+          count={1}
+          today={today}
+          onPark={(until) => void actions.park(live(parking), until)}
+          {...COMPANY_PARK_MENU}
         />
       )}
       {moving && today && (
