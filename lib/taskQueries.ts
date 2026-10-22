@@ -51,7 +51,7 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
     if (view === "open" && t.completed) return false;
     if (view === "done" && !t.completed) return false;
     if (filter.group != null) {
-      if (t.taskGroup !== filter.group || kindOf(t, ctx.companies) !== "internal") return false;
+      if (t.taskGroup !== filter.group) return false;
     } else if (filter.kind && filter.kind !== "all" && kindOf(t, ctx.companies) !== filter.kind) {
       return false;
     }

@@ -247,7 +247,8 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
             )}
           </Field>
 
-          {/* Switching keeps the company or group chosen, so switching back finds it again; only the side shown is saved. */}
+          {/* Switching keeps the company chosen, so switching back finds it again; only the side shown is saved. The group
+              goes with either side. */}
           <Field label="About" group error={companyError} focusKey={error ? undefined : tries}>
             {(control) => (
               <div>
@@ -263,16 +264,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
                   onChange={(about) => about && set({ about })}
                 />
                 <div className={styles.aboutBox}>
-                  {draft.about === "internal" ? (
-                    <SelectInput aria-label="Task group" value={draft.group} onChange={(e) => set({ group: e.target.value })}>
-                      <option value="">No group</option>
-                      {groupList.map((g) => (
-                        <option key={g.name} value={g.name}>
-                          {g.starred ? `${g.name} ★` : g.name}
-                        </option>
-                      ))}
-                    </SelectInput>
-                  ) : company ? (
+                  {draft.about === "internal" ? null : company ? (
                     <div className={styles.company} style={kindStyle(kind)}>
                       <span className={styles.mono} aria-hidden="true">
                         {initials(company.company)}
@@ -307,6 +299,16 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
                       ))}
                     </SelectInput>
                   )}
+                  <div className={draft.about === "company" ? styles.groupPick : undefined}>
+                    <SelectInput aria-label="Task group" value={draft.group} onChange={(e) => set({ group: e.target.value })}>
+                      <option value="">No group</option>
+                      {groupList.map((g) => (
+                        <option key={g.name} value={g.name}>
+                          {g.starred ? `${g.name} ★` : g.name}
+                        </option>
+                      ))}
+                    </SelectInput>
+                  </div>
                 </div>
               </div>
             )}

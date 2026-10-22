@@ -3,7 +3,7 @@
 // own page, delete with its tasks left ungrouped) and selecting.spec (several tasks moved at once).
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { seedGroups, seedTasks, storedById, task } from "./data";
+import { company, seedCompanies, seedGroups, seedTasks, storedById, task } from "./data";
 
 const waitUntilLive = (page: Page) => expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
 // The side bar lists the groups on large screens; phones have a row of chips under the title instead.
@@ -37,4 +37,21 @@ test("W11: a task moves to a task group from its details", async ({ page }) => {
   await expect.poll(async () => (await storedById("tasks", "tasks", "t1"))?.taskGroup).toBe("Office move");
   await page.goto("/tasks/groups/g1");
   await expect(page.getByRole("article").filter({ hasText: "Pack the archive" })).toHaveCount(1);
+});
+
+test("a client task goes in a task group and shows on the group's page", async ({ page }) => {
+  await seedCompanies([company(1, { company: "Delami Brands", status: "Client / Partner Done Deal" })]);
+  await seedGroups([{ id: "g1", name: "Year end", order: 1 }]);
+  await seedTasks([task("t1", { task: "Year-end calibration", linkedClientId: 1 })]);
+  await page.goto("/tasks?task=t1");
+  await waitUntilLive(page);
+  const sheet = page.getByRole("dialog", { name: "Task" });
+  await sheet.getByRole("combobox", { name: "Task group" }).selectOption("Year end");
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect.poll(async () => storedById("tasks", "tasks", "t1")).toMatchObject({ taskGroup: "Year end", linkedClientId: 1 });
+  await page.goto("/tasks/groups/g1");
+  await expect(page.getByRole("article").filter({ hasText: "Year-end calibration" })).toHaveCount(1);
+  await page.goto("/tasks?kind=client");
+  await expect(page.getByRole("article").filter({ hasText: "Year-end calibration" })).toHaveCount(1);
 });

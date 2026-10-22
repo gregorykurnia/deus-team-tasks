@@ -1,4 +1,4 @@
-// Selecting several tasks (task 3.4, guide 4.7, D-008): tick tasks, then mark them done, move internal ones to a task group
+// Selecting several tasks (task 3.4, guide 4.7, D-008): tick tasks, then mark them done, move them to a task group
 // (company tasks stay), or delete them after a confirmation. Select all reaches every task matching the view.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
@@ -54,7 +54,7 @@ test("D-008: ticked tasks are marked done together, and Undo puts them back", as
   await expect.poll(async () => (await storedById("tasks", "tasks", "a"))?.completed).toBe(false);
 });
 
-test("D-008: moving to a group takes internal work only, and the menu says company tasks stay", async ({ page }) => {
+test("moving to a group takes company tasks too, and they keep their company", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");
   await waitUntilLive(page);
@@ -63,14 +63,15 @@ test("D-008: moving to a group takes internal work only, and the menu says compa
   await tick(page, "Plan the offsite").click();
   await bar(page).getByRole("button", { name: "Move to group" }).click();
   const menu = page.getByRole("menu", { name: "Move to group" });
-  await expect(menu).toContainText("Move 1 internal task to");
-  await expect(menu).toContainText("1 company task will stay with its company.");
+  await expect(menu).toContainText("Move 2 tasks to");
+  await expect(menu).toContainText("The company task keeps its company.");
   await menu.getByRole("menuitem", { name: "Hiring" }).click();
-  await expect(toasts(page).getByText("Moved 1 task to Hiring. 1 company task stayed put.")).toBeVisible();
+  await expect(toasts(page).getByText("Moved 2 tasks to Hiring.")).toBeVisible();
   expect(await storedById("tasks", "tasks", "b")).toMatchObject({ taskGroup: "Hiring" });
-  expect((await storedById("tasks", "tasks", "co"))?.taskGroup).toBeUndefined();
+  expect(await storedById("tasks", "tasks", "co")).toMatchObject({ taskGroup: "Hiring", linkedClientId: 1 });
   await toasts(page).getByRole("button", { name: "Undo" }).click();
   await expect.poll(async () => (await storedById("tasks", "tasks", "b"))?.taskGroup).toBeUndefined();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "co"))?.taskGroup).toBeUndefined();
 });
 
 test("D-008: a new group made from the move menu gets the selected tasks", async ({ page }) => {

@@ -49,7 +49,7 @@ export function draftFromTask(t: Task, companies: CompaniesById): TaskDraft {
     task: t.task,
     about: company ? "company" : "internal",
     companyId: company?.id ?? null,
-    group: company ? "" : (t.taskGroup ?? ""),
+    group: t.taskGroup ?? "",
     taskType: t.taskType ?? "",
     priority: t.priority ?? null,
     touchPoint: t.touchPoint ?? "",
@@ -68,7 +68,7 @@ function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "complete
   return {
     task: d.task.trim(),
     linkedClientId: company ? d.companyId! : undefined,
-    taskGroup: !company && d.about === "internal" && d.group ? d.group : undefined,
+    taskGroup: d.group || undefined,
     taskType: d.taskType || undefined,
     priority: d.priority ?? undefined,
     touchPoint: d.touchPoint.trim() || undefined,

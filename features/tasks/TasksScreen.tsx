@@ -237,12 +237,12 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const stillThere = (id: string) => liveNow.current.has(id);
   const undoAction = (undo: Undo | null) =>
     undo ? { action: "Undo", onAction: () => undo().catch((err) => toast(undoFailed(err), { error: true })) } : {};
-  const internalChosen = useMemo(() => {
-    const isInternal = (id: string) => {
+  const companyChosen = useMemo(() => {
+    const isCompany = (id: string) => {
       const t = live.get(id);
-      return !!t && kindOfTask(t, byId) === "internal";
+      return !!t && kindOfTask(t, byId) !== "internal";
     };
-    return chosen.filter(isInternal).length;
+    return chosen.filter(isCompany).length;
   }, [chosen, live, byId]);
 
   async function bulk(action: BulkAction, run: () => Promise<void>) {
@@ -278,10 +278,10 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   async function moveChosen(groupName: string | null, made?: boolean) {
     const picked = chosenTasks();
     try {
-      const { skipped, undo } = await moveTasksToGroup(picked, groupName, byId, stillThere);
+      const { undo } = await moveTasksToGroup(picked, groupName, stillThere);
       setSelecting(false);
-      const count = picked.length - skipped;
-      const message = made ? `Group “${groupName}” created, and ${plural(count, "task")} moved into it` : movedMessage(count, groupName, skipped);
+      const count = picked.length;
+      const message = made ? `Group “${groupName}” created, and ${plural(count, "task")} moved into it` : movedMessage(count, groupName);
       toast(message, undoAction(undo));
     } catch (err) {
       if (!(err instanceof PartlyChanged)) throw err;
@@ -447,7 +447,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           </Link>
         }
       >
-        Someone may have deleted it. Its tasks are under Internal.
+        Someone may have deleted it. Its tasks are still in All tasks, without a group.
       </EmptyState>
     );
   } else if (!listing || !today) {
@@ -583,7 +583,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             finished={finished}
             busy={bulkBusy}
             groups={groupItems}
-            internal={internalChosen}
+            companyTasks={companyChosen}
             onSelectAll={() => setSelection(selectAll(listIds))}
             onDone={bulkDone}
             onMove={bulkMove}
@@ -656,7 +656,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
         busyLabel="Deleting…"
       >
         {memberCount > 0
-          ? `Its ${plural(memberCount, "task")} stay and become ungrouped. You'll find them under Internal.`
+          ? `Its ${plural(memberCount, "task")} stay and become ungrouped. Company tasks keep their companies.`
           : "The group is empty, so no tasks are affected."}
       </Confirm>
     </>

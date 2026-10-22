@@ -40,12 +40,12 @@ describe("task groups in the side bar", () => {
     expect(items.map((g) => g.badge)).toEqual(["WE", "HI", "PE"]);
   });
 
-  it("counts a group's open internal tasks only", () => {
+  it("counts a group's open tasks, company work included", () => {
     const tasks = [
       task("a", { taskGroup: "Hiring" }),
       task("b", { taskGroup: "Hiring", completed: true }),
-      task("c", { taskGroup: "Hiring", linkedClientId: 1 }), // company work, not in the group
+      task("c", { taskGroup: "Hiring", linkedClientId: 1 }),
     ];
-    expect(groupNavItems(groups, tasks, companies).find((g) => g.id === "g2")?.open).toBe(1);
+    expect(groupNavItems(groups, tasks, companies).find((g) => g.id === "g2")?.open).toBe(2);
   });
 });

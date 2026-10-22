@@ -26,7 +26,7 @@ interface SelectionBarProps {
   finished: boolean; // among finished tasks the first action is Mark not done
   busy: BulkAction | null;
   groups: GroupNavItem[];
-  internal: number; // chosen tasks that can go in a group
+  companyTasks: number; // chosen tasks tied to a company, which keep it when moved
   onSelectAll: () => void;
   onDone: () => void;
   onMove: (group: string | null) => void;
@@ -49,11 +49,11 @@ export default function SelectionBar(props: SelectionBarProps) {
   return createPortal(<Bar {...props} />, document.body);
 }
 
-function Bar({ line, offer, chosen, finished, busy, groups, internal, onSelectAll, onDone, onMove, onNewGroup, onDelete, onStop }: SelectionBarProps) {
+function Bar({ line, offer, chosen, finished, busy, groups, companyTasks, onSelectAll, onDone, onMove, onNewGroup, onDelete, onStop }: SelectionBarProps) {
   const [moving, setMoving] = useState(false);
   const moveRef = useRef<HTMLButtonElement>(null);
   const none = chosen === 0;
-  const note = moveNote(chosen - internal, chosen);
+  const note = moveNote(companyTasks);
 
   const action = (which: BulkAction, icon: IconName, label: string, onClick: () => void, extra?: string) => (
     <button
@@ -92,26 +92,22 @@ function Bar({ line, offer, chosen, finished, busy, groups, internal, onSelectAl
       </Button>
 
       <Menu open={moving} anchorRef={moveRef} onClose={() => setMoving(false)} label="Move to group" alignRight>
-        <MenuHeading>{internal > 0 ? `Move ${plural(internal, "internal task")} to` : "Move to group"}</MenuHeading>
-        {internal > 0 && (
-          <>
-            {groups.map((g) => (
-              <MenuItem key={g.id} onSelect={() => onMove(g.name)}>
-                <span className={styles.group}>
-                  <GroupBadge badge={g.badge} hue={g.hue} />
-                  <span className={styles.groupName}>{g.name}</span>
-                </span>
-              </MenuItem>
-            ))}
-            {groups.length > 0 && <MenuSeparator />}
-            <MenuItem icon="x" onSelect={() => onMove(null)}>
-              No group
-            </MenuItem>
-            <MenuItem icon="plus" onSelect={onNewGroup}>
-              New group…
-            </MenuItem>
-          </>
-        )}
+        <MenuHeading>{`Move ${plural(chosen, "task")} to`}</MenuHeading>
+        {groups.map((g) => (
+          <MenuItem key={g.id} onSelect={() => onMove(g.name)}>
+            <span className={styles.group}>
+              <GroupBadge badge={g.badge} hue={g.hue} />
+              <span className={styles.groupName}>{g.name}</span>
+            </span>
+          </MenuItem>
+        ))}
+        {groups.length > 0 && <MenuSeparator />}
+        <MenuItem icon="x" onSelect={() => onMove(null)}>
+          No group
+        </MenuItem>
+        <MenuItem icon="plus" onSelect={onNewGroup}>
+          New group…
+        </MenuItem>
         {note && <MenuFoot>{note}</MenuFoot>}
       </Menu>
     </div>

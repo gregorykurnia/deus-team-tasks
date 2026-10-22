@@ -17,6 +17,11 @@
   margin-top: 10px;
 }
 
+/* A company task's group sits under its company. */
+.groupPick {
+  margin-top: 10px;
+}
+
 /* The company a task is about: its initials in its kind's colours, its name, and what it is. */
 .company {
   display: flex;

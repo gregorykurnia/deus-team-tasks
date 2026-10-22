@@ -2,12 +2,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { companiesById } from "@/lib/kinds";
 import { addTask, moveTasksToGroup, setTasksDone, updateTask } from "@/lib/taskWrites";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
 import { addFlow, updateFlow, withoutUnset } from "@/lib/flowWrites";
 import { OfflineError } from "@/lib/connection";
-import type { PipelineEntry } from "@/lib/clientTypes";
 import type { NewTask, Task } from "@/lib/types";
 import { clearProject, readAll, readFields, seed } from "../support/emulator";
 
@@ -59,16 +57,16 @@ describe("task writes", () => {
     expect(Object.fromEntries((await readAll("tasks", "tasks")).map((t) => [t.id, t.completed]))).toEqual({ a: false, b: true });
   });
 
-  it("moves only internal work to a group, with undo", async () => {
-    const companies = companiesById([{ id: 1, company: "Pelita Foods" } as PipelineEntry]);
+  it("moves internal and company tasks to a group, keeping their companies, with undo", async () => {
     const tasks = [asTask("int", { taskGroup: "Old" }), asTask("co", { linkedClientId: 1 })];
     await seedTasks(tasks);
-    const { moved, skipped, undo } = await moveTasksToGroup(tasks, "Hiring", companies);
-    expect({ moved, skipped }).toEqual({ moved: 1, skipped: 1 });
+    const { moved, undo } = await moveTasksToGroup(tasks, "Hiring");
+    expect(moved).toBe(2);
     expect(await readFields("tasks", "tasks/int")).toMatchObject({ taskGroup: "Hiring" });
-    expect(await readFields("tasks", "tasks/co")).not.toHaveProperty("taskGroup");
+    expect(await readFields("tasks", "tasks/co")).toMatchObject({ taskGroup: "Hiring", linkedClientId: 1 });
     await undo();
     expect(await readFields("tasks", "tasks/int")).toMatchObject({ taskGroup: "Old" });
+    expect(await readFields("tasks", "tasks/co")).not.toHaveProperty("taskGroup");
   });
 
   it("leaves out a task deleted meanwhile, so the rest of its batch still saves", async () => {

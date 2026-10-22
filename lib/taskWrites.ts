@@ -5,7 +5,6 @@ import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, type WriteB
 import { commitEach, PartlyCommitted } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
-import { kindOf, type CompaniesById } from "./kinds";
 import type { NewTask, Task } from "./types";
 
 export const TASKS = "tasks";
@@ -123,21 +122,14 @@ export async function putBackDone(tasks: Task[], present?: StillThere): Promise<
   );
 }
 
-// Moving to a task group applies to internal work only (D-008): company tasks
-// stay with their companies. `group` null makes the tasks ungrouped.
-export async function moveTasksToGroup(
-  tasks: Task[],
-  group: string | null,
-  companies: CompaniesById,
-  present?: StillThere
-): Promise<{ moved: number; skipped: number; undo: Undo }> {
+// Moves tasks of any kind into a task group; a company task keeps its company. `group` null makes the tasks ungrouped.
+export async function moveTasksToGroup(tasks: Task[], group: string | null, present?: StillThere): Promise<{ moved: number; undo: Undo }> {
   assertOnline("No connection. The tasks weren't moved.");
-  const internal = tasks.filter((t) => kindOf(t, companies) === "internal");
-  const moving = internal.filter((t) => (t.taskGroup ?? null) !== group);
+  const moving = tasks.filter((t) => (t.taskGroup ?? null) !== group);
   const undoFor = (written: Task[]) => async () => {
     assertOnline("No connection. The change wasn't undone.");
     await writeEach(written, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: t.taskGroup })), present);
   };
   const written = await writeEach(moving, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: group ?? undefined })), present, undoFor);
-  return { moved: written.length, skipped: tasks.length - internal.length, undo: undoFor(written) };
+  return { moved: written.length, undo: undoFor(written) };
 }

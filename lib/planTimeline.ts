@@ -22,7 +22,7 @@ export const NOBODY = "";
 export function planTasks(open: Task[], state: Pick<PlanState, "kind" | "group" | "person">, companies: CompaniesById): Task[] {
   let list = open;
   if (state.kind) list = list.filter((t) => kindOf(t, companies) === state.kind);
-  else if (state.group) list = list.filter((t) => t.taskGroup === state.group && kindOf(t, companies) === "internal");
+  else if (state.group) list = list.filter((t) => t.taskGroup === state.group);
   if (state.person) list = list.filter((t) => t.responsible.includes(state.person!) || t.informed.some((i) => i.name === state.person));
   return list;
 }

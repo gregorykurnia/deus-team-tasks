@@ -74,18 +74,15 @@ describe("the selection bar", () => {
 });
 
 describe("moving to a group", () => {
-  it("says company tasks stay with their companies", () => {
-    expect(moveNote(0, 3)).toBeNull();
-    expect(moveNote(1, 3)).toBe("1 company task will stay with its company.");
-    expect(moveNote(2, 3)).toBe("2 company tasks will stay with their companies.");
-    expect(moveNote(2, 2)).toBe("Only internal work goes in task groups. These tasks belong to companies.");
-    expect(moveNote(1, 1)).toBe("Only internal work goes in task groups. This task belongs to a company.");
+  it("says company tasks keep their companies", () => {
+    expect(moveNote(0)).toBeNull();
+    expect(moveNote(1)).toBe("The company task keeps its company.");
+    expect(moveNote(2)).toBe("Company tasks keep their companies.");
   });
 
   it("confirms where they went", () => {
-    expect(movedMessage(3, "Hiring", 0)).toBe("Moved 3 tasks to Hiring.");
-    expect(movedMessage(2, "Hiring", 1)).toBe("Moved 2 tasks to Hiring. 1 company task stayed put.");
-    expect(movedMessage(1, null, 0)).toBe("Moved 1 task out of its group.");
-    expect(movedMessage(2, null, 0)).toBe("Moved 2 tasks out of their groups.");
+    expect(movedMessage(3, "Hiring")).toBe("Moved 3 tasks to Hiring.");
+    expect(movedMessage(1, null)).toBe("Moved 1 task out of its group.");
+    expect(movedMessage(2, null)).toBe("Moved 2 tasks out of their groups.");
   });
 });

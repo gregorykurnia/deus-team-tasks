@@ -32,9 +32,10 @@ describe("a new task", () => {
     });
   });
 
-  it("stores a company task with its company and no group", () => {
-    const d = { ...emptyDraft("Hiring"), task: "Send the deck", about: "company" as const, companyId: 1 };
-    expect(newTaskFromDraft(d)).toMatchObject({ linkedClientId: 1, taskGroup: undefined });
+  it("stores a company task with its company and its group", () => {
+    const d = { ...emptyDraft("Year end"), task: "Send the deck", about: "company" as const, companyId: 1 };
+    expect(newTaskFromDraft(d)).toMatchObject({ linkedClientId: 1, taskGroup: "Year end" });
+    expect(newTaskFromDraft({ ...d, group: "" })).toMatchObject({ linkedClientId: 1, taskGroup: undefined });
   });
 
   it("needs a description", () => {

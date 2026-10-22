@@ -71,7 +71,7 @@ export default function SideNav() {
         ) : groups.error ? (
           <p className={`${styles.empty} ${styles.failed}`}>Couldn’t load task groups.</p>
         ) : groupItems.length === 0 ? (
-          <p className={styles.empty}>Group internal work by topic, like “Hiring”.</p>
+          <p className={styles.empty}>Group work by topic, like “Hiring” or “Year end”.</p>
         ) : (
           <ul className={styles.groupList}>
             {groupItems.map((g) => {

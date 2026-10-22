@@ -55,16 +55,14 @@ export function selectAllOffer(chosen: number, all: boolean, total: number): num
   return !all && total > chosen ? total : null;
 }
 
-// Only internal work goes in task groups: the move menu says what happens to company tasks in the selection.
-export function moveNote(companyTasks: number, total: number): string | null {
+// The move menu's foot when company tasks are chosen: they go in the group and keep their company.
+export function moveNote(companyTasks: number): string | null {
   if (companyTasks === 0) return null;
-  if (companyTasks === total)
-    return total === 1 ? "Only internal work goes in task groups. This task belongs to a company." : "Only internal work goes in task groups. These tasks belong to companies.";
-  return `${plural(companyTasks, "company task")} will stay with ${companyTasks === 1 ? "its company" : "their companies"}.`;
+  return companyTasks === 1 ? "The company task keeps its company." : "Company tasks keep their companies.";
 }
 
-// The confirmation after a move: "Moved 3 tasks to Hiring. 1 company task stayed put."
-export function movedMessage(moved: number, group: string | null, companyTasks: number): string {
+// The confirmation after a move: "Moved 3 tasks to Hiring."
+export function movedMessage(moved: number, group: string | null): string {
   const where = group ? `to ${group}` : moved === 1 ? "out of its group" : "out of their groups";
-  return `Moved ${plural(moved, "task")} ${where}${companyTasks ? `. ${plural(companyTasks, "company task")} stayed put.` : "."}`;
+  return `Moved ${plural(moved, "task")} ${where}.`;
 }

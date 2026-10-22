@@ -53,6 +53,11 @@ describe("filters", () => {
     expect(ids(filterTasks(tasks, { view: "open", kind: "client" }, ctx))).toEqual(["cli"]);
     expect(ids(filterTasks(tasks, { view: "open", group: "Hiring" }, ctx))).toEqual(["open-int"]);
   });
+  it("keeps company tasks in their task group", () => {
+    const yearEnd = [task("cli-ye", { linkedClientId: 2, taskGroup: "Year end" }), task("int-ye", { taskGroup: "Year end" }), task("cli")];
+    expect(ids(filterTasks(yearEnd, { view: "open", group: "Year end" }, ctx))).toEqual(["cli-ye", "int-ye"]);
+    expect(ids(filterTasks(yearEnd, { view: "open", kind: "client" }, ctx))).toEqual(["cli-ye"]);
+  });
   it("searches the description, company, people and more", () => {
     expect(ids(filterTasks(tasks, { search: "pelita" }, ctx))).toEqual(["pro"]);
     expect(ids(filterTasks(tasks, { search: "ANA" }, ctx))).toEqual(["pro"]);

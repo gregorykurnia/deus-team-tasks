@@ -290,7 +290,7 @@ test("W11: deleting a group asks first, and its tasks stay, ungrouped", async ({
   await page.getByRole("button", { name: "Options for Hiring" }).click();
   await page.getByRole("menuitem", { name: "Delete group" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Delete “Hiring”?" });
-  await expect(confirm).toContainText("Its 2 tasks stay and become ungrouped. You'll find them under Internal.");
+  await expect(confirm).toContainText("Its 2 tasks stay and become ungrouped. Company tasks keep their companies.");
   await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
   await confirm.getByRole("button", { name: "Cancel" }).click();
   expect(await stored("tasks", "taskGroups")).toHaveLength(1);

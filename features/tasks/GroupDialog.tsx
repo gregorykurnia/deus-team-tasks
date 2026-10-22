@@ -77,7 +77,7 @@ export default function GroupDialog({ group, groups, tasks, onClose, onCreated, 
         </>
       }
     >
-      <p className={styles.dialogText}>{group ? "Its tasks stay where they are." : "Keep related internal work together, like “Hiring” or “Office move”."}</p>
+      <p className={styles.dialogText}>{group ? "Its tasks stay where they are." : "Keep related work together, like “Hiring” or “Year end”. Company and internal tasks can both go in."}</p>
       {failed && (
         <div className={styles.dialogNotice}>
           <Notice tone="error" title={partly ? "The group was only partly renamed." : `Couldn't ${verb} the group.`}>
