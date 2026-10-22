@@ -12,7 +12,6 @@ import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import Button from "@/ui/Button";
 import { ChoiceChip } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
-import Icon from "@/ui/Icon";
 import { DateInput, NumberInput, TextArea, TextInput } from "@/ui/Inputs";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuSeparator } from "@/ui/Menu";
 import OptionChip from "@/ui/OptionChip";
@@ -25,7 +24,6 @@ interface CellEditorProps {
   value: unknown; // what's stored now
   options?: ChoiceOption[]; // a choice field's
   optionNotes?: Record<string, string>; // a note beside an option: "Moves it to Deal done"
-  synced?: boolean; // linked tasks follow this date (B12)
   required?: string; // the company's name: what to say when it's emptied
   onEditOptions?: () => void; // a choice field: its options dialog
   today: string;
@@ -144,7 +142,7 @@ function useSave(onSave: CellEditorProps["onSave"], onClose: () => void) {
   return { busy, save };
 }
 
-function DateEditor({ field, value, synced, today, onSave, onClose }: CellEditorProps) {
+function DateEditor({ field, value, today, onSave, onClose }: CellEditorProps) {
   const stored = typeof value === "string" ? value : "";
   const [date, setDate] = useState(stored);
   const saver = useSave(onSave, onClose);
@@ -174,14 +172,6 @@ function DateEditor({ field, value, synced, today, onSave, onClose }: CellEditor
           </ChoiceChip>
         ))}
       </div>
-      {synced && (
-        <MenuFoot>
-          <span className={styles.qeSync}>
-            <Icon name="sync" size={13} />
-            Linked tasks follow this date.
-          </span>
-        </MenuFoot>
-      )}
       <div className={styles.qeActs}>
         {stored && (
           <Button small variant="quiet" onClick={() => save("")}>

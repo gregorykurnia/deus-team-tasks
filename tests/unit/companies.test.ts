@@ -12,7 +12,6 @@ import {
   productOptions,
   productsOf,
   sortCompanies,
-  taskDatesFromCompany,
   toggleChoice,
   whereToActCounts,
 } from "@/lib/companies";
@@ -107,19 +106,6 @@ describe("follow-up task (B11)", () => {
       linkedClientId: 7,
     });
     expect(followUpTaskFor(co(8), TODAY)).toMatchObject({ endDate: TODAY, priority: undefined, lastActionDate: undefined });
-  });
-});
-
-describe("kept in step (B12)", () => {
-  it("brings an open task's last action and deadline to the company's", () => {
-    const t = { startDate: "2026-10-22", endDate: "2026-10-24", lastActionDate: "2026-10-01" };
-    expect(taskDatesFromCompany({ date: "2026-10-19", target: "2026-10-21" }, t)).toEqual({
-      lastActionDate: "2026-10-19",
-      endDate: "2026-10-21",
-      startDate: "2026-10-21",
-    });
-    expect(taskDatesFromCompany({ date: "2026-10-01", target: "2026-10-24" }, t)).toBeNull();
-    expect(taskDatesFromCompany({ date: undefined, target: undefined }, t)).toEqual({ lastActionDate: undefined });
   });
 });
 

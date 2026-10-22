@@ -16,7 +16,7 @@ import PageHeader from "@/desk/PageHeader";
 import { useOverParam } from "@/desk/useOverParam";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { PartlyChanged } from "@/lib/taskWrites";
-import { deleteBlocked, deleteWording, hasField, isKeptInStep, partlyDeleteWording, RENAME_MISSING } from "@/lib/companyEdit";
+import { deleteBlocked, deleteWording, hasField, partlyDeleteWording, RENAME_MISSING } from "@/lib/companyEdit";
 import {
   COMPANY_GROUP_LABELS,
   COMPANY_GROUPS,
@@ -609,7 +609,6 @@ export default function CompaniesScreen() {
             value={c[field.key]}
             options={settings.options[field.key]}
             optionNotes={optionNotes}
-            synced={isKeptInStep(field.key) && openTasksOf(c.id) > 0}
             required={field.key === "company" ? RENAME_MISSING : undefined}
             onEditOptions={field.type === "choice" ? () => setOptionsFor(field) : undefined}
             today={today}

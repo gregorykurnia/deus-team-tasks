@@ -11,7 +11,7 @@ import { useId, useMemo, useRef, useState } from "react";
 import { useCompaniesById, useNotes, useTasks } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { fieldText, hasField, isKeptInStep, keptInStepNote, recordAlerts, recordSections } from "@/lib/companyEdit";
+import { fieldText, hasField, keptInStepNote, recordAlerts, recordSections } from "@/lib/companyEdit";
 import { COMPANY_GROUP_LABELS, companyGroup, isCompanyParked } from "@/lib/companies";
 import type { CompanyField, CompanySettings } from "@/lib/companySettings";
 import { cellOf, type Cell } from "@/lib/companyView";
@@ -88,11 +88,6 @@ export default function CompanyRecord({ company: c, settings, today, online, act
       <div key={f.key} className={f.type === "long" ? `${styles.prop} ${styles.propLong}` : styles.prop}>
         <span className={styles.pl}>
           {f.label}
-          {isKeptInStep(f.key) && open.length > 0 && (
-            <span className={styles.psync} title="Linked tasks follow this date">
-              <Icon name="sync" size={13} label="Linked tasks follow this date" />
-            </span>
-          )}
         </span>
         <button type="button" className={styles.pv} aria-label={valueName(f.label, text, cell)} onClick={(e) => onEdit(e.currentTarget, c, f)}>
           {cell.kind === "empty" ? (

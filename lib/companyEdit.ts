@@ -41,10 +41,6 @@ export function sameValue(a: unknown, b: unknown): boolean {
   return (isEmpty(a) ? "" : String(a)) === (isEmpty(b) ? "" : String(b));
 }
 
-// The last action and the target date are kept in step with the company's open tasks (B12).
-export const KEPT_IN_STEP = ["date", "target"];
-export const isKeptInStep = (key: string) => KEPT_IN_STEP.includes(key);
-
 export interface QuickPick {
   label: string;
   iso: string;
@@ -70,10 +66,9 @@ export function movesToDealDone(c: PipelineEntry, key: string, value: FieldValue
   return key === "status" && value === DEAL_DONE_STATUS && companyGroup(c) === "active";
 }
 
-// "Status updated", "Target date cleared. 2 linked tasks now match".
-export function changeMessage(label: string, cleared: boolean, tasksChanged: number): string {
-  const lead = `${label} ${cleared ? "cleared" : "updated"}`;
-  return tasksChanged ? `${lead}. ${plural(tasksChanged, "linked task")} now ${tasksChanged === 1 ? "matches" : "match"}` : lead;
+// "Status updated", "Target date cleared".
+export function changeMessage(label: string, cleared: boolean): string {
+  return `${label} ${cleared ? "cleared" : "updated"}`;
 }
 
 export const hasField = (fields: CompanyField[], key: string) => fields.some((f) => f.key === key);
@@ -214,9 +209,10 @@ export function recordAlerts(c: PipelineEntry, fields: CompanyField[], today: st
 export function keptInStepNote(fields: CompanyField[], openTasks: number): string | null {
   const has = (k: string) => hasField(fields, k);
   if (!openTasks || (!has("date") && !has("target"))) return null;
-  const what = has("date") && has("target") ? "The last action and target date stay" : has("date") ? "The last action stays" : "The target date stays";
-  const which = openTasks === 1 ? "this task" : `these ${openTasks.toLocaleString("en-GB")} tasks`;
-  return `${what} in step with ${which}. Change either side and the other follows.`;
+  const what = has("date") && has("target") ? "last action and target date" : has("date") ? "last action" : "target date";
+  const which = openTasks === 1 ? "this task" : "one of these tasks";
+  const own = openTasks === 1 ? "The task keeps its own dates" : "Each task keeps its own dates";
+  return `Saving a date on ${which} updates the company’s ${what}. ${own}.`;
 }
 
 /* ---------- Deleting (B14, 5.4) ---------- */

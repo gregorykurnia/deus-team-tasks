@@ -32,16 +32,15 @@ test("B10: a choice is changed from the list, saves itself, and Undo puts it bac
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.status).toBe("To Follow Up");
 });
 
-test("B10, B12: a quick date pick saves, and the company's open tasks follow it", async ({ page }) => {
+test("B10, B12: a quick date pick saves, and the company's open tasks keep their own dates", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");
   await cell(page, "Pelita Foods", /^Target date:/).click();
   const menu = page.getByRole("dialog", { name: "Target date" });
-  await expect(menu.getByText("Linked tasks follow this date.")).toBeVisible();
   await menu.getByRole("button", { name: "In a week" }).click();
-  await expect(toasts(page).getByText("Target date updated. 1 linked task now matches")).toBeVisible();
+  await expect(toasts(page).getByText("Target date updated", { exact: true })).toBeVisible();
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.target).toBe(isoDay(7));
-  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ endDate: isoDay(7) });
+  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ endDate: isoDay(-2), startDate: isoDay(-5) });
 });
 
 test("B10: text is changed in place: Enter saves, and Clear empties it", async ({ page }) => {
@@ -180,7 +179,7 @@ test("B14, 5.4: deleting asks first and says what stays; the tasks become intern
   expect((await storedById("tasks", "tasks", "t1"))?.linkedClientId).toBeUndefined();
 });
 
-test("B1, B10, B12: the record shows what's urgent, edits in place, and lists the tasks kept in step", async ({ page }) => {
+test("B1, B10, B12: the record shows what's urgent, edits in place, and lists its tasks, which keep their own dates", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");
   await row(page, "Pelita Foods").getByRole("link", { name: "Pelita Foods" }).click();
@@ -190,7 +189,7 @@ test("B1, B10, B12: the record shows what's urgent, edits in place, and lists th
   await expect(record.getByText("Target date missed 2 days ago.")).toBeVisible();
   await expect(record.getByText("Rina", { exact: true }).first()).toBeVisible(); // the contact, under the name
   await expect(record.getByText("Changes save as you make them, for everyone.")).toBeVisible();
-  await expect(record.getByText(/stay in step with this task/)).toBeVisible();
+  await expect(record.getByText(/The task keeps its own dates/)).toBeVisible();
   await expect(record.getByRole("link", { name: "Call Rina about the quote" })).toBeVisible();
   await expect(record.getByRole("button", { name: "Save" })).toHaveCount(0); // no Save anywhere
 
@@ -200,8 +199,8 @@ test("B1, B10, B12: the record shows what's urgent, edits in place, and lists th
   await expect(record.getByRole("button", { name: /^Priority: Low\. Change/ })).toBeVisible();
 
   await record.getByRole("button", { name: "Last action: today" }).click();
-  await expect(toasts(page).getByText("Last action updated. 1 linked task now matches")).toBeVisible();
-  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ lastActionDate: isoDay(0) });
+  await expect(toasts(page).getByText("Last action updated", { exact: true })).toBeVisible();
+  expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ lastActionDate: isoDay(-20) });
   await expect(record.getByText("Gone cold.")).toHaveCount(0);
 
   // Rename, from ⋯: the name is required.

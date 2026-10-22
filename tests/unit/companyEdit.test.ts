@@ -45,10 +45,9 @@ describe("quick editors", () => {
     expect(sameValue(12, "12")).toBe(true);
   });
 
-  it("says what changed, and how many linked tasks followed", () => {
-    expect(changeMessage("Status", false, 0)).toBe("Status updated");
-    expect(changeMessage("Target date", true, 1)).toBe("Target date cleared. 1 linked task now matches");
-    expect(changeMessage("Last action", false, 3)).toBe("Last action updated. 3 linked tasks now match");
+  it("says what changed", () => {
+    expect(changeMessage("Status", false)).toBe("Status updated");
+    expect(changeMessage("Target date", true)).toBe("Target date cleared");
   });
 
   it("writes dates in full and numbers with separators", () => {
@@ -140,9 +139,9 @@ describe("the record (6.5)", () => {
     expect(alerts.map((a) => a.title)).toEqual(["Outreach was planned 5 days ago."]);
   });
 
-  it("names the dates kept in step with the open tasks", () => {
-    expect(keptInStepNote(settings.fields.active, 1)).toBe("The last action and target date stay in step with this task. Change either side and the other follows.");
-    expect(keptInStepNote(settings.fields.noOrNotNow, 3)).toBe("The last action stays in step with these 3 tasks. Change either side and the other follows.");
+  it("says a task's dates update the company, and each task keeps its own", () => {
+    expect(keptInStepNote(settings.fields.active, 1)).toBe("Saving a date on this task updates the company’s last action and target date. The task keeps its own dates.");
+    expect(keptInStepNote(settings.fields.noOrNotNow, 3)).toBe("Saving a date on one of these tasks updates the company’s last action. Each task keeps its own dates.");
     expect(keptInStepNote(settings.fields.active, 0)).toBeNull();
     expect(keptInStepNote(settings.fields.toApproach, 2)).toBeNull();
   });

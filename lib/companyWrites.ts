@@ -7,7 +7,7 @@ import { assertOnline } from "./connection";
 import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
-import { companyGroup, DEAL_DONE_STATUS, groupFlags, taskDatesFromCompany, type CompanyGroup } from "./companies";
+import { companyGroup, DEAL_DONE_STATUS, groupFlags, type CompanyGroup } from "./companies";
 import { NOTES } from "./noteWrites";
 import { isParked } from "./parking";
 import { addTask, PartlyChanged, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
@@ -122,40 +122,6 @@ async function rollBack(err: unknown, undoFirst: () => Promise<void>): Promise<n
   throw err;
 }
 
-// Changes a company and keeps its open tasks in step with its last action and
-// target dates (B12). The company and its tasks live in two Firebase projects,
-// so this is one write for the company and one batch for the tasks.
-export async function updateCompanyKeptInStep(
-  current: PipelineEntry,
-  patch: CompanyPatch,
-  tasks: Task[]
-): Promise<{ undo: Undo; tasksChanged: number }> {
-  const next = { ...current, ...patch };
-  const undoCompany = await updateCompany(current, patch);
-  const datesChanged = (current.date || "") !== (next.date || "") || (current.target || "") !== (next.target || "");
-  const changes = datesChanged
-    ? openTasksOf(current.id, tasks).flatMap((t) => {
-        const p = taskDatesFromCompany(next, t);
-        return p ? [{ t, p }] : [];
-      })
-    : [];
-  try {
-    await commitInChunks(
-      db,
-      changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-    );
-  } catch (err) {
-    return rollBack(err, undoCompany);
-  }
-  return {
-    tasksChanged: changes.length,
-    undo: async () => {
-      await undoCompany();
-      await restoreTasks(changes);
-    },
-  };
-}
-
 // What a company takes from one of its open tasks whose dates changed (B12): the
 // task's last action, and its deadline as the target. Null when nothing moves.
 function companyPatchFrom(company: PipelineEntry, task: Pick<Task, "lastActionDate" | "endDate">): CompanyPatch | null {
@@ -215,7 +181,7 @@ export async function moveCompany(
   to: CompanyGroup,
   fields: CompanyPatch,
   tasks: Task[]
-): Promise<{ undo: Undo; tasksSwitchKind: number; tasksChanged: number }> {
+): Promise<{ undo: Undo; tasksSwitchKind: number }> {
   const patch: CompanyPatch = { ...fields, ...groupFlags(to) };
   if (to === "dealDone") patch.status = DEAL_DONE_STATUS;
   // Leaving Deal done lets go of its status, so the company never reads as a client again by mistake.
@@ -225,8 +191,9 @@ export async function moveCompany(
   const from = companyGroup(current);
   const crossesDealDone = (from === "dealDone") !== (to === "dealDone");
   const tasksSwitchKind = crossesDealDone ? openTasksOf(current.id, tasks).length : 0;
-  const { undo, tasksChanged } = await updateCompanyKeptInStep(current, patch, tasks);
-  return { undo, tasksSwitchKind, tasksChanged };
+  // Its tasks keep their own dates: a company's dates never change a task's (B12).
+  const undo = await updateCompany(current, patch);
+  return { undo, tasksSwitchKind };
 }
 
 /* ---------- Parking (N20) ---------- */

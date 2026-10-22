@@ -279,20 +279,3 @@ export function followUpTaskFor(c: PipelineEntry, today: string = todayIso()): N
   };
 }
 
-/* ---------- Kept in step (B12) ---------- */
-
-// The task fields that follow a company's last action and target dates. Only
-// open tasks follow; finished tasks keep theirs.
-export function taskDatesFromCompany(
-  c: Pick<PipelineEntry, "date" | "target">,
-  t: { startDate: string; endDate: string; lastActionDate?: string }
-): { lastActionDate?: string; endDate?: string; startDate?: string } | null {
-  const patch: { lastActionDate?: string; endDate?: string; startDate?: string } = {};
-  const date = c.date || undefined;
-  if ((t.lastActionDate || undefined) !== date) patch.lastActionDate = date;
-  if (c.target && t.endDate !== c.target) {
-    patch.endDate = c.target;
-    if (t.startDate && t.startDate > c.target) patch.startDate = c.target; // a start can't come after the deadline
-  }
-  return Object.keys(patch).length ? patch : null;
-}

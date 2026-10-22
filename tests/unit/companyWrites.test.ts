@@ -18,7 +18,6 @@ import {
   replaceFieldValue,
   saveTaskKeptInStep,
   updateCompany,
-  updateCompanyKeptInStep,
 } from "@/lib/companyWrites";
 import { saveNotes, startNotesForCompany } from "@/lib/noteWrites";
 import { deletePastClient, HasSubsidiariesError, setCounted, setPastClientSector } from "@/lib/pastClientWrites";
@@ -61,7 +60,7 @@ describe("changing a company", () => {
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ pic: "Dewi", cx_region: "North" });
   });
 
-  it("brings its open tasks in step with its dates; finished tasks keep theirs", async () => {
+  it("changes its dates without touching its tasks, which keep their own (B12)", async () => {
     const c = co(1, { date: "2026-10-01", target: "2026-10-30" });
     const tasks = [
       task("open", { linkedClientId: 1, lastActionDate: "2026-10-01", endDate: "2026-10-30" }),
@@ -70,12 +69,11 @@ describe("changing a company", () => {
     ];
     await seedCompanies([c]);
     await seedTasks(tasks);
-    const { tasksChanged, undo } = await updateCompanyKeptInStep(c, { date: "2026-10-19", target: "2026-10-25" }, tasks);
-    expect(tasksChanged).toBe(1);
-    expect(await readFields("tasks", "tasks/open")).toMatchObject({ lastActionDate: "2026-10-19", endDate: "2026-10-25" });
+    const undo = await updateCompany(c, { date: "2026-10-19", target: "2026-10-25" });
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-19", target: "2026-10-25" });
+    expect(await readFields("tasks", "tasks/open")).toMatchObject({ lastActionDate: "2026-10-01", endDate: "2026-10-30" });
     expect(await readFields("tasks", "tasks/done")).toMatchObject({ lastActionDate: "2026-10-01", endDate: "2026-10-30" });
     await undo();
-    expect(await readFields("tasks", "tasks/open")).toMatchObject({ lastActionDate: "2026-10-01", endDate: "2026-10-30" });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-01", target: "2026-10-30" });
   });
 

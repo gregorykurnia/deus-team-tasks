@@ -7,10 +7,10 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useCompaniesById, useNotes, useTasks } from "@/desk/DeskData";
 import { over } from "@/desk/areas";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { changeMessage, isKeptInStep, moveMessage, movesToDealDone, type CompanyPatch, type FieldValue } from "@/lib/companyEdit";
+import { changeMessage, moveMessage, movesToDealDone, type CompanyPatch, type FieldValue } from "@/lib/companyEdit";
 import { followUpTaskFor, type CompanyGroup } from "@/lib/companies";
 import type { CompanyField } from "@/lib/companySettings";
-import { addTaskKeptInStep, bringBackCompanies, deleteCompany, moveCompany, parkCompanies, updateCompany, updateCompanyKeptInStep } from "@/lib/companyWrites";
+import { addTaskKeptInStep, bringBackCompanies, deleteCompany, moveCompany, parkCompanies, updateCompany } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
 import { plural, weekdayDate } from "@/lib/dates";
 import { putBackDone, setTasksDone, type Undo } from "@/lib/taskWrites";
@@ -61,12 +61,8 @@ export function useCompanyActions() {
           await move(c, "dealDone", {});
           return true;
         }
-        const patch = { [field.key]: value };
-        let undo: Undo;
-        let tasksChanged = 0;
-        if (isKeptInStep(field.key)) ({ undo, tasksChanged } = await updateCompanyKeptInStep(c, patch, latest.current.tasks));
-        else undo = await updateCompany(c, patch);
-        toast(changeMessage(field.label, value === undefined, tasksChanged), { action: "Undo", onAction: undoing(undo) });
+        const undo = await updateCompany(c, { [field.key]: value });
+        toast(changeMessage(field.label, value === undefined), { action: "Undo", onAction: undoing(undo) });
         return true;
       } catch (err) {
         toast(failureMessage(err, `${field.label} couldn't be saved. Check your connection and try again.`), { error: true });

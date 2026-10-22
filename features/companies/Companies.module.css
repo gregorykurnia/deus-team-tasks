@@ -827,16 +827,6 @@
   flex: 1;
 }
 
-.qeSync {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.qeSync svg {
-  color: var(--blue);
-}
-
 .miChoice {
   display: flex;
   align-items: center;
@@ -911,11 +901,6 @@
   color: var(--muted);
   font-size: 13.5px;
   font-weight: var(--w-semibold);
-}
-
-.psync {
-  display: inline-flex;
-  color: var(--blue);
 }
 
 .pv {
