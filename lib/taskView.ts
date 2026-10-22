@@ -27,7 +27,7 @@ export const VIEW_PARAMS = ["kind", "view", "q", "due", "type", "idle", "range",
 
 const DUE_CHOICES: DueChoice[] = ["overdue", "soon", "active", "nodate"];
 const RANGES: FinishedRange[] = ["week", "month", "all"];
-const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "type", "desc", "prio", "doneAt", "back"];
+const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "group", "type", "desc", "prio", "doneAt", "back"];
 const VIEWS: TaskView[] = ["open", "parked", "done"];
 
 // Sorting by when it was finished only makes sense for finished tasks, by when it comes back only for parked ones, and
@@ -38,17 +38,22 @@ export function sortKeyFits(key: TaskSortKey, view: TaskView): boolean {
   return key !== "last" || view !== "done";
 }
 
-// The sort menu's choices (guide 6.2); column heads can sort by a few more.
-export function sortMenuKeys(view: TaskView): TaskSortKey[] {
-  if (view === "done") return ["doneAt", "end", "about", "type", "desc"];
-  if (view === "parked") return ["back", "end", "last", "about", "type", "desc", "prio"];
-  return ["end", "last", "about", "type", "desc", "prio", "start"];
+// The sort menu's choices (guide 6.2); column heads can sort by a few more. A group's page has no Group to sort by.
+export function sortMenuKeys(view: TaskView, inGroup = false): TaskSortKey[] {
+  const keys: TaskSortKey[] =
+    view === "done"
+      ? ["doneAt", "end", "about", "group", "type", "desc"]
+      : view === "parked"
+        ? ["back", "end", "last", "about", "group", "type", "desc", "prio"]
+        : ["end", "last", "about", "group", "type", "desc", "prio", "start"];
+  return inGroup ? keys.filter((k) => k !== "group") : keys;
 }
 
 export const SORT_LABELS: Record<TaskSortKey, string> = {
   end: "Deadline",
   last: "Last action",
   about: "Company",
+  group: "Group",
   type: "Task type",
   desc: "Description",
   prio: "Priority",

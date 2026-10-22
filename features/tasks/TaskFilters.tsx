@@ -146,7 +146,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
 
       <Menu open={open === "sort"} anchorRef={sortRef} onClose={close} label="Sort by">
         <MenuHeading>Sort by</MenuHeading>
-        {sortMenuKeys(state.view).map((key) => (
+        {sortMenuKeys(state.view, inGroup).map((key) => (
           <MenuChoice key={key} checked={sort.key === key} onSelect={() => onState({ ...state, sort: key, dir: null })}>
             {SORT_LABELS[key]}
           </MenuChoice>
@@ -163,7 +163,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
 
       <Menu open={open === "details"} anchorRef={detailsRef} onClose={close} label="Details shown" alignRight>
         <MenuHeading>Details shown</MenuHeading>
-        {COLUMNS.map((c) => (
+        {COLUMNS.filter((c) => !(inGroup && c.id === "group")).map((c) => (
           <MenuCheck key={c.id} checked={shown.includes(c.id)} onSelect={() => onShown(toggleColumn(shown, c.id))}>
             {c.label}
           </MenuCheck>

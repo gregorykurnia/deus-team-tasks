@@ -91,7 +91,7 @@ describe("sorting (guide 5.6)", () => {
     expect(ids(sortTasks(tasks, "end", "asc", ctx))).toEqual(["early", "late", "undated"]);
     expect(ids(sortTasks(tasks, "end", "desc", ctx))).toEqual(["late", "early", "undated"]);
   });
-  it("sorts by company or group name, priority and description", () => {
+  it("sorts by company, group, priority and description", () => {
     const list = [
       task("g", { taskGroup: "zeta" }),
       task("c", { linkedClientId: 2 }),
@@ -99,6 +99,7 @@ describe("sorting (guide 5.6)", () => {
       task("hi", { priority: "High", task: "a" }),
     ];
     expect(ids(sortTasks(list, "about", "asc", ctx))).toEqual(["c", "g", "none", "hi"]);
+    expect(ids(sortTasks(list, "group", "asc", ctx))).toEqual(["g", "c", "none", "hi"]);
     expect(ids(sortTasks(list, "prio", "asc", ctx))).toEqual(["hi", "none", "g", "c"]);
     expect(ids(sortTasks(list, "desc", "asc", ctx))[0]).toBe("hi");
   });

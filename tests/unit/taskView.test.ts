@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { companiesById } from "@/lib/kinds";
-import { COLUMNS, DEFAULT_COLUMNS, listGrid, parseColumns, toggleColumn } from "@/lib/taskColumns";
+import { COLUMNS, DEFAULT_COLUMNS, listGrid, listMinWidth, parseColumns, toggleColumn } from "@/lib/taskColumns";
 import {
   clearedFilters,
   directionLabels,
@@ -184,9 +184,14 @@ describe("the list", () => {
     expect(list("view=done&range=all").sorted.map((t) => t.task)).toContain("Undated finish");
   });
 
-  it("orders by the company, with tasks that have no company or group last", () => {
-    expect(list("sort=about&dir=asc").sorted.map((t) => t.task)).toEqual(["Send quote", "Book interviews", "Chase invoice", "Plan offsite"]);
-    expect(list("sort=about&dir=desc").sorted.map((t) => t.task)).toEqual(["Chase invoice", "Book interviews", "Send quote", "Plan offsite"]);
+  it("orders by the company, with tasks that have no company last", () => {
+    expect(list("sort=about&dir=asc").sorted.map((t) => t.task)).toEqual(["Send quote", "Chase invoice", "Plan offsite", "Book interviews"]);
+    expect(list("sort=about&dir=desc").sorted.map((t) => t.task)).toEqual(["Chase invoice", "Send quote", "Plan offsite", "Book interviews"]);
+  });
+
+  it("orders by the group, with tasks that have no group last", () => {
+    expect(list("sort=group&dir=asc").sorted[0].task).toBe("Book interviews");
+    expect(list("sort=group&dir=desc").sorted[0].task).toBe("Book interviews");
   });
 
   it("scopes to the view before it counts, so the kind switch counts what's on screen", () => {
@@ -233,7 +238,11 @@ describe("details shown", () => {
   });
 
   it("keeps the catalogue's order and drops what it doesn't know", () => {
-    expect(parseColumns('["resp","bogus","about","key"]')).toEqual(["about", "resp", "key"]);
+    expect(parseColumns('["resp","bogus","group","key"]')).toEqual(["group", "resp", "key"]);
+  });
+
+  it("turns the one Company or group column saved before into the two", () => {
+    expect(parseColumns('["about","end"]')).toEqual(["company", "group", "end"]);
   });
 
   it("can show none at all", () => {
@@ -241,14 +250,19 @@ describe("details shown", () => {
   });
 
   it("adds and removes a detail in the catalogue's order", () => {
-    expect(toggleColumn(DEFAULT_COLUMNS, "touch")).toEqual(["about", "type", "touch", "end", "last", "resp"]);
-    expect(toggleColumn(DEFAULT_COLUMNS, "type")).toEqual(["about", "end", "last", "resp"]);
+    expect(toggleColumn(DEFAULT_COLUMNS, "touch")).toEqual(["company", "group", "type", "touch", "end", "last", "resp"]);
+    expect(toggleColumn(DEFAULT_COLUMNS, "group")).toEqual(["company", "type", "end", "last", "resp"]);
   });
 
   it("makes one grid for the head and every row: the circle, the title, then each chosen detail", () => {
     expect(listGrid([]).split(" minmax(").length).toBe(2); // the circle and the title
     expect(listGrid(["type", "end"])).toBe("26px minmax(200px, 2.2fr) 104px 118px");
-    expect(COLUMNS.map((c) => c.id)).toEqual(["about", "type", "touch", "prio", "start", "end", "last", "resp", "inf", "key"]);
+    expect(COLUMNS.map((c) => c.id)).toEqual(["company", "group", "type", "touch", "prio", "start", "end", "last", "resp", "inf", "key"]);
+  });
+
+  it("knows how wide it must be before it scrolls sideways, so text never spills out of it", () => {
+    expect(listMinWidth([])).toBe(26 + 200 + 14 + 28 + 12);
+    expect(listMinWidth(["type", "end"])).toBe(26 + 200 + 104 + 118 + 14 * 3 + 28 + 12);
   });
 });
 

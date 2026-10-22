@@ -1,10 +1,12 @@
 "use client";
 
 // The list (guide 6.2, 5.7): column heads that sort, then one row per task, 100 at a time. The head and every row share
-// one grid, built from the details shown. On phones the head goes and each row becomes a card (the Sort menu stays).
+// one grid, built from the details shown. When the details shown don't fit, the list scrolls sideways inside its own panel
+// with the title pinned, as the companies list does. On phones the head goes and each row becomes a card (the Sort menu stays).
+// On a group's page the Group column is left out: every task is in it.
 // While selecting several, the done circles become checkboxes, the head's one ticks every row shown, and a row's click
 // ticks it rather than opening the task (guide 4.7).
-import { COLUMNS, columnLabel, columnSort, listGrid, type ColumnId } from "@/lib/taskColumns";
+import { COLUMNS, columnLabel, columnSort, listGrid, listMinWidth, type ColumnId } from "@/lib/taskColumns";
 import type { CompaniesById } from "@/lib/kinds";
 import type { SortDir, TaskSortKey, TaskView } from "@/lib/taskQueries";
 import type { Task } from "@/lib/types";
@@ -37,7 +39,8 @@ interface TaskListProps {
   selecting?: { head: boolean | "mixed"; chosen: ReadonlySet<string>; onHead: () => void; onToggle: (id: string) => void };
 }
 
-export default function TaskList({ tasks, hidden, pageSize, columns, view, sort, inGroup, companies, groupLooks, today, leaving, hrefFor, onSort, onToggleDone, onMore, selecting }: TaskListProps) {
+export default function TaskList({ tasks, hidden, pageSize, columns: chosen, view, sort, inGroup, companies, groupLooks, today, leaving, hrefFor, onSort, onToggleDone, onMore, selecting }: TaskListProps) {
+  const columns = inGroup ? chosen.filter((c) => c !== "group") : chosen;
   const head = (label: string, key: TaskSortKey | undefined) => {
     if (!key) return <span key={label}>{label}</span>;
     const on = sort.key === key;
@@ -55,29 +58,33 @@ export default function TaskList({ tasks, hidden, pageSize, columns, view, sort,
   };
   return (
     <>
-      <div className={styles.thead} style={{ "--cols": listGrid(columns) } as CSSProperties}>
-        {selecting ? <SelectBox checked={selecting.head} label="Select every task shown" onClick={selecting.onHead} /> : <span />}
-        {head("Description", "desc")}
-        {COLUMNS.filter((c) => columns.includes(c.id)).map((c) => head(columnLabel(c, view), columnSort(c, view)))}
-      </div>
-      <div className={styles.rows}>
-        {tasks.map((t) => (
-          <TaskListRow
-            key={t.id}
-            task={t}
-            companies={companies}
-            today={today}
-            href={hrefFor(t.id)}
-            columns={columns}
-            groupLooks={groupLooks}
-            inGroup={inGroup}
-            leaving={leaving.has(t.id)}
-            onToggleDone={(done) => onToggleDone(t, done)}
-            selecting={!!selecting}
-            selected={selecting?.chosen.has(t.id)}
-            onSelect={() => selecting?.onToggle(t.id)}
-          />
-        ))}
+      <div className={styles.listWrap}>
+        <div className={styles.listTable} style={{ "--minw": `${listMinWidth(columns)}px` } as CSSProperties}>
+          <div className={styles.thead} style={{ "--cols": listGrid(columns) } as CSSProperties}>
+            <span className={styles.pinLead}>{selecting && <SelectBox checked={selecting.head} label="Select every task shown" onClick={selecting.onHead} />}</span>
+            <span className={styles.pinTitle}>{head("Description", "desc")}</span>
+            {COLUMNS.filter((c) => columns.includes(c.id)).map((c) => head(columnLabel(c, view), columnSort(c, view)))}
+          </div>
+          <div className={styles.rows}>
+            {tasks.map((t) => (
+              <TaskListRow
+                key={t.id}
+                task={t}
+                companies={companies}
+                today={today}
+                href={hrefFor(t.id)}
+                columns={columns}
+                groupLooks={groupLooks}
+                inGroup={inGroup}
+                leaving={leaving.has(t.id)}
+                onToggleDone={(done) => onToggleDone(t, done)}
+                selecting={!!selecting}
+                selected={selecting?.chosen.has(t.id)}
+                onSelect={() => selecting?.onToggle(t.id)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
       {hidden > 0 && (
         <div className={styles.more}>

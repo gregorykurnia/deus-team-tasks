@@ -152,7 +152,7 @@ export function TaskCard(input: RowProps) {
 
 interface ListRowProps extends RowProps {
   columns?: ColumnId[]; // the details shown, in the catalogue's order
-  groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the About column
+  groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the Group column
   inGroup?: boolean; // on a group's own page every task is in it, so it is not repeated
 }
 
@@ -162,17 +162,17 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   let content: ReactNode = null;
   let wrap = false;
   switch (id) {
-    case "about": {
+    case "company":
+      content = row.badge.kind === "company" ? <NameTag kind={row.kind}>{row.place}</NameTag> : <NameTag kind="internal">Internal</NameTag>;
+      break;
+    case "group": {
       const look = task.taskGroup ? groupLooks?.get(task.taskGroup) : undefined;
-      if (row.badge.kind === "company") content = <NameTag kind={row.kind}>{row.place}</NameTag>;
-      else if (task.taskGroup)
-        content = (
-          <span className={styles.group}>
-            {look && <GroupBadge {...look} />}
-            <span className={styles.groupName}>{task.taskGroup}</span>
-          </span>
-        );
-      else content = <NameTag kind="internal">Internal</NameTag>;
+      content = task.taskGroup && (
+        <span className={styles.group}>
+          {look && <GroupBadge {...look} />}
+          <span className={styles.groupName}>{task.taskGroup}</span>
+        </span>
+      );
       break;
     }
     case "type":
@@ -220,7 +220,7 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   }
   const empty = !content;
   const classes = [styles.cell, id === "end" && styles.deadline, wrap && styles.wrap, empty && styles.emptyCell, id === "resp" && styles.lift].filter(Boolean);
-  const label = id === "about" ? (row.badge.kind === "company" ? "Company" : "Group") : columnLabel(column, row.done ? "done" : row.parked ? "parked" : "open");
+  const label = columnLabel(column, row.done ? "done" : row.parked ? "parked" : "open");
   return (
     <span className={classes.join(" ")} data-col={id}>
       {/* "No action for 15 days" already names the detail: "Last action No action for 15 days" would say it twice. */}
@@ -243,11 +243,17 @@ export function TaskListRow(input: ListRowProps) {
   const props = useArrivalProps(input);
   const { task, columns = DEFAULT_COLUMNS, groupLooks, inGroup, today } = props;
   const row = taskRowModel(task, props.companies, today);
+  const company = row.badge.kind === "company" ? row.place : null;
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
   const meta = [
-    !columns.includes("about") && !inGroup && row.place && (
-      <span key="place" className={styles.place}>
-        {row.place}
+    !columns.includes("company") && company && (
+      <span key="company" className={styles.place}>
+        {company}
+      </span>
+    ),
+    !columns.includes("group") && !inGroup && task.taskGroup && (
+      <span key="group" className={styles.place}>
+        {task.taskGroup}
       </span>
     ),
     !columns.includes("end") && !row.done && row.deadline.tone !== "plain" && <span key="deadline">{row.deadline.label}</span>,

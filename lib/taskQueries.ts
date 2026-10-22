@@ -77,7 +77,7 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
   });
 }
 
-export type TaskSortKey = "end" | "start" | "last" | "about" | "type" | "desc" | "prio" | "doneAt" | "back";
+export type TaskSortKey = "end" | "start" | "last" | "about" | "group" | "type" | "desc" | "prio" | "doneAt" | "back";
 export type SortDir = "asc" | "desc";
 
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
@@ -95,9 +95,11 @@ function sortValue(t: TaskWithDone, key: TaskSortKey, ctx: QueryContext): string
     case "back":
       return t.parkedUntil || null;
     case "about": {
-      const name = linkedCompany(t, ctx.companies)?.company ?? t.taskGroup;
+      const name = linkedCompany(t, ctx.companies)?.company;
       return name ? name.toLowerCase() : null;
     }
+    case "group":
+      return t.taskGroup ? t.taskGroup.toLowerCase() : null;
     case "type":
       return t.taskType ? t.taskType.toLowerCase() : null;
     case "desc":
