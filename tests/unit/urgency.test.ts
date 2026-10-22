@@ -83,3 +83,13 @@ describe("company target date and planned outreach", () => {
     expect(outreachSignal("2026-10-25", TODAY)?.tone).toBe("plain");
   });
 });
+
+describe("a parked task (N19)", () => {
+  it("shows no urgency, only that it's parked or when it comes back", () => {
+    expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1 }, TODAY)).toEqual({ tone: "none", label: "Parked" });
+    expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1, parkedUntil: "2026-11-03" }, TODAY)).toEqual({ tone: "none", label: "Back 3 Nov" });
+  });
+  it("is late again once the day it was parked until comes", () => {
+    expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1, parkedUntil: "2026-10-20" }, TODAY)).toEqual({ tone: "red", label: "2 days late" });
+  });
+});

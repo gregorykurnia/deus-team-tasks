@@ -1,13 +1,14 @@
 // Finding, narrowing and ordering tasks (guide 5.6, 5.7), and the sections of Today.
 import { daysBetween, isoOf, todayIso } from "./dates";
 import { kindOf, linkedCompany, type CompaniesById, type Kind } from "./kinds";
+import { isParked } from "./parking";
 import { dueBucket, idleDays, type DueBucket } from "./urgency";
 import type { Task, TaskType } from "./types";
 
-export type TaskView = "open" | "done";
+export type TaskView = "open" | "parked" | "done";
 
 export interface TaskFilter {
-  view?: TaskView; // open or done; leave out for both
+  view?: TaskView; // open, parked or done; leave out for every task
   kind?: Kind | "all";
   group?: string | null; // a task group's name
   search?: string;
@@ -24,8 +25,9 @@ export interface QueryContext {
 
 type TaskWithDone = Task & { completedAt?: number };
 
-export function isOpen(task: Pick<Task, "completed">): boolean {
-  return !task.completed;
+// Open is neither finished nor parked (lib/parking).
+export function isOpen(task: Pick<Task, "completed" | "parkedAt" | "parkedUntil">, today: string = todayIso()): boolean {
+  return !task.completed && !isParked(task, today);
 }
 
 export function matchesSearch(task: Task, query: string, ctx: QueryContext): boolean {
@@ -48,7 +50,8 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
   const today = ctx.today ?? todayIso();
   const view = filter.view;
   return tasks.filter((t) => {
-    if (view === "open" && t.completed) return false;
+    if (view === "open" && !isOpen(t, today)) return false;
+    if (view === "parked" && !isParked(t, today)) return false;
     if (view === "done" && !t.completed) return false;
     if (filter.group != null) {
       if (t.taskGroup !== filter.group) return false;
@@ -56,14 +59,14 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
       return false;
     }
     if (filter.search && !matchesSearch(t, filter.search, ctx)) return false;
-    if (view !== "done") {
+    if (view === "open" || view === undefined) {
       if (filter.due && dueBucket(t, today) !== filter.due) return false;
       if (filter.minIdleDays != null) {
         if (!linkedCompany(t, ctx.companies)) return false;
         const idle = idleDays(t.lastActionDate, today);
         if (idle === null || idle < filter.minIdleDays) return false;
       }
-    } else if (filter.finishedWithinDays != null) {
+    } else if (view === "done" && filter.finishedWithinDays != null) {
       // Tasks finished before completedAt was recorded have no date (N1).
       if (!t.completedAt) return false;
       if (daysBetween(isoOf(new Date(t.completedAt)), today) >= filter.finishedWithinDays) return false;
@@ -74,7 +77,7 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
   });
 }
 
-export type TaskSortKey = "end" | "start" | "last" | "about" | "type" | "desc" | "prio" | "doneAt";
+export type TaskSortKey = "end" | "start" | "last" | "about" | "type" | "desc" | "prio" | "doneAt" | "back";
 export type SortDir = "asc" | "desc";
 
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
@@ -89,6 +92,8 @@ function sortValue(t: TaskWithDone, key: TaskSortKey, ctx: QueryContext): string
       return t.lastActionDate || null;
     case "doneAt":
       return t.completedAt ?? null;
+    case "back":
+      return t.parkedUntil || null;
     case "about": {
       const name = linkedCompany(t, ctx.companies)?.company ?? t.taskGroup;
       return name ? name.toLowerCase() : null;
@@ -118,9 +123,10 @@ export function sortTasks<T extends TaskWithDone>(tasks: T[], key: TaskSortKey, 
 }
 
 // Defaults: deadline, earliest first. Prospect work by latest deadline first
-// (W14). Finished tasks most recent first.
+// (W14). Finished tasks most recent first, parked ones by the first back.
 export function defaultSort(view: TaskView, kind: Kind | "all", inGroup: boolean): { key: TaskSortKey; dir: SortDir } {
   if (view === "done") return { key: "doneAt", dir: "desc" };
+  if (view === "parked") return { key: "back", dir: "asc" };
   if (kind === "prospect" && !inGroup) return { key: "end", dir: "desc" };
   return { key: "end", dir: "asc" };
 }
@@ -136,7 +142,7 @@ export interface TodaySections<T> {
 // three days, under way today, or missing a date.
 export function todaySections<T extends TaskWithDone>(tasks: T[], ctx: QueryContext): TodaySections<T> {
   const today = ctx.today ?? todayIso();
-  const open = tasks.filter(isOpen);
+  const open = tasks.filter((t) => isOpen(t, today));
   const by = (bucket: DueBucket) => sortTasks(open.filter((t) => dueBucket(t, today) === bucket), "end", "asc", ctx);
   return { overdue: by("overdue"), soon: by("soon"), active: by("active"), nodate: by("nodate") };
 }

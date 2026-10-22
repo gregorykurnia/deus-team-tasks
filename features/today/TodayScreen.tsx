@@ -10,6 +10,7 @@ import PageHeader from "@/desk/PageHeader";
 import { failureMessage, useConnection } from "@/lib/connection";
 import { longDayLabel } from "@/lib/dates";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
+import { isOpen } from "@/lib/taskQueries";
 import { addTask, setTasksDone } from "@/lib/taskWrites";
 import { attentionOf, carriersOf, heroOf, twoWeeksOf, CHART_DAYS } from "@/lib/today";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
@@ -53,9 +54,9 @@ export default function TodayScreen() {
   const pending = !today || (waiting(tasks) && !offlineEmpty) || companies.loading;
   const ready = !pending && !tasksFailed && !offlineEmpty && today !== null;
 
-  // Open tasks, plus any just marked done that are still on their way out of the list.
-  const listed = useMemo(() => tasks.rows.filter((t) => !t.completed || leaving.has(t.id)), [tasks.rows, leaving]);
-  const open = useMemo(() => tasks.rows.filter((t) => !t.completed), [tasks.rows]);
+  // Open tasks (parked ones aren't), plus any just marked done that are still on their way out of the list.
+  const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
+  const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
   const eventList = events.status === "ok" ? events.events : null;
 
   const model = useMemo(() => {

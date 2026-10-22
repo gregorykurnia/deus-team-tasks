@@ -232,6 +232,47 @@ export function MenuNumber({ label, unit, initial, onApply }: { label: string; u
   );
 }
 
+// "On [date]" with Apply: a day after `min`.
+export function MenuDate({ label, min, onApply }: { label: string; min: string; onApply: (iso: string) => void }) {
+  const { close } = useMenu();
+  const [value, setValue] = useState("");
+  function apply() {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value <= min) return;
+    onApply(value);
+    close();
+  }
+  return (
+    // Like MenuNumber: one item, whose focus goes to its field.
+    <div
+      className={`${styles.number} ${styles.dateRow}`}
+      role="menuitem"
+      tabIndex={-1}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget) e.currentTarget.querySelector("input")?.focus();
+      }}
+    >
+      <label>
+        {label}
+        <input
+          type="date"
+          min={min}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              apply();
+            }
+          }}
+        />
+      </label>
+      <Button small variant="main" onClick={apply} disabled={!value || value <= min}>
+        Apply
+      </Button>
+    </div>
+  );
+}
+
 export const TONE_NAMES: Record<OptionTone, string> = {
   blue: "Blue",
   sky: "Sky",

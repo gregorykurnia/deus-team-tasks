@@ -148,7 +148,7 @@ test("W10: finished tasks show most recent first, and an undated finish is under
   ]);
   await page.goto("/tasks");
   await expect(rows(page)).toHaveCount(1); // the page is ready once it shows its tasks
-  await page.getByRole("group", { name: "Open or done" }).getByRole("button", { name: "Done" }).click();
+  await page.getByRole("group", { name: "Open, parked or done" }).getByRole("button", { name: "Done" }).click();
   await expect(page).toHaveURL(/view=done/);
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText("Finished yesterday");

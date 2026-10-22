@@ -10,6 +10,7 @@ import { plural } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
 import { byDeadline, nextDueLabel, personLine, personRows, rankLine, searchPeople, SEARCH_FROM, sparkHeight, widestLoad, workWords, type PersonRow } from "@/lib/planPeople";
 import type { PlanState } from "@/lib/planView";
+import { isOpen } from "@/lib/taskQueries";
 import type { Task } from "@/lib/types";
 import Avatar from "@/ui/Avatar";
 import { buttonClass } from "@/ui/Button";
@@ -40,7 +41,7 @@ interface PeopleViewProps {
 
 export default function PeopleView(props: PeopleViewProps) {
   const { state, today, names, tasks, loading } = props;
-  const rows = useMemo(() => personRows(names, tasks.filter((t) => !t.completed || props.leaving.has(t.id)), today), [names, tasks, props.leaving, today]);
+  const rows = useMemo(() => personRows(names, tasks.filter((t) => isOpen(t, today) || props.leaving.has(t.id)), today), [names, tasks, props.leaving, today]);
   if (state.person) {
     const row = rows.find((r) => r.name === state.person) ?? personRows([state.person], [], today)[0];
     return <PersonPage {...props} row={row} loading={loading} />;

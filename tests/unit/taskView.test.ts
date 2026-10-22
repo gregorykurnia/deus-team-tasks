@@ -251,3 +251,20 @@ describe("details shown", () => {
     expect(COLUMNS.map((c) => c.id)).toEqual(["about", "type", "touch", "prio", "start", "end", "last", "resp", "inf", "key"]);
   });
 });
+
+describe("the Parked view (N19)", () => {
+  it("is held in the address, with no Due or No action for, and sorts by when it comes back", () => {
+    const s = view("view=parked&due=overdue&idle=14");
+    expect(s).toMatchObject({ view: "parked", due: null, idle: null });
+    expect(viewParams(s, false).toString()).toBe("view=parked");
+    expect(effectiveSort(s, false)).toEqual({ key: "back", dir: "asc" });
+    expect(view("view=parked&sort=doneAt").sort).toBeNull();
+    expect(view("sort=back").sort).toBeNull();
+  });
+  it("lists only parked tasks, and says when there are none", () => {
+    const parked = task({ parkedAt: 1 });
+    const listing = listTasks([task(), parked, task({ completed: true })], view("view=parked"), null, companies, TODAY);
+    expect(ids(listing.sorted)).toEqual([parked.id]);
+    expect(emptyCase(view("view=parked"), false, 0, false, true)).toEqual({ case: "no-parked", kind: "all" });
+  });
+});

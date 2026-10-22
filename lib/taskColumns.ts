@@ -1,6 +1,6 @@
 // "Details shown" on All tasks (guide 5.6, W15): which columns the list has, in a fixed order, remembered on this device.
 // The fields a company group's list shows are different: those are shared (D-024).
-import type { TaskSortKey } from "./taskQueries";
+import type { TaskSortKey, TaskView } from "./taskQueries";
 
 export type ColumnId = "about" | "type" | "touch" | "prio" | "start" | "end" | "last" | "resp" | "inf" | "key";
 
@@ -48,9 +48,17 @@ export function toggleColumn(shown: ColumnId[], id: ColumnId): ColumnId[] {
   return COLUMNS.filter((c) => next.includes(c.id)).map((c) => c.id);
 }
 
-// The label a column's head and cells carry: a finished task has no deadline to show, it shows when it was finished.
-export function columnLabel(column: Column, finished: boolean): string {
-  return column.id === "end" && finished ? "Finished" : column.label;
+// The label a column's head and cells carry: in place of the deadline a finished task shows when it was finished, and a
+// parked one when it comes back.
+export function columnLabel(column: Column, view: TaskView): string {
+  if (column.id !== "end" || view === "open") return column.label;
+  return view === "done" ? "Finished" : "Comes back";
+}
+
+// What the head of a column sorts by in this view.
+export function columnSort(column: Column, view: TaskView): TaskSortKey | undefined {
+  if (column.id !== "end" || view === "open") return column.sort;
+  return view === "done" ? "doneAt" : "back";
 }
 
 // The list's grid, shared by the head and every row: the circle, the title, then the chosen columns.

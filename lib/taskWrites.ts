@@ -1,6 +1,7 @@
 // Every task write goes through here. A field set to undefined is cleared with
 // deleteField(), the document id is never stored as a field, finishing a task
-// records when (completedAt), and nothing is written with no connection.
+// records when (completedAt) and ends any parking, and nothing is written with
+// no connection.
 import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
 import { commitEach, PartlyCommitted } from "./batches";
 import { assertOnline } from "./connection";
@@ -13,10 +14,10 @@ export type Undo = () => Promise<void>;
 
 type TaskPatch = Partial<NewTask> & { id?: unknown };
 
-// Marking done records when; marking not done clears it. A task already done
-// keeps its date when it's saved again.
+// Marking done records when, and a parked task is parked no more; marking not
+// done clears it. A task already done keeps its date when it's saved again.
 export function withCompletedAt<P extends TaskPatch>(patch: P, current?: Pick<Task, "completed" | "completedAt">, now = Date.now()): P {
-  if (patch.completed === true && !current?.completed) return { ...patch, completedAt: now };
+  if (patch.completed === true && !current?.completed) return { ...patch, completedAt: now, parkedAt: undefined, parkedUntil: undefined };
   if (patch.completed === true) return { ...patch, completedAt: current?.completedAt };
   if (patch.completed === false) return { ...patch, completedAt: undefined };
   return patch;
@@ -112,14 +113,28 @@ export async function setTasksDone(tasks: Task[], done: boolean, present?: Still
 }
 
 // Undo for marking done or not done: each task back to done or not as it was
-// (pass them as they were), with its finished date.
+// (pass them as they were), with its finished date and any parking.
 export async function putBackDone(tasks: Task[], present?: StillThere): Promise<void> {
   assertOnline("No connection. The change wasn't undone.");
   await writeEach(
     tasks,
-    (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt })),
+    (batch, t) =>
+      batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt, parkedAt: t.parkedAt, parkedUntil: t.parkedUntil })),
     present
   );
+}
+
+// Parks open tasks (lib/parking) until a day, or until brought back when `until` is null; `until` null with `park`
+// false brings them back. Undo puts each one's parking back as it was. Finished tasks are left as they are.
+export async function setTasksParked(tasks: Task[], park: boolean, until: string | null = null, present?: StillThere): Promise<Undo> {
+  const many = tasks.length !== 1;
+  assertOnline(`No connection. The ${many ? "tasks weren't" : "task wasn't"} ${park ? "parked" : "brought back"}.`);
+  const changed = tasks.filter((t) => !t.completed);
+  const now = Date.now();
+  const undoFor = (written: Task[]) => () => putBackParked(written, present);
+  const patch = park ? { parkedAt: now, parkedUntil: until ?? undefined } : { parkedAt: undefined, parkedUntil: undefined };
+  const written = await writeEach(changed, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate(patch)), present, undoFor);
+  return undoFor(written);
 }
 
 // Moves tasks of any kind into a task group; a company task keeps its company. `group` null makes the tasks ungrouped.
@@ -132,4 +147,10 @@ export async function moveTasksToGroup(tasks: Task[], group: string | null, pres
   };
   const written = await writeEach(moving, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ taskGroup: group ?? undefined })), present, undoFor);
   return { moved: written.length, undo: undoFor(written) };
+}
+
+// Undo for parking or bringing back: each task's parking as it was (pass them as they were).
+export async function putBackParked(tasks: Task[], present?: StillThere): Promise<void> {
+  assertOnline("No connection. The change wasn't undone.");
+  await writeEach(tasks, (batch, t) => batch.update(doc(db, TASKS, t.id), toTaskUpdate({ parkedAt: t.parkedAt, parkedUntil: t.parkedUntil })), present);
 }

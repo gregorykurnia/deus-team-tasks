@@ -148,6 +148,10 @@
   font-weight: var(--w-bold);
 }
 
+.dateRow input {
+  width: 150px;
+}
+
 .palette {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

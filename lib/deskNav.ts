@@ -1,4 +1,4 @@
-// What the side bar counts and lists (guide 3): open tasks, the ones Today
+// What the side bar counts and lists (guide 3): open tasks (not parked), the ones Today
 // shows, and the task groups with their badge and open count.
 import { todayIso } from "./dates";
 import { initials } from "./people";
@@ -14,7 +14,7 @@ export interface NavCounts {
 }
 
 export function navCounts(tasks: Task[], today: string = todayIso()): NavCounts {
-  const open = tasks.filter(isOpen);
+  const open = tasks.filter((t) => isOpen(t, today));
   const urgent = open.filter((t) => {
     const bucket = dueBucket(t, today);
     return bucket === "overdue" || bucket === "soon";

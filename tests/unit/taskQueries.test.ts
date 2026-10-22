@@ -136,3 +136,24 @@ describe("Today", () => {
     expect(fold([1], 6)).toEqual({ shown: [1], hidden: 0 });
   });
 });
+
+describe("parked tasks (N19)", () => {
+  const tasks = [
+    task("open", { endDate: "2026-10-10" }),
+    task("parked", { endDate: "2026-10-10", parkedAt: 1 }),
+    task("until", { endDate: "2026-10-10", parkedAt: 1, parkedUntil: "2026-10-25" }),
+    task("back", { endDate: "2026-10-10", parkedAt: 1, parkedUntil: "2026-10-20" }),
+    task("done", { completed: true, parkedAt: 1 }),
+  ];
+  const ids = (list: Task[]) => list.map((t) => t.id);
+  it("keeps parked tasks out of the open work until the day they were parked until", () => {
+    expect(ids(filterTasks(tasks, { view: "open" }, ctx))).toEqual(["open", "back"]);
+    expect(ids(filterTasks(tasks, { view: "parked" }, ctx))).toEqual(["parked", "until"]);
+    expect(ids(filterTasks(tasks, { view: "done" }, ctx))).toEqual(["done"]);
+    expect(ids(todaySections(tasks, ctx).overdue)).toEqual(["open", "back"]);
+  });
+  it("lists the first back first, and the ones with no day last", () => {
+    expect(defaultSort("parked", "all", false)).toEqual({ key: "back", dir: "asc" });
+    expect(ids(sortTasks(filterTasks(tasks, { view: "parked" }, ctx), "back", "asc", ctx))).toEqual(["until", "parked"]);
+  });
+});

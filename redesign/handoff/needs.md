@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15, N16, N17, N18
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15, N16, N17, N18, N19
 
 # Needs
 
@@ -24,3 +24,4 @@ Design gaps found after the design was approved, written as job stories.
 | N16 | When I try to put the app on my device from a browser that can't install it, I want to be told what to do instead, so that I'm not left at a dead end. | Step 7, task 4.1 | open |
 | N17 | When I look at the two-week chart on Today on my phone and want to open one of its days, I want each day to be big enough to tap without hitting its neighbour, so that I open the day I meant. | Task 4.5 | open |
 | N18 | When a piece of work for one client or prospect has several tasks (like a client's year end), I want to keep those tasks together in a task group while they stay that company's tasks, so that I can see that piece of work on its own and still find it under Clients or Prospects. | Owner, 2026-10-22 | open |
+| N19 | When a task can wait but isn't finished, I want to set it aside, either until a day I choose or until I decide to pick it up again, so that it stops counting as late and stops crowding the work that needs attention, while I can still find it easily and nothing set aside is forgotten. | Owner, 2026-10-22 | open |

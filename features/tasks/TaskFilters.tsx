@@ -49,7 +49,8 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
   const toggle = (which: Which) => setOpen((now) => (now === which ? null : which));
   const close = () => setOpen(null);
   const done = state.view === "done";
-  const idleApplies = !done && !inGroup && state.kind !== "internal";
+  // A parked task has no urgency and no last action to chase, so Due and No action for are open work's only.
+  const idleApplies = state.view === "open" && !inGroup && state.kind !== "internal";
   const customIdle = state.idle !== null && !IDLE_CHOICES.includes(state.idle);
   const dirs = directionLabels(sort.key);
 
@@ -57,7 +58,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
     <div className={styles.filters} role="toolbar" aria-label="Filter and sort">
       {done ? (
         <FilterButton ref={rangeRef} icon="clock" label="Finished" summary={RANGE_LABELS[state.range]} expanded={open === "range"} onClick={() => toggle("range")} />
-      ) : (
+      ) : state.view === "open" ? (
         <FilterButton
           ref={dueRef}
           icon="clock"
@@ -67,7 +68,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
           onClick={() => toggle("due")}
           onClear={() => onState({ ...state, due: null })}
         />
-      )}
+      ) : null}
       <FilterButton
         ref={typeRef}
         icon="filter"

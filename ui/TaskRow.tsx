@@ -220,7 +220,7 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   }
   const empty = !content;
   const classes = [styles.cell, id === "end" && styles.deadline, wrap && styles.wrap, empty && styles.emptyCell, id === "resp" && styles.lift].filter(Boolean);
-  const label = id === "about" ? (row.badge.kind === "company" ? "Company" : "Group") : columnLabel(column, row.done);
+  const label = id === "about" ? (row.badge.kind === "company" ? "Company" : "Group") : columnLabel(column, row.done ? "done" : row.parked ? "parked" : "open");
   return (
     <span className={classes.join(" ")} data-col={id}>
       {/* "No action for 15 days" already names the detail: "Last action No action for 15 days" would say it twice. */}

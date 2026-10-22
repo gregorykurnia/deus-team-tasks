@@ -27,16 +27,22 @@ export const VIEW_PARAMS = ["kind", "view", "q", "due", "type", "idle", "range",
 
 const DUE_CHOICES: DueChoice[] = ["overdue", "soon", "active", "nodate"];
 const RANGES: FinishedRange[] = ["week", "month", "all"];
-const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "type", "desc", "prio", "doneAt"];
+const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "type", "desc", "prio", "doneAt", "back"];
+const VIEWS: TaskView[] = ["open", "parked", "done"];
 
-// Sorting by when it was finished only makes sense for finished tasks, and by last action only for open ones.
+// Sorting by when it was finished only makes sense for finished tasks, by when it comes back only for parked ones, and
+// by last action only for unfinished ones.
 export function sortKeyFits(key: TaskSortKey, view: TaskView): boolean {
-  return view === "done" ? key !== "last" : key !== "doneAt";
+  if (key === "doneAt") return view === "done";
+  if (key === "back") return view === "parked";
+  return key !== "last" || view !== "done";
 }
 
 // The sort menu's choices (guide 6.2); column heads can sort by a few more.
 export function sortMenuKeys(view: TaskView): TaskSortKey[] {
-  return view === "done" ? ["doneAt", "end", "about", "type", "desc"] : ["end", "last", "about", "type", "desc", "prio", "start"];
+  if (view === "done") return ["doneAt", "end", "about", "type", "desc"];
+  if (view === "parked") return ["back", "end", "last", "about", "type", "desc", "prio"];
+  return ["end", "last", "about", "type", "desc", "prio", "start"];
 }
 
 export const SORT_LABELS: Record<TaskSortKey, string> = {
@@ -48,6 +54,7 @@ export const SORT_LABELS: Record<TaskSortKey, string> = {
   prio: "Priority",
   start: "Start",
   doneAt: "Finished",
+  back: "Comes back",
 };
 
 // Direction labels are in words (guide 5.6): [ascending, descending].
@@ -58,6 +65,8 @@ export function directionLabels(key: TaskSortKey): [string, string] {
       return ["Earliest first", "Latest first"];
     case "doneAt":
       return ["Oldest first", "Most recent first"];
+    case "back":
+      return ["Soonest first", "Latest first"];
     case "last":
       return ["Longest without action first", "Most recent first"];
     case "prio":
@@ -73,7 +82,8 @@ function naturalDir(key: TaskSortKey): SortDir {
 }
 
 export function parseTaskView(params: URLSearchParams, inGroup: boolean): TaskViewState {
-  const view: TaskView = params.get("view") === "done" ? "done" : "open";
+  const viewParam = params.get("view") as TaskView;
+  const view: TaskView = VIEWS.includes(viewParam) ? viewParam : "open";
   const kindParam = params.get("kind");
   const kind = !inGroup && KINDS.includes(kindParam as Kind) ? (kindParam as Kind) : "all";
   const dueParam = params.get("due") as DueChoice;
@@ -104,7 +114,7 @@ export function viewParams(state: TaskViewState, inGroup: boolean, current: URLS
   VIEW_PARAMS.forEach((key) => key !== "focus" && params.delete(key));
   const put = (key: string, value: string | null | undefined) => value && params.set(key, value);
   if (!inGroup && state.kind !== "all") put("kind", state.kind);
-  if (state.view === "done") put("view", "done");
+  if (state.view !== "open") put("view", state.view);
   put("q", state.q);
   put("due", state.view === "open" ? state.due : null);
   put("type", state.type);
@@ -156,7 +166,7 @@ export interface TaskListing<T extends Task> {
   sorted: T[];
 }
 
-// The list: scoped to open or done (and to the group), narrowed by kind, search and filters, then ordered.
+// The list: scoped to open, parked or done (and to the group), narrowed by kind, search and filters, then ordered.
 export function listTasks<T extends Task & { completedAt?: number }>(
   tasks: T[],
   state: TaskViewState,
@@ -192,6 +202,7 @@ export type EmptyCase =
   | { case: "no-match" }
   | { case: "none-in-range"; range: Exclude<FinishedRange, "all"> } // nothing finished in the range, but earlier ones exist
   | { case: "no-finished"; kind: Kind | "all" }
+  | { case: "no-parked"; kind: Kind | "all" }
   | { case: "empty-group" }
   | { case: "nothing-yet" }
   | { case: "no-kind"; kind: Kind }
@@ -213,6 +224,7 @@ export function emptyCase(
     if (state.range !== "all" && anyFinishedHere) return { case: "none-in-range", range: state.range };
     return { case: "no-finished", kind: inGroup ? "all" : state.kind };
   }
+  if (state.view === "parked") return { case: "no-parked", kind: inGroup ? "all" : state.kind };
   if (inGroup) return { case: "empty-group" };
   if (!anyTasks) return { case: "nothing-yet" };
   return state.kind === "all" ? { case: "all-done" } : { case: "no-kind", kind: state.kind };

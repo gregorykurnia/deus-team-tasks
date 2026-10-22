@@ -1,8 +1,8 @@
 "use client";
 
-// All tasks and one task group (guide 6.2). The view (kind, open or done, filters, sort) lives in the address, so a link
+// All tasks and one task group (guide 6.2). The view (kind, open, parked or done, filters, sort) lives in the address, so a link
 // from Today lands on the right list and a reload keeps it. Every source loads on its own; a task just marked done stays
-// in its list while it leaves. Select (?select=1) chooses several tasks to mark done, move or delete at once (guide 4.7).
+// in its list while it leaves. Select (?select=1) chooses several tasks to mark done, park, move or delete at once (guide 4.7).
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -12,14 +12,14 @@ import PageHeader from "@/desk/PageHeader";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import QuickCapture from "@/features/today/QuickCapture";
 import { assertOnline, failureMessage, useConnection } from "@/lib/connection";
-import { plural } from "@/lib/dates";
+import { plural, weekdayDate } from "@/lib/dates";
 import { groupNavItems, navCounts } from "@/lib/deskNav";
 import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, partlyGroupChange, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
-import type { TaskSortKey } from "@/lib/taskQueries";
+import { filterTasks, type TaskSortKey, type TaskView } from "@/lib/taskQueries";
 import { chosenIds, headState, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
-import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, type Undo } from "@/lib/taskWrites";
+import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, setTasksParked, type Undo } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
@@ -181,7 +181,12 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const groupItems = useMemo(() => groupNavItems(groups.rows, tasks.rows, byId), [groups.rows, tasks.rows, byId]);
   const groupLooks = useMemo(() => new Map<string, GroupLook>(groupItems.map((g) => [g.name, { badge: g.badge, hue: g.hue }])), [groupItems]);
   const groupItem = group ? groupItems.find((g) => g.id === group.id) : undefined;
-  const openCount = useMemo(() => (inGroup ? groupItem?.open : navCounts(tasks.rows).tasks), [inGroup, groupItem, tasks.rows]);
+  const openCount = useMemo(() => (inGroup ? groupItem?.open : navCounts(tasks.rows, today ?? undefined).tasks), [inGroup, groupItem, tasks.rows, today]);
+  // Parked tasks here, whatever the kind: the Parked switch shows how many, so they aren't forgotten.
+  const parkedCount = useMemo(
+    () => (ready && today ? filterTasks(tasks.rows, { view: "parked", group: inGroup ? group!.name : null }, { companies: byId, today }).length : undefined),
+    [ready, today, tasks.rows, inGroup, group, byId]
+  );
   const countable = !tasks.loading && !tasks.error && !companies.loading;
 
   function stopLeaving(id: string) {
@@ -271,6 +276,26 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             : `${saved} moved back to open tasks. Couldn't move the other ${num(err.left)} back. Check your connection and try again.`;
           toast(message, { error: true, ...undoAction(err.undo) });
         } else toast(failureMessage(err, `The tasks couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
+      }
+    });
+  }
+
+  function bulkPark(park: boolean, until: string | null = null) {
+    const picked = chosenTasks();
+    const what = plural(picked.length, "task");
+    void bulk(park ? "park" : "unpark", async () => {
+      try {
+        const undo = await setTasksParked(picked, park, until, stillThere);
+        setSelecting(false);
+        toast(park ? `${what} parked${until ? ` until ${weekdayDate(until)}` : ""}` : `${what} brought back to open tasks`, undoAction(undo));
+      } catch (err) {
+        if (err instanceof PartlyChanged) {
+          const saved = `${num(err.changed)} of ${what}`;
+          const message = park
+            ? `${saved} parked. Couldn't park the other ${num(err.left)}. Check your connection and try again.`
+            : `${saved} brought back. Couldn't bring back the other ${num(err.left)}. Check your connection and try again.`;
+          toast(message, { error: true, ...undoAction(err.undo) });
+        } else toast(failureMessage(err, `The tasks couldn't be ${park ? "parked" : "brought back"}. Check your connection and try again.`), { error: true });
       }
     });
   }
@@ -393,7 +418,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const memberCount = group ? tasks.rows.filter((t) => t.taskGroup === group.name).length : 0;
   const newGroupHref = over(pathname, search, "newGroup=1");
   const finished = state.view === "done";
-  const noun = finished ? "finished task" : "open task";
+  const noun = finished ? "finished task" : state.view === "parked" ? "parked task" : "open task";
 
   const header = inGroup ? (
     <PageHeader
@@ -463,7 +488,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     );
   } else if (listing.sorted.length === 0) {
     const empty = emptyCase(state, inGroup, listing.scoped.length, listing.scoped.length > 0, tasks.rows.length > 0);
-    body = <Empty empty={empty} state={state} groupName={group?.name} onChange={update} />;
+    body = <Empty empty={empty} state={state} groupName={group?.name} parked={parkedCount ?? 0} onChange={update} />;
   } else {
     body = (
       <>
@@ -488,7 +513,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           hidden={hidden}
           pageSize={PAGE_SIZE}
           columns={columns}
-          finished={finished}
+          view={state.view}
           sort={sort}
           inGroup={inGroup}
           companies={byId}
@@ -542,13 +567,14 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           />
         )}
         <span className={styles.spacer} />
-        <Segmented<"open" | "done">
-          label="Open or done"
+        <Segmented<TaskView>
+          label="Open, parked or done"
           full={phone}
           value={state.view}
           onChange={(view) => view && update((now) => switchedView(now, view))}
           options={[
             { value: "open", label: "Open" },
+            { value: "parked", label: "Parked", count: parkedCount || undefined },
             { value: "done", label: "Done" },
           ]}
         />
@@ -568,7 +594,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             selectRef={selectButton}
           />
         )}
-        {ready && !finished && !selecting && (
+        {ready && state.view === "open" && !selecting && (
           <QuickCapture id="capture" label="New task" placeholder={group ? `Add a task to ${group.name}` : undefined} onAdd={capture} />
         )}
         {body}
@@ -580,12 +606,15 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             line={selectedLine(chosen.length, selection.all)}
             offer={selectAllOffer(chosen.length, selection.all, listIds.length)}
             chosen={chosen.length}
-            finished={finished}
+            view={state.view}
+            today={today ?? ""}
             busy={bulkBusy}
             groups={groupItems}
             companyTasks={companyChosen}
             onSelectAll={() => setSelection(selectAll(listIds))}
             onDone={bulkDone}
+            onPark={(until) => bulkPark(true, until)}
+            onUnpark={() => bulkPark(false)}
             onMove={bulkMove}
             onNewGroup={() => setGroupForMove(true)}
             onDelete={askToDelete}
@@ -671,8 +700,21 @@ function undoFailed(err: unknown): string {
 }
 
 // What a list with nothing in it says (guide 4.15, 6.2): why it's empty, and the way out.
-function Empty({ empty, state, groupName, onChange }: { empty: EmptyCase; state: TaskViewState; groupName?: string; onChange: (change: (now: TaskViewState) => TaskViewState) => void }) {
+function Empty({
+  empty,
+  state,
+  groupName,
+  parked,
+  onChange,
+}: {
+  empty: EmptyCase;
+  state: TaskViewState;
+  groupName?: string;
+  parked: number; // parked tasks here, which an empty open list points to
+  onChange: (change: (now: TaskViewState) => TaskViewState) => void;
+}) {
   const clear = (label: string, change: (now: TaskViewState) => TaskViewState) => <Button onClick={() => onChange(change)}>{label}</Button>;
+  const showParked = parked > 0 ? clear("Show parked tasks", (now) => switchedView(now, "parked")) : undefined;
   switch (empty.case) {
     case "idle":
       return (
@@ -690,7 +732,7 @@ function Empty({ empty, state, groupName, onChange }: { empty: EmptyCase; state:
           actions={onlySearch ? clear("Clear search", (now) => ({ ...now, q: "" })) : clear("Clear filters", clearedFilters)}
         >
           {state.q.trim()
-            ? `Nothing ${state.view === "done" ? "finished " : "open "}matches “${state.q.trim()}”${others}. Try a different search or clear the filters.`
+            ? `Nothing ${{ open: "open ", parked: "parked ", done: "finished " }[state.view]}matches “${state.q.trim()}”${others}. Try a different search or clear the filters.`
             : "Nothing matches these filters. Try a different one or clear the filters."}
         </EmptyState>
       );
@@ -715,9 +757,17 @@ function Empty({ empty, state, groupName, onChange }: { empty: EmptyCase; state:
           {KIND_WHY[empty.kind]}
         </EmptyState>
       );
+    case "no-parked":
+      return (
+        <EmptyState icon="pause" title={empty.kind === "all" ? "Nothing parked" : `No parked ${KIND_NOUN[empty.kind]} work`}>
+          Park a task to put it out of the way without finishing it. It stays here until you bring it back, or until the
+          day you parked it until.
+        </EmptyState>
+      );
     case "empty-group":
       return (
-        <EmptyState icon="folder" title={`Nothing in ${groupName ?? "this group"} yet`}>
+        <EmptyState icon="folder" title={parked > 0 ? `Nothing open in ${groupName ?? "this group"}` : `Nothing in ${groupName ?? "this group"} yet`} actions={showParked}>
+          {parked > 0 ? `Its ${plural(parked, "task")} ${parked === 1 ? "is" : "are"} parked. ` : ""}
           Add a task here, or move an internal task into this group from its details.
         </EmptyState>
       );
@@ -729,8 +779,8 @@ function Empty({ empty, state, groupName, onChange }: { empty: EmptyCase; state:
       );
     case "all-done":
       return (
-        <EmptyState icon="done" title="Nothing open right now" actions={clear("Show finished tasks", (now) => switchedView(now, "done"))}>
-          Every task is finished.
+        <EmptyState icon="done" title="Nothing open right now" actions={showParked ?? clear("Show finished tasks", (now) => switchedView(now, "done"))}>
+          {parked > 0 ? "Every task is finished or parked." : "Every task is finished."}
         </EmptyState>
       );
     case "no-kind":

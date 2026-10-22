@@ -2,6 +2,7 @@
 // thing: the kind of work, the badge, where the task belongs, the last action and the deadline in words.
 import { isoOf, parseIso } from "./dates";
 import { kindOf, linkedCompany, type CompaniesById, type Kind } from "./kinds";
+import { isParked } from "./parking";
 import { initials } from "./people";
 import type { Task } from "./types";
 import { deadlineSignal, lastActionSignal, type DeadlineSignal, type Signal } from "./urgency";
@@ -18,6 +19,7 @@ export interface RowModel {
   deadline: DeadlineSignal;
   deadlineTitle: string; // the full date, for hover
   done: boolean;
+  parked: boolean; // out of the open work until it comes back (lib/parking)
 }
 
 // "Tue 20 Oct"
@@ -30,9 +32,11 @@ export function taskRowModel(task: Task, companies: CompaniesById, today?: strin
   const kind = kindOf(task, companies);
   const company = linkedCompany(task, companies);
   const done = !!task.completed;
+  const parked = isParked(task, today);
 
   let deadlineTitle = "No deadline set";
   if (done) deadlineTitle = task.completedAt ? `Finished ${longDate(isoOf(new Date(task.completedAt)))}` : "Done";
+  else if (parked) deadlineTitle = task.parkedUntil ? `Parked until ${longDate(task.parkedUntil)}` : "Parked until someone brings it back";
   else if (task.endDate) deadlineTitle = `Deadline ${longDate(task.endDate)}`;
 
   return {
@@ -41,9 +45,10 @@ export function taskRowModel(task: Task, companies: CompaniesById, today?: strin
     place: company?.company ?? task.taskGroup ?? null,
     touchPoint: task.touchPoint || null,
     highPriority: kind === "internal" && task.priority === "High",
-    lastAction: company && !done ? lastActionSignal(task.lastActionDate, today) : null,
+    lastAction: company && !done && !parked ? lastActionSignal(task.lastActionDate, today) : null,
     deadline: deadlineSignal(task, today),
     deadlineTitle,
     done,
+    parked,
   };
 }

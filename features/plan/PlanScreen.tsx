@@ -28,6 +28,7 @@ import {
   type PlanState,
 } from "@/lib/planView";
 import { isPerson, namesInUse } from "@/lib/people";
+import { isOpen } from "@/lib/taskQueries";
 import { setTasksDone } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
@@ -97,8 +98,9 @@ export default function PlanScreen() {
     const live = timers.current;
     return () => live.forEach(clearTimeout);
   }, []);
-  const open = useMemo(() => tasks.rows.filter((t) => !t.completed), [tasks.rows]);
-  const listed = useMemo(() => tasks.rows.filter((t) => !t.completed || leaving.has(t.id)), [tasks.rows, leaving]);
+  // Parked tasks are out of the plan until they come back (lib/parking).
+  const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
+  const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
   const narrowed = useMemo(() => (ready ? planTasks(listed, state, byId) : []), [ready, listed, state, byId]);
 
   function stopLeaving(id: string) {

@@ -2,7 +2,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { addTask, moveTasksToGroup, setTasksDone, updateTask } from "@/lib/taskWrites";
+import { addTask, moveTasksToGroup, setTasksDone, setTasksParked, updateTask } from "@/lib/taskWrites";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
 import { addFlow, updateFlow, withoutUnset } from "@/lib/flowWrites";
 import { OfflineError } from "@/lib/connection";
@@ -164,6 +164,34 @@ describe("when tasks and flows were finished or edited (1.6)", () => {
 
     await updateTask("t", { completed: false }, { ...asTask("t"), completed: true, completedAt: doneAt });
     expect(await readFields("tasks", "tasks/t")).not.toHaveProperty("completedAt");
+  });
+
+  it("parks open tasks until a day or until brought back, leaves finished ones, and undoes it (N19)", async () => {
+    const tasks = [asTask("a"), asTask("b", { completed: true }), { ...asTask("c"), parkedAt: 5, parkedUntil: "2026-11-01" }];
+    await seedTasks(tasks);
+    const before = Date.now();
+    const undo = await setTasksParked(tasks, true, "2026-12-01");
+    const a = await readFields("tasks", "tasks/a");
+    expect(a?.parkedAt as number).toBeGreaterThanOrEqual(before);
+    expect(a).toMatchObject({ parkedUntil: "2026-12-01" });
+    expect(await readFields("tasks", "tasks/b")).not.toHaveProperty("parkedAt");
+    await undo();
+    expect(await readFields("tasks", "tasks/a")).not.toHaveProperty("parkedAt");
+    expect(await readFields("tasks", "tasks/c")).toMatchObject({ parkedAt: 5, parkedUntil: "2026-11-01" });
+
+    await setTasksParked([tasks[2]], false);
+    const c = await readFields("tasks", "tasks/c");
+    expect(c).not.toHaveProperty("parkedAt");
+    expect(c).not.toHaveProperty("parkedUntil");
+  });
+
+  it("ends parking when a task is marked done, and puts it back on Undo", async () => {
+    const t = { ...asTask("t"), parkedAt: 5 };
+    await seedTasks([t]);
+    const undo = await setTasksDone([t], true);
+    expect(await readFields("tasks", "tasks/t")).not.toHaveProperty("parkedAt");
+    await undo();
+    expect(await readFields("tasks", "tasks/t")).toMatchObject({ completed: false, parkedAt: 5 });
   });
 
   it("puts the finished date back on Undo", async () => {

@@ -1,6 +1,7 @@
 // Urgency rules (guide 5.1): one rule set everywhere. Urgency always has words;
 // colour is the second signal. Done tasks never show urgency.
 import { ago, daysBetween, isoOf, plural, shortDate, todayIso } from "./dates";
+import { isParked, parkedLabel } from "./parking";
 import type { Task } from "./types";
 
 export type Tone = "plain" | "amber" | "red";
@@ -14,7 +15,7 @@ export interface Signal {
 // Due filter of All tasks.
 export type DueBucket = "overdue" | "soon" | "active" | "nodate" | "later";
 
-type Dated = Pick<Task, "startDate" | "endDate" | "completed"> & { completedAt?: number };
+type Dated = Pick<Task, "startDate" | "endDate" | "completed" | "parkedAt" | "parkedUntil"> & { completedAt?: number };
 
 export function dueBucket(task: Dated, today: string = todayIso()): DueBucket {
   if (!task.endDate) return "nodate";
@@ -31,11 +32,13 @@ export interface DeadlineSignal {
 }
 
 // The deadline pill: "2 days late" (red), "Today", "Tomorrow", "In 3 days"
-// (amber), "In 12 days" (plain), then the date after 30 days.
+// (amber), "In 12 days" (plain), then the date after 30 days. A parked task
+// shows no urgency, only "Parked" or when it comes back.
 export function deadlineSignal(task: Dated, today: string = todayIso()): DeadlineSignal {
   if (task.completed) {
     return { tone: "done", label: task.completedAt ? `Done ${ago(isoOf(new Date(task.completedAt)), today)}` : "Done" };
   }
+  if (isParked(task, today)) return { tone: "none", label: parkedLabel(task, today) };
   if (!task.endDate) return { tone: "none", label: task.startDate ? "No deadline" : "No dates" };
   const left = daysBetween(today, task.endDate);
   if (left < 0) return { tone: "red", label: `${plural(-left, "day")} late` };

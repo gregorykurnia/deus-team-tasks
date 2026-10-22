@@ -1,18 +1,20 @@
 "use client";
 
 // Task details (guide 6.3): a short sheet to add a task quickly, opening out to every detail; the same full sheet to
-// change a task, mark it done or not done, or delete it. Saving checks the description, and with no connection it's
+// change a task, mark it done or not done, park it or bring it back (N19), or delete it. Saving checks the description, and with no connection it's
 // refused with the sheet left open and nothing lost (5.8). A company task's dates stay in step with the company (B12).
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import ParkMenu from "@/features/tasks/ParkMenu";
 import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks } from "@/desk/DeskData";
 import { addTaskKeptInStep, saveTaskKeptInStep } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
-import { ago, isoOf, plural } from "@/lib/dates";
+import { ago, isoOf, plural, todayIso, weekdayDate } from "@/lib/dates";
 import { isDealDone, kindOf, type Kind } from "@/lib/kinds";
+import { isParked } from "@/lib/parking";
 import { initials, openCountsByName } from "@/lib/people";
 import { sortGroups } from "@/lib/taskGroups";
-import { deleteTask, putBackDone, setTasksDone } from "@/lib/taskWrites";
+import { deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
 import { TASK_PRIORITIES, TASK_TYPES, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
 import Button from "@/ui/Button";
 import { ChipGroup } from "@/ui/ChipGroup";
@@ -41,7 +43,7 @@ interface TaskSheetProps {
   onClose: () => void;
 }
 
-type Busy = null | "save" | "done" | "delete";
+type Busy = null | "save" | "done" | "park" | "delete";
 
 export default function TaskSheet({ task, gone: deleted = false, initialGroup, onClose }: TaskSheetProps) {
   const tasks = useTasks();
@@ -65,6 +67,10 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   const company = draft.about === "company" && draft.companyId != null ? byId.get(draft.companyId) : undefined;
   const kind: Kind = draft.about === "internal" ? "internal" : company ? kindOf({ linkedClientId: company.id }, byId) : "prospect";
   const finished = !!task?.completed;
+  const today = todayIso();
+  const parked = !!task && isParked(task, today);
+  const [parking, setParking] = useState(false);
+  const parkButton = useRef<HTMLButtonElement>(null);
   // "A company" with none chosen would save as internal work while the head says Prospect: it needs one first.
   const companyMissing = draft.about === "company" && !company;
   const error = missing && !hasDescription(draft) ? DESCRIPTION_MISSING : undefined;
@@ -164,6 +170,34 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     }
   }
 
+  // Parking or bringing back keeps anything changed in the sheet too, as marking done does.
+  async function setParked(park: boolean, until: string | null = null) {
+    if (!task || busy || gone) return;
+    const patch = patchFromDraft(opened, draft);
+    const changed = Object.keys(patch).length > 0;
+    if (changed && incomplete) {
+      setTries((n) => n + 1);
+      setMissing(true);
+      return;
+    }
+    setBusy("park");
+    try {
+      if (changed) {
+        const parking = park ? { parkedAt: Date.now(), parkedUntil: until ?? undefined } : { parkedAt: undefined, parkedUntil: undefined };
+        const { companyChanged, tasksChanged } = await saveTaskKeptInStep(task, { ...patch, ...parking }, byId, tasks.rows);
+        toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
+      } else await setTasksParked([task], park, until);
+      onClose();
+      toast(park ? (until ? `Parked until ${weekdayDate(until)}` : "Parked") : "Brought back to open tasks", {
+        action: "Undo",
+        onAction: () => void putBackParked([task]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+      });
+    } catch (err) {
+      setBusy(null);
+      toast(failureMessage(err, `The task couldn't be ${park ? "parked" : "brought back"}. Check your connection and try again.`), { error: true });
+    }
+  }
+
   async function remove() {
     if (!task || busy) return;
     setBusy("delete");
@@ -179,7 +213,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     }
   }
 
-  const title = task ? (finished ? "Finished task" : "Task") : "New task";
+  const title = task ? (finished ? "Finished task" : parked ? "Parked task" : "Task") : "New task";
   const footer = gone ? (
     <>
       <SheetSpacer />
@@ -192,6 +226,19 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
         Delete
       </Button>
       <SheetSpacer />
+      {parked ? (
+        <Button onClick={() => void setParked(false)} busy={busy === "park"} busyLabel="Saving…" disabled={!!busy && busy !== "park"}>
+          <Icon name="undo" />
+          Bring back
+        </Button>
+      ) : (
+        !finished && (
+          <Button ref={parkButton} onClick={() => setParking(true)} busy={busy === "park"} busyLabel="Saving…" disabled={!!busy && busy !== "park"} aria-haspopup="menu" aria-expanded={parking}>
+            <Icon name="pause" />
+            Park
+          </Button>
+        )
+      )}
       <Button onClick={() => void setDone(!finished)} busy={busy === "done"} busyLabel="Saving…" disabled={!!busy && busy !== "done"}>
         <Icon name={finished ? "undo" : "check"} />
         {finished ? "Mark not done" : "Mark done"}
@@ -225,6 +272,12 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
           {gone && (
             <Notice tone="warning" title="This task was deleted.">
               Someone removed it while you had it open, so changes to it can&rsquo;t be saved.
+            </Notice>
+          )}
+          {parked && task && !gone && (
+            <Notice tone="info" title={task.parkedUntil ? `Parked until ${weekdayDate(task.parkedUntil)}` : "Parked until someone brings it back"}>
+              {task.parkedAt ? `Parked ${ago(isoOf(new Date(task.parkedAt)), today)}. ` : ""}It&rsquo;s out of Today, Plan and the open list
+              {task.parkedUntil ? ", and comes back by itself on that day" : ""}. Bring it back to work on it now.
             </Notice>
           )}
           <Field label="Description" hideLabel error={error} focusKey={tries}>
@@ -417,6 +470,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
       >
         It will be removed for everyone on the team.
       </Confirm>
+      <ParkMenu open={parking} anchorRef={parkButton} onClose={() => setParking(false)} count={1} today={today} onPark={(until) => void setParked(true, until)} />
     </>
   );
 }
