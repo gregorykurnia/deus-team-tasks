@@ -50,7 +50,7 @@ test.describe("menus", () => {
     await expect(button).toBeFocused();
   });
 
-  test("a menu near the bottom opens above its button and stays 12px inside the window", async ({ page }) => {
+  test("a menu near the bottom opens above its button and stays 12px inside the window", { tag: "@phone" }, async ({ page }) => {
     const button = opener(page, "Menu: palette");
     // At the right edge, clear of the dev indicator at the bottom left.
     await button.evaluate((el) => {
@@ -118,7 +118,7 @@ test.describe("sheets and dialogs", () => {
     await expect(sheet).toBeHidden();
   });
 
-  test("on a phone a sheet is a bottom sheet, full width", async ({ page, isMobile }) => {
+  test("on a phone a sheet is a bottom sheet, full width", { tag: "@phone" }, async ({ page, isMobile }) => {
     test.skip(!isMobile, "Phones only.");
     await opener(page, "Sheet").click();
     const sheet = page.getByRole("dialog", { name: "New task" });
@@ -194,7 +194,7 @@ test.describe("toasts", () => {
     await expect(toast).toBeHidden({ timeout: 7000 });
   });
 
-  test("on a phone toasts sit above where the tab bar goes", async ({ page, isMobile }) => {
+  test("on a phone toasts sit above where the tab bar goes", { tag: "@phone" }, async ({ page, isMobile }) => {
     test.skip(!isMobile, "Phones only.");
     await opener(page, "Toast").click();
     const box = (await page.getByText("Saved").boundingBox())!;
@@ -221,7 +221,7 @@ test.describe("busy, placement and timing (R2.1)", () => {
     await expect(page.getByText("Confirmed after a moment: Delete group")).toHaveCount(1);
   });
 
-  test("a menu too tall for either side opens on the roomier one and scrolls, never over its button", async ({ page }) => {
+  test("a menu too tall for either side opens on the roomier one and scrolls, never over its button", { tag: "@phone" }, async ({ page }) => {
     const button = opener(page, "Menu: pick several");
     await page.setViewportSize({ width: page.viewportSize()!.width, height: 260 });
     await button.evaluate((el) => {
@@ -236,7 +236,7 @@ test.describe("busy, placement and timing (R2.1)", () => {
     expect(box.y).toBeGreaterThanOrEqual(12);
   });
 
-  test("a menu stays with its button when the window changes size", async ({ page }) => {
+  test("a menu stays with its button when the window changes size", { tag: "@phone" }, async ({ page }) => {
     const button = opener(page, "Menu: pick one");
     await button.evaluate((el) => {
       el.style.cssText = "position:fixed;right:40px;top:40px;z-index:5";

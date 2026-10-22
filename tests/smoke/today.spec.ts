@@ -142,7 +142,7 @@ test("D2: a task row opens its details over Today", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Task" })).toBeVisible();
 });
 
-test("D4: the two-week chart has a column for each day, and a day opens Plan", async ({ page, isMobile }) => {
+test("D4: the two-week chart has a column for each day, and a day opens Plan", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedTasks([task("a", { endDate: isoDay(2) }), task("b", { endDate: isoDay(2) }), task("c", { endDate: isoDay(2) })]);
   await page.goto("/");
   await expect(hero(page).getByText(/is the busiest, with 3 deadlines/)).toBeVisible();
@@ -220,7 +220,7 @@ test("D6: who's carrying what ranks people by what they own and opens their page
   await expect(people.first()).toHaveAttribute("href", "/plan?view=people&person=Maya%20Chen");
 });
 
-test("search: the header search takes the words to All tasks", async ({ page, isMobile }) => {
+test("search: the header search takes the words to All tasks", { tag: "@phone" }, async ({ page, isMobile }) => {
   await page.goto("/");
   if (isMobile) {
     await expect(page.getByRole("link", { name: "Search" })).toHaveAttribute("href", "/tasks?focus=search");

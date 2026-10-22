@@ -105,7 +105,7 @@ for (const s of SHEETS) {
   });
 }
 
-test("axe: the phone's More sheet has no serious or critical issues", async ({ page, isMobile }) => {
+test("axe: the phone's More sheet has no serious or critical issues", { tag: "@phone" }, async ({ page, isMobile }) => {
   test.skip(!isMobile, "More is the phone's.");
   await page.goto("/?more=1");
   await loaded(page);

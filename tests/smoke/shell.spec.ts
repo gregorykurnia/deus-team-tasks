@@ -61,7 +61,7 @@ test.describe("large screens", () => {
   });
 });
 
-test.describe("phones", () => {
+test.describe("phones", { tag: "@phone" }, () => {
   test.skip(({ isMobile }) => !isMobile, "The tab bar is for 900px and under.");
 
   test("A4: Today, Tasks and Companies are one tap away, and the rest two taps through More", async ({ page }) => {
@@ -162,7 +162,7 @@ test("A3: with no connection a banner says so, and a toast says when it's back",
   await expect(page.getByText("No connection.")).toBeHidden();
 });
 
-test("A3: opened with the server unreachable, the app says it's connecting, then that there's no connection", async ({ page, isMobile }) => {
+test("A3: opened with the server unreachable, the app says it's connecting, then that there's no connection", { tag: "@phone" }, async ({ page, isMobile }) => {
   // context.setOffline only flips the browser's own flag: block the emulator itself, before the page loads.
   await page.route(/127\.0\.0\.1:8180/, (route) => route.abort());
   await page.goto("/tasks");

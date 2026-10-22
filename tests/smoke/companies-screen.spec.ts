@@ -92,7 +92,7 @@ test("B8: Status, Priority and Product narrow the list, show their value, and cl
   await expect(filter(page, "Product")).toHaveCount(0);
 });
 
-test("B9: the sort menu and the column heads order the list, empty values last either way round", async ({ page, isMobile }) => {
+test("B9: the sort menu and the column heads order the list, empty values last either way round", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/companies");
   await expect(filter(page, /^Sort\s*Last action, most recent first/)).toBeVisible();

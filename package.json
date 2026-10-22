@@ -10,9 +10,10 @@
     "test:smoke": "playwright test",
     "a11y": "node scripts/a11y/axe.mjs --servers --distinct",
     "compare": "JAVA_TOOL_OPTIONS=-Xmx2g node scripts/compare/run.mjs --servers",
-    "test:unit": "firebase emulators:exec --only firestore --project demo-deus --log-verbosity QUIET \"vitest run\"",
+    "test:unit": "vitest run --project unit",
     "launch-data": "jiti scripts/launch/data.ts",
-    "launch-data:dry": "scripts/launch/dry-run.sh"
+    "launch-data:dry": "scripts/launch/dry-run.sh",
+    "test:data": "firebase emulators:exec --only firestore --project demo-deus --log-verbosity QUIET \"vitest run --project data\""
   },
   "dependencies": {
     "firebase": "^12.18.0",

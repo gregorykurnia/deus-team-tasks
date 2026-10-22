@@ -83,7 +83,7 @@ test("R4: with every parent counted the tile says so and can't be pressed", asyn
   await expect(page.getByText("Every parent company counts.")).toBeVisible();
 });
 
-test("R2: parents are cards A to Z; a parent opens its subsidiaries under a branch, and Show all subsidiaries opens every one", async ({ page, isMobile }) => {
+test("R2: parents are cards A to Z; a parent opens its subsidiaries under a branch, and Show all subsidiaries opens every one", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   await showRecord(page, isMobile);
@@ -112,7 +112,7 @@ test("R2: parents are cards A to Z; a parent opens its subsidiaries under a bran
   await expect(page.getByRole("group", { name: /^Subsidiaries of / })).toHaveCount(0);
 });
 
-test("R7: search covers names and sectors, highlights, opens the parent that has a match and offers its other subsidiaries", async ({ page, isMobile }) => {
+test("R7: search covers names and sectors, highlights, opens the parent that has a match and offers its other subsidiaries", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   await search(page).fill("outlet");
@@ -136,7 +136,7 @@ test("R7: search covers names and sectors, highlights, opens the parent that has
   await expect(parent(page, "Halcyon Group").getByRole("group", { name: "Halcyon Clinic" }).locator("mark")).toHaveText("Healthcare");
 });
 
-test("R7: nothing matches says what was searched and Clear search brings the record back", async ({ page, isMobile }) => {
+test("R7: nothing matches says what was searched and Clear search brings the record back", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past?q=zzz");
   await showRecord(page, isMobile);
@@ -147,7 +147,7 @@ test("R7: nothing matches says what was searched and Clear search brings the rec
   await expect(search(page)).toHaveValue("");
 });
 
-test("R7: the order menu orders the parents, and companies without a sector always go last", async ({ page, isMobile }) => {
+test("R7: the order menu orders the parents, and companies without a sector always go last", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   await showRecord(page, isMobile);
@@ -163,7 +163,7 @@ test("R7: the order menu orders the parents, and companies without a sector alwa
   await expect.poll(() => names(page)).toEqual(["Halcyon Group", "Nusa Retail", "Pelita Foods", "Zeta Works"]);
 });
 
-test("R5: By sector counts every counted company once, with No sector and a total that equals the client total", async ({ page, isMobile }) => {
+test("R5: By sector counts every counted company once, with No sector and a total that equals the client total", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   await showSectors(page, isMobile);
@@ -178,7 +178,7 @@ test("R5: By sector counts every counted company once, with No sector and a tota
   await expect(page.getByTestId("client-total")).toHaveText("7");
 });
 
-test("R5: pressing a sector shows its companies in the record (on a phone, the record), pressing it again lets go", async ({ page, isMobile }) => {
+test("R5: pressing a sector shows its companies in the record (on a phone, the record), pressing it again lets go", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   await showSectors(page, isMobile);
@@ -196,7 +196,7 @@ test("R5: pressing a sector shows its companies in the record (on a phone, the r
   await expect.poll(() => names(page)).toEqual(["Halcyon Group", "Zeta Works"]);
 });
 
-test("R5: the breakdown shows the top 8 sectors, and all of them on request", async ({ page, isMobile }) => {
+test("R5: the breakdown shows the top 8 sectors, and all of them on request", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedPast(Array.from({ length: 11 }, (_, i) => past(`s${i}`, { name: `Company ${i}`, sector: `Sector ${String.fromCharCode(65 + i)}` })));
   await page.goto("/past");
   await showSectors(page, isMobile);
@@ -208,7 +208,7 @@ test("R5: the breakdown shows the top 8 sectors, and all of them on request", as
   await expect(panel.getByRole("button", { name: /^Sector / })).toHaveCount(8);
 });
 
-test("A phone has a switch between Companies and By sector; a desktop shows both", async ({ page, isMobile }) => {
+test("A phone has a switch between Companies and By sector; a desktop shows both", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past");
   const switcher = page.getByRole("group", { name: "Show" });
@@ -226,7 +226,7 @@ test("A phone has a switch between Companies and By sector; a desktop shows both
   expect(new URL(page.url()).searchParams.get("view")).toBe("sectors");
 });
 
-test("R7: 130 parents show 100 at a time, and 60 subsidiaries 50 at a time", async ({ page, isMobile }) => {
+test("R7: 130 parents show 100 at a time, and 60 subsidiaries 50 at a time", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedPast([
     ...Array.from({ length: 130 }, (_, i) => past(`p${i}`, { name: `Parent ${String(i).padStart(3, "0")}` })),
     ...Array.from({ length: 60 }, (_, i) => past(`k${i}`, { name: `Kid ${String(i).padStart(3, "0")}`, parentId: "p0" })),
@@ -253,7 +253,7 @@ test("R1: with nothing on record, the screen says what the record is for", async
   await expect(page.getByText("so the team can quote how many clients we’ve had")).toBeVisible();
 });
 
-test("R3: nothing counted yet (only an umbrella company) says so, and the breakdown explains", async ({ page, isMobile }) => {
+test("R3: nothing counted yet (only an umbrella company) says so, and the breakdown explains", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedPast([past("u", { name: "Umbrella Holdings", countHead: false })]);
   await page.goto("/past");
   await expect(page.getByTestId("client-total")).toHaveText("0");
@@ -263,7 +263,7 @@ test("R3: nothing counted yet (only an umbrella company) says so, and the breakd
   await expect(sectors(page).getByText("Everything on record now is an umbrella company that isn’t counted.")).toBeVisible();
 });
 
-test("The view lives in the address: a link lands on the same search, sector and order", async ({ page, isMobile }) => {
+test("The view lives in the address: a link lands on the same search, sector and order", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/past?q=nusa&sort=name-desc&view=list");
   await expect(search(page)).toHaveValue("nusa");

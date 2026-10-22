@@ -175,7 +175,7 @@ const month = (page: Page) => page.getByRole("region", { name: /^[A-Z][a-z]+ \d{
 const dayRegion = (page: Page, name: string) => page.getByRole("region", { name });
 
 test.describe("Month (D5, D7)", () => {
-  test("shows the day's deadlines and events, and a day opens the Day view", async ({ page, calendar, isMobile }) => {
+  test("shows the day's deadlines and events, and a day opens the Day view", { tag: "@phone" }, async ({ page, calendar, isMobile }) => {
     await calendar("ok", [{ id: "e1", title: "Weekly sync", start: isoDay(0), end: isoDay(0), allDay: false, startTime: "09:30", endTime: "10:00" }]);
     await seedTasks([task("a", { task: "Write the proposal", endDate: isoDay(0), responsible: [MAYA] }), task("late", { task: "Chase the invoice", endDate: isoDay(-1) })]);
     await page.goto("/plan?view=month");
@@ -227,7 +227,7 @@ test.describe("Month (D5, D7)", () => {
     await expect(grid.getByText("3 more")).toBeVisible();
   });
 
-  test("calendar off: a notice in the month, and tasks carry on", async ({ page, isMobile }) => {
+  test("calendar off: a notice in the month, and tasks carry on", { tag: "@phone" }, async ({ page, isMobile }) => {
     await seedTasks([task("a", { task: "Still here", endDate: isoDay(0) })]);
     await page.goto("/plan?view=month");
     await expect(month(page).getByText("The team calendar isn't connected.")).toBeVisible();
@@ -353,7 +353,7 @@ test.describe("Day (D4, D5, D9)", () => {
 const people = (page: Page) => page.getByRole("region", { name: "People" });
 
 test.describe("People (D1, D6)", () => {
-  test("ranks everyone by what they own, with the words for each bar, and a name opens their page", async ({ page, isMobile }) => {
+  test("ranks everyone by what they own, with the words for each bar, and a name opens their page", { tag: "@phone" }, async ({ page, isMobile }) => {
     await seedTasks([
       task("a", { task: "Write the proposal", responsible: [MAYA], endDate: isoDay(2) }),
       task("b", { task: "Send the quote", responsible: [MAYA], endDate: isoDay(-2) }),

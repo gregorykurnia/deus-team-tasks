@@ -12,7 +12,7 @@ const groupLinks = (page: Page, isMobile: boolean) =>
     .getByRole("link")
     .filter({ hasText: /Hiring|Office move/ });
 
-test("W9: a starred task group comes first", async ({ page, isMobile }) => {
+test("W9: a starred task group comes first", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedGroups([
     { id: "g1", name: "Hiring", order: 1 },
     { id: "g2", name: "Office move", order: 2 },

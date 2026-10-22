@@ -119,7 +119,7 @@ test("selecting several swaps the circles for checkboxes, with a head box that c
   await expect(head).toHaveAttribute("aria-checked", "false");
 });
 
-test("on large screens a list row is a grid; on a phone it becomes a card, and Today's card loses its badge", async ({ page, isMobile }) => {
+test("on large screens a list row is a grid; on a phone it becomes a card, and Today's card loses its badge", { tag: "@phone" }, async ({ page, isMobile }) => {
   const list = page.getByRole("region", { name: "List rows (All tasks)" }).getByRole("article").first();
   const display = await list.evaluate((el) => getComputedStyle(el).display);
   const badge = rowOf(page, CALL).getByText("PF", { exact: true });

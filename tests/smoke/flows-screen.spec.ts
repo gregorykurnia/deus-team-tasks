@@ -53,7 +53,7 @@ test("M1 to M3: a flow reads as a path with its decision, and a loop back jumps 
   await expect(doc(page).getByRole("heading", { name: "Step 2: Set up the accounts" }).locator("..")).toBeFocused();
 });
 
-test("M4: the list runs A to Z, and search covers steps, outcomes and people", async ({ page, isMobile }) => {
+test("M4: the list runs A to Z, and search covers steps, outcomes and people", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/flows");
   if (!isMobile) await expect(page).toHaveURL(/\/flows\/renewals/);

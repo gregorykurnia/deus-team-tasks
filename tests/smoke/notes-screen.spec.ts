@@ -107,7 +107,7 @@ test("A1, 5.8: a colleague's change to the heading being written never replaces 
   await expect.poll(async () => (await storedNotes("walk-in"))?.nextStepAndOwnership).toBe("My own next step");
 });
 
-test("U2, U7: likelihood is picked and cleared; How likely and search narrow the list", async ({ page, isMobile }) => {
+test("U2, U7: likelihood is picked and cleared; How likely and search narrow the list", { tag: "@phone" }, async ({ page, isMobile }) => {
   await seedAll();
   await page.goto("/notes/walk-in");
   await doc(page).getByRole("radio", { name: "Medium" }).click();
@@ -173,7 +173,7 @@ test("U8: deleting asks first, says what goes, and the company stays", async ({ 
   expect(await storedById("clients", "pipeline", 2)).toBeTruthy();
 });
 
-test("E1: export says what's in the file, then downloads it", async ({ page }) => {
+test("E1: export says what's in the file, then downloads it", { tag: "@phone" }, async ({ page }) => {
   await seedAll();
   await page.goto("/notes/walk-in");
   if ((page.viewportSize()?.width ?? 0) <= 900) await doc(page).getByRole("button", { name: "All notes" }).click();

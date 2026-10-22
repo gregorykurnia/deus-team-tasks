@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // Smoke tests run against the Firestore emulator, never live data.
-// Playwright starts the emulator and one dev server, and stops both afterwards.
+// Playwright starts the emulator and one dev server, and stops both afterwards. Not a production build: lib/emulator.ts
+// never connects a production build to the emulator, so such a run would reach the live projects.
 const PORT = 3100;
 
 export default defineConfig({
@@ -19,8 +20,10 @@ export default defineConfig({
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
+    // Only the tests tagged @phone: the ones that check the phone layout (they take isMobile or a phone-only skip).
     {
       name: "phone",
+      grep: /@phone/,
       use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
     // The team's time zone (UTC+7), for what depends on which day it is: Plan, Today and the deadline pills.
