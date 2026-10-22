@@ -8,7 +8,7 @@ const AREAS = [
   { link: "Today", title: "Today", path: "/" },
   { link: "All tasks", title: "Tasks", path: "/tasks" },
   { link: "Plan", title: "Plan", path: "/plan" },
-  { link: "Companies", title: "Companies", path: "/companies" },
+  { link: "Prospects", title: "Prospects", path: "/companies" },
   { link: "Qualification notes", title: "Qualification notes", path: "/notes" },
   { link: "Past clients", title: "Past clients", path: "/past" },
   { link: "Flows", title: "Flows", path: "/flows" },

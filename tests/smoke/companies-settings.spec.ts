@@ -97,7 +97,7 @@ test("C3: renaming an option changes every company using it, and a filter on it 
   const dialog = page.getByRole("dialog", { name: "Status options" });
 
   // The locked ones say why, and only their colour changes.
-  await expect(dialog.getByText("Moves the company to Deal done")).toBeVisible();
+  await expect(dialog.getByText("Moves the company to Active clients and partners")).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "Rename To Follow Up" })).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "Remove To Follow Up" })).toHaveCount(0);
 

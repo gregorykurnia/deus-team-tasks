@@ -5,7 +5,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies } from "./data";
 
-const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}`) });
+const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}\\s*\\d`) }); // the count follows the name: Active isn't Active clients and partners
 const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Filter, sort and export" });
 const filter = (page: Page, name: string | RegExp) => toolbar(page).getByRole("button", { name });
 const search = (page: Page) => page.getByRole("searchbox", { name: "Search companies" });
@@ -29,7 +29,7 @@ async function seedAll() {
 test("B1, B2: the four groups are sized, Active opens first, and a tile switches the list", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");
-  await expect(page.getByRole("heading", { level: 1, name: "Companies" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Prospects" })).toBeVisible();
   await expect(page.getByText("6 companies").first()).toBeVisible();
   await expect(tile(page, "To approach")).toContainText("1");
   await expect(tile(page, "Active")).toContainText("3");
@@ -37,9 +37,9 @@ test("B1, B2: the four groups are sized, Active opens first, and a tile switches
   await expect(panel(page, "Active").getByText("3 active prospects")).toBeVisible();
   await expect.poll(() => names(page)).toEqual(["Borneo Retail", "Citra Mart", "Pelita Foods"]); // most recent action first
 
-  await tile(page, "Deal done").click();
+  await tile(page, "Active clients and partners").click();
   await expect(page).toHaveURL("/companies?group=deal-done");
-  await expect(panel(page, "Deal done").getByText("1 client", { exact: true })).toBeVisible();
+  await expect(panel(page, "Active clients and partners").getByText("1 client or partner", { exact: true })).toBeVisible();
   await expect.poll(() => names(page)).toEqual(["Halcyon Logistics"]);
   await expect(page.getByRole("region", { name: "Where to act" })).toHaveCount(0); // Active only
   await expect(page.getByText("Ahmad")).toBeVisible(); // the contact under the name
@@ -121,9 +121,9 @@ test("B8: search covers the group, highlights what matched, and says where else 
   await expect(page.locator("mark")).toHaveText("Pelita");
   await expect(page).toHaveURL("/companies?q=pelita");
 
-  await tile(page, "Deal done").click(); // the search carries over
-  await expect(page.getByRole("heading", { name: "No clients match" })).toBeVisible();
-  await expect(page.getByText("Nothing in Deal done matches “pelita”.")).toBeVisible();
+  await tile(page, "Active clients and partners").click(); // the search carries over
+  await expect(page.getByRole("heading", { name: "No clients and partners match" })).toBeVisible();
+  await expect(page.getByText("Nothing in Active clients and partners matches “pelita”.")).toBeVisible();
   const elsewhere = page.getByText("Found in other groups:").locator("..");
   await expect(elsewhere.getByRole("button", { name: /^1\s*To approach/ })).toBeVisible();
   await expect(elsewhere.getByRole("button", { name: /^1\s*Active/ })).toBeVisible();
@@ -152,7 +152,7 @@ test("B2: a group with nobody in it, and no companies at all, say so", async ({ 
   await seedCompanies([company(1, { company: "Pelita Foods" })]);
   await page.goto("/companies?group=deal-done");
   await expect(page.getByRole("heading", { name: "No deals done yet" })).toBeVisible();
-  await expect(tile(page, "Deal done")).toContainText("0");
+  await expect(tile(page, "Active clients and partners")).toContainText("0");
 });
 
 test("B1: with no companies, Companies says nothing is recorded yet", async ({ page }) => {
@@ -180,8 +180,8 @@ test("5.13: on a phone the tiles go two by two and each company is a card with l
   await expect(card.getByText("Last action", { exact: true })).toBeVisible(); // the label shows
   // Measured once the page has settled: the tiles can still move a pixel or two while it loads.
   const top = async (name: string) => (await tile(page, name).boundingBox())!.y;
-  await expect.poll(async () => (await top("To approach")) === (await top("Active"))).toBe(true); // two across
-  expect(await top("Deal done")).toBeGreaterThan(await top("To approach"));
+  await expect.poll(async () => (await top("Active")) === (await top("Active clients and partners"))).toBe(true); // two across
+  expect(await top("To approach")).toBeGreaterThan(await top("Active"));
   await expect(search(page)).toBeVisible(); // under the title
   await expect(card.getByText("Missed by 2 days")).toBeVisible();
   const box = await card.boundingBox();

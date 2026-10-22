@@ -269,10 +269,10 @@ export interface GroupLook {
 }
 
 export const GROUP_LOOKS: GroupLook[] = [
-  { id: "toApproach", label: COMPANY_GROUP_LABELS.toApproach, blurb: "Not contacted yet", icon: "flag", noun: ["company to approach", "companies to approach"] },
   { id: "active", label: COMPANY_GROUP_LABELS.active, blurb: "Prospects we’re working", icon: "bolt", noun: ["active prospect", "active prospects"] },
-  { id: "dealDone", label: COMPANY_GROUP_LABELS.dealDone, blurb: "Our clients", icon: "done", noun: ["client", "clients"] },
+  { id: "dealDone", label: COMPANY_GROUP_LABELS.dealDone, blurb: "Our clients and partners", icon: "done", noun: ["client or partner", "clients and partners"] },
   { id: "noOrNotNow", label: COMPANY_GROUP_LABELS.noOrNotNow, blurb: "On hold or rejected", icon: "pause", noun: ["company on hold or rejected", "companies on hold or rejected"] },
+  { id: "toApproach", label: COMPANY_GROUP_LABELS.toApproach, blurb: "Not contacted yet", icon: "flag", noun: ["company to approach", "companies to approach"] },
 ];
 
 export const lookOf = (group: CompanyGroup): GroupLook => GROUP_LOOKS.find((g) => g.id === group)!;

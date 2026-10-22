@@ -109,7 +109,7 @@ describe("moving between groups (B5, 5.10)", () => {
   });
 
   it("says where it went, and what happened to the tasks", () => {
-    expect(moveMessage("Halcyon", "dealDone", 2)).toBe("Deal done. Halcyon moved to Deal done. Its 2 open tasks now count as client work.");
+    expect(moveMessage("Halcyon", "dealDone", 2)).toBe("Deal done. Halcyon moved to Active clients and partners. Its 2 open tasks now count as client work.");
     expect(moveMessage("Halcyon", "active", 1)).toBe("Halcyon moved to Active. Its 1 open task now counts as prospect work again.");
     expect(moveMessage("Halcyon", "noOrNotNow", 0)).toBe("Halcyon moved to No or not now.");
   });

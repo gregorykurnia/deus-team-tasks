@@ -15,7 +15,7 @@ export const AREAS: Area[] = [
   { id: "today", label: "Today", icon: "sun", href: "/" },
   { id: "tasks", label: "All tasks", icon: "list", href: "/tasks" },
   { id: "plan", label: "Plan", icon: "cal", href: "/plan", blurb: "Deadlines, events and who carries what" },
-  { id: "companies", label: "Companies", icon: "building", href: "/companies" },
+  { id: "companies", label: "Prospects", icon: "building", href: "/companies" },
   { id: "notes", label: "Qualification notes", icon: "note", href: "/notes", blurb: "Qualify prospects" },
   { id: "past", label: "Past clients", icon: "archive", href: "/past", blurb: "Every company we have served" },
   { id: "flows", label: "Flows", icon: "flow", href: "/flows", blurb: "How work moves between people" },

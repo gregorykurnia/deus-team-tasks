@@ -8,12 +8,12 @@ import type { NewTask } from "./types";
 
 export type CompanyGroup = "toApproach" | "active" | "dealDone" | "noOrNotNow";
 
-export const COMPANY_GROUPS: CompanyGroup[] = ["toApproach", "active", "dealDone", "noOrNotNow"];
+export const COMPANY_GROUPS: CompanyGroup[] = ["active", "dealDone", "noOrNotNow", "toApproach"];
 
 export const COMPANY_GROUP_LABELS: Record<CompanyGroup, string> = {
   toApproach: "To approach",
   active: "Active",
-  dealDone: "Deal done",
+  dealDone: "Active clients and partners",
   noOrNotNow: "No or not now",
 };
 

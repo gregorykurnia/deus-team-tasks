@@ -484,7 +484,7 @@ export default function CompaniesScreen() {
   return (
     <>
       <PageHeader
-        title="Companies"
+        title="Prospects"
         subtitle={sizes ? plural(total, "company", "companies") : undefined}
         search={phone ? undefined : searchField}
         action={{ label: "New company", href: over(pathname, search, "newCompany=1") }}
@@ -599,7 +599,7 @@ export default function CompaniesScreen() {
         const { field } = editing;
         const group = companyGroup(c);
         const dealDone = settings.options.status?.find((o) => o.role === "dealDone")?.name;
-        const optionNotes = group === "active" && field.key === "status" && dealDone ? { [dealDone]: "Moves it to Deal done" } : undefined;
+        const optionNotes = group === "active" && field.key === "status" && dealDone ? { [dealDone]: `Moves it to ${COMPANY_GROUP_LABELS.dealDone}` } : undefined;
         return (
           <CellEditor
             key={`edit:${c.id}:${field.key}`}

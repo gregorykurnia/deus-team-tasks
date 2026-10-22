@@ -120,7 +120,7 @@ export default function FieldDemos() {
               <SelectInput {...c} defaultValue="active">
                 <option value="lead">To approach</option>
                 <option value="active">Active</option>
-                <option value="done">Deal done</option>
+                <option value="done">Active clients and partners</option>
               </SelectInput>
             )}
           </Field>

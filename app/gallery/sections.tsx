@@ -139,7 +139,7 @@ export function Tags() {
       <KindTag kind="internal" />
       <GroupTag group="toApproach">To approach</GroupTag>
       <GroupTag group="active">Active</GroupTag>
-      <GroupTag group="dealDone">Deal done</GroupTag>
+      <GroupTag group="dealDone">Active clients and partners</GroupTag>
       <GroupTag group="noOrNotNow">No or not now</GroupTag>
       <OutsideTag>Not counted</OutsideTag>
       <OutsideTag>Not tracked yet</OutsideTag>

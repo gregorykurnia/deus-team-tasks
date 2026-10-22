@@ -119,8 +119,8 @@ describe("the list", () => {
     const listing = listCompanies(companies, state("q=acme&group=deal-done"), settings, TODAY);
     expect(listing.sorted).toEqual([]);
     expect(listing.elsewhere).toEqual([
-      { group: "toApproach", count: 1 },
       { group: "active", count: 1 },
+      { group: "toApproach", count: 1 },
     ]);
     expect(listCompanies(companies, state("group=deal-done"), settings, TODAY).elsewhere).toEqual([]);
   });

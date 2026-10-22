@@ -38,9 +38,9 @@ test("B1 to B4: a company is added in each group with what that group asks for",
   // Deal done: the status says so.
   await page.goto("/companies?newCompany=1");
   await sheet.getByRole("textbox", { name: "Company name" }).fill("Arunika Labs");
-  await sheet.getByRole("radio", { name: /Deal done/ }).click();
+  await sheet.getByRole("radio", { name: /Active clients and partners/ }).click();
   await sheet.getByRole("button", { name: "Add company" }).click();
-  await expect(toasts(page).getByText("Arunika Labs added to Deal done")).toBeVisible();
+  await expect(toasts(page).getByText("Arunika Labs added to Active clients and partners")).toBeVisible();
   expect(await storedCompany("Arunika Labs")).toMatchObject({ status: "Client / Partner Done Deal", _raw: false, _hold: false });
 
   // To approach: when outreach is planned.

@@ -8,7 +8,7 @@ import { company, isoDay, seedCompanies, seedTasks, settledOnline, storedById, s
 const row = (page: Page, name: string) => page.getByRole("article", { name });
 const cell = (page: Page, name: string, label: RegExp) => row(page, name).getByRole("button", { name: label });
 const toasts = (page: Page) => page.getByRole("status").filter({ has: page.locator("span") });
-const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}`) });
+const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}\\s*\\d`) }); // the count follows the name: Active isn't Active clients and partners
 const rowMenu = (page: Page, name: string) => page.getByRole("button", { name: `More for ${name}` });
 
 async function seedAll() {
@@ -61,16 +61,16 @@ test("B10: text is changed in place: Enter saves, and Clear empties it", async (
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.notes).toBeUndefined();
 });
 
-test("5.10: choosing Deal done as the status moves the company to Deal done, with Undo", async ({ page }) => {
+test("5.10: choosing Deal done as the status moves the company to Active clients and partners, with Undo", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");
   await cell(page, "Pelita Foods", /^Status:/).click();
   const menu = page.getByRole("menu", { name: "Status" });
-  await expect(menu.getByText("Moves it to Deal done")).toBeVisible();
+  await expect(menu.getByText("Moves it to Active clients and partners")).toBeVisible();
   await menu.getByRole("menuitemradio", { name: /Client \/ Partner Done Deal/ }).click();
-  await expect(toasts(page).getByText("Deal done. Pelita Foods moved to Deal done. Its 1 open task now counts as client work.")).toBeVisible();
+  await expect(toasts(page).getByText("Deal done. Pelita Foods moved to Active clients and partners. Its 1 open task now counts as client work.")).toBeVisible();
   await expect(row(page, "Pelita Foods")).toHaveCount(0); // it left Active
-  await expect(tile(page, "Deal done")).toContainText("1");
+  await expect(tile(page, "Active clients and partners")).toContainText("1");
   await toasts(page).getByRole("button", { name: "Undo" }).click();
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.status).toBe("To Follow Up");
 });
@@ -107,7 +107,7 @@ test("B5, 5.10: moving carries over what's known and asks for what the new group
   await rowMenu(page, "Lumen Hotels").click();
   await page.getByRole("menuitem", { name: "Move to another group" }).click();
   const dialog = page.getByRole("dialog", { name: "Move Lumen Hotels" });
-  await expect(dialog.getByRole("radio", { name: /Active/ })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByRole("radio", { name: /^Active Prospects/ })).toHaveAttribute("aria-checked", "true");
   await expect(dialog.getByText("Carried over")).toBeVisible();
   await expect(dialog.getByText("Hospitality")).toBeVisible();
   await expect(dialog.getByText("What Active needs")).toBeVisible();

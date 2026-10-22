@@ -1,7 +1,7 @@
 "use client";
 
 // The tab bar at 900px and under (guide 3): Today, Tasks, the raised + for a
-// new task, Companies, and More for the other areas.
+// new task, Prospects, and More for the other areas.
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/ui/Icon";
@@ -36,7 +36,7 @@ export default function TabBar() {
       </OverLink>
       <Link className={styles.tab} href="/companies" aria-current={current(area === "companies")}>
         <Icon name="building" size={21} />
-        Companies
+        Prospects
       </Link>
       <button
         className={styles.tab}

@@ -49,7 +49,7 @@ const SCREENS: { name: string; path: string; ready: string | RegExp }[] = [
   { name: "Plan month", path: "/plan?view=month", ready: "Plan" },
   { name: "Plan day", path: "/plan?view=day", ready: "Plan" },
   { name: "Plan people", path: "/plan?view=people", ready: "Plan" },
-  { name: "Companies", path: "/companies", ready: "Companies" },
+  { name: "Prospects", path: "/companies", ready: "Prospects" },
   { name: "Qualification notes", path: "/notes/n1", ready: "Qualification notes" },
   { name: "Past clients", path: "/past", ready: "Past clients" },
   { name: "Flows", path: "/flows/f1", ready: "Flows" },

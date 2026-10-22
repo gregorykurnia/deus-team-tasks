@@ -65,7 +65,7 @@ const DEFAULT_OPTIONS: Record<string, ChoiceOption[]> = {
 
 // Each locked option: its field, its stored name, the colour it starts with, and why it's locked.
 export const LOCKED_OPTIONS: { field: string; role: LockedRole; name: string; colour: OptionColour; reason: string }[] = [
-  { field: "status", role: "dealDone", name: DEAL_DONE_STATUS, colour: "green", reason: "Moves the company to Deal done" },
+  { field: "status", role: "dealDone", name: DEAL_DONE_STATUS, colour: "green", reason: "Moves the company to Active clients and partners" },
   { field: "status", role: "followUp", name: FOLLOW_UP_STATUS, colour: "amber", reason: "Shows who is waiting on us" },
   { field: "priority", role: "highPriority", name: HIGH_PRIORITY, colour: "red", reason: "Counts in High priority, under Where to act" },
   { field: "answer", role: "notNow", name: NOT_NOW_ANSWER, colour: "amber", reason: "Means on hold" },
@@ -129,7 +129,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
 
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = { options: DEFAULT_OPTIONS, fields: DEFAULT_FIELDS };
 
-const GROUPS: CompanyGroup[] = ["toApproach", "active", "dealDone", "noOrNotNow"];
+const GROUPS: CompanyGroup[] = ["active", "dealDone", "noOrNotNow", "toApproach"];
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
