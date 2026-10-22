@@ -189,7 +189,7 @@ Every place the old code shows something, with its new counterpart. Nothing is r
 | 4.8 | Data step for launch: settings import, sector backfill, dry run (Q3, Q4); runs before 4.7 | Opus 5.5 High | 2026-10-21 · this commit (export was empty: defaults kept; live import done, 13 sectors filled; backup `launch-data/live-20261021-235812`) |
 | 4.7 | Delete old UI files, old-names check, remove unused deps | Haiku 5.5 Max | 2026-10-21 · this commit (no dependency was unused, so none removed; new `Chip` renamed `ChoiceChip` to clear the old-names check) |
 | R4 | **Phase 4 review** (plus one full `npm run compare`, see 4.4a–4.4e) | Opus 5.5 High | 2026-10-21 · this commit (notes and fixes: `redesign/reviews/phase-4.md`; the compare's emulator failed part way and the rest was shot on a fresh one; Phase 4 is ticked once 4.8's live run is done) |
-| M | Merge `redesign` into `main` on your say; update `CLAUDE.md` | Sonnet 5.5 High | |
+| M | Merge `redesign` into `main` on your say; update `CLAUDE.md` | Sonnet 5.5 High | 2026-10-22 · this commit (`CLAUDE.md` rebuild rules removed; `main` fast-forwarded to it) |
 
 Done cells: date and commit, plus a short phrase only if something changed from the plan.
 
