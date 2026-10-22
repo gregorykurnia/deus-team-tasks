@@ -77,7 +77,7 @@ test("W2, W3, W4: every detail is added, with a new name and someone kept inform
   });
 });
 
-test("W7, B12: changing a company task's deadline brings the company and its other open tasks in step", async ({ page }) => {
+test("W7, B12: changing a company task's deadline brings the company in step, and its other tasks keep their own", async ({ page }) => {
   await seedCompanies([company(1, { company: "Halcyon Logistics", date: isoDay(-6), target: isoDay(10) })]);
   await seedTasks([
     task("t1", { task: "Send the revised proposal", linkedClientId: 1, lastActionDate: isoDay(-6), endDate: isoDay(10) }),
@@ -91,9 +91,9 @@ test("W7, B12: changing a company task's deadline brings the company and its oth
   await s.getByLabel("Deadline").fill(isoDay(3));
   await s.getByRole("button", { name: "Save changes" }).click();
   await expect(s).toHaveCount(0);
-  await expect(page.getByText("Changes saved. Halcyon Logistics and 1 other task now match.")).toBeVisible();
+  await expect(page.getByText("Changes saved. Halcyon Logistics now matches.")).toBeVisible();
   expect(await storedById("tasks", "tasks", "t1")).toMatchObject({ endDate: isoDay(3), task: "Send the revised proposal" });
-  expect(await storedById("tasks", "tasks", "t2")).toMatchObject({ endDate: isoDay(3) });
+  expect(await storedById("tasks", "tasks", "t2")).toMatchObject({ endDate: isoDay(10) });
   expect(await storedById("clients", "pipeline", 1)).toMatchObject({ target: isoDay(3), date: isoDay(-6) });
 });
 

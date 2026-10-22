@@ -9,7 +9,7 @@ import ParkMenu from "@/features/tasks/ParkMenu";
 import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks } from "@/desk/DeskData";
 import { addTaskKeptInStep, saveTaskKeptInStep } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
-import { ago, isoOf, plural, todayIso, weekdayDate } from "@/lib/dates";
+import { ago, isoOf, todayIso, weekdayDate } from "@/lib/dates";
 import { isDealDone, kindOf, type Kind } from "@/lib/kinds";
 import { isParked } from "@/lib/parking";
 import { initials, openCountsByName } from "@/lib/people";
@@ -101,9 +101,8 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     return [...TOUCH_POINTS, ...own].map((t) => ({ value: t, label: t, icon: TOUCH_ICONS[t] ?? "chat" }));
   }, [draft.touchPoint]);
 
-  function keptInStepMessage(lead: string, companyChanged: boolean, others: number) {
-    if (!companyChanged || !company) return lead;
-    return others ? `${lead}. ${company.company} and ${plural(others, "other task")} now match.` : `${lead}. ${company.company} now matches.`;
+  function keptInStepMessage(lead: string, companyChanged: boolean) {
+    return companyChanged && company ? `${lead}. ${company.company} now matches.` : lead;
   }
 
   async function save() {
@@ -121,9 +120,9 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
       }
       setBusy("save");
       try {
-        const { companyChanged, tasksChanged } = await saveTaskKeptInStep(task, patch, byId, tasks.rows);
+        const { companyChanged } = await saveTaskKeptInStep(task, patch, byId);
         onClose();
-        toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
+        toast(keptInStepMessage("Changes saved", companyChanged));
       } catch (err) {
         setBusy(null);
         toast(failureMessage(err, "Your changes couldn't be saved. Check your connection and try again."), { error: true });
@@ -132,9 +131,9 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     }
     setBusy("save");
     try {
-      const { companyChanged, tasksChanged } = await addTaskKeptInStep(newTaskFromDraft(draft), byId, tasks.rows);
+      const { companyChanged } = await addTaskKeptInStep(newTaskFromDraft(draft), byId);
       onClose();
-      toast(keptInStepMessage("Task added", companyChanged, tasksChanged));
+      toast(keptInStepMessage("Task added", companyChanged));
     } catch (err) {
       setBusy(null);
       toast(failureMessage(err, "The task couldn't be added. Check your connection and try again."), { error: true });
@@ -155,8 +154,8 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     try {
       // The changes are saved as Save changes saves them, with no Undo; the toast's Undo is for done or not done only.
       if (changed) {
-        const { companyChanged, tasksChanged } = await saveTaskKeptInStep(task, { ...patch, completed: done }, byId, tasks.rows);
-        toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
+        const { companyChanged } = await saveTaskKeptInStep(task, { ...patch, completed: done }, byId);
+        toast(keptInStepMessage("Changes saved", companyChanged));
       } else await setTasksDone([task], done);
       onClose();
       toast(done ? "Marked done" : "Moved back to open tasks", {
@@ -184,8 +183,8 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     try {
       if (changed) {
         const parking = park ? { parkedAt: Date.now(), parkedUntil: until ?? undefined } : { parkedAt: undefined, parkedUntil: undefined };
-        const { companyChanged, tasksChanged } = await saveTaskKeptInStep(task, { ...patch, ...parking }, byId, tasks.rows);
-        toast(keptInStepMessage("Changes saved", companyChanged, tasksChanged));
+        const { companyChanged } = await saveTaskKeptInStep(task, { ...patch, ...parking }, byId);
+        toast(keptInStepMessage("Changes saved", companyChanged));
       } else await setTasksParked([task], park, until);
       onClose();
       toast(park ? (until ? `Parked until ${weekdayDate(until)}` : "Parked") : "Brought back to open tasks", {

@@ -164,25 +164,10 @@ function companyPatchFrom(company: PipelineEntry, task: Pick<Task, "lastActionDa
   return date !== company.date || target !== company.target ? { date, target } : null;
 }
 
-// The company's other open tasks, brought in step with the company's new dates.
-function otherTasksInStep(company: PipelineEntry, companyPatch: CompanyPatch, exceptId: string, tasks: Task[]) {
-  const companyNext = { ...company, ...companyPatch };
-  return openTasksOf(company.id, tasks).flatMap((other) => {
-    if (other.id === exceptId) return [];
-    const p = taskDatesFromCompany(companyNext, other);
-    return p ? [{ t: other, p: p as Partial<NewTask> }] : [];
-  });
-}
-
-// Saves a company task. When its last action or deadline changes, the company
-// follows, and through it the company's other open tasks (B12). Pass only the
-// fields that change: a save that leaves the dates alone never moves the company.
-export async function saveTaskKeptInStep(
-  task: Task,
-  patch: Partial<NewTask>,
-  companies: CompaniesById,
-  tasks: Task[]
-): Promise<{ companyChanged: boolean; tasksChanged: number }> {
+// Saves a company task. When its last action or deadline changes, the company follows (B12). The company's other tasks
+// keep their own dates: each task's deadline is its own. Pass only the fields that change: a save that leaves the dates
+// alone never moves the company.
+export async function saveTaskKeptInStep(task: Task, patch: Partial<NewTask>, companies: CompaniesById): Promise<{ companyChanged: boolean }> {
   assertOnline("No connection. The task wasn't saved.");
   const next = { ...task, ...patch };
   const company = next.linkedClientId != null ? companies.get(next.linkedClientId) : undefined;
@@ -190,7 +175,6 @@ export async function saveTaskKeptInStep(
   const changes: { t: Task; p: Partial<NewTask> }[] = [{ t: task, p: ownPatch }];
   const datesChanged = "lastActionDate" in patch || "endDate" in patch;
   const companyPatch = company && !next.completed && datesChanged ? companyPatchFrom(company, next) : null;
-  if (company && companyPatch) changes.push(...otherTasksInStep(company, companyPatch, task.id, tasks));
   await commitInChunks(
     db,
     changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
@@ -202,36 +186,23 @@ export async function saveTaskKeptInStep(
       return rollBack(err, () => restoreTasks(changes));
     }
   }
-  return { companyChanged: !!companyPatch, tasksChanged: changes.length - 1 };
+  return { companyChanged: !!companyPatch };
 }
 
-// Adds a task. A new company task with a last action or deadline brings its
-// company, and the company's other open tasks, in step (B12). If that fails,
-// the new task goes again, so trying once more can't make two.
-export async function addTaskKeptInStep(
-  task: NewTask,
-  companies: CompaniesById,
-  tasks: Task[]
-): Promise<{ id: string; companyChanged: boolean; tasksChanged: number }> {
+// Adds a task. A new company task with a last action or deadline brings its company in step (B12); the company's other
+// tasks keep their own dates. If that fails, the new task goes again, so trying once more can't make two.
+export async function addTaskKeptInStep(task: NewTask, companies: CompaniesById): Promise<{ id: string; companyChanged: boolean }> {
   const id = await addTask(task);
   const company = task.linkedClientId != null ? companies.get(task.linkedClientId) : undefined;
   const dated = !!task.lastActionDate || !!task.endDate;
   const companyPatch = company && !task.completed && dated ? companyPatchFrom(company, task) : null;
-  if (!company || !companyPatch) return { id, companyChanged: false, tasksChanged: 0 };
-  const changes = otherTasksInStep(company, companyPatch, id, tasks);
+  if (!company || !companyPatch) return { id, companyChanged: false };
   try {
-    await commitInChunks(
-      db,
-      changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-    );
     await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
   } catch (err) {
-    return rollBack(err, async () => {
-      await restoreTasks(changes);
-      await deleteDoc(doc(db, TASKS, id));
-    });
+    return rollBack(err, () => deleteDoc(doc(db, TASKS, id)));
   }
-  return { id, companyChanged: true, tasksChanged: changes.length };
+  return { id, companyChanged: true };
 }
 
 /* ---------- Moving between groups (B5) ---------- */

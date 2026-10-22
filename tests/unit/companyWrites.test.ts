@@ -79,7 +79,7 @@ describe("changing a company", () => {
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-01", target: "2026-10-30" });
   });
 
-  it("brings the company and its other open tasks in step when a task's dates change", async () => {
+  it("brings the company in step when a task's dates change, and leaves its other tasks' dates alone", async () => {
     const c = co(1, { date: "2026-10-01", target: "2026-10-30" });
     const tasks = [
       task("mine", { linkedClientId: 1, lastActionDate: "2026-10-01", endDate: "2026-10-30" }),
@@ -87,10 +87,11 @@ describe("changing a company", () => {
     ];
     await seedCompanies([c]);
     await seedTasks(tasks);
-    const result = await saveTaskKeptInStep(tasks[0], { lastActionDate: "2026-10-18", endDate: "2026-10-24" }, companiesById([c]), tasks);
-    expect(result).toEqual({ companyChanged: true, tasksChanged: 1 });
+    const result = await saveTaskKeptInStep(tasks[0], { lastActionDate: "2026-10-18", endDate: "2026-10-24" }, companiesById([c]));
+    expect(result).toEqual({ companyChanged: true });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-18", target: "2026-10-24" });
-    expect(await readFields("tasks", "tasks/sibling")).toMatchObject({ lastActionDate: "2026-10-18", endDate: "2026-10-24" });
+    expect(await readFields("tasks", "tasks/mine")).toMatchObject({ lastActionDate: "2026-10-18", endDate: "2026-10-24" });
+    expect(await readFields("tasks", "tasks/sibling")).toMatchObject({ lastActionDate: "2026-10-01", endDate: "2026-10-30" });
   });
 
   it("leaves the company alone when a company task is saved without changing its dates", async () => {
@@ -98,24 +99,24 @@ describe("changing a company", () => {
     const tasks = [task("mine", { linkedClientId: 1, lastActionDate: "2026-10-01", endDate: "2026-10-20" })];
     await seedCompanies([c]);
     await seedTasks(tasks);
-    const result = await saveTaskKeptInStep(tasks[0], { keyPoints: "Bring the pricing sheet" }, companiesById([c]), tasks);
-    expect(result).toEqual({ companyChanged: false, tasksChanged: 0 });
+    const result = await saveTaskKeptInStep(tasks[0], { keyPoints: "Bring the pricing sheet" }, companiesById([c]));
+    expect(result).toEqual({ companyChanged: false });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-05", target: "2026-10-30" });
     expect(await readFields("tasks", "tasks/mine")).toMatchObject({ keyPoints: "Bring the pricing sheet", endDate: "2026-10-20" });
   });
 
-  it("adds a dated company task and brings the company and its other open tasks in step", async () => {
+  it("adds a dated company task and brings the company in step, and leaves its other tasks' dates alone", async () => {
     const c = co(1, { date: "2026-10-01", target: "2026-10-30" });
     const tasks = [task("sibling", { linkedClientId: 1, lastActionDate: "2026-10-01", endDate: "2026-10-30" })];
     await seedCompanies([c]);
     await seedTasks(tasks);
     const { id: _id, ...fresh } = task("new", { linkedClientId: 1, lastActionDate: "2026-10-18", endDate: "2026-10-24" });
     void _id;
-    const result = await addTaskKeptInStep(fresh, companiesById([c]), tasks);
-    expect(result).toMatchObject({ companyChanged: true, tasksChanged: 1 });
+    const result = await addTaskKeptInStep(fresh, companiesById([c]));
+    expect(result).toMatchObject({ companyChanged: true });
     expect(await readFields("tasks", `tasks/${result.id}`)).toMatchObject({ task: "new", linkedClientId: 1 });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-18", target: "2026-10-24" });
-    expect(await readFields("tasks", "tasks/sibling")).toMatchObject({ lastActionDate: "2026-10-18", endDate: "2026-10-24" });
+    expect(await readFields("tasks", "tasks/sibling")).toMatchObject({ lastActionDate: "2026-10-01", endDate: "2026-10-30" });
   });
 
   it("adds an undated company task without touching the company", async () => {
@@ -123,8 +124,8 @@ describe("changing a company", () => {
     await seedCompanies([c]);
     const { id: _id, ...fresh } = task("new", { linkedClientId: 1 });
     void _id;
-    const result = await addTaskKeptInStep(fresh, companiesById([c]), []);
-    expect(result).toMatchObject({ companyChanged: false, tasksChanged: 0 });
+    const result = await addTaskKeptInStep(fresh, companiesById([c]));
+    expect(result).toMatchObject({ companyChanged: false });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-01", target: "2026-10-30" });
   });
 

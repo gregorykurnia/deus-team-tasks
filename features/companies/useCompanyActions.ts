@@ -96,7 +96,7 @@ export function useCompanyActions() {
   const followUp = useCallback(
     async function followUp(c: PipelineEntry, today: string): Promise<void> {
       try {
-        const { id } = await addTaskKeptInStep(followUpTaskFor(c, today), latest.current.byId, latest.current.tasks);
+        const { id } = await addTaskKeptInStep(followUpTaskFor(c, today), latest.current.byId);
         toast(`Follow-up task created for ${c.company}`, { action: "Open", onAction: () => openOver(`task=${id}`) });
       } catch (err) {
         console.error("Couldn't create the follow-up task", err);
