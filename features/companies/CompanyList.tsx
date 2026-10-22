@@ -59,6 +59,16 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
       return null;
     case "choice":
       return <OptionChip tone={cell.colour}>{cell.label}</OptionChip>;
+    case "choices":
+      return (
+        <span className={styles.chips}>
+          {cell.items.map((i) => (
+            <OptionChip key={i.label} tone={i.colour}>
+              {i.label}
+            </OptionChip>
+          ))}
+        </span>
+      );
     case "date":
       if (cell.pill) {
         return (

@@ -54,6 +54,7 @@ describe("reading (falls back to the defaults)", () => {
       "Last action",
       "Target date",
       "Products",
+      "GBA trials",
       "Next actions",
     ]);
   });
@@ -187,6 +188,13 @@ describe("fields per group (C1, C2)", () => {
     await expect(renameField("active", "pic", " ")).rejects.toMatchObject({ problem: "missing" });
     await expect(addOwnField("active", "Next Actions", "text")).rejects.toMatchObject({ problem: "taken" });
     expect(await addOwnField("toApproach", "Status", "text")).toMatch(/^cx_/);
+  });
+
+  it("brings GBA trials into a stored record that predates them: shown on Active, hidden elsewhere (N22)", () => {
+    const s = readCompanySettings({ fields: { active: [{ key: "status", label: "Status", type: "choice", shown: true, own: false }], dealDone: [] } });
+    expect(s.fields.active.find((f) => f.key === "gbaTrials")).toEqual({ key: "gbaTrials", label: "GBA trials", type: "choices", shown: true, own: false });
+    expect(s.fields.dealDone.find((f) => f.key === "gbaTrials")?.shown).toBe(false);
+    expect(s.options.gbaTrials.map((o) => o.name)).toEqual(["Personality", "Cognitive", "Neuroscience", "Simulation"]);
   });
 
   it("counts removed own fields whose values companies still hold", () => {

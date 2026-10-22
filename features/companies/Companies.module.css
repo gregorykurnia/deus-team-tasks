@@ -534,6 +534,14 @@
 }
 
 .dv,
+/* Several options in one value (GBA trials, N22): their chips wrap. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
 .nv {
   font-variant-numeric: var(--num);
   white-space: nowrap;

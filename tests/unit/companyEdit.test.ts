@@ -81,7 +81,7 @@ describe("moving between groups (B5, 5.10)", () => {
       ["Type", "Client"],
       ["Industry", "Logistics"],
     ]);
-    expect(plan.toFill.map((f) => f.key)).toEqual(["status", "date", "target", "product", "notes"]);
+    expect(plan.toFill.map((f) => f.key)).toEqual(["status", "date", "target", "product", "gbaTrials", "notes"]);
     expect(plan.values.status).toBe("Meeting Soon"); // an Active company needs a status
     expect(plan.values.date).toBe(TODAY); // contact was just made
     expect(plan.kindSwitch).toBe(0);
@@ -120,7 +120,7 @@ describe("the record (6.5)", () => {
     const fields = [...settings.fields.active, { key: "cx_1", label: "Budget", type: "number" as const, shown: true, own: true }];
     const sections = recordSections(fields);
     expect(sections.map((s) => s.title)).toEqual(["Where we stand", "What’s happening", "Who they are", "Added by the team"]);
-    expect(sections[0].fields.map((f) => f.key)).toEqual(["status", "priority", "product"]);
+    expect(sections[0].fields.map((f) => f.key)).toEqual(["status", "priority", "product", "gbaTrials"]);
     expect(sections[3].fields.map((f) => f.key)).toEqual(["cx_1"]);
     expect(recordSections(settings.fields.noOrNotNow).at(-1)?.fields).toEqual([]);
   });
@@ -172,7 +172,7 @@ describe("deleting (B14)", () => {
 
 describe("new company (B1, B3)", () => {
   it("asks for what the group's list shows, and the contact person", () => {
-    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "status", "priority", "date", "target", "product", "notes"]);
+    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "status", "priority", "date", "target", "product", "gbaTrials", "notes"]);
     expect(newCompanyFields(settings, "noOrNotNow").map((f) => f.key)).toContain("pic");
   });
 });

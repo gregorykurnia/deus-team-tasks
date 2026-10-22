@@ -28,7 +28,7 @@ const state = (query: string) => parseCompanyView(new URLSearchParams(query));
 
 describe("the view in the address (guide 6.5)", () => {
   it("opens on Active with nothing narrowed", () => {
-    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, act: null, parked: false, sort: null, dir: null });
+    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, trial: null, act: null, parked: false, sort: null, dir: null });
     expect(viewParams(state("")).toString()).toBe("");
   });
 
@@ -58,8 +58,14 @@ describe("filters", () => {
   });
 
   it("clears every filter and the search, and keeps the group and the sort", () => {
-    const cleared = clearedFilters(state("q=a&status=Drop&priority=High&product=x&act=gone-cold&sort=target&dir=asc"));
-    expect(cleared).toMatchObject({ group: "active", q: "", status: null, priority: null, product: null, act: null, sort: "target", dir: "asc" });
+    const cleared = clearedFilters(state("q=a&status=Drop&priority=High&product=x&trial=Cognitive&act=gone-cold&sort=target&dir=asc"));
+    expect(cleared).toMatchObject({ group: "active", q: "", status: null, priority: null, product: null, trial: null, act: null, sort: "target", dir: "asc" });
+  });
+
+  it("offers GBA trials only where the list shows them (N22)", () => {
+    expect(appliedFilters(state("trial=Cognitive"), fieldsOf("active"))).toMatchObject({ trial: "Cognitive" });
+    expect(viewParams(state("trial=Cognitive")).get("trial")).toBe("Cognitive");
+    expect(appliedFilters(state("group=deal-done&trial=Cognitive"), fieldsOf("dealDone"))).toMatchObject({ trial: null }); // kept hidden there
   });
 });
 
@@ -179,6 +185,14 @@ describe("cells (guide 4.9, 5.1)", () => {
 
   it("leaves empty values empty, and numbers with separators", () => {
     expect(cellOf(co(1), field("active", "target"), "active", settings, TODAY)).toEqual({ kind: "empty" });
+    expect(cellOf(co(1, { gbaTrials: "Personality, Gone" }), field("active", "gbaTrials"), "active", settings, TODAY)).toEqual({
+      kind: "choices",
+      label: "Personality, Gone",
+      items: [
+        { label: "Personality", colour: "violet" },
+        { label: "Gone", colour: "slate" },
+      ],
+    });
     expect(cellOf(co(1, { cx_1: 12500 }), { key: "cx_1", label: "Budget", type: "number", shown: true, own: true }, "active", settings, TODAY)).toEqual({ kind: "number", label: "12,500" });
   });
 

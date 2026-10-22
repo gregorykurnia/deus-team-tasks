@@ -25,6 +25,9 @@ export const FOLLOW_UP_STATUS = "To Follow Up";
 // The priority Where to act counts, and a follow-up task takes on.
 export const HIGH_PRIORITY = "High";
 
+// The Discover GBA modules a prospect has trialled (N22): a field that picks several of its options.
+export const GBA_TRIALS = "gbaTrials";
+
 // "No or not now" tells on hold from rejected (D-011).
 export const NOT_NOW_ANSWER = "Not now";
 export const NO_ANSWER = "No";
@@ -109,6 +112,21 @@ export function hasProduct(c: Pick<PipelineEntry, "product">, productKey: string
   return productsOf(c).some((p) => normalizeKey(p) === productKey);
 }
 
+/* ---------- Several options in one value (N22) ---------- */
+
+// The options a "choices" value holds: "Personality, Cognitive" is two.
+export function choicesOf(value: unknown): string[] {
+  return typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : [];
+}
+
+// A value with one option added or taken away, in the options' order (ones no longer among them last), or nothing.
+export function toggleChoice(value: unknown, name: string, order: string[]): string | undefined {
+  const now = choicesOf(value);
+  const next = now.includes(name) ? now.filter((v) => v !== name) : [...now, name];
+  const rank = (v: string) => (order.includes(v) ? order.indexOf(v) : order.length);
+  return next.sort((a, b) => rank(a) - rank(b)).join(", ") || undefined;
+}
+
 /* ---------- Find and narrow (B8) ---------- */
 
 const SEARCHED: Record<CompanyGroup, (keyof PipelineEntry)[]> = {
@@ -139,6 +157,7 @@ export interface CompanyFilter {
   status?: string | null; // an option name, or "-" for companies without one
   priority?: string | null; // the same
   productKey?: string | null;
+  trial?: string | null; // a GBA module, or "-" for companies that have trialled none
   whereToAct?: WhereToAct | null;
 }
 
@@ -155,6 +174,7 @@ export function filterCompanies(companies: PipelineEntry[], f: CompanyFilter, to
     if (f.status && !choiceMatches(c.status, f.status)) return false;
     if (f.priority && !choiceMatches(c.priority, f.priority)) return false;
     if (f.productKey && !hasProduct(c, f.productKey)) return false;
+    if (f.trial && !(f.trial === NO_VALUE ? !choicesOf(c[GBA_TRIALS]).length : choicesOf(c[GBA_TRIALS]).includes(f.trial))) return false;
     if (f.whereToAct && !isWhereToAct(c, f.whereToAct, today)) return false;
     return true;
   });

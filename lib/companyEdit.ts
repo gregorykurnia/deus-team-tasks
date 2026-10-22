@@ -160,7 +160,7 @@ export function moveMessage(name: string, to: CompanyGroup, kindSwitch: number):
 
 // The record's sections, by field key; fields the team added go under "Added by the team".
 const SECTIONS: [string, string[]][] = [
-  ["Where we stand", ["status", "answer", "priority", "product", "reason"]],
+  ["Where we stand", ["status", "answer", "priority", "product", "gbaTrials", "reason"]],
   ["What’s happening", ["date", "target", "reach", "notes", "trial"]],
   ["Who they are", ["pic", "type", "industry", "sourcing"]],
 ];

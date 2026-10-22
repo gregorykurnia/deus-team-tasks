@@ -5,9 +5,11 @@ import {
   COMES_BACK,
   COMPANY_GROUP_LABELS,
   COMPANY_GROUPS,
+  choicesOf,
   companiesInGroup,
   defaultCompanySort,
   filterCompanies,
+  GBA_TRIALS,
   isCompanyParked,
   matchesCompanySearch,
   NO_VALUE,
@@ -30,6 +32,7 @@ export interface CompanyViewState {
   status: string | null; // an option name, or "-" for no status
   priority: string | null; // the same
   product: string | null; // a product's merged key
+  trial: string | null; // a GBA module (N22), or "-" for none
   act: WhereToAct | null; // Active only
   parked: boolean; // Active only: the parked companies rather than those in play (N20)
   sort: string | null; // "company" or a field's key; null is the group's default
@@ -37,7 +40,7 @@ export interface CompanyViewState {
 }
 
 export const DEFAULT_GROUP: CompanyGroup = "active";
-export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "act", "view", "sort", "dir"] as const;
+export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "trial", "act", "view", "sort", "dir"] as const;
 
 const GROUP_SLUGS: Record<CompanyGroup, string> = {
   toApproach: "to-approach",
@@ -64,6 +67,7 @@ export function parseCompanyView(params: URLSearchParams): CompanyViewState {
     status: params.get("status") || null,
     priority: params.get("priority") || null,
     product: params.get("product") || null,
+    trial: params.get("trial") || null,
     act: group === "active" ? fromSlug(ACT_SLUGS, params.get("act")) : null,
     parked: group === "active" && params.get("view") === "parked",
     sort,
@@ -81,6 +85,7 @@ export function viewParams(state: CompanyViewState, current: URLSearchParams = n
   put("status", state.status);
   put("priority", state.priority);
   put("product", state.product);
+  put("trial", state.trial);
   if (state.group === "active" && state.act) put("act", ACT_SLUGS[state.act]);
   if (state.group === "active" && state.parked) put("view", "parked");
   if (state.sort) {
@@ -104,9 +109,15 @@ export function shownFields(settings: CompanySettings, group: CompanyGroup): Com
 
 const hasField = (fields: CompanyField[], key: string) => fields.some((f) => f.key === key);
 
-// Status and Priority filters exist where the group has the field; Product too (guide 6.5).
-export function availableFilters(fields: CompanyField[]): { status: boolean; priority: boolean; product: boolean } {
-  return { status: hasField(fields, "status"), priority: hasField(fields, "priority"), product: hasField(fields, "product") };
+// Status and Priority filters exist where the group has the field; Product too (guide 6.5). GBA trials, where the list
+// shows it (N22): every group has the field, and most keep it hidden.
+export function availableFilters(fields: CompanyField[]): { status: boolean; priority: boolean; product: boolean; trial: boolean } {
+  return {
+    status: hasField(fields, "status"),
+    priority: hasField(fields, "priority"),
+    product: hasField(fields, "product"),
+    trial: fields.some((f) => f.key === GBA_TRIALS && f.shown),
+  };
 }
 
 /* ---------- Filters ---------- */
@@ -119,24 +130,25 @@ export function appliedFilters(state: CompanyViewState, fields: CompanyField[]) 
     status: has.status ? state.status : null,
     priority: has.priority ? state.priority : null,
     productKey: has.product ? state.product : null,
+    trial: has.trial ? state.trial : null,
     whereToAct: state.group === "active" ? state.act : null,
   };
 }
 
 export function filtersOn(state: CompanyViewState, fields: CompanyField[]): boolean {
   const f = appliedFilters(state, fields);
-  return !!(f.search || f.status || f.priority || f.productKey || f.whereToAct);
+  return !!(f.search || f.status || f.priority || f.productKey || f.trial || f.whereToAct);
 }
 
 // Clear filters keeps the group and the sort, and drops the rest.
 export function clearedFilters(state: CompanyViewState): CompanyViewState {
-  return { ...state, q: "", status: null, priority: null, product: null, act: null };
+  return { ...state, q: "", status: null, priority: null, product: null, trial: null, act: null };
 }
 
 // Filters that aren't the search: "Clear filters" rather than "Clear search" (guide 6.5).
 export function narrowedBeyondSearch(state: CompanyViewState, fields: CompanyField[]): boolean {
   const f = appliedFilters(state, fields);
-  return !!(f.status || f.priority || f.productKey || f.whereToAct);
+  return !!(f.status || f.priority || f.productKey || f.trial || f.whereToAct);
 }
 
 // "-" is a company with no value, and its filter says "None".
@@ -322,6 +334,7 @@ export type CellTone = "plain" | "amber" | "red";
 export type Cell =
   | { kind: "empty" }
   | { kind: "choice"; label: string; colour: OptionColour }
+  | { kind: "choices"; label: string; items: { label: string; colour: OptionColour }[] } // label: all of them, in words
   | { kind: "date"; label: string; tone: CellTone; title: string; pill: boolean } // pill: a target date or planned outreach
   | { kind: "number"; label: string }
   | { kind: "text"; label: string };
@@ -369,6 +382,10 @@ export function cellOf(c: PipelineEntry, field: CompanyField, group: CompanyGrou
     case "choice":
       // A value that isn't one of the options any more still shows, in grey.
       return { kind: "choice", label: text, colour: optionOf(settings, field.key, text)?.colour ?? "slate" };
+    case "choices": {
+      const items = choicesOf(text).map((name) => ({ label: name, colour: optionOf(settings, field.key, name)?.colour ?? ("slate" as const) }));
+      return items.length ? { kind: "choices", label: items.map((i) => i.label).join(", "), items } : { kind: "empty" };
+    }
     case "date":
       if (field.key === "date") return lastActionCell(text, group, today, isCompanyParked(c, today));
       if (field.key === "target" || field.key === "reach") return pillCell(text, field.key === "reach", today, isCompanyParked(c, today));
@@ -396,6 +413,7 @@ export function subline(c: PipelineEntry, group: CompanyGroup): string {
 
 const COLUMN_WIDTH: Record<CompanyField["type"], { css: string; min: number }> = {
   choice: { css: "150px", min: 150 },
+  choices: { css: "minmax(200px, 1.2fr)", min: 200 }, // its chips wrap
   date: { css: "150px", min: 150 },
   text: { css: "minmax(150px, 1fr)", min: 150 },
   long: { css: "minmax(220px, 1.6fr)", min: 220 },

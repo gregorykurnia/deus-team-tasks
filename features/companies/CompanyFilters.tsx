@@ -1,10 +1,11 @@
 "use client";
 
-// The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, then
+// The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, GBA
+// trials where its list shows them (N22), then
 // Sort, Select (Active only, to park several, N20), Fields and Export. A filter that's on shows its value and a round ×
 // that clears it.
 import { useRef, useState, type Ref } from "react";
-import { NO_VALUE, type ProductOption } from "@/lib/companies";
+import { GBA_TRIALS, NO_VALUE, type ProductOption } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import {
   availableFilters,
@@ -75,6 +76,7 @@ export default function CompanyFilters({ state, fields, options, products, onSta
           </Menu>
         </>
       )}
+      {has.trial && <ChoiceFilter name="trial" label="GBA trials" any="Any trial or none" state={state} options={options[GBA_TRIALS] ?? []} onState={onState} />}
       <FilterButton ref={sortRef} icon="sort" label="Sort" summary={sortSummary(sort, fields)} expanded={open === "sort"} onClick={() => toggle("sort")} />
       <Menu open={open === "sort"} anchorRef={sortRef} onClose={close} label="Sort by">
         <MenuHeading>Sort by</MenuHeading>
@@ -102,8 +104,9 @@ export default function CompanyFilters({ state, fields, options, products, onSta
   );
 }
 
-// Status and Priority: pick one of the field's options, or "None" for companies without one.
-function ChoiceFilter({ name, label, any, state, options, onState }: { name: "status" | "priority"; label: string; any: string; state: CompanyViewState; options: ChoiceOption[]; onState: (next: CompanyViewState) => void }) {
+// Status, Priority and GBA trials: pick one of the field's options, or "None" for companies without one. A company with
+// several trials matches each of them.
+function ChoiceFilter({ name, label, any, state, options, onState }: { name: "status" | "priority" | "trial"; label: string; any: string; state: CompanyViewState; options: ChoiceOption[]; onState: (next: CompanyViewState) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
   const value = state[name];
@@ -111,7 +114,7 @@ function ChoiceFilter({ name, label, any, state, options, onState }: { name: "st
     <>
       <FilterButton
         ref={ref}
-        icon={name === "status" ? "choice" : "flag"}
+        icon={name === "status" ? "choice" : name === "trial" ? "checks" : "flag"}
         label={label}
         value={value ? filterValueLabel(value) : null}
         expanded={open}

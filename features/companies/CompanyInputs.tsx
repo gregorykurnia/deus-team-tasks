@@ -4,9 +4,10 @@
 // field per detail the group asks for, each marked optional (5.5).
 import type { KeyboardEvent } from "react";
 import { parseValue, type CompanyPatch } from "@/lib/companyEdit";
-import type { CompanyGroup } from "@/lib/companies";
+import { choicesOf, toggleChoice, type CompanyGroup } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import { lookOf } from "@/lib/companyView";
+import { ChoiceChip } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
 import Icon from "@/ui/Icon";
 import { DateInput, NumberInput, SelectInput, TextArea, TextInput } from "@/ui/Inputs";
@@ -73,6 +74,22 @@ interface DetailFieldProps {
 
 export function DetailField({ field, value, options, onChange }: DetailFieldProps) {
   const v = inputValue(value);
+  if (field.type === "choices") {
+    const order = options.map((o) => o.name);
+    return (
+      <Field label={field.label} optional group>
+        {() => (
+          <div className={styles.chips} role="group" aria-label={field.label}>
+            {options.map((o) => (
+              <ChoiceChip key={o.name} pressed={choicesOf(v).includes(o.name)} onClick={() => onChange(toggleChoice(v, o.name, order) ?? "")}>
+                {o.name}
+              </ChoiceChip>
+            ))}
+          </div>
+        )}
+      </Field>
+    );
+  }
   return (
     <Field label={field.label} optional>
       {(control) => {

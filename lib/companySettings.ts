@@ -7,7 +7,7 @@ import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { assertOnline, forgetSource, reportSnapshot, watchSource } from "./connection";
 import { db } from "./firebase";
-import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
+import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, GBA_TRIALS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
 import { replaceFieldValue } from "./companyWrites";
 import type { PipelineEntry } from "./clientTypes";
 
@@ -28,7 +28,8 @@ export interface ChoiceOption {
   role?: LockedRole;
 }
 
-export type FieldType = "text" | "long" | "number" | "date" | "choice";
+// "choices" picks several of a field's options, stored in option order as one comma-separated value (GBA trials, N22).
+export type FieldType = "text" | "long" | "number" | "date" | "choice" | "choices";
 
 export interface CompanyField {
   key: string; // where companies store the value
@@ -61,6 +62,7 @@ const DEFAULT_OPTIONS: Record<string, ChoiceOption[]> = {
   type: [opt("Client", "blue"), opt("Partner", "green"), opt("Individual Partner", "violet")],
   priority: [opt(HIGH_PRIORITY, "red", "highPriority"), opt("Medium", "amber"), opt("Low", "slate")],
   answer: [opt(NOT_NOW_ANSWER, "amber", "notNow"), opt(NO_ANSWER, "slate", "no")],
+  [GBA_TRIALS]: [opt("Personality", "violet"), opt("Cognitive", "blue"), opt("Neuroscience", "teal"), opt("Simulation", "amber")],
 };
 
 // Each locked option: its field, its stored name, the colour it starts with, and why it's locked.
@@ -93,6 +95,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("industry", "Industry", "text", true),
     field("sourcing", "How we found it", "text", true),
     field("notes", "Notes", "long", true),
+    field(GBA_TRIALS, "GBA trials", "choices", false),
   ],
   active: [
     field("status", "Status", "choice", true),
@@ -100,6 +103,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("date", "Last action", "date", true),
     field("target", "Target date", "date", true),
     field("product", "Products", "text", true),
+    field(GBA_TRIALS, "GBA trials", "choices", true),
     field("notes", "Next actions", "long", true),
     field("pic", "Contact person", "text", false),
     field("type", "Type", "choice", false),
@@ -114,6 +118,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("notes", "Next actions", "long", true),
     field("type", "Type", "choice", true),
     field("pic", "Contact person", "text", false),
+    field(GBA_TRIALS, "GBA trials", "choices", false),
     field("industry", "Industry", "text", false),
     field("sourcing", "How we found it", "text", false),
   ],
@@ -124,6 +129,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("type", "Type", "choice", true),
     field("date", "Last action", "date", true),
     field("pic", "Contact person", "text", false),
+    field(GBA_TRIALS, "GBA trials", "choices", false),
   ],
 };
 

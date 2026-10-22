@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import {
+  choicesOf,
   companyGroup,
   DEAL_DONE_STATUS,
   defaultCompanySort,
@@ -12,6 +13,7 @@ import {
   productsOf,
   sortCompanies,
   taskDatesFromCompany,
+  toggleChoice,
   whereToActCounts,
 } from "@/lib/companies";
 
@@ -118,5 +120,31 @@ describe("kept in step (B12)", () => {
     });
     expect(taskDatesFromCompany({ date: "2026-10-01", target: "2026-10-24" }, t)).toBeNull();
     expect(taskDatesFromCompany({ date: undefined, target: undefined }, t)).toEqual({ lastActionDate: undefined });
+  });
+});
+
+describe("GBA trials: several options in one value (N22)", () => {
+  const order = ["Personality", "Cognitive", "Neuroscience", "Simulation"];
+
+  it("reads the options a value holds", () => {
+    expect(choicesOf("Personality, Cognitive")).toEqual(["Personality", "Cognitive"]);
+    expect(choicesOf(" Simulation ,")).toEqual(["Simulation"]);
+    expect(choicesOf(undefined)).toEqual([]);
+    expect(choicesOf("")).toEqual([]);
+  });
+
+  it("ticks and unticks an option, keeping the options' order, and leaves nothing when none is left", () => {
+    expect(toggleChoice(undefined, "Simulation", order)).toBe("Simulation");
+    expect(toggleChoice("Simulation", "Personality", order)).toBe("Personality, Simulation");
+    expect(toggleChoice("Personality, Simulation", "Personality", order)).toBe("Simulation");
+    expect(toggleChoice("Simulation", "Simulation", order)).toBeUndefined();
+    expect(toggleChoice("Old module", "Cognitive", order)).toBe("Cognitive, Old module"); // one no longer an option goes last
+  });
+
+  it("filters by a module, or by none trialled", () => {
+    const companies = [co(1, { gbaTrials: "Personality, Cognitive" }), co(2, { gbaTrials: "Cognitive" }), co(3)];
+    expect(filterCompanies(companies, { trial: "Cognitive" }, TODAY).map((c) => c.id)).toEqual([1, 2]);
+    expect(filterCompanies(companies, { trial: "Personality" }, TODAY).map((c) => c.id)).toEqual([1]);
+    expect(filterCompanies(companies, { trial: "-" }, TODAY).map((c) => c.id)).toEqual([3]);
   });
 });

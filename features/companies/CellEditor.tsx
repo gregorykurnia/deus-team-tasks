@@ -2,9 +2,11 @@
 
 // The quick editor (guide 4.9): one detail changed in one step, in a menu anchored to the value. A choice shows its options
 // as chips with the chosen one ticked, then Clear and Edit options. A date has a field, quick picks, then Clear and Save. Text has a field
-// (or a 130px text box) with Save. Enter saves (Ctrl + Enter in a text box), and the screen's toast offers Undo. It closes
+// (or a 130px text box) with Save. Pick several (GBA trials, N22) ticks and unticks options, each saved as it's ticked,
+// and stays open. Enter saves (Ctrl + Enter in a text box), and the screen's toast offers Undo. It closes
 // once saved: when saving fails, it stays open with what was typed, and the toast says what wasn't saved.
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { choicesOf, toggleChoice } from "@/lib/companies";
 import { parseValue, quickPicks, sameValue, type FieldValue } from "@/lib/companyEdit";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import Button from "@/ui/Button";
@@ -12,7 +14,7 @@ import { ChoiceChip } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
 import Icon from "@/ui/Icon";
 import { DateInput, NumberInput, TextArea, TextInput } from "@/ui/Inputs";
-import Menu, { MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuSeparator } from "@/ui/Menu";
+import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuSeparator } from "@/ui/Menu";
 import OptionChip from "@/ui/OptionChip";
 import styles from "./Companies.module.css";
 
@@ -39,11 +41,19 @@ export default function CellEditor(props: CellEditorProps) {
       anchorRef={anchorRef}
       onClose={onClose}
       label={field.label}
-      form={field.type !== "choice"}
+      form={field.type !== "choice" && field.type !== "choices"}
       initialFocus={text ? ["input", "textarea"] : field.type === "date" ? ["input"] : undefined}
     >
       <MenuHeading>{field.label}</MenuHeading>
-      {field.type === "choice" ? <ChoiceEditor {...props} /> : field.type === "date" ? <DateEditor {...props} /> : <TextEditor {...props} />}
+      {field.type === "choice" ? (
+        <ChoiceEditor {...props} />
+      ) : field.type === "choices" ? (
+        <ChoicesEditor {...props} />
+      ) : field.type === "date" ? (
+        <DateEditor {...props} />
+      ) : (
+        <TextEditor {...props} />
+      )}
     </Menu>
   );
 }
@@ -73,6 +83,35 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, onSave, onEditOpt
           <MenuSeparator />
           <MenuItem icon="sliders" onSelect={onEditOptions}>
             Edit options
+          </MenuItem>
+        </>
+      )}
+    </>
+  );
+}
+
+// Each tick saves the options picked so far. They're kept here too, so a quick second tick builds on the first before
+// the company catches up.
+function ChoicesEditor({ value, options = [], onSave }: CellEditorProps) {
+  const [picked, setPicked] = useState<string | undefined>(choicesOf(value).join(", ") || undefined);
+  const order = options.map((o) => o.name);
+  const save = (next: string | undefined) => {
+    const before = picked;
+    setPicked(next);
+    void onSave(next).then((saved) => !saved && setPicked(before));
+  };
+  return (
+    <>
+      {options.map((o) => (
+        <MenuCheck key={o.name} checked={choicesOf(picked).includes(o.name)} onSelect={() => save(toggleChoice(picked, o.name, order))}>
+          <OptionChip tone={o.colour}>{o.name}</OptionChip>
+        </MenuCheck>
+      ))}
+      {picked && (
+        <>
+          <MenuSeparator />
+          <MenuItem icon="x" onSelect={() => save(undefined)}>
+            Clear
           </MenuItem>
         </>
       )}

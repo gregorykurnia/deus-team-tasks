@@ -38,8 +38,8 @@ import OptionsDialog, { type OptionChanges } from "./OptionsDialog";
 import { usePending } from "./usePending";
 import styles from "./Settings.module.css";
 
-export const KIND_LABELS: Record<FieldType, string> = { text: "Short text", long: "Long text", number: "Number", date: "Date", choice: "Choice" };
-const KIND_ICONS: Record<FieldType, IconName> = { text: "text", long: "para", number: "hash", date: "cal", choice: "choice" };
+export const KIND_LABELS: Record<FieldType, string> = { text: "Short text", long: "Long text", number: "Number", date: "Date", choice: "Choice", choices: "Pick several" };
+const KIND_ICONS: Record<FieldType, IconName> = { text: "text", long: "para", number: "hash", date: "cal", choice: "choice", choices: "checks" };
 const KINDS: FieldType[] = ["text", "long", "number", "date", "choice"];
 
 interface FieldsSheetProps extends OptionChanges {
