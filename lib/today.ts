@@ -101,6 +101,7 @@ export interface ChartDay {
   weekend: boolean;
   today: boolean;
   summary: string; // "Thu 23: 3 deadlines, 1 event"
+  details: string; // the summary, then a line per task due and event, for the hover text
 }
 
 export interface TwoWeeks {
@@ -112,6 +113,23 @@ export interface TwoWeeks {
 export const CHART_DAYS = 14;
 const EVENT_WEIGHT = 0.6;
 const EVENT_CAP = 6;
+const DETAIL_LINES = 8;
+const DETAIL_LENGTH = 80;
+
+const clip = (s: string) => (s.length > DETAIL_LENGTH ? `${s.slice(0, DETAIL_LENGTH - 1)}…` : s);
+
+// The hover text: the summary, then the tasks due (with their company) and the events, folding after eight lines.
+function dayDetails(summary: string, due: Task[], events: CalendarEvent[], companies: CompaniesById): string {
+  const lines = [
+    ...due.map((t) => {
+      const company = linkedCompany(t, companies);
+      return `• ${clip(t.task)}${company ? ` (${company.company})` : ""}`;
+    }),
+    ...events.map((e) => `• ${clip(e.title)} (event)`),
+  ];
+  const shown = lines.length > DETAIL_LINES ? [...lines.slice(0, DETAIL_LINES - 1), `and ${lines.length - DETAIL_LINES + 1} more`] : lines;
+  return [summary, ...shown].join("\n");
+}
 
 // Whether a calendar event covers a day (its end is inclusive).
 export function eventOnDay(e: Pick<CalendarEvent, "start" | "end">, iso: string): boolean {
@@ -125,9 +143,11 @@ export function twoWeeksOf(open: Task[], events: CalendarEvent[] | null, compani
     const iso = addDays(today, i);
     const due = open.filter((t) => t.endDate === iso);
     const count = (k: Kind) => due.filter((t) => kindOf(t, companies) === k).length;
-    const n = events ? events.filter((e) => eventOnDay(e, iso)).length : 0;
+    const onDay = events ? events.filter((e) => eventOnDay(e, iso)) : [];
+    const n = onDay.length;
     const label = dayLabel(iso);
     const deadlines = due.length;
+    const summary = `${label}: ${plural(deadlines, "deadline")}${n ? `, ${plural(n, "event")}` : ""}`;
     days.push({
       iso,
       label,
@@ -137,7 +157,8 @@ export function twoWeeksOf(open: Task[], events: CalendarEvent[] | null, compani
       events: n,
       weekend: isWeekend(iso),
       today: i === 0,
-      summary: `${label}: ${plural(deadlines, "deadline")}${n ? `, ${plural(n, "event")}` : ""}`,
+      summary,
+      details: dayDetails(summary, due, onDay, companies),
     });
   }
   const height = (d: ChartDay) => d.prospect + d.client + d.internal + Math.min(d.events, EVENT_CAP) * EVENT_WEIGHT;

@@ -21,7 +21,7 @@ export default function TwoWeekChart({ weeks, events }: { weeks: TwoWeeks; event
       <div className={styles.chart}>
         {days.map((d) => {
           const bars = segmentShares(d, max).map((s) => <i key={s.kind} data-segment={s.kind} style={{ height: `${s.share * 100}%` }} />);
-          const marks = { className: styles.column, "data-today": d.today || undefined, "data-weekend": d.weekend || undefined, title: d.summary, "aria-label": d.summary };
+          const marks = { className: styles.column, "data-today": d.today || undefined, "data-weekend": d.weekend || undefined, title: d.details, "aria-label": d.summary };
           return phone ? (
             <div key={d.iso} role="img" {...marks}>
               {bars}

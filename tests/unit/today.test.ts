@@ -112,6 +112,18 @@ describe("the two-week chart (guide 4.12)", () => {
     expect(days[0].summary).toBe("Tue 20: 0 deadlines");
   });
 
+  it("lists each day's tasks, with their company, and events in its hover text, folding after eight lines", () => {
+    const tasks = [task("a", { endDate: day(1), linkedClientId: 1 }), task("b", { endDate: day(1) })];
+    const { days } = twoWeeksOf(tasks, [event({ start: day(1), end: day(1), title: "Pelita demo" })], companies, TODAY);
+    expect(days[1].details).toBe("Wed 21: 2 deadlines, 1 event\n• Task a (Pelita Foods)\n• Task b\n• Pelita demo (event)");
+    expect(days[0].details).toBe("Tue 20: 0 deadlines");
+
+    const many = Array.from({ length: 10 }, (_, i) => task(`m${i}`, { endDate: day(2) }));
+    const lines = twoWeeksOf(many, [], companies, TODAY).days[2].details.split("\n");
+    expect(lines).toHaveLength(9);
+    expect(lines.at(-1)).toBe("and 3 more");
+  });
+
   it("shows no event bars when the calendar is unavailable", () => {
     const { days } = twoWeeksOf([], null, companies, TODAY);
     expect(days.every((d) => d.events === 0)).toBe(true);
