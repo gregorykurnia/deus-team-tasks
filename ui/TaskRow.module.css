@@ -255,6 +255,30 @@
   padding: 4px 10px;
 }
 
+/* A detail changed in place (All tasks, wide screens): a button that opens its quick editor. A faint blue fill and
+   outline on hover mean "you can change this", as on a company's cells (guide 4.9). It sits above the row, so a click
+   on it never opens the task. */
+.edit {
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: var(--r-xs);
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.edit:hover {
+  background: rgba(47, 107, 234, .07);
+  box-shadow: inset 0 0 0 1px rgba(47, 107, 234, .25);
+}
+
+.edit.wrap {
+  padding-block: 4px;
+}
+
 /* A two-line cell: informed people and key points. */
 .wrap {
   display: -webkit-box;

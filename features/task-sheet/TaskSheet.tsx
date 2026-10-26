@@ -21,7 +21,7 @@ import { sortGroups } from "@/lib/taskGroups";
 import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/lib/taskStatus";
 import { canHoldSubtasks, newSubtask, parentOf, subtasksOf } from "@/lib/subtasks";
 import { addTask, deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
-import { TASK_PRIORITIES, TASK_TYPES, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
+import { TASK_PRIORITIES, TASK_TYPES, TOUCH_POINTS, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
 import Button from "@/ui/Button";
 import { ChipGroup } from "@/ui/ChipGroup";
 import { Confirm } from "@/ui/Dialog";
@@ -36,7 +36,7 @@ import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { KindTag } from "@/ui/Tag";
 import { TaskRecordRow } from "@/ui/TaskRow";
 import { useToast } from "@/ui/Toaster";
-import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromDraft, TOUCH_POINTS, type About, type TaskDraft } from "./draft";
+import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromDraft, type About, type TaskDraft } from "./draft";
 import styles from "./TaskSheet.module.css";
 
 const TOUCH_ICONS: Record<string, IconName> = { Call: "phone", Email: "mail", Meeting: "people", Message: "chat", Visit: "pin" };

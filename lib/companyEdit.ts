@@ -46,9 +46,9 @@ export interface QuickPick {
   iso: string;
 }
 
-// A date's quick picks: the last action looks back (Today, Yesterday), every other date looks ahead.
+// A date's quick picks: the last action (a company's or a task's) looks back (Today, Yesterday), every other date looks ahead.
 export function quickPicks(key: string, today: string = todayIso()): QuickPick[] {
-  if (key === "date") {
+  if (key === "date" || key === "lastActionDate") {
     return [
       { label: "Today", iso: today },
       { label: "Yesterday", iso: addDays(today, -1) },

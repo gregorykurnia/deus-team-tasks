@@ -5,10 +5,12 @@
 // with the title pinned, as the companies list does. On phones the head goes and each row becomes a card (the Sort menu stays).
 // On a group's page the Group column is left out: every task is in it. A subtask sits indented under its parent (N24).
 // While selecting several, the done circles become checkboxes, the head's one ticks every row shown, and a row's click
-// ticks it rather than opening the task (guide 4.7).
+// ticks it rather than opening the task (guide 4.7). On wide screens, outside selecting, a detail that can be changed in
+// place opens its quick editor from its cell (lib/taskCells).
 import { COLUMNS, columnLabel, columnSort, listGrid, listMinWidth, type ColumnId } from "@/lib/taskColumns";
 import type { CompaniesById } from "@/lib/kinds";
 import type { SubtaskCount } from "@/lib/subtasks";
+import type { EditableColumn } from "@/lib/taskCells";
 import type { SortDir, TaskSortKey, TaskView } from "@/lib/taskQueries";
 import type { Task } from "@/lib/types";
 import Button from "@/ui/Button";
@@ -39,10 +41,11 @@ interface TaskListProps {
   onSort: (key: TaskSortKey) => void;
   onToggleDone: (task: Task, done: boolean) => void;
   onMore: () => void;
+  onEdit?: (task: Task, column: EditableColumn, anchor: HTMLElement) => void;
   selecting?: { head: boolean | "mixed"; chosen: ReadonlySet<string>; onHead: () => void; onToggle: (id: string) => void };
 }
 
-export default function TaskList({ tasks, hidden, pageSize, columns: chosen, view, sort, inGroup, companies, groupLooks, today, leaving, all, subtaskCounts, hrefFor, onSort, onToggleDone, onMore, selecting }: TaskListProps) {
+export default function TaskList({ tasks, hidden, pageSize, columns: chosen, view, sort, inGroup, companies, groupLooks, today, leaving, all, subtaskCounts, hrefFor, onSort, onToggleDone, onMore, onEdit, selecting }: TaskListProps) {
   const columns = inGroup ? chosen.filter((c) => c !== "group") : chosen;
   const shown = new Set(tasks.map((t) => t.id));
   const head = (label: string, key: TaskSortKey | undefined) => {
@@ -88,6 +91,7 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, vie
                   count: subtaskCounts.get(t.id),
                 }}
                 onToggleDone={(done) => onToggleDone(t, done)}
+                onEdit={onEdit && !selecting ? (column, anchor) => onEdit(t, column, anchor) : undefined}
                 selecting={!!selecting}
                 selected={selecting?.chosen.has(t.id)}
                 onSelect={() => selecting?.onToggle(t.id)}

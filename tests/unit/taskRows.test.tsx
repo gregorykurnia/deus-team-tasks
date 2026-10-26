@@ -153,6 +153,23 @@ describe("list row (All tasks)", () => {
     expect(html(<TaskListRow {...props} task={{ ...base, completed: true }} columns={["status"]} />)).toMatch(/data-col="status">.*Done/);
   });
 
+  it("makes a detail that changes in place a button named for what it holds, but not the company, group or people", () => {
+    const edit = () => {};
+    const markup = html(<TaskListRow {...props} task={{ ...base, priority: "High" }} columns={["company", "status", "prio", "touch", "start", "end", "type", "resp"]} onEdit={edit} />);
+    expect(markup).toContain('aria-label="Status: To Do. Change"');
+    expect(markup).toContain('aria-label="Priority: High. Change"');
+    expect(markup).toContain('aria-label="Touch point: Call. Change"');
+    expect(markup).toContain('aria-label="Start: 10 Oct. Change"');
+    expect(markup).toContain('aria-label="Deadline: 2 days late. Change"');
+    expect(markup).toContain('aria-label="Task type: None. Change"');
+    expect(markup.match(/<button[^>]*data-col/g)).toHaveLength(6);
+    // Without onEdit (phones, selecting) nothing is a button; a finished task's Finished column isn't one either.
+    expect(html(<TaskListRow {...props} task={base} columns={["prio"]} />)).not.toMatch(/<button[^>]*data-col/);
+    const done = html(<TaskListRow {...props} task={{ ...base, completed: true }} columns={["end", "key"]} onEdit={edit} />);
+    expect(done).not.toContain("Finished: ");
+    expect(done).toContain('aria-label="Key points: Ask about the second outlet.. Change"');
+  });
+
   it("shows only the live tag under the title while just changed, as the details have their own cells", () => {
     const markup = html(<TaskListRow {...props} task={{ ...base, priority: "High" }} justChanged />);
     expect(markup).toContain("Just changed");

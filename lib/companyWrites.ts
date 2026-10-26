@@ -155,6 +155,22 @@ export async function saveTaskKeptInStep(task: Task, patch: Partial<NewTask>, co
   return { companyChanged: !!companyPatch };
 }
 
+// A change made in a task's cell on All tasks (lib/taskCells): saved as task details saves it, with Undo that puts the
+// task's fields back and, when its company followed the dates, the company's last action and target too.
+export async function saveTaskWithUndo(task: Task, patch: Partial<NewTask>, companies: CompaniesById): Promise<{ companyChanged: boolean; undo: Undo }> {
+  const company = task.linkedClientId != null ? companies.get(task.linkedClientId) : undefined;
+  const { companyChanged } = await saveTaskKeptInStep(task, patch, companies);
+  const written = withCompletedAt(patch, task);
+  return {
+    companyChanged,
+    undo: async () => {
+      assertOnline("No connection. The change wasn't undone.");
+      await restoreTasks([{ t: task, p: written }]);
+      if (company && companyChanged) await updateDoc(companyRef(company.id), toCompanyUpdate({ date: company.date, target: company.target }));
+    },
+  };
+}
+
 // Adds a task. A new company task with a last action or deadline brings its company in step (B12); the company's other
 // tasks keep their own dates. If that fails, the new task goes again, so trying once more can't make two.
 export async function addTaskKeptInStep(task: NewTask, companies: CompaniesById): Promise<{ id: string; companyChanged: boolean }> {

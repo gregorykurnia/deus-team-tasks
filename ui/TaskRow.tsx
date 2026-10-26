@@ -11,6 +11,7 @@ import { isTagged, useArrival } from "@/lib/liveChanges";
 import type { CompaniesById } from "@/lib/kinds";
 import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
 import { countLabel, type SubtaskCount } from "@/lib/subtasks";
+import { cellEditable, type EditableColumn } from "@/lib/taskCells";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
 import { STATUS_LABELS, taskStatus } from "@/lib/taskStatus";
 import type { Task } from "@/lib/types";
@@ -168,6 +169,8 @@ interface ListRowProps extends RowProps {
   groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the Group column
   inGroup?: boolean; // on a group's own page every task is in it, so it is not repeated
   subtask?: SubtaskLine;
+  // Set on wide screens: a detail that can be changed in place (lib/taskCells) is a button that opens its quick editor.
+  onEdit?: (column: EditableColumn, anchor: HTMLElement) => void;
 }
 
 // Subtasks on the list (lib/subtasks): a subtask under its parent is indented, one listed without it names it, and a
@@ -178,8 +181,31 @@ export interface SubtaskLine {
   count?: SubtaskCount;
 }
 
-// One of the chosen details. Empty ones say so with a dash, and drop out of the phone's card.
-function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Task; row: RowModel; groupLooks?: ReadonlyMap<string, GroupLook>; today: string }) {
+// What an editable cell holds, in words, for its button's name.
+function cellWords(id: EditableColumn, task: Task, row: RowModel, today: string): string | undefined {
+  switch (id) {
+    case "status":
+      return STATUS_LABELS[taskStatus(task)];
+    case "start":
+      return task.startDate ? shortDate(task.startDate, today) : undefined;
+    case "end":
+      return task.endDate ? row.deadline.label : undefined;
+    case "last":
+      return row.lastAction?.label;
+    case "type":
+      return task.taskType;
+    case "touch":
+      return task.touchPoint;
+    case "prio":
+      return task.priority;
+    case "key":
+      return task.keyPoints;
+  }
+}
+
+// One of the chosen details. Empty ones say so with a dash, and drop out of the phone's card. With onEdit, one that can
+// be changed in place is a button named for what it holds ("Priority: High. Change"), as a company's cells are.
+function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; task: Task; row: RowModel; groupLooks?: ReadonlyMap<string, GroupLook>; today: string; onEdit?: ListRowProps["onEdit"] }) {
   const column = COLUMNS.find((c) => c.id === id)!;
   let content: ReactNode = null;
   let wrap = false;
@@ -248,6 +274,25 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
   const empty = !content;
   const classes = [styles.cell, id === "end" && styles.deadline, wrap && styles.wrap, empty && styles.emptyCell, id === "resp" && styles.lift].filter(Boolean);
   const label = columnLabel(column, row.done ? "done" : row.parked ? "parked" : "open");
+  if (onEdit && cellEditable(id, row)) {
+    return (
+      <button
+        type="button"
+        className={[...classes, styles.edit].join(" ")}
+        data-col={id}
+        aria-label={`${label}: ${cellWords(id, task, row, today) || "None"}. Change`}
+        onClick={(e) => onEdit(id, e.currentTarget)}
+      >
+        {empty ? (
+          <span aria-hidden="true" className={styles.none}>
+            –
+          </span>
+        ) : (
+          content
+        )}
+      </button>
+    );
+  }
   return (
     <span className={classes.join(" ")} data-col={id}>
       {/* "No action for 15 days" already names the detail: "Last action No action for 15 days" would say it twice. */}
@@ -306,7 +351,7 @@ export function TaskListRow(input: ListRowProps) {
         {meta.length > 0 && <p className={styles.meta}>{meta}</p>}
       </div>
       {COLUMNS.filter((c) => columns.includes(c.id)).map((c) => (
-        <ListCell key={c.id} id={c.id} task={task} row={row} groupLooks={groupLooks} today={today} />
+        <ListCell key={c.id} id={c.id} task={task} row={row} groupLooks={groupLooks} today={today} onEdit={props.onEdit} />
       ))}
     </article>
   );

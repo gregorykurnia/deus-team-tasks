@@ -9,18 +9,23 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { groupHref, over } from "@/desk/areas";
 import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
+import CellEditor from "@/features/companies/CellEditor";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import QuickCapture from "@/features/today/QuickCapture";
+import { changeMessage, type FieldValue } from "@/lib/companyEdit";
+import { saveTaskWithUndo } from "@/lib/companyWrites";
 import { assertOnline, failureMessage, useConnection } from "@/lib/connection";
 import { plural, weekdayDate } from "@/lib/dates";
 import { groupNavItems, navCounts } from "@/lib/deskNav";
-import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
+import { kindOf as kindOfTask, linkedCompany, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, partlyGroupChange, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
 import { subtaskCounts } from "@/lib/subtasks";
+import { cellField, cellOptions, cellPatch, cellValue, statusFromLabel, type EditableColumn } from "@/lib/taskCells";
+import { STATUS_LABELS, statusPatch, taskStatus } from "@/lib/taskStatus";
 import { filterTasks, type TaskSortKey, type TaskView } from "@/lib/taskQueries";
 import { chosenIds, headState, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
-import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, setTasksParked, type Undo } from "@/lib/taskWrites";
+import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, putBackDone, setTasksDone, setTasksParked, updateTask, type Undo } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import Button, { buttonClass } from "@/ui/Button";
 import { Confirm } from "@/ui/Dialog";
@@ -46,6 +51,7 @@ import { useDetailsShown } from "./useDetailsShown";
 import styles from "./Tasks.module.css";
 
 const TABLET_AND_SMALLER = "(max-width: 900px)";
+const LIST_AS_TABLE = "(min-width: 761px)"; // rows are table rows, not cards (ui/TaskRow.module.css), and details change in place
 const LEAVE_MS = 900; // the row's leaving animation: .35s of waiting, then .5s sliding and fading
 const SEARCH_DELAY_MS = 180;
 const num = (n: number) => n.toLocaleString("en-GB");
@@ -72,6 +78,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const companies = useCompanies();
   const byId = useCompaniesById();
   const phone = useMediaQuery(TABLET_AND_SMALLER); // the tab bar layout: group chips and a search under the title
+  const table = useMediaQuery(LIST_AS_TABLE);
   const [columns, setColumns] = useDetailsShown();
   const newGroup = useOverParam("newGroup");
 
@@ -216,6 +223,53 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     } catch (err) {
       stopLeaving(task.id);
       toast(failureMessage(err, `The task couldn't be marked ${done ? "done" : "not done"}. Check your connection and try again.`), { error: true });
+    }
+  }
+
+  // A detail changed in place (lib/taskCells). The editor holds the task as it was when opened and reads the live one.
+  const editAnchor = useRef<HTMLElement | null>(null);
+  const [editing, setEditing] = useState<{ task: Task; column: EditableColumn } | null>(null);
+
+  // A new status says where the task went, with Undo, as in task details; finished or not, it leaves as marking done does.
+  async function saveStatus(task: Task, label: string | undefined): Promise<boolean> {
+    const to = statusFromLabel(label);
+    if (!to || to === taskStatus(task)) return true;
+    const leaves = (to === "done") !== !!task.completed;
+    if (leaves) setLeaving((map) => new Map(map).set(task.id, task));
+    try {
+      await updateTask(task.id, statusPatch(to, task), task);
+      if (leaves) timers.current.set(task.id, setTimeout(() => stopLeaving(task.id), LEAVE_MS));
+      toast(`Moved to ${STATUS_LABELS[to]}`, {
+        action: "Undo",
+        onAction: () => {
+          stopLeaving(task.id);
+          putBackDone([task]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true }));
+        },
+      });
+      return true;
+    } catch (err) {
+      if (leaves) stopLeaving(task.id);
+      toast(failureMessage(err, "The status couldn't be saved. Check your connection and try again."), { error: true });
+      return false;
+    }
+  }
+
+  // Any other detail is saved as task details saves it: a company task's dates bring its company in step (B12).
+  async function saveCell(task: Task, column: EditableColumn, value: FieldValue): Promise<boolean> {
+    if (column === "status") return saveStatus(task, typeof value === "string" ? value : undefined);
+    const { label } = cellField(column);
+    try {
+      const { companyChanged, undo } = await saveTaskWithUndo(task, cellPatch(column, value), byId);
+      const lead = changeMessage(label, value === undefined);
+      const company = companyChanged ? linkedCompany(task, byId) : undefined;
+      toast(company ? `${lead}. ${company.company} now matches.` : lead, {
+        action: "Undo",
+        onAction: () => void undo().catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+      });
+      return true;
+    } catch (err) {
+      toast(failureMessage(err, `${label} couldn't be saved. Check your connection and try again.`), { error: true });
+      return false;
     }
   }
 
@@ -536,6 +590,14 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           hrefFor={(id) => over(pathname, search, `task=${id}`)}
           onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
           onToggleDone={toggleDone}
+          onEdit={
+            table
+              ? (task, column, anchor) => {
+                  editAnchor.current = anchor;
+                  setEditing({ task, column });
+                }
+              : undefined
+          }
           onMore={() => setExtra({ key: viewKey, rows: (extra.key === viewKey ? extra.rows : 0) + PAGE_SIZE })}
           selecting={
             selecting
@@ -665,6 +727,23 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
         />
       )}
 
+      {editing && today && (() => {
+        const task = live.get(editing.task.id) ?? editing.task;
+        const { column } = editing;
+        return (
+          <CellEditor
+            key={`edit:${task.id}:${column}`}
+            anchorRef={editAnchor}
+            onClose={() => setEditing(null)}
+            field={cellField(column)}
+            value={cellValue(column, task)}
+            options={cellOptions(column, task)}
+            noClear={column === "status"}
+            today={today}
+            onSave={(value) => saveCell(task, column, value)}
+          />
+        );
+      })()}
       {newGroup.open && (
         <GroupDialog
           groups={groups.rows}

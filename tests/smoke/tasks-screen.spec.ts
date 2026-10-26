@@ -139,6 +139,28 @@ test("D2: marking done in the list writes it, the row leaves, and Undo puts it b
   await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.completed).toBe(false);
 });
 
+test("4.9 on All tasks: a detail changes from its cell without opening the task, with Undo", async ({ page }) => {
+  await seedMixed();
+  await page.goto("/tasks");
+  await waitUntilLive(page);
+  const row = rows(page).filter({ hasText: "Plan the offsite" });
+
+  await row.getByRole("button", { name: /^Task type: .*\. Change$/ }).click();
+  await page.getByRole("menu", { name: "Task type" }).getByRole("menuitemradio", { name: "Finalize Scheduling" }).click();
+  await expect(toasts(page).getByText("Task type updated")).toBeVisible();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.taskType).toBe("Finalize Scheduling");
+  await expect(row.getByRole("button", { name: "Task type: Finalize Scheduling. Change" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
+  const before = (await storedById("tasks", "tasks", "loose"))?.endDate;
+
+  await row.getByRole("button", { name: /^Deadline: .*\. Change$/ }).click();
+  await page.getByRole("dialog", { name: "Deadline" }).getByRole("button", { name: "In a week" }).click();
+  await expect(toasts(page).getByText("Deadline updated")).toBeVisible();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.endDate).toBe(isoDay(7));
+  await toasts(page).getByRole("button", { name: "Undo" }).last().click();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.endDate).toBe(before);
+});
+
 test("status: In Progress set in the task, shown on its row and found with the Status filter; Done moves it to Done, with Undo", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");

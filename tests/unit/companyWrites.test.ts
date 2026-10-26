@@ -17,6 +17,7 @@ import {
   parkCompany,
   replaceFieldValue,
   saveTaskKeptInStep,
+  saveTaskWithUndo,
   updateCompany,
 } from "@/lib/companyWrites";
 import { saveNotes, startNotesForCompany } from "@/lib/noteWrites";
@@ -101,6 +102,29 @@ describe("changing a company", () => {
     expect(result).toEqual({ companyChanged: false });
     expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-05", target: "2026-10-30" });
     expect(await readFields("tasks", "tasks/mine")).toMatchObject({ keyPoints: "Bring the pricing sheet", endDate: "2026-10-20" });
+  });
+
+  it("changes a company task from its cell, and Undo puts back the task and the company it brought in step", async () => {
+    const c = co(1, { date: "2026-10-05", target: "2026-10-30" });
+    const tasks = [task("mine", { linkedClientId: 1, lastActionDate: "2026-10-01", endDate: "2026-10-20" })];
+    await seedCompanies([c]);
+    await seedTasks(tasks);
+    const { companyChanged, undo } = await saveTaskWithUndo(tasks[0], { endDate: "2026-10-24" }, companiesById([c]));
+    expect(companyChanged).toBe(true);
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-01", target: "2026-10-24" });
+    await undo();
+    expect(await readFields("tasks", "tasks/mine")).toMatchObject({ endDate: "2026-10-20", lastActionDate: "2026-10-01" });
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ date: "2026-10-05", target: "2026-10-30" });
+  });
+
+  it("clears a field from its cell, and Undo writes it back", async () => {
+    const tasks = [task("mine", { priority: "High" })];
+    await seedTasks(tasks);
+    const { companyChanged, undo } = await saveTaskWithUndo(tasks[0], { priority: undefined }, companiesById([]));
+    expect(companyChanged).toBe(false);
+    expect(await readFields("tasks", "tasks/mine")).not.toHaveProperty("priority");
+    await undo();
+    expect(await readFields("tasks", "tasks/mine")).toMatchObject({ priority: "High" });
   });
 
   it("adds a dated company task and brings the company in step, and leaves its other tasks' dates alone", async () => {

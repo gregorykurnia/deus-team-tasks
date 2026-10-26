@@ -23,9 +23,6 @@ export interface TaskDraft {
   keyPoints: string;
 }
 
-// The touch points offered as chips (guide 6.3). A task can hold another, written before there were chips.
-export const TOUCH_POINTS = ["Call", "Email", "Meeting", "Message", "Visit"] as const;
-
 export function emptyDraft(group = ""): TaskDraft {
   return {
     task: "",
