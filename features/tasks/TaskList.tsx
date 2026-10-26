@@ -5,8 +5,8 @@
 // with the title pinned, as the companies list does. On phones the head goes and each row becomes a card (the Sort menu stays).
 // On a group's page the Group column is left out: every task is in it. A subtask sits indented under its parent (N24).
 // While selecting several, the done circles become checkboxes, the head's one ticks every row shown, and a row's click
-// ticks it rather than opening the task (guide 4.7). On wide screens, outside selecting, a detail that can be changed in
-// place opens its quick editor from its cell (lib/taskCells).
+// ticks it rather than opening the task (guide 4.7). Outside selecting, a detail that can be changed in place opens its
+// quick editor from its cell (lib/taskCells), on phones' cards too.
 import { COLUMNS, columnLabel, columnSort, listGrid, listMinWidth, type ColumnId } from "@/lib/taskColumns";
 import type { CompaniesById } from "@/lib/kinds";
 import type { SubtaskCount } from "@/lib/subtasks";

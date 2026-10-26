@@ -161,6 +161,19 @@ test("4.9 on All tasks: a detail changes from its cell without opening the task,
   await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.endDate).toBe(before);
 });
 
+test("4.9 on a phone: a detail on a task's card changes from a tap, without opening the task", { tag: "@phone" }, async ({ page, isMobile }) => {
+  test.skip(!isMobile, "The card is the phone's.");
+  await seedMixed();
+  await page.goto("/tasks");
+  await waitUntilLive(page);
+  const card = rows(page).filter({ hasText: "Chase the invoice" });
+  await card.getByRole("button", { name: "Task type: Follow Up. Change" }).tap();
+  await page.getByRole("menu", { name: "Task type" }).getByRole("menuitemradio", { name: "Our Action" }).tap();
+  await expect(toasts(page).getByText("Task type updated")).toBeVisible();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "late"))?.taskType).toBe("Our Action");
+  await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
+});
+
 test("status: In Progress set in the task, shown on its row and found with the Status filter; Done moves it to Done, with Undo", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");

@@ -255,7 +255,7 @@
   padding: 4px 10px;
 }
 
-/* A detail changed in place (All tasks, wide screens): a button that opens its quick editor. A faint blue fill and
+/* A detail changed in place (All tasks): a button that opens its quick editor. A faint blue fill and
    outline on hover mean "you can change this", as on a company's cells (guide 4.9). It sits above the row, so a click
    on it never opens the task. */
 .edit {
@@ -391,6 +391,11 @@
     flex-basis: 100%;
   }
 
+  /* A two-line cell isn't a flex box, so its label takes the gap as a margin. */
+  .list .wrap .label {
+    margin-right: 5px;
+  }
+
   /* Small labels name the details that don't explain themselves. */
   .list .cell[data-col="status"] .label,
   .list .cell[data-col="last"] .label,
@@ -408,6 +413,31 @@
     position: absolute;
     top: 12px;
     right: 12px;
+  }
+
+  /* A detail changed in place is a tap target, as on a company's card (guide 5.13): 32px tall, and an invisible 4px
+     above and below makes it 40px. The 8px between lines of details keeps those from overlapping. Its text stays in
+     line with the rest. The deadline keeps its corner, its pill the target. */
+  .list:has(.edit) {
+    row-gap: 8px;
+  }
+
+  .list .edit {
+    min-height: 32px;
+    margin: 0 -4px;
+    padding: 2px 4px;
+  }
+
+  .list .edit::after {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .list .deadline.edit {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
   }
 }
 

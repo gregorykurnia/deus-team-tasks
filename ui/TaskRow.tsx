@@ -169,7 +169,7 @@ interface ListRowProps extends RowProps {
   groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the Group column
   inGroup?: boolean; // on a group's own page every task is in it, so it is not repeated
   subtask?: SubtaskLine;
-  // Set on wide screens: a detail that can be changed in place (lib/taskCells) is a button that opens its quick editor.
+  // Set, a detail that can be changed in place (lib/taskCells) is a button that opens its quick editor.
   onEdit?: (column: EditableColumn, anchor: HTMLElement) => void;
 }
 
@@ -283,6 +283,11 @@ function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; 
         aria-label={`${label}: ${cellWords(id, task, row, today) || "None"}. Change`}
         onClick={(e) => onEdit(id, e.currentTarget)}
       >
+        {!(id === "last" && row.lastAction?.tone === "red") && (
+          <span aria-hidden="true" className={styles.label}>
+            {label}
+          </span>
+        )}
         {empty ? (
           <span aria-hidden="true" className={styles.none}>
             –

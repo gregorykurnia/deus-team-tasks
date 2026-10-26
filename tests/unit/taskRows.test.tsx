@@ -163,7 +163,7 @@ describe("list row (All tasks)", () => {
     expect(markup).toContain('aria-label="Deadline: 2 days late. Change"');
     expect(markup).toContain('aria-label="Task type: None. Change"');
     expect(markup.match(/<button[^>]*data-col/g)).toHaveLength(6);
-    // Without onEdit (phones, selecting) nothing is a button; a finished task's Finished column isn't one either.
+    // Without onEdit (selecting) nothing is a button; a finished task's Finished column isn't one either.
     expect(html(<TaskListRow {...props} task={base} columns={["prio"]} />)).not.toMatch(/<button[^>]*data-col/);
     const done = html(<TaskListRow {...props} task={{ ...base, completed: true }} columns={["end", "key"]} onEdit={edit} />);
     expect(done).not.toContain("Finished: ");

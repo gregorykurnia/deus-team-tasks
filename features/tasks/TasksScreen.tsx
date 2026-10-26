@@ -51,7 +51,6 @@ import { useDetailsShown } from "./useDetailsShown";
 import styles from "./Tasks.module.css";
 
 const TABLET_AND_SMALLER = "(max-width: 900px)";
-const LIST_AS_TABLE = "(min-width: 761px)"; // rows are table rows, not cards (ui/TaskRow.module.css), and details change in place
 const LEAVE_MS = 900; // the row's leaving animation: .35s of waiting, then .5s sliding and fading
 const SEARCH_DELAY_MS = 180;
 const num = (n: number) => n.toLocaleString("en-GB");
@@ -78,7 +77,6 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const companies = useCompanies();
   const byId = useCompaniesById();
   const phone = useMediaQuery(TABLET_AND_SMALLER); // the tab bar layout: group chips and a search under the title
-  const table = useMediaQuery(LIST_AS_TABLE);
   const [columns, setColumns] = useDetailsShown();
   const newGroup = useOverParam("newGroup");
 
@@ -590,14 +588,10 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           hrefFor={(id) => over(pathname, search, `task=${id}`)}
           onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
           onToggleDone={toggleDone}
-          onEdit={
-            table
-              ? (task, column, anchor) => {
-                  editAnchor.current = anchor;
-                  setEditing({ task, column });
-                }
-              : undefined
-          }
+          onEdit={(task, column, anchor) => {
+            editAnchor.current = anchor;
+            setEditing({ task, column });
+          }}
           onMore={() => setExtra({ key: viewKey, rows: (extra.key === viewKey ? extra.rows : 0) + PAGE_SIZE })}
           selecting={
             selecting
