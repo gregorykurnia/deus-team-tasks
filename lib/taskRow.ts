@@ -4,6 +4,7 @@ import { isoOf, parseIso } from "./dates";
 import { kindOf, linkedCompany, type CompaniesById, type Kind } from "./kinds";
 import { isParked } from "./parking";
 import { initials } from "./people";
+import { taskStatus } from "./taskStatus";
 import type { Task } from "./types";
 import { deadlineSignal, lastActionSignal, type DeadlineSignal, type Signal } from "./urgency";
 
@@ -19,6 +20,7 @@ export interface RowModel {
   deadline: DeadlineSignal;
   deadlineTitle: string; // the full date, for hover
   done: boolean;
+  inProgress: boolean; // the "In Progress" chip (lib/taskStatus)
   parked: boolean; // out of the open work until it comes back (lib/parking)
 }
 
@@ -49,6 +51,7 @@ export function taskRowModel(task: Task, companies: CompaniesById, today?: strin
     deadline: deadlineSignal(task, today),
     deadlineTitle,
     done,
+    inProgress: taskStatus(task) === "inProgress",
     parked,
   };
 }

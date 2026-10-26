@@ -11,12 +11,14 @@ import { isTagged, useArrival } from "@/lib/liveChanges";
 import type { CompaniesById } from "@/lib/kinds";
 import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
+import { STATUS_LABELS } from "@/lib/taskStatus";
 import type { Task } from "@/lib/types";
 import type { Tone } from "@/lib/urgency";
 import Avatar from "./Avatar";
 import AvatarStack from "./AvatarStack";
 import DoneCircle from "./DoneCircle";
 import Icon from "./Icon";
+import OptionChip from "./OptionChip";
 import { kindStyle } from "./kindStyle";
 import Pill, { type PillTone } from "./Pill";
 import SelectBox from "./SelectBox";
@@ -89,9 +91,19 @@ function Title({ task, href, selecting }: { task: Task; href: string; selecting?
   );
 }
 
-// Company or group, touch point, "High priority", the last action in its tone, "Just changed".
+// "In Progress", first in the line under the title wherever the task shows.
+function InProgress() {
+  return (
+    <span className={styles.status}>
+      <OptionChip tone="blue">{STATUS_LABELS.inProgress}</OptionChip>
+    </span>
+  );
+}
+
+// In Progress, company or group, touch point, "High priority", the last action in its tone, "Just changed".
 function Meta({ row, justChanged, only }: { row: RowModel; justChanged?: boolean; only?: "place" }) {
   const bits = [
+    row.inProgress && <InProgress key="status" />,
     row.place && (
       <span key="place" className={styles.place}>
         {row.place}
@@ -246,6 +258,7 @@ export function TaskListRow(input: ListRowProps) {
   const company = row.badge.kind === "company" ? row.place : null;
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
   const meta = [
+    row.inProgress && <InProgress key="status" />,
     !columns.includes("company") && company && (
       <span key="company" className={styles.place}>
         {company}
@@ -347,6 +360,11 @@ export function TaskRecordRow(input: RowProps) {
       <Lead {...props} row={row} />
       <div className={styles.main}>
         <Title task={props.task} href={props.href} selecting={props.selecting} />
+        {row.inProgress && (
+          <p className={styles.meta}>
+            <InProgress />
+          </p>
+        )}
       </div>
       <DeadlinePill row={row} />
     </article>

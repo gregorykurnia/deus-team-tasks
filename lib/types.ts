@@ -35,6 +35,7 @@ export interface Task {
   taskGroup?: string; // name of the Task Group this task is organized under (Operational view)
   lastActionDate?: string; // yyyy-mm-dd
   completedAt?: number; // ms; when it was marked done (tasks finished before this was recorded have none, N1)
+  startedAt?: number; // ms; when it was marked In Progress (lib/taskStatus); none is To Do
   parkedAt?: number; // ms; when it was parked: out of the open work until brought back (lib/parking)
   parkedUntil?: string; // yyyy-mm-dd; the day a parked task comes back by itself, or none to wait until brought back
 }

@@ -43,7 +43,7 @@ const ids = (tasks: Task[]) => tasks.map((t) => t.id);
 
 describe("the view in the address", () => {
   it("starts on open tasks of every kind with nothing filtered", () => {
-    expect(view()).toEqual({ kind: "all", view: "open", q: "", due: null, type: null, idle: null, range: "week", sort: null, dir: null });
+    expect(view()).toEqual({ kind: "all", view: "open", q: "", due: null, status: null, type: null, idle: null, range: "week", sort: null, dir: null });
   });
 
   it("reads what Today links with: ?due=, ?kind=, ?idle=, ?q=", () => {

@@ -137,6 +137,17 @@
   white-space: nowrap;
 }
 
+/* The "In Progress" chip, a little tighter than in a cell so the line under the title keeps its height. */
+.meta > .status {
+  display: inline-flex;
+  overflow: visible;
+}
+
+.status > * {
+  padding: 0 8px;
+  font-size: 11.5px;
+}
+
 .place {
   color: var(--ink-2);
   font-weight: var(--w-semibold);

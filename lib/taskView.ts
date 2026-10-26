@@ -2,18 +2,21 @@
 // empty state to say when the list is empty. The address holds only the view's own params, so ?task= and ?newGroup= pass.
 import { KINDS, type CompaniesById, type Kind } from "./kinds";
 import { countByKind, defaultSort, filterTasks, sortTasks, type SortDir, type TaskSortKey, type TaskView } from "./taskQueries";
+import type { TaskStatus } from "./taskStatus";
 import type { Task, TaskType } from "./types";
 import { TASK_TYPES } from "./types";
 import type { DueBucket } from "./urgency";
 
 export type DueChoice = Exclude<DueBucket, "later">;
 export type FinishedRange = "week" | "month" | "all";
+export type StatusChoice = Exclude<TaskStatus, "done">;
 
 export interface TaskViewState {
   kind: Kind | "all"; // never set inside a task group
   view: TaskView;
   q: string;
   due: DueChoice | null; // open tasks only
+  status: StatusChoice | null; // open tasks only: To Do or In Progress
   type: TaskType | "-" | null; // "-" is no task type
   idle: number | null; // open company tasks: days without action
   range: FinishedRange; // done tasks: finished within
@@ -23,10 +26,12 @@ export interface TaskViewState {
 
 export const PAGE_SIZE = 100;
 
-export const VIEW_PARAMS = ["kind", "view", "q", "due", "type", "idle", "range", "sort", "dir", "focus"] as const;
+export const VIEW_PARAMS = ["kind", "view", "q", "due", "status", "type", "idle", "range", "sort", "dir", "focus"] as const;
 
 const DUE_CHOICES: DueChoice[] = ["overdue", "soon", "active", "nodate"];
 const RANGES: FinishedRange[] = ["week", "month", "all"];
+// In the address: ?status=to-do or ?status=in-progress.
+const STATUS_PARAMS: Record<StatusChoice, string> = { todo: "to-do", inProgress: "in-progress" };
 const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "group", "type", "desc", "prio", "doneAt", "back"];
 const VIEWS: TaskView[] = ["open", "parked", "done"];
 
@@ -92,6 +97,7 @@ export function parseTaskView(params: URLSearchParams, inGroup: boolean): TaskVi
   const kindParam = params.get("kind");
   const kind = !inGroup && KINDS.includes(kindParam as Kind) ? (kindParam as Kind) : "all";
   const dueParam = params.get("due") as DueChoice;
+  const statusParam = (Object.keys(STATUS_PARAMS) as StatusChoice[]).find((s) => STATUS_PARAMS[s] === params.get("status"));
   const typeParam = params.get("type");
   const idleParam = Number(params.get("idle"));
   const sortParam = params.get("sort") as TaskSortKey;
@@ -105,6 +111,7 @@ export function parseTaskView(params: URLSearchParams, inGroup: boolean): TaskVi
     view,
     q: params.get("q") ?? "",
     due: view === "open" && DUE_CHOICES.includes(dueParam) ? dueParam : null,
+    status: view === "open" && statusParam ? statusParam : null,
     type: typeParam === "-" || TASK_TYPES.includes(typeParam as TaskType) ? (typeParam as TaskType | "-") : null,
     idle: idleApplies && Number.isInteger(idleParam) && idleParam >= 1 && idleParam <= 999 ? idleParam : null,
     range: view === "done" && RANGES.includes(rangeParam) ? rangeParam : "week",
@@ -122,6 +129,7 @@ export function viewParams(state: TaskViewState, inGroup: boolean, current: URLS
   if (state.view !== "open") put("view", state.view);
   put("q", state.q);
   put("due", state.view === "open" ? state.due : null);
+  put("status", state.view === "open" && state.status ? STATUS_PARAMS[state.status] : null);
   put("type", state.type);
   put("idle", state.view === "open" && !inGroup && state.kind !== "internal" && state.idle ? String(state.idle) : null);
   if (state.view === "done" && state.range !== "week") put("range", state.range);
@@ -153,15 +161,15 @@ export function sortedByHead(state: TaskViewState, inGroup: boolean, key: TaskSo
 // A view change that keeps the sort only when it still fits.
 export function switchedView(state: TaskViewState, view: TaskView): TaskViewState {
   const sort = state.sort && sortKeyFits(state.sort, view) ? state.sort : null;
-  return { ...state, view, sort, dir: sort ? state.dir : null, due: null, idle: null, range: "week" };
+  return { ...state, view, sort, dir: sort ? state.dir : null, due: null, status: null, idle: null, range: "week" };
 }
 
 export function filtersOn(state: TaskViewState): boolean {
-  return !!(state.q.trim() || state.type || (state.view === "open" && (state.due || state.idle)));
+  return !!(state.q.trim() || state.type || (state.view === "open" && (state.due || state.status || state.idle)));
 }
 
 export function clearedFilters(state: TaskViewState): TaskViewState {
-  return { ...state, q: "", due: null, type: null, idle: null };
+  return { ...state, q: "", due: null, status: null, type: null, idle: null };
 }
 
 export interface TaskListing<T extends Task> {
@@ -192,6 +200,7 @@ export function listTasks<T extends Task & { completedAt?: number }>(
       group,
       search: state.q,
       due: state.due,
+      status: state.status,
       minIdleDays: state.idle,
       type: state.type,
       finishedWithinDays: state.range === "week" ? 7 : state.range === "month" ? 30 : null,
@@ -222,7 +231,7 @@ export function emptyCase(
   anyTasks: boolean
 ): EmptyCase {
   if (filtersOn(state) && scopedCount > 0) {
-    const onlyIdle = state.idle && !state.q.trim() && !state.type && !state.due;
+    const onlyIdle = state.idle && !state.q.trim() && !state.type && !state.due && !state.status;
     return onlyIdle ? { case: "idle", days: state.idle! } : { case: "no-match" };
   }
   if (state.view === "done") {

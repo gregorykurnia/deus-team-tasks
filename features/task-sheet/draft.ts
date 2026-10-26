@@ -1,12 +1,14 @@
 // What task details (guide 6.3) holds while it's open, and what it writes: a new task in full, or only the
 // fields that changed, so a colleague's change to another field is never written over.
 import { linkedCompany, type CompaniesById } from "@/lib/kinds";
+import { statusPatch, taskStatus, type TaskStatus } from "@/lib/taskStatus";
 import type { InformedPerson, NewTask, Task, TaskPriority, TaskType } from "@/lib/types";
 
 export type About = "company" | "internal";
 
 export interface TaskDraft {
   task: string;
+  status: TaskStatus;
   about: About;
   companyId: number | null;
   group: string; // a task group's name, "" for none
@@ -27,6 +29,7 @@ export const TOUCH_POINTS = ["Call", "Email", "Meeting", "Message", "Visit"] as 
 export function emptyDraft(group = ""): TaskDraft {
   return {
     task: "",
+    status: "todo",
     about: "internal",
     companyId: null,
     group,
@@ -47,6 +50,7 @@ export function draftFromTask(t: Task, companies: CompaniesById): TaskDraft {
   const company = linkedCompany(t, companies);
   return {
     task: t.task,
+    status: taskStatus(t),
     about: company ? "company" : "internal",
     companyId: company?.id ?? null,
     group: t.taskGroup ?? "",
@@ -62,8 +66,8 @@ export function draftFromTask(t: Task, companies: CompaniesById): TaskDraft {
   };
 }
 
-// The stored fields a draft stands for. Undefined clears a field.
-function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "completedAt"> {
+// The stored fields a draft stands for, apart from its status (lib/taskStatus). Undefined clears a field.
+function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "completedAt" | "startedAt"> {
   const company = d.about === "company" && d.companyId != null;
   return {
     task: d.task.trim(),
@@ -82,19 +86,21 @@ function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "complete
 }
 
 export function newTaskFromDraft(d: TaskDraft, order = Date.now()): NewTask {
-  return { ...fieldsOf(d), order };
+  return { ...fieldsOf(d), ...(d.status === "todo" ? {} : statusPatch(d.status, undefined, order)), order };
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-// Only what changed between the draft as it opened and as it is now.
-export function patchFromDraft(opened: TaskDraft, now: TaskDraft): Partial<NewTask> {
+// Only what changed between the draft as it opened and as it is now. A new status writes what it stands for, keeping
+// the task's own start date (pass the task as it is).
+export function patchFromDraft(opened: TaskDraft, now: TaskDraft, current?: Task): Partial<NewTask> {
   const before = fieldsOf(opened);
   const after = fieldsOf(now);
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(after) as (keyof typeof after)[]) {
     if (!same(before[key], after[key])) patch[key] = after[key];
   }
+  if (opened.status !== now.status) Object.assign(patch, statusPatch(now.status, current));
   return patch as Partial<NewTask>;
 }
 

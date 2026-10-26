@@ -139,6 +139,40 @@ test("D2: marking done in the list writes it, the row leaves, and Undo puts it b
   await expect.poll(async () => (await storedById("tasks", "tasks", "loose"))?.completed).toBe(false);
 });
 
+test("status: In Progress set in the task, shown on its row and found with the Status filter; Done moves it to Done, with Undo", async ({ page }) => {
+  await seedMixed();
+  await page.goto("/tasks");
+  await waitUntilLive(page);
+  const status = (name: string) => page.getByRole("dialog", { name: "Task" }).getByRole("group", { name: "Status" }).getByRole("button", { name });
+
+  await page.getByRole("link", { name: "Plan the offsite" }).click();
+  await expect(status("To Do")).toHaveAttribute("aria-pressed", "true");
+  await status("In Progress").click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(toasts(page).getByText("Moved to In Progress")).toBeVisible();
+  await expect(rows(page).filter({ hasText: "Plan the offsite" })).toContainText("In Progress");
+  expect(typeof (await storedById("tasks", "tasks", "loose"))?.startedAt).toBe("number");
+
+  await filter(page, /^Status/).click();
+  await page.getByRole("menuitemradio", { name: "In Progress" }).click();
+  await expect(page).toHaveURL(/status=in-progress/);
+  await expect(rows(page)).toHaveCount(1);
+  await filter(page, /^Status/).click();
+  await page.getByRole("menuitemradio", { name: "To Do" }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await filter(page, "Clear the status filter").click();
+  await expect(rows(page)).toHaveCount(4);
+
+  await page.getByRole("link", { name: "Plan the offsite" }).click();
+  await status("Done").click();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(toasts(page).getByText("Moved to Done")).toBeVisible();
+  await expect(rows(page).filter({ hasText: "Plan the offsite" })).toHaveCount(0);
+  expect(await storedById("tasks", "tasks", "loose")).toMatchObject({ completed: true });
+  await toasts(page).getByRole("button", { name: "Undo" }).last().click(); // the In Progress toast may still be showing
+  await expect(rows(page).filter({ hasText: "Plan the offsite" })).toContainText("In Progress");
+});
+
 test("W10: finished tasks show most recent first, and an undated finish is under 'any time' (N1)", async ({ page }) => {
   await seedTasks([
     task("a", { task: "Finished yesterday", completed: true, completedAt: Date.now() - 86_400_000 }),

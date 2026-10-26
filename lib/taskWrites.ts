@@ -112,14 +112,14 @@ export async function setTasksDone(tasks: Task[], done: boolean, present?: Still
   return undoFor(written);
 }
 
-// Undo for marking done or not done: each task back to done or not as it was
-// (pass them as they were), with its finished date and any parking.
+// Undo for marking done or not done, or a new status: each task back to done or not as it was
+// (pass them as they were), with its finished and started dates and any parking.
 export async function putBackDone(tasks: Task[], present?: StillThere): Promise<void> {
   assertOnline("No connection. The change wasn't undone.");
   await writeEach(
     tasks,
     (batch, t) =>
-      batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt, parkedAt: t.parkedAt, parkedUntil: t.parkedUntil })),
+      batch.update(doc(db, TASKS, t.id), toTaskUpdate({ completed: !!t.completed, completedAt: t.completedAt, startedAt: t.startedAt, parkedAt: t.parkedAt, parkedUntil: t.parkedUntil })),
     present
   );
 }

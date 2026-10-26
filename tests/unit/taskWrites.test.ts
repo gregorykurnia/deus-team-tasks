@@ -2,7 +2,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { addTask, moveTasksToGroup, setTasksDone, setTasksParked, updateTask } from "@/lib/taskWrites";
+import { addTask, moveTasksToGroup, putBackDone, setTasksDone, setTasksParked, updateTask } from "@/lib/taskWrites";
+import { statusPatch } from "@/lib/taskStatus";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
 import { addFlow, updateFlow, withoutUnset } from "@/lib/flowWrites";
 import { OfflineError } from "@/lib/connection";
@@ -201,6 +202,21 @@ describe("when tasks and flows were finished or edited (1.6)", () => {
     expect(await readFields("tasks", "tasks/t")).not.toHaveProperty("completedAt");
     await undo();
     expect(await readFields("tasks", "tasks/t")).toMatchObject({ completed: true, completedAt: 1234 });
+  });
+
+  it("starts a task, finishes it keeping its start, and Undo puts the status back as it was", async () => {
+    const t = asTask("t");
+    await seedTasks([t]);
+    await updateTask("t", statusPatch("inProgress", t, 99), t);
+    expect(await readFields("tasks", "tasks/t")).toMatchObject({ completed: false, startedAt: 99 });
+    const started = { ...t, completed: false, startedAt: 99 };
+    await updateTask("t", statusPatch("done", started), started);
+    expect(await readFields("tasks", "tasks/t")).toMatchObject({ completed: true, startedAt: 99 });
+    await putBackDone([t]);
+    const back = await readFields("tasks", "tasks/t");
+    expect(back).toMatchObject({ completed: false });
+    expect(back).not.toHaveProperty("startedAt");
+    expect(back).not.toHaveProperty("completedAt");
   });
 
   it("records when a flow was last edited", async () => {

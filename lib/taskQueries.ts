@@ -2,6 +2,7 @@
 import { daysBetween, isoOf, todayIso } from "./dates";
 import { kindOf, linkedCompany, type CompaniesById, type Kind } from "./kinds";
 import { isParked } from "./parking";
+import { taskStatus, type TaskStatus } from "./taskStatus";
 import { dueBucket, idleDays, type DueBucket } from "./urgency";
 import type { Task, TaskType } from "./types";
 
@@ -13,6 +14,7 @@ export interface TaskFilter {
   group?: string | null; // a task group's name
   search?: string;
   due?: Exclude<DueBucket, "later"> | null;
+  status?: Exclude<TaskStatus, "done"> | null; // To Do or In Progress, open tasks only
   minIdleDays?: number | null; // "No action for", company tasks only
   type?: TaskType | "-" | null; // "-" means no task type
   finishedWithinDays?: number | null; // Done view: 7, 30, or any time
@@ -61,6 +63,7 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
     if (filter.search && !matchesSearch(t, filter.search, ctx)) return false;
     if (view === "open" || view === undefined) {
       if (filter.due && dueBucket(t, today) !== filter.due) return false;
+      if (filter.status && taskStatus(t) !== filter.status) return false;
       if (filter.minIdleDays != null) {
         if (!linkedCompany(t, ctx.companies)) return false;
         const idle = idleDays(t.lastActionDate, today);

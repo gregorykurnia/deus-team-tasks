@@ -5,6 +5,7 @@
 // Details shown, turns selecting several on and off (guide 4.7).
 import { useRef, useState, type Ref } from "react";
 import { COLUMNS, DEFAULT_COLUMNS, toggleColumn, type ColumnId } from "@/lib/taskColumns";
+import { STATUS_LABELS } from "@/lib/taskStatus";
 import type { SortDir, TaskSortKey } from "@/lib/taskQueries";
 import {
   directionLabels,
@@ -13,6 +14,7 @@ import {
   SORT_LABELS,
   type DueChoice,
   type FinishedRange,
+  type StatusChoice,
   type TaskViewState,
 } from "@/lib/taskView";
 import { TASK_TYPES, type TaskType } from "@/lib/types";
@@ -20,11 +22,12 @@ import FilterButton, { FilterToggle } from "@/ui/FilterButton";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuNumber, MenuSeparator } from "@/ui/Menu";
 import styles from "./Tasks.module.css";
 
-type Which = "due" | "range" | "type" | "idle" | "sort" | "details";
+type Which = "due" | "status" | "range" | "type" | "idle" | "sort" | "details";
 
 const DUE_LABELS: Record<DueChoice, string> = { overdue: "Overdue", soon: "Next 3 days", active: "Under way today", nodate: "No dates" };
 const RANGE_LABELS: Record<FinishedRange, string> = { week: "Last 7 days", month: "Last 30 days", all: "Any time" };
 const IDLE_CHOICES = [3, 7, 14, 30];
+const STATUS_CHOICES: StatusChoice[] = ["todo", "inProgress"];
 
 interface TaskFiltersProps {
   state: TaskViewState;
@@ -41,6 +44,7 @@ interface TaskFiltersProps {
 export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown, selecting, onSelecting, selectRef }: TaskFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const dueRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLButtonElement>(null);
   const rangeRef = useRef<HTMLButtonElement>(null);
   const typeRef = useRef<HTMLButtonElement>(null);
   const idleRef = useRef<HTMLButtonElement>(null);
@@ -69,6 +73,17 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
           onClear={() => onState({ ...state, due: null })}
         />
       ) : null}
+      {state.view === "open" && (
+        <FilterButton
+          ref={statusRef}
+          icon="bolt"
+          label="Status"
+          value={state.status ? STATUS_LABELS[state.status] : null}
+          expanded={open === "status"}
+          onClick={() => toggle("status")}
+          onClear={() => onState({ ...state, status: null })}
+        />
+      )}
       <FilterButton
         ref={typeRef}
         icon="filter"
@@ -102,6 +117,18 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
         {(["overdue", "soon", "active", "nodate"] as const).map((due) => (
           <MenuChoice key={due} checked={state.due === due} onSelect={() => onState({ ...state, due })}>
             {{ overdue: "Overdue", soon: "In the next 3 days", active: "Under way today", nodate: "No dates yet" }[due]}
+          </MenuChoice>
+        ))}
+      </Menu>
+
+      <Menu open={open === "status"} anchorRef={statusRef} onClose={close} label="Status">
+        <MenuHeading>Status</MenuHeading>
+        <MenuChoice checked={!state.status} onSelect={() => onState({ ...state, status: null })}>
+          Any status
+        </MenuChoice>
+        {STATUS_CHOICES.map((status) => (
+          <MenuChoice key={status} checked={state.status === status} onSelect={() => onState({ ...state, status })}>
+            {STATUS_LABELS[status]}
           </MenuChoice>
         ))}
       </Menu>

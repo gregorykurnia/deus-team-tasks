@@ -14,6 +14,7 @@ import { isDealDone, kindOf, type Kind } from "@/lib/kinds";
 import { isParked } from "@/lib/parking";
 import { initials, openCountsByName } from "@/lib/people";
 import { sortGroups } from "@/lib/taskGroups";
+import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/lib/taskStatus";
 import { deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
 import { TASK_PRIORITIES, TASK_TYPES, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
 import Button from "@/ui/Button";
@@ -113,7 +114,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
       return;
     }
     if (task) {
-      const patch = patchFromDraft(opened, draft);
+      const patch = patchFromDraft(opened, draft, task);
       if (Object.keys(patch).length === 0) {
         onClose();
         return;
@@ -122,7 +123,15 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
       try {
         const { companyChanged } = await saveTaskKeptInStep(task, patch, byId);
         onClose();
-        toast(keptInStepMessage("Changes saved", companyChanged));
+        // A new status alone says where the task went, with Undo as marking done has; with other changes it's saved as
+        // they are, with no Undo.
+        const statusOnly = Object.keys(patch).every((k) => k === "completed" || k === "startedAt");
+        if (statusOnly && draft.status !== opened.status)
+          toast(`Moved to ${STATUS_LABELS[draft.status]}`, {
+            action: "Undo",
+            onAction: () => void putBackDone([task]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+          });
+        else toast(keptInStepMessage(draft.status !== opened.status ? `Changes saved. Moved to ${STATUS_LABELS[draft.status]}` : "Changes saved", companyChanged));
       } catch (err) {
         setBusy(null);
         toast(failureMessage(err, "Your changes couldn't be saved. Check your connection and try again."), { error: true });
@@ -143,7 +152,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   // Marking done or not done keeps anything changed in the sheet too, so nothing typed is lost.
   async function setDone(done: boolean) {
     if (!task || busy || gone) return;
-    const patch = patchFromDraft(opened, draft);
+    const patch = patchFromDraft(opened, draft, task);
     const changed = Object.keys(patch).length > 0;
     if (changed && incomplete) {
       setTries((n) => n + 1);
@@ -172,7 +181,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   // Parking or bringing back keeps anything changed in the sheet too, as marking done does.
   async function setParked(park: boolean, until: string | null = null) {
     if (!task || busy || gone) return;
-    const patch = patchFromDraft(opened, draft);
+    const patch = patchFromDraft(opened, draft, task);
     const changed = Object.keys(patch).length > 0;
     if (changed && incomplete) {
       setTries((n) => n + 1);
@@ -382,6 +391,19 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
             </button>
           ) : (
             <>
+              {/* A new task starts To Do or In Progress: one already done isn't something to add. */}
+              <Field label="Status" group>
+                {() => (
+                  <Segmented<TaskStatus>
+                    label="Status"
+                    full
+                    options={(task ? TASK_STATUSES : TASK_STATUSES.filter((s) => s !== "done")).map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+                    value={draft.status}
+                    onChange={(status) => status && set({ status })}
+                  />
+                )}
+              </Field>
+
               <div className={styles.row2}>
                 <Field label="Task type" optional>
                   {(control) => (
