@@ -47,7 +47,7 @@ import GroupTools from "./GroupTools";
 import SelectionBar, { type BulkAction } from "./SelectionBar";
 import TaskFilters from "./TaskFilters";
 import TaskList from "./TaskList";
-import { useDetailsShown } from "./useDetailsShown";
+import { useColumnWidths, useDetailsShown } from "./useDetailsShown";
 import styles from "./Tasks.module.css";
 
 const TABLET_AND_SMALLER = "(max-width: 900px)";
@@ -78,6 +78,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const byId = useCompaniesById();
   const phone = useMediaQuery(TABLET_AND_SMALLER); // the tab bar layout: group chips and a search under the title
   const [columns, setColumns] = useDetailsShown();
+  const [widths, setWidths] = useColumnWidths();
   const newGroup = useOverParam("newGroup");
 
   const state = useMemo(() => parseTaskView(search, inGroup), [search, inGroup]);
@@ -576,6 +577,8 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           hidden={hidden}
           pageSize={PAGE_SIZE}
           columns={columns}
+          widths={widths}
+          onWidths={setWidths}
           view={state.view}
           sort={sort}
           inGroup={inGroup}
@@ -658,6 +661,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             shown={columns}
             onState={(next) => update(() => next)}
             onShown={setColumns}
+            onResetWidths={Object.keys(widths).length ? () => setWidths({}) : undefined}
             selecting={selecting}
             onSelecting={() => setSelecting(!selecting)}
             selectRef={selectButton}

@@ -66,15 +66,73 @@ export function columnSort(column: Column, view: TaskView): TaskSortKey | undefi
   return view === "done" ? "doneAt" : "back";
 }
 
-// The list's grid, shared by the head and every row: the circle, the title, then the chosen columns.
-export function listGrid(shown: ColumnId[]): string {
-  const widths = COLUMNS.filter((c) => shown.includes(c.id)).map((c) => c.width);
-  return ["26px", "minmax(200px, 2.2fr)", ...widths].join(" ");
+// Column widths the user dragged (N26), remembered on this device, in px by column; "title" is the Description column.
+// A column without one keeps its track from COLUMNS.
+export type WidthKey = ColumnId | "title";
+export type ColumnWidths = Partial<Record<WidthKey, number>>;
+
+export const WIDTHS_STORAGE_KEY = "desk.tasks.widths";
+export const TITLE_MIN = 200;
+export const WIDTH_MAX = 640;
+
+const BY_ID = new Map(COLUMNS.map((c) => [c.id, c]));
+
+export function widthMin(key: WidthKey): number {
+  return key === "title" ? TITLE_MIN : BY_ID.get(key)!.min;
 }
 
-// The narrowest the list can be before its text would spill out: the circle, the title and each column at their least,
-// the 14px gaps between them, the row's 14px sides and the list's 6px margins. Narrower than that, it scrolls sideways.
-export function listMinWidth(shown: ColumnId[]): number {
+export function clampWidth(key: WidthKey, px: number): number {
+  return Math.round(Math.min(WIDTH_MAX, Math.max(widthMin(key), px)));
+}
+
+// What was saved. Anything unreadable is dropped.
+export function parseWidths(raw: string | null): ColumnWidths {
+  if (!raw) return {};
+  try {
+    const saved: unknown = JSON.parse(raw);
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+    const widths: ColumnWidths = {};
+    for (const [key, px] of Object.entries(saved)) {
+      if ((key === "title" || IDS.has(key)) && typeof px === "number" && Number.isFinite(px)) widths[key as WidthKey] = clampWidth(key as WidthKey, px);
+    }
+    return widths;
+  } catch {
+    return {};
+  }
+}
+
+const flexible = (key: WidthKey) => key === "title" || BY_ID.get(key)!.width.includes("fr");
+
+// A column dragged to `px`. It and every stretching track before it keep the widths they have now (`measured`, in the
+// order of `order`), so the column's edge follows the pointer and only the tracks after it give or take the space.
+export function resizeColumn(widths: ColumnWidths, order: WidthKey[], measured: number[], key: WidthKey, px: number): ColumnWidths {
+  const next = { ...widths };
+  for (const [i, k] of order.entries()) {
+    if (k === key) break;
+    if (next[k] === undefined && flexible(k) && measured[i]) next[k] = clampWidth(k, measured[i]);
+  }
+  next[key] = clampWidth(key, px);
+  return next;
+}
+
+export function resetWidth(widths: ColumnWidths, key: WidthKey): ColumnWidths {
+  const next = { ...widths };
+  delete next[key];
+  return next;
+}
+
+// The list's grid, shared by the head and every row: the circle, the title, then the chosen columns.
+export function listGrid(shown: ColumnId[], widths: ColumnWidths = {}): string {
+  const track = (key: WidthKey, fallback: string) => (widths[key] ? `${widths[key]}px` : fallback);
+  const tracks = COLUMNS.filter((c) => shown.includes(c.id)).map((c) => track(c.id, c.width));
+  return ["26px", track("title", "minmax(200px, 2.2fr)"), ...tracks].join(" ");
+}
+
+// The narrowest the list can be before its text would spill out: the circle, the title and each column at their least
+// (or the width they were given), the 14px gaps between them, the row's 14px sides and the list's 6px margins. Narrower
+// than that, it scrolls sideways.
+export function listMinWidth(shown: ColumnId[], widths: ColumnWidths = {}): number {
   const columns = COLUMNS.filter((c) => shown.includes(c.id));
-  return 26 + 200 + columns.reduce((n, c) => n + c.min, 0) + 14 * (columns.length + 1) + 28 + 12;
+  const title = widths.title ?? TITLE_MIN;
+  return 26 + title + columns.reduce((n, c) => n + (widths[c.id] ?? c.min), 0) + 14 * (columns.length + 1) + 28 + 12;
 }

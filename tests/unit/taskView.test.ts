@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { companiesById } from "@/lib/kinds";
-import { COLUMNS, DEFAULT_COLUMNS, listGrid, listMinWidth, parseColumns, toggleColumn } from "@/lib/taskColumns";
+import { COLUMNS, DEFAULT_COLUMNS, listGrid, listMinWidth, parseColumns, parseWidths, resetWidth, resizeColumn, toggleColumn } from "@/lib/taskColumns";
 import {
   clearedFilters,
   directionLabels,
@@ -263,6 +263,26 @@ describe("details shown", () => {
   it("knows how wide it must be before it scrolls sideways, so text never spills out of it", () => {
     expect(listMinWidth([])).toBe(26 + 200 + 14 + 28 + 12);
     expect(listMinWidth(["type", "end"])).toBe(26 + 200 + 104 + 118 + 14 * 3 + 28 + 12);
+  });
+
+  it("reads back the widths columns were dragged to, kept within each column's least and 640px (N26)", () => {
+    expect(parseWidths('{"end":150.4,"title":90,"key":2000,"nope":300,"type":"wide"}')).toEqual({ end: 150, title: 200, key: 640 });
+    expect(parseWidths("not json")).toEqual({});
+    expect(parseWidths("[1]")).toEqual({});
+    expect(parseWidths(null)).toEqual({});
+  });
+
+  it("puts a dragged width in the grid and in how wide the list must be", () => {
+    expect(listGrid(["type", "end"], { title: 320, end: 160 })).toBe("26px 320px 104px 160px");
+    expect(listMinWidth(["type", "end"], { title: 320, end: 160 })).toBe(26 + 320 + 104 + 160 + 14 * 3 + 28 + 12);
+  });
+
+  it("keeps the stretching columns before a dragged one as they are, so only the ones after it move", () => {
+    const order = ["title", "company", "type", "end", "resp"] as const;
+    const measured = [410.6, 180, 104, 118, 150];
+    expect(resizeColumn({}, [...order], measured, "end", 200)).toEqual({ title: 411, company: 180, end: 200 });
+    expect(resizeColumn({ title: 300 }, [...order], measured, "company", 90)).toEqual({ title: 300, company: 130 });
+    expect(resetWidth({ title: 300, end: 200 }, "end")).toEqual({ title: 300 });
   });
 });
 

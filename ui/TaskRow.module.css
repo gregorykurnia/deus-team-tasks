@@ -221,7 +221,7 @@
 /* ---------- List (All tasks) ---------- */
 .list {
   display: grid;
-  grid-template-columns: var(--cols);
+  grid-template-columns: var(--list-cols, var(--cols)); /* the list's, with any widths dragged (N26) */
   align-items: center;
   gap: 14px;
   min-height: 60px;

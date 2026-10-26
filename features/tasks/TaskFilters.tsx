@@ -36,12 +36,13 @@ interface TaskFiltersProps {
   shown: ColumnId[];
   onState: (next: TaskViewState) => void;
   onShown: (shown: ColumnId[]) => void;
+  onResetWidths?: () => void; // when columns were dragged to other widths (N26)
   selecting: boolean;
   onSelecting: () => void;
   selectRef?: Ref<HTMLButtonElement>; // gets focus back when selecting stops
 }
 
-export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown, selecting, onSelecting, selectRef }: TaskFiltersProps) {
+export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown, onResetWidths, selecting, onSelecting, selectRef }: TaskFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
   const dueRef = useRef<HTMLButtonElement>(null);
   const statusRef = useRef<HTMLButtonElement>(null);
@@ -199,6 +200,7 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
         <MenuItem keepOpen onSelect={() => onShown(DEFAULT_COLUMNS)}>
           Reset to the default
         </MenuItem>
+        {onResetWidths && <MenuItem onSelect={onResetWidths}>Reset column widths</MenuItem>}
         <MenuFoot>Remembered on this device.</MenuFoot>
       </Menu>
     </div>

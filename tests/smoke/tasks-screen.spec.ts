@@ -174,6 +174,43 @@ test("4.9 on a phone: a detail on a task's card changes from a tap, without open
   await expect(page.getByRole("dialog", { name: "Task" })).toHaveCount(0);
 });
 
+test("N26: a column is dragged wider from its head, remembered on this device, and goes back on a double-click or from Details shown", async ({ page }) => {
+  await seedMixed();
+  await page.goto("/tasks");
+  await expect(rows(page)).toHaveCount(4);
+  const handle = page.getByRole("separator", { name: "Deadline width" });
+  const cellWidth = async () => (await rows(page).first().locator('[data-col="end"]').boundingBox())!.width;
+  const before = await cellWidth();
+
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(cellWidth).toBeCloseTo(before + 80, 0);
+  await expect(handle).toHaveAttribute("aria-valuenow", "198"); // 118px to start with
+
+  await page.reload();
+  await expect.poll(cellWidth).toBeCloseTo(before + 80, 0);
+  await handle.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(cellWidth).toBeCloseTo(before + 90, 0);
+  await expect(handle).toHaveAttribute("aria-valuenow", "208");
+
+  await handle.dblclick();
+  await expect.poll(cellWidth).toBeCloseTo(before, 0);
+  await expect(handle).toHaveAttribute("aria-valuenow", "118");
+
+  await page.getByRole("separator", { name: "Description width" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await filter(page, "Details shown").click();
+  await page.getByRole("menuitem", { name: "Reset column widths" }).click();
+  await filter(page, "Details shown").click();
+  await expect(page.getByRole("menuitem", { name: "Reset to the default" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Reset column widths" })).toHaveCount(0);
+});
+
 test("status: In Progress set in the task, shown on its row and found with the Status filter; Done moves it to Done, with Undo", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");
