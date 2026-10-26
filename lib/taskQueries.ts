@@ -80,10 +80,11 @@ export function filterTasks<T extends TaskWithDone>(tasks: T[], filter: TaskFilt
   });
 }
 
-export type TaskSortKey = "end" | "start" | "last" | "about" | "group" | "type" | "desc" | "prio" | "doneAt" | "back";
+export type TaskSortKey = "end" | "start" | "last" | "about" | "group" | "type" | "desc" | "prio" | "status" | "doneAt" | "back";
 export type SortDir = "asc" | "desc";
 
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
+const STATUS_RANK: Record<TaskStatus, number> = { todo: 0, inProgress: 1, done: 2 };
 
 function sortValue(t: TaskWithDone, key: TaskSortKey, ctx: QueryContext): string | number | null {
   switch (key) {
@@ -109,6 +110,8 @@ function sortValue(t: TaskWithDone, key: TaskSortKey, ctx: QueryContext): string
       return t.task.toLowerCase();
     case "prio":
       return t.priority ? PRIORITY_RANK[t.priority] : null;
+    case "status":
+      return STATUS_RANK[taskStatus(t)];
   }
 }
 

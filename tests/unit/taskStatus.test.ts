@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { draftFromTask, emptyDraft, newTaskFromDraft, patchFromDraft } from "@/features/task-sheet/draft";
 import { companiesById } from "@/lib/kinds";
-import { filterTasks } from "@/lib/taskQueries";
+import { filterTasks, sortTasks } from "@/lib/taskQueries";
 import { taskRowModel } from "@/lib/taskRow";
 import { statusPatch, STATUS_LABELS, taskStatus } from "@/lib/taskStatus";
 import { clearedFilters, filtersOn, listTasks, parseTaskView, switchedView, viewParams } from "@/lib/taskView";
@@ -103,5 +103,14 @@ describe("the task sheet's status", () => {
     expect(newTaskFromDraft({ ...d, status: "inProgress" }, 7)).toMatchObject({ completed: false, startedAt: 7 });
     expect(newTaskFromDraft(d, 7)).not.toHaveProperty("startedAt");
     expect(newTaskFromDraft(d, 7)).not.toHaveProperty("completed");
+  });
+});
+
+describe("the Status column", () => {
+  it("sorts To Do first, or In Progress first the other way round", () => {
+    const tasks = [task("doing", { startedAt: 5 }), task("todo"), task("done", { completed: true })];
+    expect(sortTasks(tasks, "status", "asc", ctx).map((t) => t.id)).toEqual(["todo", "doing", "done"]);
+    expect(sortTasks(tasks, "status", "desc", ctx).map((t) => t.id)).toEqual(["done", "doing", "todo"]);
+    expect(view("sort=status&dir=desc")).toMatchObject({ sort: "status", dir: "desc" });
   });
 });

@@ -368,6 +368,7 @@
   }
 
   /* Small labels name the details that don't explain themselves. */
+  .list .cell[data-col="status"] .label,
   .list .cell[data-col="last"] .label,
   .list .cell[data-col="start"] .label,
   .list .cell[data-col="prio"] .label,

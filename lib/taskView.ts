@@ -32,7 +32,7 @@ const DUE_CHOICES: DueChoice[] = ["overdue", "soon", "active", "nodate"];
 const RANGES: FinishedRange[] = ["week", "month", "all"];
 // In the address: ?status=to-do or ?status=in-progress.
 const STATUS_PARAMS: Record<StatusChoice, string> = { todo: "to-do", inProgress: "in-progress" };
-const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "group", "type", "desc", "prio", "doneAt", "back"];
+const SORT_KEYS: TaskSortKey[] = ["end", "start", "last", "about", "group", "type", "desc", "prio", "status", "doneAt", "back"];
 const VIEWS: TaskView[] = ["open", "parked", "done"];
 
 // Sorting by when it was finished only makes sense for finished tasks, by when it comes back only for parked ones, and
@@ -62,6 +62,7 @@ export const SORT_LABELS: Record<TaskSortKey, string> = {
   type: "Task type",
   desc: "Description",
   prio: "Priority",
+  status: "Status",
   start: "Start",
   doneAt: "Finished",
   back: "Comes back",
@@ -81,6 +82,8 @@ export function directionLabels(key: TaskSortKey): [string, string] {
       return ["Longest without action first", "Most recent first"];
     case "prio":
       return ["High first", "Low first"];
+    case "status":
+      return ["To Do first", "In Progress first"];
     default:
       return ["A to Z", "Z to A"];
   }

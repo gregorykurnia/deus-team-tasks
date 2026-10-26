@@ -2,7 +2,7 @@
 // The fields a company group's list shows are different: those are shared (D-024).
 import type { TaskSortKey, TaskView } from "./taskQueries";
 
-export type ColumnId = "company" | "group" | "type" | "touch" | "prio" | "start" | "end" | "last" | "resp" | "inf" | "key";
+export type ColumnId = "company" | "group" | "status" | "type" | "touch" | "prio" | "start" | "end" | "last" | "resp" | "inf" | "key";
 
 export interface Column {
   id: ColumnId;
@@ -15,6 +15,7 @@ export interface Column {
 export const COLUMNS: Column[] = [
   { id: "company", label: "Company", width: "minmax(130px, 1fr)", min: 130, sort: "about" },
   { id: "group", label: "Group", width: "minmax(120px, 0.9fr)", min: 120, sort: "group" },
+  { id: "status", label: "Status", width: "112px", min: 112, sort: "status" },
   { id: "type", label: "Task type", width: "104px", min: 104, sort: "type" },
   { id: "touch", label: "Touch point", width: "96px", min: 96 },
   { id: "prio", label: "Priority", width: "86px", min: 86, sort: "prio" },

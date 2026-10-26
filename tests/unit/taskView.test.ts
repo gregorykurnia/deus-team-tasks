@@ -257,7 +257,7 @@ describe("details shown", () => {
   it("makes one grid for the head and every row: the circle, the title, then each chosen detail", () => {
     expect(listGrid([]).split(" minmax(").length).toBe(2); // the circle and the title
     expect(listGrid(["type", "end"])).toBe("26px minmax(200px, 2.2fr) 104px 118px");
-    expect(COLUMNS.map((c) => c.id)).toEqual(["company", "group", "type", "touch", "prio", "start", "end", "last", "resp", "inf", "key"]);
+    expect(COLUMNS.map((c) => c.id)).toEqual(["company", "group", "status", "type", "touch", "prio", "start", "end", "last", "resp", "inf", "key"]);
   });
 
   it("knows how wide it must be before it scrolls sideways, so text never spills out of it", () => {

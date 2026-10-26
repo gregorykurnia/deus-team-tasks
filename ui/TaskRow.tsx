@@ -11,7 +11,7 @@ import { isTagged, useArrival } from "@/lib/liveChanges";
 import type { CompaniesById } from "@/lib/kinds";
 import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
-import { STATUS_LABELS } from "@/lib/taskStatus";
+import { STATUS_LABELS, taskStatus } from "@/lib/taskStatus";
 import type { Task } from "@/lib/types";
 import type { Tone } from "@/lib/urgency";
 import Avatar from "./Avatar";
@@ -187,6 +187,11 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
       );
       break;
     }
+    case "status": {
+      const status = taskStatus(task);
+      content = status === "inProgress" ? <InProgress /> : STATUS_LABELS[status];
+      break;
+    }
     case "type":
       content = task.taskType;
       break;
@@ -258,7 +263,7 @@ export function TaskListRow(input: ListRowProps) {
   const company = row.badge.kind === "company" ? row.place : null;
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
   const meta = [
-    row.inProgress && <InProgress key="status" />,
+    row.inProgress && !columns.includes("status") && <InProgress key="status" />,
     !columns.includes("company") && company && (
       <span key="company" className={styles.place}>
         {company}

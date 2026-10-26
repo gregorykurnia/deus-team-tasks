@@ -143,6 +143,16 @@ describe("list row (All tasks)", () => {
     expect(html(<TaskListRow {...props} task={base} columns={["group"]} />)).toMatch(/_emptyCell_/);
   });
 
+  it("shows the status in a column of its own, and In Progress under the title only when that column is hidden", () => {
+    const started = { ...base, startedAt: 5 };
+    const shown = html(<TaskListRow {...props} task={started} columns={["status"]} />);
+    expect(shown).toMatch(/data-col="status">.*In Progress/);
+    expect(shown.match(/In Progress/g)).toHaveLength(1);
+    expect(html(<TaskListRow {...props} task={started} columns={["type"]} />)).toMatch(/_meta_.*In Progress/);
+    expect(html(<TaskListRow {...props} task={base} columns={["status"]} />)).toMatch(/data-col="status">.*To Do/);
+    expect(html(<TaskListRow {...props} task={{ ...base, completed: true }} columns={["status"]} />)).toMatch(/data-col="status">.*Done/);
+  });
+
   it("shows only the live tag under the title while just changed, as the details have their own cells", () => {
     const markup = html(<TaskListRow {...props} task={{ ...base, priority: "High" }} justChanged />);
     expect(markup).toContain("Just changed");
