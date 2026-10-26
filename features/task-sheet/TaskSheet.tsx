@@ -1,10 +1,14 @@
 "use client";
 
 // Task details (guide 6.3): a short sheet to add a task quickly, opening out to every detail; the same full sheet to
-// change a task, mark it done or not done, park it or bring it back (N19), or delete it. Saving checks the description, and with no connection it's
+// change a task, mark it done or not done, park it or bring it back (N19), or delete it. A saved task lists its subtasks and adds
+// new ones (N24); a subtask links back to its parent. Saving checks the description, and with no connection it's
 // refused with the sheet left open and nothing lost (5.8). A company task's dates stay in step with the company (B12).
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { over } from "@/desk/areas";
+import QuickCapture from "@/features/today/QuickCapture";
 import ParkMenu from "@/features/tasks/ParkMenu";
 import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks } from "@/desk/DeskData";
 import { addTaskKeptInStep, saveTaskKeptInStep } from "@/lib/companyWrites";
@@ -15,7 +19,8 @@ import { isParked } from "@/lib/parking";
 import { initials, openCountsByName } from "@/lib/people";
 import { sortGroups } from "@/lib/taskGroups";
 import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/lib/taskStatus";
-import { deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
+import { canHoldSubtasks, newSubtask, parentOf, subtasksOf } from "@/lib/subtasks";
+import { addTask, deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
 import { TASK_PRIORITIES, TASK_TYPES, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
 import Button from "@/ui/Button";
 import { ChipGroup } from "@/ui/ChipGroup";
@@ -29,6 +34,7 @@ import PeoplePicker, { InformedList } from "@/ui/PeoplePicker";
 import Segmented from "@/ui/Segmented";
 import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { KindTag } from "@/ui/Tag";
+import { TaskRecordRow } from "@/ui/TaskRow";
 import { useToast } from "@/ui/Toaster";
 import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromDraft, TOUCH_POINTS, type About, type TaskDraft } from "./draft";
 import styles from "./TaskSheet.module.css";
@@ -69,6 +75,16 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   const kind: Kind = draft.about === "internal" ? "internal" : company ? kindOf({ linkedClientId: company.id }, byId) : "prospect";
   const finished = !!task?.completed;
   const today = todayIso();
+
+  // Subtasks (N24): a task that isn't one itself lists its own and takes new ones; a subtask names its parent.
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const router = useRouter();
+  const byTaskId = useMemo(() => new Map(tasks.rows.map((t) => [t.id, t])), [tasks.rows]);
+  const parent = task ? parentOf(task, byTaskId) : undefined;
+  const holdsSubtasks = !!task && !gone && canHoldSubtasks(task, byTaskId);
+  const subtasks = useMemo(() => (task ? subtasksOf(tasks.rows, task.id) : []), [tasks.rows, task]);
+  const taskHref = (id: string) => over(pathname, search, `task=${id}`);
   const parked = !!task && isParked(task, today);
   const [parking, setParking] = useState(false);
   const parkButton = useRef<HTMLButtonElement>(null);
@@ -210,7 +226,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     if (!task || busy) return;
     setBusy("delete");
     try {
-      await deleteTask(task.id);
+      await deleteTask(task.id, subtasks.map((t) => t.id));
       setConfirming(false);
       onClose();
       toast("Task deleted");
@@ -218,6 +234,54 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
       setBusy(null);
       setConfirming(false);
       toast(failureMessage(err, "The task couldn't be deleted. Check your connection and try again."), { error: true });
+    }
+  }
+
+  // Opening a subtask or the parent keeps anything changed here: it's saved first, as Save changes saves it.
+  async function openOther(e: MouseEvent<HTMLElement>) {
+    const link = e.target instanceof Element ? e.target.closest("a[href]") : null;
+    if (!task || !link || gone) return;
+    const patch = patchFromDraft(opened, draft, task);
+    if (Object.keys(patch).length === 0) return;
+    e.preventDefault();
+    if (busy) return;
+    if (incomplete) {
+      setTries((n) => n + 1);
+      setMissing(true);
+      return;
+    }
+    setBusy("save");
+    try {
+      const { companyChanged } = await saveTaskKeptInStep(task, patch, byId);
+      toast(keptInStepMessage("Changes saved", companyChanged));
+      router.push(link.getAttribute("href")!, { scroll: false });
+    } catch (err) {
+      setBusy(null);
+      toast(failureMessage(err, "Your changes couldn't be saved. Check your connection and try again."), { error: true });
+    }
+  }
+
+  async function addSubtask(text: string): Promise<boolean> {
+    if (!task) return false;
+    try {
+      await addTask(newSubtask(task, text));
+      toast("Subtask added");
+      return true;
+    } catch (err) {
+      toast(failureMessage(err, "The subtask couldn't be added. Check your connection and try again."), { error: true });
+      return false;
+    }
+  }
+
+  async function setSubtaskDone(t: Task, done: boolean) {
+    try {
+      await setTasksDone([t], done);
+      toast(done ? "Subtask marked done" : "Subtask moved back to open tasks", {
+        action: "Undo",
+        onAction: () => void putBackDone([t]).catch((err) => toast(failureMessage(err, "The change couldn't be undone."), { error: true })),
+      });
+    } catch (err) {
+      toast(failureMessage(err, `The subtask couldn't be ${done ? "marked done" : "marked not done"}. Check your connection and try again.`), { error: true });
     }
   }
 
@@ -287,6 +351,14 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
               {task.parkedAt ? `Parked ${ago(isoOf(new Date(task.parkedAt)), today)}. ` : ""}It&rsquo;s out of Today, Plan and the open list
               {task.parkedUntil ? ", and comes back by itself on that day" : ""}. Bring it back to work on it now.
             </Notice>
+          )}
+          {parent && (
+            <p className={styles.subtaskOf} onClickCapture={(e) => void openOther(e)}>
+              <Icon name="tree" size={16} />
+              <span>
+                Subtask of <Link href={taskHref(parent.id)}>{parent.task}</Link>
+              </span>
+            </p>
           )}
           <Field label="Description" hideLabel error={error} focusKey={tries}>
             {(control) => (
@@ -374,6 +446,19 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
               </div>
             )}
           </Field>
+
+          {holdsSubtasks && task && (
+            <Field label="Subtasks" optional={subtasks.length ? `${subtasks.filter((t) => t.completed).length} of ${subtasks.length} done` : true} group>
+              {() => (
+                <div role="group" aria-label="Subtasks" className={styles.subtasks} onClickCapture={(e) => void openOther(e)}>
+                  {subtasks.map((t) => (
+                    <TaskRecordRow key={t.id} task={t} companies={byId} today={today} href={taskHref(t.id)} onToggleDone={(d) => void setSubtaskDone(t, d)} />
+                  ))}
+                  <QuickCapture id={`subtask-${task.id}`} label="Add a subtask" placeholder="Add a subtask, like “Book the meeting room”" onAdd={addSubtask} />
+                </div>
+              )}
+            </Field>
+          )}
 
           {!full ? (
             <button
@@ -490,6 +575,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
         busy={busy === "delete"}
       >
         It will be removed for everyone on the team.
+        {subtasks.length > 0 && (subtasks.length === 1 ? " Its subtask stays, as a task of its own." : ` Its ${subtasks.length} subtasks stay, as tasks of their own.`)}
       </Confirm>
       <ParkMenu open={parking} anchorRef={parkButton} onClose={() => setParking(false)} count={1} today={today} onPark={(until) => void setParked(true, until)} />
     </>

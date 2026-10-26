@@ -2,7 +2,7 @@
 // deleteField(), the document id is never stored as a field, finishing a task
 // records when (completedAt) and ends any parking, and nothing is written with
 // no connection.
-import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, writeBatch, type WriteBatch } from "firebase/firestore";
 import { commitEach, PartlyCommitted } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
@@ -49,9 +49,15 @@ export async function updateTask(id: string, patch: TaskPatch, current?: Task): 
   await updateDoc(doc(db, TASKS, id), toTaskUpdate(withCompletedAt(patch, current)));
 }
 
-export async function deleteTask(id: string): Promise<void> {
+// A deleted task's subtasks (lib/subtasks) stay, as tasks of their own: pass their ids and they lose their parent in
+// the same write.
+export async function deleteTask(id: string, subtaskIds: string[] = []): Promise<void> {
   assertOnline("No connection. The task wasn't deleted.");
-  await deleteDoc(doc(db, TASKS, id));
+  if (subtaskIds.length === 0) return deleteDoc(doc(db, TASKS, id));
+  const batch = writeBatch(db);
+  batch.delete(doc(db, TASKS, id));
+  subtaskIds.forEach((s) => batch.update(doc(db, TASKS, s), { parentId: deleteField() }));
+  await batch.commit();
 }
 
 // A change to many tasks that stopped part way, when a batch after the first failed (lib/batches): `changed` were
@@ -88,11 +94,12 @@ async function writeEach<T extends { id: string }>(
   }
 }
 
-export async function deleteTasks(ids: string[], present?: StillThere): Promise<void> {
+// Subtasks of the deleted tasks that aren't deleted with them (`freed`) stay, as tasks of their own (lib/subtasks).
+export async function deleteTasks(ids: string[], present?: StillThere, freed: string[] = []): Promise<void> {
   assertOnline("No connection. The tasks weren't deleted.");
   await writeEach(
-    ids.map((id) => ({ id })),
-    (batch, t) => batch.delete(doc(db, TASKS, t.id)),
+    [...ids.map((id) => ({ id, free: false })), ...freed.map((id) => ({ id, free: true }))],
+    (batch, t) => (t.free ? batch.update(doc(db, TASKS, t.id), { parentId: deleteField() }) : batch.delete(doc(db, TASKS, t.id))),
     present
   );
 }

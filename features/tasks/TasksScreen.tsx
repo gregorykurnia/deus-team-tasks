@@ -17,6 +17,7 @@ import { groupNavItems, navCounts } from "@/lib/deskNav";
 import { kindOf as kindOfTask, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, partlyGroupChange, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
+import { subtaskCounts } from "@/lib/subtasks";
 import { filterTasks, type TaskSortKey, type TaskView } from "@/lib/taskQueries";
 import { chosenIds, headState, movedMessage, NO_SELECTION, selectAll, selectAllOffer, selectedLine, toggleChosen, toggleHead, viewChanged, type Selection } from "@/lib/taskSelection";
 import { addTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, setTasksParked, type Undo } from "@/lib/taskWrites";
@@ -165,6 +166,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const ready = !pending && !tasksFailed && !offlineEmpty && !groupMissing && !(inGroup && groups.error) && today !== null;
 
   const live = useMemo(() => new Map(tasks.rows.map((t) => [t.id, t])), [tasks.rows]);
+  const subtaskCountsById = useMemo(() => subtaskCounts(tasks.rows), [tasks.rows]);
   const source = useMemo(() => tasks.rows.map((t) => leaving.get(t.id) ?? t), [tasks.rows, leaving]);
   const listing = useMemo(
     () => (ready && today ? listTasks(source, state, inGroup ? group!.name : null, byId, today) : null),
@@ -341,16 +343,25 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
 
   function bulkDelete() {
     const picked = chosenTasks();
+    // Subtasks of what's deleted stay, as tasks of their own: they lose their parent after the deletes.
+    const ids = new Set(picked.map((t) => t.id));
+    const freed = tasks.rows.filter((t) => t.parentId && ids.has(t.parentId) && !ids.has(t.id)).map((t) => t.id);
     void bulk("delete", async () => {
-      try {
-        await deleteTasks(picked.map((t) => t.id), stillThere);
+      const deleted = () => {
         setConfirmingDelete(false);
         setSelecting(false);
         toast(`${plural(picked.length, "task")} deleted`);
+      };
+      try {
+        await deleteTasks([...ids], stillThere, freed);
+        deleted();
       } catch (err) {
+        // A subtask whose parent is gone reads as a task of its own anyway (lib/subtasks), so only the deletes count.
+        const left = err instanceof PartlyChanged ? Math.max(0, err.left - freed.length) : null;
+        if (left === 0) return deleted();
         setConfirmingDelete(false);
-        if (err instanceof PartlyChanged)
-          toast(`${num(picked.length - err.left)} of ${plural(picked.length, "task")} deleted. Couldn't delete the other ${num(err.left)}. Check your connection and try again.`, { error: true });
+        if (left !== null)
+          toast(`${num(picked.length - left)} of ${plural(picked.length, "task")} deleted. Couldn't delete the other ${num(left)}. Check your connection and try again.`, { error: true });
         else toast(failureMessage(err, "The tasks couldn't be deleted. Check your connection and try again."), { error: true });
       }
     });
@@ -520,6 +531,8 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           groupLooks={groupLooks}
           today={today}
           leaving={new Set(leaving.keys())}
+          all={live}
+          subtaskCounts={subtaskCountsById}
           hrefFor={(id) => over(pathname, search, `task=${id}`)}
           onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
           onToggleDone={toggleDone}

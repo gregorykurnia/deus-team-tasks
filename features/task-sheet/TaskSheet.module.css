@@ -144,6 +144,40 @@
   color: var(--blue);
 }
 
+/* Subtasks (N24): the task's own as small rows, then the quick field that adds the next. A subtask names its parent. */
+.subtasks {
+  display: grid;
+  gap: 8px;
+}
+
+.subtasks > :last-child {
+  margin: 0;
+}
+
+.subtaskOf {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+}
+
+.subtaskOf svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.subtaskOf a {
+  color: var(--blue);
+  font-weight: var(--w-bold);
+}
+
+.subtaskOf a:hover {
+  text-decoration: underline;
+}
+
 .meta {
   margin-bottom: 0;
   color: var(--muted);

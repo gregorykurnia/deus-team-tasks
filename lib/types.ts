@@ -38,6 +38,7 @@ export interface Task {
   startedAt?: number; // ms; when it was marked In Progress (lib/taskStatus); none is To Do
   parkedAt?: number; // ms; when it was parked: out of the open work until brought back (lib/parking)
   parkedUntil?: string; // yyyy-mm-dd; the day a parked task comes back by itself, or none to wait until brought back
+  parentId?: string; // the task this is a subtask of (lib/subtasks); one level only
 }
 
 export type NewTask = Omit<Task, "id">;

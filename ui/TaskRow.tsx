@@ -10,6 +10,7 @@ import { shortDate } from "@/lib/dates";
 import { isTagged, useArrival } from "@/lib/liveChanges";
 import type { CompaniesById } from "@/lib/kinds";
 import { COLUMNS, columnLabel, DEFAULT_COLUMNS, listGrid, type ColumnId } from "@/lib/taskColumns";
+import { countLabel, type SubtaskCount } from "@/lib/subtasks";
 import { taskRowModel, type RowModel } from "@/lib/taskRow";
 import { STATUS_LABELS, taskStatus } from "@/lib/taskStatus";
 import type { Task } from "@/lib/types";
@@ -166,6 +167,15 @@ interface ListRowProps extends RowProps {
   columns?: ColumnId[]; // the details shown, in the catalogue's order
   groupLooks?: ReadonlyMap<string, GroupLook>; // for a group's badge in the Group column
   inGroup?: boolean; // on a group's own page every task is in it, so it is not repeated
+  subtask?: SubtaskLine;
+}
+
+// Subtasks on the list (lib/subtasks): a subtask under its parent is indented, one listed without it names it, and a
+// parent counts its subtasks done.
+export interface SubtaskLine {
+  nested?: boolean;
+  parent?: string; // the parent's description
+  count?: SubtaskCount;
 }
 
 // One of the chosen details. Empty ones say so with a dash, and drop out of the phone's card.
@@ -258,12 +268,23 @@ function ListCell({ id, task, row, groupLooks, today }: { id: ColumnId; task: Ta
 
 export function TaskListRow(input: ListRowProps) {
   const props = useArrivalProps(input);
-  const { task, columns = DEFAULT_COLUMNS, groupLooks, inGroup, today } = props;
+  const { task, columns = DEFAULT_COLUMNS, groupLooks, inGroup, today, subtask } = props;
   const row = taskRowModel(task, props.companies, today);
   const company = row.badge.kind === "company" ? row.place : null;
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
   const meta = [
     row.inProgress && !columns.includes("status") && <InProgress key="status" />,
+    subtask?.parent && (
+      <span key="parent" className={styles.place}>
+        Subtask of {subtask.parent}
+      </span>
+    ),
+    subtask?.count && (
+      <span key="subtasks" className={styles.subCount}>
+        <Icon name="tree" size={13} />
+        {countLabel(subtask.count)}
+      </span>
+    ),
     !columns.includes("company") && company && (
       <span key="company" className={styles.place}>
         {company}
@@ -278,7 +299,7 @@ export function TaskListRow(input: ListRowProps) {
     props.justChanged && <LiveTag key="live" />,
   ].filter(Boolean);
   return (
-    <article {...rowProps(row, props)} className={`${styles.row} ${styles.list}`} style={{ ...kindStyle(row.kind), "--cols": listGrid(columns) } as CSSProperties}>
+    <article {...rowProps(row, props)} data-sub={subtask?.nested || undefined} className={`${styles.row} ${styles.list}`} style={{ ...kindStyle(row.kind), "--cols": listGrid(columns) } as CSSProperties}>
       <Lead {...props} row={row} />
       <div className={styles.main}>
         <Title task={task} href={props.href} selecting={props.selecting} />

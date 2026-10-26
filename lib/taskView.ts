@@ -2,6 +2,7 @@
 // empty state to say when the list is empty. The address holds only the view's own params, so ?task= and ?newGroup= pass.
 import { KINDS, type CompaniesById, type Kind } from "./kinds";
 import { countByKind, defaultSort, filterTasks, sortTasks, type SortDir, type TaskSortKey, type TaskView } from "./taskQueries";
+import { nestSubtasks } from "./subtasks";
 import type { TaskStatus } from "./taskStatus";
 import type { Task, TaskType } from "./types";
 import { TASK_TYPES } from "./types";
@@ -211,7 +212,7 @@ export function listTasks<T extends Task & { completedAt?: number }>(
     ctx
   );
   const { key, dir } = effectiveSort(state, group !== null);
-  return { scoped, counts, total, sorted: sortTasks(narrowed, key, dir, ctx) };
+  return { scoped, counts, total, sorted: nestSubtasks(sortTasks(narrowed, key, dir, ctx)) };
 }
 
 export type EmptyCase =

@@ -3,11 +3,12 @@
 // The list (guide 6.2, 5.7): column heads that sort, then one row per task, 100 at a time. The head and every row share
 // one grid, built from the details shown. When the details shown don't fit, the list scrolls sideways inside its own panel
 // with the title pinned, as the companies list does. On phones the head goes and each row becomes a card (the Sort menu stays).
-// On a group's page the Group column is left out: every task is in it.
+// On a group's page the Group column is left out: every task is in it. A subtask sits indented under its parent (N24).
 // While selecting several, the done circles become checkboxes, the head's one ticks every row shown, and a row's click
 // ticks it rather than opening the task (guide 4.7).
 import { COLUMNS, columnLabel, columnSort, listGrid, listMinWidth, type ColumnId } from "@/lib/taskColumns";
 import type { CompaniesById } from "@/lib/kinds";
+import type { SubtaskCount } from "@/lib/subtasks";
 import type { SortDir, TaskSortKey, TaskView } from "@/lib/taskQueries";
 import type { Task } from "@/lib/types";
 import Button from "@/ui/Button";
@@ -32,6 +33,8 @@ interface TaskListProps {
   groupLooks: ReadonlyMap<string, GroupLook>;
   today: string;
   leaving: ReadonlySet<string>;
+  all: ReadonlyMap<string, Task>; // every task by id, for a subtask's parent
+  subtaskCounts: ReadonlyMap<string, SubtaskCount>;
   hrefFor: (id: string) => string;
   onSort: (key: TaskSortKey) => void;
   onToggleDone: (task: Task, done: boolean) => void;
@@ -39,8 +42,9 @@ interface TaskListProps {
   selecting?: { head: boolean | "mixed"; chosen: ReadonlySet<string>; onHead: () => void; onToggle: (id: string) => void };
 }
 
-export default function TaskList({ tasks, hidden, pageSize, columns: chosen, view, sort, inGroup, companies, groupLooks, today, leaving, hrefFor, onSort, onToggleDone, onMore, selecting }: TaskListProps) {
+export default function TaskList({ tasks, hidden, pageSize, columns: chosen, view, sort, inGroup, companies, groupLooks, today, leaving, all, subtaskCounts, hrefFor, onSort, onToggleDone, onMore, selecting }: TaskListProps) {
   const columns = inGroup ? chosen.filter((c) => c !== "group") : chosen;
+  const shown = new Set(tasks.map((t) => t.id));
   const head = (label: string, key: TaskSortKey | undefined) => {
     if (!key) return <span key={label}>{label}</span>;
     const on = sort.key === key;
@@ -77,6 +81,12 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, vie
                 groupLooks={groupLooks}
                 inGroup={inGroup}
                 leaving={leaving.has(t.id)}
+                subtask={{
+                  // Listed under its parent (lib/subtasks), it's indented; listed without it, it names it.
+                  nested: !!t.parentId && shown.has(t.parentId),
+                  parent: t.parentId && !shown.has(t.parentId) ? all.get(t.parentId)?.task : undefined,
+                  count: subtaskCounts.get(t.id),
+                }}
                 onToggleDone={(done) => onToggleDone(t, done)}
                 selecting={!!selecting}
                 selected={selecting?.chosen.has(t.id)}

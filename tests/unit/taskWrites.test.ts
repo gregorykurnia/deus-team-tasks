@@ -2,7 +2,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { addTask, moveTasksToGroup, putBackDone, setTasksDone, setTasksParked, updateTask } from "@/lib/taskWrites";
+import { addTask, deleteTask, deleteTasks, moveTasksToGroup, putBackDone, setTasksDone, setTasksParked, updateTask } from "@/lib/taskWrites";
 import { statusPatch } from "@/lib/taskStatus";
 import { createTaskGroup, deleteTaskGroup, GroupNameError, renameTaskGroup } from "@/lib/taskGroups";
 import { addFlow, updateFlow, withoutUnset } from "@/lib/flowWrites";
@@ -217,6 +217,15 @@ describe("when tasks and flows were finished or edited (1.6)", () => {
     expect(back).toMatchObject({ completed: false });
     expect(back).not.toHaveProperty("startedAt");
     expect(back).not.toHaveProperty("completedAt");
+  });
+
+  it("keeps a deleted task's subtasks as tasks of their own, alone or with others (N24)", async () => {
+    await seedTasks([asTask("p"), asTask("s1", { parentId: "p" }), asTask("s2", { parentId: "p" }), asTask("q"), asTask("t", { parentId: "q" }), asTask("u", { parentId: "q" })]);
+    await deleteTask("p", ["s1", "s2"]);
+    await deleteTasks(["q", "u"], undefined, ["t"]);
+    const left = await readAll("tasks", "tasks");
+    expect(left.map((t) => t.id).sort()).toEqual(["s1", "s2", "t"]);
+    expect(left.every((t) => !("parentId" in t))).toBe(true);
   });
 
   it("records when a flow was last edited", async () => {
