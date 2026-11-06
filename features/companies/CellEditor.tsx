@@ -26,6 +26,7 @@ interface CellEditorProps {
   optionNotes?: Record<string, string>; // a note beside an option: "Moves it to Deal done"
   required?: string; // the company's name: what to say when it's emptied
   onEditOptions?: () => void; // a choice field: its options dialog
+  onAddOption?: { label: string; run: () => void }; // a choice field: add a new option from here ("Add task type…")
   noClear?: boolean; // a choice that always holds one of its options (a task's status)
   today: string;
   onSave: (value: FieldValue) => Promise<boolean>; // true once saved
@@ -57,7 +58,7 @@ export default function CellEditor(props: CellEditorProps) {
   );
 }
 
-function ChoiceEditor({ value, options = [], optionNotes = {}, noClear, onSave, onEditOptions }: CellEditorProps) {
+function ChoiceEditor({ value, options = [], optionNotes = {}, noClear, onSave, onEditOptions, onAddOption }: CellEditorProps) {
   return (
     <>
       {options.map((o) => (
@@ -69,6 +70,14 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, noClear, onSave, 
         </MenuChoice>
       ))}
       {options.length === 0 && <MenuFoot>No options yet.</MenuFoot>}
+      {onAddOption && (
+        <>
+          <MenuSeparator />
+          <MenuItem icon="plus" onSelect={onAddOption.run}>
+            {onAddOption.label}
+          </MenuItem>
+        </>
+      )}
       {value !== undefined && value !== "" && !noClear && (
         <>
           <MenuSeparator />

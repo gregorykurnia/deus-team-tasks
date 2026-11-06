@@ -10,6 +10,7 @@ import { groupHref, over } from "@/desk/areas";
 import { useCompanies, useCompaniesById, useTaskGroups, useTasks, useTaskTypes } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
 import CellEditor from "@/features/companies/CellEditor";
+import AddTaskTypeDialog from "@/features/task-sheet/AddTaskTypeDialog";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import QuickCapture from "@/features/today/QuickCapture";
 import { changeMessage, type FieldValue } from "@/lib/companyEdit";
@@ -229,6 +230,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   // A detail changed in place (lib/taskCells). The editor holds the task as it was when opened and reads the live one.
   const editAnchor = useRef<HTMLElement | null>(null);
   const [editing, setEditing] = useState<{ task: Task; column: EditableColumn } | null>(null);
+  const [addingTypeFor, setAddingTypeFor] = useState<Task | null>(null); // "Add task type…" in a Task type cell
 
   // A new status says where the task went, with Undo, as in task details; finished or not, it leaves as marking done does.
   async function saveStatus(task: Task, label: string | undefined): Promise<boolean> {
@@ -738,11 +740,32 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             value={cellValue(column, task)}
             options={cellOptions(column, task, taskTypes)}
             noClear={column === "status"}
+            onAddOption={
+              column === "type"
+                ? {
+                    label: "Add task type…",
+                    run: () => {
+                      setEditing(null);
+                      setAddingTypeFor(task);
+                    },
+                  }
+                : undefined
+            }
             today={today}
             onSave={(value) => saveCell(task, column, value)}
           />
         );
       })()}
+      {addingTypeFor && (
+        <AddTaskTypeDialog
+          onClose={() => setAddingTypeFor(null)}
+          onAdded={(name) => {
+            const task = live.get(addingTypeFor.id) ?? addingTypeFor;
+            setAddingTypeFor(null);
+            void saveCell(task, "type", name);
+          }}
+        />
+      )}
       {newGroup.open && (
         <GroupDialog
           groups={groups.rows}

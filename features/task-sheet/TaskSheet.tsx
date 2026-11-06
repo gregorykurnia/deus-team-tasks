@@ -40,6 +40,9 @@ import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromD
 import AddTaskTypeDialog from "./AddTaskTypeDialog";
 import styles from "./TaskSheet.module.css";
 
+// The Task type dropdown's last choice opens Add task type; no saved name can match it (names are trimmed text).
+const ADD_TYPE = "__add-task-type__";
+
 const TOUCH_ICONS: Record<string, IconName> = { Call: "phone", Email: "mail", Meeting: "people", Message: "chat", Visit: "pin" };
 const DESCRIPTION_MISSING = "Add a short description so the team knows what this is.";
 const COMPANY_MISSING = "Choose the company this task is about, or switch to Internal work.";
@@ -497,13 +500,19 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
                 <Field label="Task type" optional>
                   {(control) => (
                     <>
-                      <SelectInput {...control} data-first-detail value={draft.taskType} onChange={(e) => set({ taskType: e.target.value })}>
+                      <SelectInput
+                        {...control}
+                        data-first-detail
+                        value={draft.taskType}
+                        onChange={(e) => (e.target.value === ADD_TYPE ? setAddingType(true) : set({ taskType: e.target.value }))}
+                      >
                         <option value="">None</option>
                         {typeNames.map((name) => (
                           <option key={name} value={name}>
                             {name}
                           </option>
                         ))}
+                        <option value={ADD_TYPE}>＋ Add task type…</option>
                       </SelectInput>
                       <Button small variant="quiet" onClick={() => setAddingType(true)}>
                         <Icon name="plus" size={16} />

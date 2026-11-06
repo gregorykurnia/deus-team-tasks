@@ -58,6 +58,34 @@ test("custom task types save for the team, survive a reload and work in filters 
   }
 });
 
+test("a task type can be added from the Task type dropdowns: in task details and in All tasks quick editing", async ({ page }) => {
+  await seedTasks([task("other", { task: "Collect interview notes", taskType: "Our Action" })]);
+  await page.goto("/tasks?task=new");
+  await waitUntilLive(page);
+  const s = sheet(page, "New task");
+  await s.getByLabel("Description").fill("Review the release");
+  await s.getByRole("button", { name: /Add details/ }).click();
+  await s.getByLabel("Task type").selectOption({ label: "＋ Add task type…" });
+  const dialog = sheet(page, "Add task type");
+  await dialog.getByLabel("Name", { exact: true }).fill("Quality review");
+  await dialog.getByRole("button", { name: "Add type", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(s.getByLabel("Task type")).toHaveValue("Quality review");
+  await expect(s.getByLabel("Description")).toHaveValue("Review the release");
+  await s.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(s).toHaveCount(0);
+
+  await page.goto("/tasks");
+  await waitUntilLive(page);
+  await page.getByRole("button", { name: "Task type: Our Action. Change", exact: true }).click();
+  await page.getByRole("menu", { name: "Task type" }).getByRole("menuitem", { name: "Add task type…" }).click();
+  await dialog.getByLabel("Name", { exact: true }).fill("Site visit");
+  await dialog.getByRole("button", { name: "Add type", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(async () => (await storedById("tasks", "tasks", "other"))?.taskType).toBe("Site visit");
+  expect((await storedById("tasks", "settings", "companies"))?.options).toHaveProperty("taskType", expect.arrayContaining([{ name: "Site visit", colour: "violet" }]));
+});
+
 test("adding a task type validates names and keeps both drafts when offline", async ({ page, context }) => {
   await page.goto("/tasks?task=new");
   await waitUntilLive(page);
