@@ -2,7 +2,7 @@
 // step, marking it done, deleting it after a confirmation, and refusing to save with no connection.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { company, isoDay, seedCompanies, seedTasks, storedById, stored, task } from "./data";
+import { company, isoDay, seedCompanies, seedTasks, settledOnline, storedById, stored, task } from "./data";
 
 // Writes are refused until the app has reached the server. The live status sits in the side bar (hidden on phones).
 async function waitUntilLive(page: Page) {
@@ -11,6 +11,84 @@ async function waitUntilLive(page: Page) {
 
 const sheet = (page: Page, name: string) => page.getByRole("dialog", { name });
 const toasts = (page: Page) => page.getByRole("status").filter({ has: page.locator("span") });
+
+test("custom task types save for the team, survive a reload and work in filters and quick editing", { tag: "@phone" }, async ({ page, isMobile }, testInfo) => {
+  await seedTasks([task("other", { task: "Collect interview notes", taskType: "Our Action" })]);
+  await page.goto("/tasks?task=new");
+  await waitUntilLive(page);
+  const s = sheet(page, "New task");
+  await s.getByLabel("Description").fill("Review the release");
+  await s.getByRole("button", { name: /Add details/ }).click();
+  await s.getByRole("button", { name: "Add task type", exact: true }).click();
+  const dialog = sheet(page, "Add task type");
+  await dialog.getByLabel("Name", { exact: true }).fill(" Quality review ");
+  await dialog.getByRole("button", { name: "Add type", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(s.getByLabel("Task type")).toHaveValue("Quality review");
+  await expect(s.getByLabel("Description")).toHaveValue("Review the release");
+  await s.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(s).toHaveCount(0);
+  expect((await stored("tasks", "tasks")).find((t) => t.task === "Review the release")).toMatchObject({ taskType: "Quality review" });
+  expect((await storedById("tasks", "settings", "companies"))?.options).toHaveProperty("taskType", expect.arrayContaining([{ name: "Quality review", colour: "violet" }]));
+
+  await page.reload();
+  await waitUntilLive(page);
+  await page.getByRole("toolbar", { name: "Filter and sort" }).getByRole("button", { name: /^Type/ }).click();
+  await page.getByRole("menuitemradio", { name: "Quality review", exact: true }).click();
+  await expect(page).toHaveURL(/type=Quality\+review/);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Type\s*Quality review/ })).toBeVisible();
+  await expect(page.getByText("Review the release", { exact: true })).toBeVisible();
+  await expect(page.getByText("Collect interview notes", { exact: true })).toHaveCount(0);
+
+  await page.goto("/tasks");
+  await waitUntilLive(page);
+  await page.getByRole("button", { name: "Task type: Our Action. Change", exact: true }).click();
+  await page.getByRole("menu", { name: "Task type" }).getByRole("menuitemradio", { name: "Quality review", exact: true }).click();
+  await expect.poll(async () => (await storedById("tasks", "tasks", "other"))?.taskType).toBe("Quality review");
+
+  await page.goto("/tasks?task=new");
+  await waitUntilLive(page);
+  await s.getByRole("button", { name: /Add details/ }).click();
+  await s.getByLabel("Task type").selectOption("Quality review");
+  await expect(s.getByLabel("Task type")).toHaveValue("Quality review");
+  if (isMobile) {
+    expect(await s.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(390);
+    await page.screenshot({ path: testInfo.outputPath("task-types-phone.png") });
+  }
+});
+
+test("adding a task type validates names and keeps both drafts when offline", async ({ page, context }) => {
+  await page.goto("/tasks?task=new");
+  await waitUntilLive(page);
+  const s = sheet(page, "New task");
+  await s.getByLabel("Description").fill("Keep this draft");
+  await s.getByRole("button", { name: /Add details/ }).click();
+  await s.getByRole("button", { name: "Add task type", exact: true }).click();
+  const dialog = sheet(page, "Add task type");
+  const name = dialog.getByLabel("Name", { exact: true });
+  const add = dialog.getByRole("button", { name: "Add type", exact: true });
+  await add.click();
+  await expect(dialog.getByText("Give the task type a name.")).toBeVisible();
+  await name.fill("follow up");
+  await add.click();
+  await expect(dialog.getByText(/already a task type/)).toBeVisible();
+  await name.fill("-");
+  await add.click();
+  await expect(dialog.getByText("Choose a name other than “-”.")).toBeVisible();
+  await name.fill("Research");
+  await context.setOffline(true);
+  await add.click();
+  await expect(dialog.getByText(/No connection/)).toBeVisible();
+  await expect(name).toHaveValue("Research");
+  expect(await stored("tasks", "settings")).toHaveLength(0);
+  await context.setOffline(false);
+  await settledOnline(page);
+  await add.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(s.getByLabel("Description")).toHaveValue("Keep this draft");
+  await expect(s.getByLabel("Task type")).toHaveValue("Research");
+});
 
 test("W1: a task is captured in a sentence, and Enter saves it as internal work", async ({ page }) => {
   await page.goto("/?task=new");
@@ -62,7 +140,7 @@ test("W2, W3, W4: every detail is added, with a new name and someone kept inform
   await s.getByLabel("Add someone to keep informed").press("Enter");
   await s.getByLabel("Their part for Maya Chen").fill("backup");
   await s.getByLabel("Key points").fill("The lease ends in March.");
-  await s.getByRole("button", { name: "Add task" }).click();
+  await s.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(s).toHaveCount(0);
   const added = (await stored("tasks", "tasks")).find((t) => t.id !== "other");
   expect(added).toMatchObject({

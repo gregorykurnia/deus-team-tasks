@@ -28,6 +28,14 @@ describe("cellEditable", () => {
 });
 
 describe("cellOptions and cellValue", () => {
+  it("offers the team's custom task types and keeps a stored type while settings load", () => {
+    const options = [{ name: "Quality review", colour: "violet" as const }];
+    expect(cellOptions("type", task(), options)).toEqual(options);
+    expect(cellOptions("type", task({ taskType: "Research" }), options).map((o) => o.name)).toEqual(["Quality review", "Research"]);
+    expect(cellOptions("type", task({ taskType: "Quality review" }), options)).toEqual(options);
+    expect(cellPatch("type", " Quality review ")).toEqual({ taskType: "Quality review" });
+  });
+
   it("offers the statuses by their labels, and reads the task's", () => {
     expect(cellOptions("status", task()).map((o) => o.name)).toEqual(["To Do", "In Progress", "Done"]);
     expect(cellValue("status", task({ startedAt: 5 }))).toBe("In Progress");

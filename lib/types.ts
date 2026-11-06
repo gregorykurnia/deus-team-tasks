@@ -12,7 +12,8 @@ export const TASK_TYPES = [
   "Trial Pending",
 ] as const;
 
-export type TaskType = (typeof TASK_TYPES)[number];
+// These defaults start the shared list; the team can add its own names.
+export type TaskType = string;
 
 export const TASK_PRIORITIES = ["High", "Medium", "Low"] as const;
 

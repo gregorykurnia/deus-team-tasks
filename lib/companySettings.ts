@@ -1,5 +1,6 @@
 // Shared company settings (C1 to C3, D-024): the options of each choice field
 // and the fields of each company group, the same for everyone on the team.
+// Task types share this live options record too.
 // Stored in settings/companies in the tasks project (Q6). Until that record
 // exists, the built-in defaults apply. The old UI keeps its own settings in
 // the browser until the launch import (task 4.8).
@@ -10,6 +11,7 @@ import { db } from "./firebase";
 import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, GBA_TRIALS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
 import { replaceFieldValue } from "./companyWrites";
 import type { PipelineEntry } from "./clientTypes";
+import { TASK_TYPES } from "./types";
 
 /* ---------- Shape ---------- */
 
@@ -23,7 +25,7 @@ export type OptionColour = (typeof OPTION_COLOURS)[number];
 export type LockedRole = "dealDone" | "followUp" | "highPriority" | "notNow" | "no";
 
 export interface ChoiceOption {
-  name: string; // the value stored on companies
+  name: string; // the value stored on companies or tasks
   colour: OptionColour;
   role?: LockedRole;
 }
@@ -48,8 +50,9 @@ export interface CompanySettings {
 
 const opt = (name: string, colour: OptionColour, role?: LockedRole): ChoiceOption => (role ? { name, colour, role } : { name, colour });
 
-// The option names are the values already stored on companies.
+// Option names are stored as values on companies or tasks.
 const DEFAULT_OPTIONS: Record<string, ChoiceOption[]> = {
+  taskType: TASK_TYPES.map((name) => opt(name, "violet")),
   status: [
     opt(DEAL_DONE_STATUS, "green", "dealDone"),
     opt(FOLLOW_UP_STATUS, "amber", "followUp"),
@@ -217,7 +220,7 @@ export function useCompanySettings(): CompanySettingsState {
 
 export class SettingsError extends Error {
   constructor(
-    public problem: "locked" | "missing" | "taken" | "notFound" | "notOwn",
+    public problem: "locked" | "missing" | "taken" | "notFound" | "notOwn" | "reserved",
     message: string
   ) {
     super(message);
@@ -250,6 +253,7 @@ function findOption(s: CompanySettings, fieldKey: string, name: string): ChoiceO
 function checkName(s: CompanySettings, fieldKey: string, name: string, except?: string) {
   const clean = name.trim();
   if (!clean) throw new SettingsError("missing", "Enter a name.");
+  if (fieldKey === "taskType" && clean === "-") throw new SettingsError("reserved", "Choose a name other than “-”.");
   if (optionsOf(s, fieldKey).some((o) => o.name !== except && o.name.trim().toLowerCase() === clean.toLowerCase())) {
     throw new SettingsError("taken", "An option with that name already exists.");
   }
@@ -275,7 +279,7 @@ async function companiesFollow(write: () => Promise<number>): Promise<number> {
 const lockedMessage = (o: ChoiceOption) => `“${o.name}” can’t be renamed or removed: ${lockReason(o.role!).toLowerCase()}. Its colour can change.`;
 
 export async function addOption(fieldKey: string, name: string, colour: OptionColour): Promise<void> {
-  await changeSettings("No connection. The option wasn't added.", (s) => {
+  await changeSettings(`No connection. The ${fieldKey === "taskType" ? "task type" : "option"} wasn't added.`, (s) => {
     optionsOf(s, fieldKey).push(opt(checkName(s, fieldKey, name), colour));
   });
 }

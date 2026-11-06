@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { groupHref, over } from "@/desk/areas";
-import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/DeskData";
+import { useCompanies, useCompaniesById, useTaskGroups, useTasks, useTaskTypes } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
 import CellEditor from "@/features/companies/CellEditor";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
@@ -73,6 +73,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
   const today = useToday();
   const { status } = useConnection();
   const tasks = useTasks();
+  const taskTypes = useTaskTypes();
   const groups = useTaskGroups();
   const companies = useCompanies();
   const byId = useCompaniesById();
@@ -735,7 +736,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
             onClose={() => setEditing(null)}
             field={cellField(column)}
             value={cellValue(column, task)}
-            options={cellOptions(column, task)}
+            options={cellOptions(column, task, taskTypes)}
             noClear={column === "status"}
             today={today}
             onSave={(value) => saveCell(task, column, value)}

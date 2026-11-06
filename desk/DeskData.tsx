@@ -66,6 +66,7 @@ export const useTaskGroups = () => useDesk().groups;
 export const useCompanies = () => useDesk().companies;
 export const useCompaniesById = () => useDesk().companiesById;
 export const useCompanyOptions = () => useDesk().settings;
+export const useTaskTypes = () => useDesk().settings.settings.options.taskType;
 export const useNotes = () => useDesk().notes;
 export const usePastClients = () => useDesk().pastClients;
 export const useFlows = () => useDesk().flows;

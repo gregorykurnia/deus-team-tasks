@@ -24,6 +24,7 @@ import {
   type CompanySettings,
 } from "@/lib/companySettings";
 import type { PipelineEntry } from "@/lib/clientTypes";
+import { TASK_TYPES } from "@/lib/types";
 import { clearAll, readAll, readFields, seed } from "../support/emulator";
 
 const co = (id: number, fields: Partial<PipelineEntry> = {}): PipelineEntry => ({ id, company: `Company ${id}`, ...fields });
@@ -77,6 +78,28 @@ describe("reading (falls back to the defaults)", () => {
 });
 
 describe("options (C3)", () => {
+  it("offers the existing task types on devices without saved task type settings", () => {
+    expect(readCompanySettings(undefined).options.taskType?.map((o) => o.name)).toEqual([...TASK_TYPES]);
+    expect(readCompanySettings({ options: { type: [{ name: "Reseller", colour: "pink" }] } }).options.taskType?.map((o) => o.name)).toEqual([...TASK_TYPES]);
+  });
+
+  it("saves new task types for the team without losing the defaults or other shared options", async () => {
+    await addOption("type", "Reseller", "pink");
+    await Promise.all([addOption("taskType", " Quality review ", "violet"), addOption("taskType", "Research", "violet")]);
+    const settings = await storedSettings();
+    expect(settings.options.taskType.map((o) => o.name)).toEqual(expect.arrayContaining([...TASK_TYPES, "Quality review", "Research"]));
+    expect(settings.options.type.at(-1)).toEqual({ name: "Reseller", colour: "pink" });
+    expect(settings.fields).toEqual(DEFAULT_COMPANY_SETTINGS.fields);
+  });
+
+  it("rejects blank, duplicate and reserved task type names", async () => {
+    await expect(addOption("taskType", "  ", "violet")).rejects.toMatchObject({ problem: "missing" });
+    await expect(addOption("taskType", "follow up", "violet")).rejects.toMatchObject({ problem: "taken" });
+    await expect(addOption("taskType", " - ", "violet")).rejects.toMatchObject({ problem: "reserved" });
+    await addOption("taskType", "Research", "violet");
+    await expect(addOption("taskType", " research ", "violet")).rejects.toMatchObject({ problem: "taken" });
+  });
+
   it("renames an option on every company using it, and says how many", async () => {
     const companies = [co(1, { status: "Meeting Soon" }), co(2, { status: "Meeting Soon" }), co(3, { status: "Drop" })];
     await seed("clients", "pipeline", companies, { keepIdField: true });

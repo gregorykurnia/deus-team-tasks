@@ -42,6 +42,15 @@ const view = (query = "", inGroup = false) => parseTaskView(new URLSearchParams(
 const ids = (tasks: Task[]) => tasks.map((t) => t.id);
 
 describe("the view in the address", () => {
+  it("keeps a custom task type in a shared link and after a reload", () => {
+    const state = view("type=Quality+review");
+    expect(state.type).toBe("Quality review");
+    expect(parseTaskView(viewParams(state, false), false).type).toBe("Quality review");
+    expect(view("type=%20%20").type).toBeNull();
+    expect(view("type=-").type).toBe("-");
+    expect(listTasks([task({ taskType: "Quality review" }), task({ taskType: "Our Action" })], state, null, companies, TODAY).sorted).toHaveLength(1);
+  });
+
   it("starts on open tasks of every kind with nothing filtered", () => {
     expect(view()).toEqual({ kind: "all", view: "open", q: "", due: null, status: null, type: null, idle: null, range: "week", sort: null, dir: null });
   });
@@ -53,8 +62,8 @@ describe("the view in the address", () => {
     expect(view("q=trial").q).toBe("trial");
   });
 
-  it("ignores what it doesn't know", () => {
-    const s = view("due=next-week&kind=everyone&type=Nope&idle=-3&sort=colour&range=year");
+  it("ignores invalid fixed choices and empty task types", () => {
+    const s = view("due=next-week&kind=everyone&type=%20%20&idle=-3&sort=colour&range=year");
     expect(s).toMatchObject({ due: null, kind: "all", type: null, idle: null, sort: null, range: "week" });
   });
 

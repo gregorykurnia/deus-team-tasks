@@ -5,7 +5,6 @@ import { countByKind, defaultSort, filterTasks, sortTasks, type SortDir, type Ta
 import { nestSubtasks } from "./subtasks";
 import type { TaskStatus } from "./taskStatus";
 import type { Task, TaskType } from "./types";
-import { TASK_TYPES } from "./types";
 import type { DueBucket } from "./urgency";
 
 export type DueChoice = Exclude<DueBucket, "later">;
@@ -116,7 +115,7 @@ export function parseTaskView(params: URLSearchParams, inGroup: boolean): TaskVi
     q: params.get("q") ?? "",
     due: view === "open" && DUE_CHOICES.includes(dueParam) ? dueParam : null,
     status: view === "open" && statusParam ? statusParam : null,
-    type: typeParam === "-" || TASK_TYPES.includes(typeParam as TaskType) ? (typeParam as TaskType | "-") : null,
+    type: typeParam?.trim() || null,
     idle: idleApplies && Number.isInteger(idleParam) && idleParam >= 1 && idleParam <= 999 ? idleParam : null,
     range: view === "done" && RANGES.includes(rangeParam) ? rangeParam : "week",
     sort,

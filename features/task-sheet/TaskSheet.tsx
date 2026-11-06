@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { over } from "@/desk/areas";
 import QuickCapture from "@/features/today/QuickCapture";
 import ParkMenu from "@/features/tasks/ParkMenu";
-import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks } from "@/desk/DeskData";
+import { useCompanies, useCompaniesById, useFlows, useTaskGroups, useTasks, useTaskTypes } from "@/desk/DeskData";
 import { addTaskKeptInStep, saveTaskKeptInStep } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
 import { ago, isoOf, todayIso, weekdayDate } from "@/lib/dates";
@@ -21,7 +21,7 @@ import { sortGroups } from "@/lib/taskGroups";
 import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/lib/taskStatus";
 import { canHoldSubtasks, newSubtask, parentOf, subtasksOf } from "@/lib/subtasks";
 import { addTask, deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
-import { TASK_PRIORITIES, TASK_TYPES, TOUCH_POINTS, type FlowRole, type Task, type TaskPriority, type TaskType } from "@/lib/types";
+import { TASK_PRIORITIES, TOUCH_POINTS, type FlowRole, type Task, type TaskPriority } from "@/lib/types";
 import Button from "@/ui/Button";
 import { ChipGroup } from "@/ui/ChipGroup";
 import { Confirm } from "@/ui/Dialog";
@@ -37,6 +37,7 @@ import { KindTag } from "@/ui/Tag";
 import { TaskRecordRow } from "@/ui/TaskRow";
 import { useToast } from "@/ui/Toaster";
 import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromDraft, type About, type TaskDraft } from "./draft";
+import AddTaskTypeDialog from "./AddTaskTypeDialog";
 import styles from "./TaskSheet.module.css";
 
 const TOUCH_ICONS: Record<string, IconName> = { Call: "phone", Email: "mail", Meeting: "people", Message: "chat", Visit: "pin" };
@@ -54,6 +55,7 @@ type Busy = null | "save" | "done" | "park" | "delete";
 
 export default function TaskSheet({ task, gone: deleted = false, initialGroup, onClose }: TaskSheetProps) {
   const tasks = useTasks();
+  const taskTypes = useTaskTypes();
   const groups = useTaskGroups();
   const companies = useCompanies();
   const byId = useCompaniesById();
@@ -67,7 +69,9 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState<Busy>(null);
   const [confirming, setConfirming] = useState(false);
+  const [addingType, setAddingType] = useState(false);
   const set = (patch: Partial<TaskDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const typeNames = [...new Set([...taskTypes.map((t) => t.name), ...(draft.taskType ? [draft.taskType] : [])])];
   // Our own delete takes the task off the list before the server confirms it: that isn't someone else deleting it.
   const gone = deleted && busy !== "delete";
 
@@ -492,14 +496,20 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
               <div className={styles.row2}>
                 <Field label="Task type" optional>
                   {(control) => (
-                    <SelectInput {...control} data-first-detail value={draft.taskType} onChange={(e) => set({ taskType: e.target.value as TaskType | "" })}>
-                      <option value="">None</option>
-                      {TASK_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </SelectInput>
+                    <>
+                      <SelectInput {...control} data-first-detail value={draft.taskType} onChange={(e) => set({ taskType: e.target.value })}>
+                        <option value="">None</option>
+                        {typeNames.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </SelectInput>
+                      <Button small variant="quiet" onClick={() => setAddingType(true)}>
+                        <Icon name="plus" size={16} />
+                        Add task type
+                      </Button>
+                    </>
                   )}
                 </Field>
                 <Field label="Priority" optional group>
@@ -564,6 +574,16 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
           )}
         </div>
       </Sheet>
+      {addingType && (
+        <AddTaskTypeDialog
+          onClose={() => setAddingType(false)}
+          onAdded={(name) => {
+            set({ taskType: name });
+            setAddingType(false);
+            toast(`“${name}” added`);
+          }}
+        />
+      )}
       <Confirm
         open={confirming && !!task && !gone}
         onClose={() => setConfirming(false)}

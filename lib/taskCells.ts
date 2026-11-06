@@ -37,12 +37,14 @@ const STATUS_TONES: Record<TaskStatus, ChoiceOption["colour"]> = { todo: "slate"
 const PRIORITY_TONES: Record<TaskPriority, ChoiceOption["colour"]> = { High: "red", Medium: "amber", Low: "slate" };
 
 // The options a choice offers, as option chips. A touch point written before there were chips is offered too.
-export function cellOptions(id: EditableColumn, task: Task): ChoiceOption[] {
+export function cellOptions(id: EditableColumn, task: Task, taskTypes?: ChoiceOption[]): ChoiceOption[] {
   switch (id) {
     case "status":
       return TASK_STATUSES.map((s) => ({ name: STATUS_LABELS[s], colour: STATUS_TONES[s] }));
-    case "type":
-      return TASK_TYPES.map((t) => ({ name: t, colour: "violet" }));
+    case "type": {
+      const options: ChoiceOption[] = taskTypes ?? TASK_TYPES.map((name) => ({ name, colour: "violet" }));
+      return task.taskType && !options.some((o) => o.name === task.taskType) ? [...options, { name: task.taskType, colour: "violet" }] : options;
+    }
     case "touch": {
       const own = task.touchPoint && !(TOUCH_POINTS as readonly string[]).includes(task.touchPoint) ? [task.touchPoint] : [];
       return [...TOUCH_POINTS, ...own].map((t) => ({ name: t, colour: "sky" }));

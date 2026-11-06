@@ -31,6 +31,13 @@ afterAll(async () => {
 });
 
 describe("task writes", () => {
+  it("reads back custom task types after adding and editing a task", async () => {
+    const id = await addTask(newTask({ taskType: "Quality review" }));
+    expect(await readFields("tasks", `tasks/${id}`)).toMatchObject({ taskType: "Quality review" });
+    await updateTask(id, { taskType: "Research" });
+    expect(await readFields("tasks", `tasks/${id}`)).toMatchObject({ taskType: "Research" });
+  });
+
   it("stores a new task without empty values or an id field", async () => {
     const id = await addTask({ ...newTask({ taskType: undefined, priority: "High" }), id: "x" } as NewTask);
     const fields = await readFields("tasks", `tasks/${id}`);

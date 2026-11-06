@@ -4,6 +4,7 @@
 // round × that clears it. Sort and Finished always have a choice, so they show it without being "on". Select, beside
 // Details shown, turns selecting several on and off (guide 4.7).
 import { useRef, useState, type Ref } from "react";
+import { useTaskTypes } from "@/desk/DeskData";
 import { COLUMNS, DEFAULT_COLUMNS, toggleColumn, type ColumnId } from "@/lib/taskColumns";
 import { STATUS_LABELS } from "@/lib/taskStatus";
 import type { SortDir, TaskSortKey } from "@/lib/taskQueries";
@@ -17,7 +18,6 @@ import {
   type StatusChoice,
   type TaskViewState,
 } from "@/lib/taskView";
-import { TASK_TYPES, type TaskType } from "@/lib/types";
 import FilterButton, { FilterToggle } from "@/ui/FilterButton";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuNumber, MenuSeparator } from "@/ui/Menu";
 import styles from "./Tasks.module.css";
@@ -43,6 +43,7 @@ interface TaskFiltersProps {
 }
 
 export default function TaskFilters({ state, inGroup, sort, shown, onState, onShown, onResetWidths, selecting, onSelecting, selectRef }: TaskFiltersProps) {
+  const taskTypes = useTaskTypes();
   const [open, setOpen] = useState<Which | null>(null);
   const dueRef = useRef<HTMLButtonElement>(null);
   const statusRef = useRef<HTMLButtonElement>(null);
@@ -148,9 +149,9 @@ export default function TaskFilters({ state, inGroup, sort, shown, onState, onSh
         <MenuChoice checked={!state.type} onSelect={() => onState({ ...state, type: null })}>
           Any type
         </MenuChoice>
-        {TASK_TYPES.map((type: TaskType) => (
-          <MenuChoice key={type} checked={state.type === type} onSelect={() => onState({ ...state, type })}>
-            {type}
+        {taskTypes.map(({ name }) => (
+          <MenuChoice key={name} checked={state.type === name} onSelect={() => onState({ ...state, type: name })}>
+            {name}
           </MenuChoice>
         ))}
         <MenuChoice checked={state.type === "-"} onSelect={() => onState({ ...state, type: "-" })}>
