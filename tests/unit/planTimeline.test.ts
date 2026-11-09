@@ -89,6 +89,10 @@ describe("subtasks on the timeline", () => {
     expect(model.deadlines.reduce((a, b) => a + b, 0)).toBe(1); // the parent's deadline isn't counted either
   });
 
+  it("leaves the parent out of the lists Month and Day get too", () => {
+    expect(withoutParents([parent, sub]).map((t) => t.id)).toEqual(["s"]);
+  });
+
   it("keeps the parent when its subtasks have no dates or aren't shown", () => {
     const undated = { ...sub, startDate: "", endDate: "" };
     expect(withoutParents([parent, undated]).map((t) => t.id)).toEqual(["p", "s"]);

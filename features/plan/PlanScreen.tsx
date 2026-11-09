@@ -13,7 +13,7 @@ import { failureMessage, useConnection } from "@/lib/connection";
 import { groupNavItems } from "@/lib/deskNav";
 import { eventsWindow, landing, monthWindow, somethingOn, windowHas } from "@/lib/planCalendar";
 import { loadPerPerson } from "@/lib/planMath";
-import { planTasks } from "@/lib/planTimeline";
+import { planTasks, withoutParents } from "@/lib/planTimeline";
 import {
   atToday,
   clearedPlanFilters,
@@ -103,6 +103,8 @@ export default function PlanScreen() {
   const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
   const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
   const narrowed = useMemo(() => (ready ? planTasks(listed, state, byId) : []), [ready, listed, state, byId]);
+  // Month and Day leave out a task whose dated subtasks are shown, as the timeline does: the subtasks carry the work.
+  const planned = useMemo(() => withoutParents(narrowed), [narrowed]);
 
   function stopLeaving(id: string) {
     clearTimeout(timers.current.get(id));
@@ -137,7 +139,7 @@ export default function PlanScreen() {
   // next day with something (D5). That is worked out here, so the stepper, Today and the header agree with it.
   const showsTasks = state.show !== "events";
   const eventList = state.show !== "tasks" && events.status === "ok" ? events.events : null;
-  const dayTasks = useMemo(() => (showsTasks ? narrowed : []), [showsTasks, narrowed]);
+  const dayTasks = useMemo(() => (showsTasks ? planned : []), [showsTasks, planned]);
   const landed = useMemo(
     () => (today && ready && state.view === "day" && !state.date ? landing(dayTasks, eventList, today) : null),
     [today, ready, state.view, state.date, dayTasks, eventList]
@@ -257,7 +259,7 @@ export default function PlanScreen() {
           state={state}
           today={today}
           month={monthOf(state, today)}
-          tasks={narrowed}
+          tasks={planned}
           loading={!ready}
           events={events}
           companies={byId}
