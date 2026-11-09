@@ -42,9 +42,13 @@ export interface Bar {
   inside: boolean; // its words fit inside the bar
   span: number; // columns it takes with its words, if they sit beside it
   columns: number; // columns the bar itself covers
+  parent?: string; // a subtask's parent, named on its bar: the parent has no bar of its own
 }
 
 export type Unplaced = Omit<Bar, "row" | "inside" | "span" | "columns">;
+
+// The words a bar carries: a subtask's parent first, like a breadcrumb.
+export const barWords = (bar: Pick<Bar, "task" | "parent">) => (bar.parent ? `${bar.parent} › ${bar.task.task}` : bar.task.task);
 
 export interface Lane {
   key: string;
@@ -78,7 +82,7 @@ export function pack(bars: Unplaced[], columnWidth: number): { placed: Bar[]; ro
   const ends: number[] = [];
   const placed = ordered.map((bar) => {
     const columns = bar.diamond ? 1 : bar.last - bar.first + 1;
-    const words = Math.min(200, bar.task.task.length * 6.9 + 18);
+    const words = Math.min(bar.parent ? 260 : 200, barWords(bar).length * 6.9 + 18); // a parent's name gets more room beside
     const wordColumns = Math.ceil(words / columnWidth);
     const inside = !bar.diamond && columns * columnWidth >= 92;
     const taken = inside ? columns : columns + wordColumns;
@@ -127,6 +131,18 @@ interface TimelineInput {
   companies: CompaniesById;
   columnWidth: number;
   listHref?: string; // where the chips link: All tasks, or narrowed to the Work filter's kind or task group
+  all?: ReadonlyMap<string, Pick<Task, "task">>; // every task by id, to name a subtask's parent
+}
+
+// A task with a dated subtask among the ones shown has no bar of its own: its subtasks show the work, each naming it.
+// One whose subtasks are all undated keeps its bar, so its dates don't vanish from the plan.
+export function withoutParents<T extends Pick<Task, "id" | "parentId" | "startDate" | "endDate">>(tasks: readonly T[]): T[] {
+  const parents = new Set<string>();
+  for (const t of tasks) {
+    const { start, end } = datesOf(t);
+    if (t.parentId && t.parentId !== t.id && (start || end)) parents.add(t.parentId);
+  }
+  return tasks.filter((t) => !parents.has(t.id));
 }
 
 // A chip's link: the list it narrows, with the due filter on top.
@@ -134,7 +150,8 @@ function dueHref(listHref: string, due: "overdue" | "nodate"): string {
   return `${listHref}${listHref.includes("?") ? "&" : "?"}due=${due}`;
 }
 
-export function timelineOf({ tasks, events, from, today, rows, person, companies, columnWidth, listHref = "/tasks" }: TimelineInput): Timeline {
+export function timelineOf({ tasks: given, events, from, today, rows, person, companies, columnWidth, listHref = "/tasks", all }: TimelineInput): Timeline {
+  const tasks = withoutParents(given);
   const days = daysFrom(from, TIMELINE_DAYS);
   const last = TIMELINE_DAYS - 1;
   const index = (iso: string) => daysBetween(from, iso);
@@ -171,6 +188,7 @@ export function timelineOf({ tasks, events, from, today, rows, person, companies
       diamond: !!end && (!start || start === end) && s >= 0,
       late: !!end && end < today,
       informed: !!person && !task.responsible.includes(person),
+      parent: task.parentId && task.parentId !== task.id ? all?.get(task.parentId)?.task : undefined,
     });
   }
 

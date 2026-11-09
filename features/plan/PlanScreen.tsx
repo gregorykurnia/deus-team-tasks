@@ -99,6 +99,7 @@ export default function PlanScreen() {
     return () => live.forEach(clearTimeout);
   }, []);
   // Parked tasks are out of the plan until they come back (lib/parking).
+  const taskById = useMemo(() => new Map(tasks.rows.map((t) => [t.id, t])), [tasks.rows]);
   const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
   const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
   const narrowed = useMemo(() => (ready ? planTasks(listed, state, byId) : []), [ready, listed, state, byId]);
@@ -236,6 +237,7 @@ export default function PlanScreen() {
           from={from}
           today={today}
           tasks={narrowed}
+          all={taskById}
           groupId={state.group ? (groups.rows.find((g) => g.name === state.group)?.id ?? null) : null}
           hasTasks={open.length > 0}
           loading={!ready}

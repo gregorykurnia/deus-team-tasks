@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CalendarEvent } from "@/lib/calendarEvents";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import { companiesById } from "@/lib/kinds";
-import { datesOf, pack, planTasks, timelineOf, type Unplaced } from "@/lib/planTimeline";
+import { barWords, datesOf, pack, planTasks, timelineOf, withoutParents, type Unplaced } from "@/lib/planTimeline";
 import { atToday, isAtToday, parsePlan, planParams, planSubtitle, stepLabel, stepped, timelineFrom, weekStart, type PlanState } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 
@@ -72,6 +72,32 @@ describe("placing bars", () => {
     const [d] = pack([bar("d", 3, 3, { diamond: true })], 30).placed;
     expect(d.columns).toBe(1);
     expect(d.inside).toBe(false);
+  });
+});
+
+describe("subtasks on the timeline", () => {
+  const parent = task("p", { task: "Website launch", responsible: ["Maya Chen"], startDate: "2026-10-19", endDate: "2026-10-30" });
+  const sub = task("s", { task: "Call vendor", parentId: "p", responsible: ["Kevin Tan"], startDate: "2026-10-21", endDate: "2026-10-23" });
+  const all = new Map([parent, sub].map((t) => [t.id, t]));
+
+  it("leaves out a task whose dated subtask is shown, and names the parent on the subtask's bar", () => {
+    const model = timelineOf({ ...base, tasks: [parent, sub], all });
+    const bars = model.lanes.flatMap((l) => l.bars);
+    expect(bars.map((b) => b.task.id)).toEqual(["s"]);
+    expect(bars[0].parent).toBe("Website launch");
+    expect(barWords(bars[0])).toBe("Website launch › Call vendor");
+    expect(model.deadlines.reduce((a, b) => a + b, 0)).toBe(1); // the parent's deadline isn't counted either
+  });
+
+  it("keeps the parent when its subtasks have no dates or aren't shown", () => {
+    const undated = { ...sub, startDate: "", endDate: "" };
+    expect(withoutParents([parent, undated]).map((t) => t.id)).toEqual(["p", "s"]);
+    expect(withoutParents([parent]).map((t) => t.id)).toEqual(["p"]); // narrowed to someone else's work
+  });
+
+  it("names a subtask's parent even when the parent isn't in the narrowed list, and no parent once it's gone", () => {
+    expect(timelineOf({ ...base, tasks: [sub], all }).lanes[0].bars[0].parent).toBe("Website launch");
+    expect(timelineOf({ ...base, tasks: [sub], all: new Map() }).lanes[0].bars[0].parent).toBeUndefined();
   });
 });
 

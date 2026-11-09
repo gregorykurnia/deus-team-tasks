@@ -568,6 +568,35 @@ button.insight:hover {
   font-weight: var(--w-bold);
 }
 
+/* A subtask names its parent first, lighter, like a breadcrumb. The parent's name is cut first so the subtask's stays readable. */
+.withParent {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.parentName {
+  flex: 0 3 auto; /* shrinks faster than the subtask's own name, but stays readable */
+  min-width: 7ch;
+  max-width: 50%;
+  overflow: hidden;
+  font-weight: var(--w-medium);
+  text-overflow: ellipsis;
+  opacity: 0.72;
+}
+
+.crumb {
+  flex: none;
+  opacity: 0.6;
+}
+
+.subName {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* New or changed: the blue arrive glow for 1.8s, around the bar. */
 .bar[data-new] .fill {
   animation: barArrive var(--dur-arrive) ease;

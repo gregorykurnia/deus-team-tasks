@@ -36,6 +36,7 @@ interface TimelineProps {
   from: string;
   today: string;
   tasks: Task[]; // the open tasks to draw, already narrowed (none when only events are shown)
+  all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent on its bar
   groupId: string | null; // the Work filter's task group, for the chips' links
   hasTasks: boolean; // there are tasks at all, narrowed or not
   loading: boolean;
@@ -52,7 +53,7 @@ interface TimelineProps {
 }
 
 export default function Timeline(props: TimelineProps) {
-  const { state, from, today, tasks, hasTasks, loading, events, companies, offline } = props;
+  const { state, from, today, tasks, all, hasTasks, loading, events, companies, offline } = props;
   const eventsOnly = state.show === "events";
   const wantEvents = state.show !== "tasks";
   const eventList = wantEvents && events.status === "ok" ? events.events : null;
@@ -77,8 +78,8 @@ export default function Timeline(props: TimelineProps) {
   const listHref = state.kind ? `/tasks?kind=${state.kind}` : props.groupId ? groupHref(props.groupId) : "/tasks";
   const model = useMemo(
     () =>
-      timelineOf({ tasks: eventsOnly ? [] : tasks, events: eventList, from, today, rows: state.rows, person: state.person, companies, columnWidth, listHref }),
-    [tasks, eventsOnly, eventList, from, today, state.rows, state.person, companies, columnWidth, listHref]
+      timelineOf({ tasks: eventsOnly ? [] : tasks, events: eventList, from, today, rows: state.rows, person: state.person, companies, columnWidth, listHref, all }),
+    [tasks, eventsOnly, eventList, from, today, state.rows, state.person, companies, columnWidth, listHref, all]
   );
 
   // Lanes unfolded with "Show more" fold again when the view changes.
@@ -534,7 +535,8 @@ function BarLink({ bar, person, today, companies, href }: { bar: Bar; person: st
     .join(", ");
   const people = task.responsible.length ? ` Responsible: ${task.responsible.join(", ")}.` : "";
   const informed = bar.informed ? ` ${person} is kept informed.` : "";
-  const words = `${task.task}. ${where}. ${dates[0].toUpperCase()}${dates.slice(1)}.${people}${informed}`;
+  const parent = bar.parent ? ` Subtask of ${bar.parent}.` : "";
+  const words = `${task.task}.${parent} ${where}. ${dates[0].toUpperCase()}${dates.slice(1)}.${people}${informed}`;
   const style: CSSProperties = {
     ...kindStyle(bar.kind),
     left: `${(bar.first / TIMELINE_DAYS) * 100}%`,
@@ -558,9 +560,23 @@ function BarLink({ bar, person, today, companies, href }: { bar: Bar; person: st
       data-new={arrival !== "none" || undefined}
     >
       <span className={styles.fill} style={{ width: bar.inside ? "100%" : `${(bar.columns / bar.span) * 100}%` }}>
-        {bar.inside && <span className={styles.words}>{task.task}</span>}
+        {bar.inside && <BarWords bar={bar} />}
       </span>
-      {!bar.inside && <span className={styles.words}>{task.task}</span>}
+      {!bar.inside && <BarWords bar={bar} />}
     </Link>
+  );
+}
+
+// A subtask's words name its parent first, lighter and cut shorter, so the subtask's own name stays readable.
+function BarWords({ bar }: { bar: Bar }) {
+  if (!bar.parent) return <span className={styles.words}>{bar.task.task}</span>;
+  return (
+    <span className={`${styles.words} ${styles.withParent}`}>
+      <span className={styles.parentName}>{bar.parent}</span>
+      <span className={styles.crumb} aria-hidden="true">
+        ›
+      </span>
+      <span className={styles.subName}>{bar.task.task}</span>
+    </span>
   );
 }
