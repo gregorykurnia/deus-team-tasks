@@ -260,6 +260,7 @@ export default function PlanScreen() {
           today={today}
           month={monthOf(state, today)}
           tasks={planned}
+          all={taskById}
           loading={!ready}
           events={events}
           companies={byId}
@@ -282,6 +283,7 @@ export default function PlanScreen() {
           landed={!!landed?.landed}
           holding={holding}
           tasks={dayTasks}
+          all={taskById}
           loading={!ready}
           events={dayEvents}
           companies={byId}

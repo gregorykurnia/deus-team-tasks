@@ -10,6 +10,7 @@ import { monthTitle, plural } from "@/lib/dates";
 import { kindOf, linkedCompany, type CompaniesById } from "@/lib/kinds";
 import { dayHeading, dayListsOf, dayWithSomething, cellShown, monthModelOf, nextMonthWithSomething, relativeDay } from "@/lib/planCalendar";
 import { whoWords, type PlanState } from "@/lib/planView";
+import { parentName } from "@/lib/subtasks";
 import type { Task } from "@/lib/types";
 import type { EventsState } from "@/lib/useCalendarEvents";
 import Button from "@/ui/Button";
@@ -29,6 +30,7 @@ interface MonthViewProps {
   today: string;
   month: string; // "yyyy-mm"
   tasks: Task[]; // the open tasks, narrowed by Work and Person
+  all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent
   loading: boolean;
   events: EventsState;
   companies: CompaniesById;
@@ -172,7 +174,7 @@ export default function MonthView(props: MonthViewProps) {
                           {item.event!.title}
                         </span>
                       ) : (
-                        <CellTask key={item.task!.id} task={item.task!} kindStyleOf={kindStyle(kindOf(item.task!, companies))} late={(item.task!.endDate ?? "") < today} informed={informed(item.task!)} href={props.taskHref(item.task!.id)} where={linkedCompany(item.task!, companies)?.company ?? item.task!.taskGroup ?? "Internal"} />
+                        <CellTask key={item.task!.id} task={item.task!} kindStyleOf={kindStyle(kindOf(item.task!, companies))} late={(item.task!.endDate ?? "") < today} informed={informed(item.task!)} href={props.taskHref(item.task!.id)} where={linkedCompany(item.task!, companies)?.company ?? item.task!.taskGroup ?? "Internal"} parent={parentName(item.task!, props.all)} />
                       )
                     )}
                     {more > 0 && (
@@ -229,6 +231,7 @@ export default function MonthView(props: MonthViewProps) {
             who={who}
             filtersOn={props.filtersOn}
             companies={companies}
+            all={props.all}
             leaving={props.leaving}
             previous={previous}
             next={next}
@@ -243,10 +246,20 @@ export default function MonthView(props: MonthViewProps) {
   );
 }
 
-function CellTask({ task, kindStyleOf, late, informed, href, where }: { task: Task; kindStyleOf: CSSProperties; late: boolean; informed: boolean; href: string; where: string }) {
-  const words = [task.task, where].filter(Boolean).join(", ");
+// A day cell is too narrow for two names: a subtask names its parent in its hover words and label, and in the day's list.
+function CellTask({ task, kindStyleOf, late, informed, href, where, parent }: { task: Task; kindStyleOf: CSSProperties; late: boolean; informed: boolean; href: string; where: string; parent?: string }) {
+  const words = [task.task, parent && `subtask of ${parent}`, where].filter(Boolean).join(", ");
   return (
-    <Link href={href} scroll={false} className={styles.cellTask} style={kindStyleOf} data-late={late || undefined} data-informed={informed || undefined} title={words}>
+    <Link
+      href={href}
+      scroll={false}
+      className={styles.cellTask}
+      style={kindStyleOf}
+      data-late={late || undefined}
+      data-informed={informed || undefined}
+      title={words}
+      aria-label={parent ? words : undefined}
+    >
       <i aria-hidden="true" />
       {task.task}
     </Link>

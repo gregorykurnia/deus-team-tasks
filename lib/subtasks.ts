@@ -10,6 +10,11 @@ export function parentOf<T extends Pick<Task, "parentId">>(task: T, byId: Readon
   return task.parentId ? byId.get(task.parentId) : undefined;
 }
 
+// The name of a subtask's parent while it's still there, to show which task it belongs to.
+export function parentName(task: Pick<Task, "id" | "parentId">, byId: ReadonlyMap<string, Pick<Task, "task">>): string | undefined {
+  return task.parentId && task.parentId !== task.id ? byId.get(task.parentId)?.task : undefined;
+}
+
 // Only a task that isn't a subtask itself can hold subtasks.
 export function canHoldSubtasks(task: Pick<Task, "parentId">, byId: Lookup): boolean {
   return !task.parentId || !byId.has(task.parentId);

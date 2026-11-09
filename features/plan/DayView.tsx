@@ -24,6 +24,7 @@ interface DayViewProps {
   landed: boolean; // it landed on a day other than today (D5)
   holding: boolean; // waiting for the calendar before it can pick a day
   tasks: Task[]; // the open tasks narrowed by Work and Person, none when only events are shown
+  all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent
   loading: boolean;
   events: EventsState;
   companies: CompaniesById;
@@ -137,6 +138,7 @@ export default function DayView(props: DayViewProps) {
           who={who}
           filtersOn={props.filtersOn}
           companies={props.companies}
+          all={props.all}
           leaving={props.leaving}
           previous={previous}
           next={next}

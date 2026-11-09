@@ -103,9 +103,14 @@ function InProgress() {
 }
 
 // In Progress, company or group, touch point, "High priority", the last action in its tone, "Just changed".
-function Meta({ row, justChanged, only }: { row: RowModel; justChanged?: boolean; only?: "place" }) {
+function Meta({ row, justChanged, only, parent }: { row: RowModel; justChanged?: boolean; only?: "place"; parent?: string }) {
   const bits = [
     row.inProgress && <InProgress key="status" />,
+    parent && (
+      <span key="parent" className={styles.place}>
+        Subtask of {parent}
+      </span>
+    ),
     row.place && (
       <span key="place" className={styles.place}>
         {row.place}
@@ -373,6 +378,7 @@ export function TaskListRow(input: ListRowProps) {
 
 interface DayRowProps extends RowProps {
   person?: string; // on a person's page: the person being looked at
+  parent?: string; // a subtask's parent: "Subtask of ..." under the title
 }
 
 export function TaskDayRow(input: DayRowProps) {
@@ -387,7 +393,7 @@ export function TaskDayRow(input: DayRowProps) {
         <div className={styles.dayTop}>
           <div className={styles.dayTitle}>
             <Title task={task} href={props.href} selecting={props.selecting} />
-            <Meta row={row} justChanged={props.justChanged} />
+            <Meta row={row} justChanged={props.justChanged} parent={props.parent} />
           </div>
           <DeadlinePill row={row} />
         </div>

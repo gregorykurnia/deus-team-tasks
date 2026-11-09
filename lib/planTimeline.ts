@@ -5,6 +5,7 @@ import type { CalendarEvent } from "./calendarEvents";
 import { daysBetween, isIsoDay, plural, shortDate, weekdayDate } from "./dates";
 import { kindOf, KIND_LABELS, KINDS, type CompaniesById, type Kind } from "./kinds";
 import { isPerson } from "./people";
+import { parentName } from "./subtasks";
 import { busiestDay, crunchDays, daysFrom, deadlinesPerDay, quietStretch } from "./planMath";
 import { eventOnDay } from "./today";
 import type { PlanRows, PlanState } from "./planView";
@@ -188,7 +189,7 @@ export function timelineOf({ tasks: given, events, from, today, rows, person, co
       diamond: !!end && (!start || start === end) && s >= 0,
       late: !!end && end < today,
       informed: !!person && !task.responsible.includes(person),
-      parent: task.parentId && task.parentId !== task.id ? all?.get(task.parentId)?.task : undefined,
+      parent: all && parentName(task, all),
     });
   }
 

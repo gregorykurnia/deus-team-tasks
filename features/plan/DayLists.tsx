@@ -6,6 +6,7 @@
 // calendar isn't connected or couldn't be read, and tasks carry on.
 import { shortDate, weekdayDate } from "@/lib/dates";
 import { eventTimes } from "@/lib/today";
+import { parentName } from "@/lib/subtasks";
 import { dayHeading, taskCount, type DayLists as DayListsModel } from "@/lib/planCalendar";
 import type { CompaniesById } from "@/lib/kinds";
 import type { EventsState } from "@/lib/useCalendarEvents";
@@ -33,6 +34,7 @@ interface DayListsProps {
   who: string; // " for Maya Chen", " in client work", or ""
   filtersOn: boolean;
   companies: CompaniesById;
+  all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent
   leaving: ReadonlySet<string>;
   previous: string | null; // the day before with something
   next: string | null; // the day after with something
@@ -102,6 +104,7 @@ export default function DayLists(props: DayListsProps) {
               today={today}
               href={props.taskHref(t.id)}
               person={person ?? undefined}
+              parent={parentName(t, props.all)}
               leaving={leaving.has(t.id)}
               onToggleDone={(done) => props.onToggleDone(t, done)}
             />

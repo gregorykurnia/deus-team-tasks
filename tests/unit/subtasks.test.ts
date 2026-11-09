@@ -1,7 +1,7 @@
 // Subtasks (lib/subtasks, N24): a subtask names its parent, sits under it on the list, and is counted on the parent's row.
 import { describe, expect, it } from "vitest";
 import { companiesById } from "@/lib/kinds";
-import { canHoldSubtasks, countLabel, foldSubtasks, nestSubtasks, parentsWithNested, newSubtask, parentOf, subtaskCounts, subtasksOf } from "@/lib/subtasks";
+import { canHoldSubtasks, countLabel, foldSubtasks, nestSubtasks, parentsWithNested, newSubtask, parentName, parentOf, subtaskCounts, subtasksOf } from "@/lib/subtasks";
 import { listTasks, parseTaskView } from "@/lib/taskView";
 import type { Task } from "@/lib/types";
 
@@ -47,6 +47,13 @@ describe("subtask helpers", () => {
   it("finds a subtask's parent only while it's there", () => {
     expect(parentOf(byId.get("s")!, byId)?.id).toBe("p");
     expect(parentOf(byId.get("orphan")!, byId)).toBeUndefined();
+  });
+
+  it("names a subtask's parent while it's there, and nothing for a task that isn't one", () => {
+    expect(parentName(byId.get("s")!, byId)).toBe("Task p");
+    expect(parentName(byId.get("orphan")!, byId)).toBeUndefined();
+    expect(parentName(parent, byId)).toBeUndefined();
+    expect(parentName(task("loop", { parentId: "loop" }), new Map([["loop", task("loop")]]))).toBeUndefined();
   });
 
   it("lets only a task that isn't a subtask hold subtasks", () => {
