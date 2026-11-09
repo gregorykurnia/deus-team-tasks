@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createJiti } from "jiti";
+import { checkFollowupUI } from "./ui-smoke.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const HOST = "127.0.0.1";
@@ -179,6 +180,9 @@ try {
   assert.equal(existing.companies[0].followups[0].parent.id, added.parentId);
   assert.equal(existing.companies[0].followups[0].subtasks.length, 6);
 
+  console.log("Checking the returned task link and subtask details on desktop and phone (emulator only).");
+  await checkFollowupUI({ root: ROOT, origin: ORIGIN, added, company, plan });
+
   const malformed = await raw("{");
   assert.equal(malformed.response.status, 400);
   assert.equal(malformed.data.error.code, -32700);
@@ -194,7 +198,7 @@ try {
   const unknown = await raw(JSON.stringify({ jsonrpc: "2.0", id: 72, method: "unknown_method" }));
   assert.equal(unknown.data.error.code, -32601);
   assert.match(unknown.data.error.message, /not found/i);
-  console.log("MCP smoke passed: three tools, read-only preview, six-step write, secret gate, stateless HTTP, and readable errors.");
+  console.log("MCP smoke passed: three tools, read-only preview, six-step write, desktop/phone task details, secret gate, stateless HTTP, and readable errors.");
 } catch (error) {
   console.error(error.message);
   for (const name of ["firestore", "next-disabled", "next-enabled"]) {
