@@ -21,7 +21,7 @@ import { groupNavItems, navCounts } from "@/lib/deskNav";
 import { kindOf as kindOfTask, linkedCompany, type Kind } from "@/lib/kinds";
 import { deleteTaskGroup, partlyGroupChange, setGroupStarred } from "@/lib/taskGroups";
 import { filtersOn, effectiveSort, PAGE_SIZE, parseTaskView, listTasks, sortedByHead, switchedView, clearedFilters, viewParams, emptyCase, type EmptyCase, type TaskViewState } from "@/lib/taskView";
-import { subtaskCounts } from "@/lib/subtasks";
+import { foldSubtasks, parentsWithNested, subtaskCounts } from "@/lib/subtasks";
 import { cellField, cellOptions, cellPatch, cellValue, statusFromLabel, type EditableColumn } from "@/lib/taskCells";
 import { STATUS_LABELS, statusPatch, taskStatus } from "@/lib/taskStatus";
 import { filterTasks, type TaskSortKey, type TaskView } from "@/lib/taskQueries";
@@ -181,9 +181,20 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     [ready, today, source, state, inGroup, group, byId]
   );
   const sort = effectiveSort(state, inGroup);
-  const shownTasks = useMemo(() => (listing ? listing.sorted.slice(0, limit).map((t) => live.get(t.id) ?? t) : []), [listing, limit, live]);
-  const hidden = listing ? listing.sorted.length - shownTasks.length : 0;
-  const listIds = useMemo(() => (listing ? listing.sorted.map((t) => t.id) : []), [listing]);
+  // Parents whose subtasks are hidden for now (N29): the subtasks under them leave the list, and "Select all" with them.
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
+  const foldable = useMemo(() => (listing ? parentsWithNested(listing.sorted) : new Set<string>()), [listing]);
+  const listed = useMemo(() => (listing ? foldSubtasks(listing.sorted, folded) : []), [listing, folded]);
+  const allFolded = foldable.size > 0 && [...foldable].every((id) => folded.has(id));
+  const toggleFold = (id: string) =>
+    setFolded((now) => {
+      const next = new Set(now);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const shownTasks = useMemo(() => listed.slice(0, limit).map((t) => live.get(t.id) ?? t), [listed, limit, live]);
+  const hidden = listed.length - shownTasks.length;
+  const listIds = useMemo(() => listed.map((t) => t.id), [listed]);
   const shownIds = useMemo(() => shownTasks.map((t) => t.id), [shownTasks]);
   const chosen = useMemo(() => chosenIds(selection, listIds), [selection, listIds]);
   const chosenSet = useMemo(() => new Set(chosen), [chosen]);
@@ -574,6 +585,11 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           ) : (
             <b>{plural(listing.sorted.length, noun)}</b>
           )}
+          {foldable.size > 0 && (
+            <button type="button" className={styles.linkButton} aria-pressed={allFolded} onClick={() => setFolded(allFolded ? new Set() : new Set(foldable))}>
+              {allFolded ? "Show subtasks" : "Hide subtasks"}
+            </button>
+          )}
         </p>
         <TaskList
           tasks={shownTasks}
@@ -591,6 +607,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           leaving={new Set(leaving.keys())}
           all={live}
           subtaskCounts={subtaskCountsById}
+          folding={{ foldable, folded, onFold: toggleFold }}
           hrefFor={(id) => over(pathname, search, `task=${id}`)}
           onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
           onToggleDone={toggleDone}

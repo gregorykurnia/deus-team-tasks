@@ -34,6 +34,20 @@ test("a subtask is added from its parent's sheet, sits under it on All tasks, an
   await expect(rows(page).nth(2)).toContainText("Book the trial room");
   await expect(rows(page).nth(2)).toHaveAttribute("data-sub", "true");
 
+  // The count hides the subtasks under the parent and shows them again, as does the switch for every parent (N29).
+  const count = rows(page).nth(1).getByRole("button", { name: "0/1 subtask" });
+  await expect(count).toHaveAttribute("aria-expanded", "true");
+  await count.click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(count).toHaveAttribute("aria-expanded", "false");
+  await expect(sheet(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Show subtasks" }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await page.getByRole("button", { name: "Hide subtasks" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await count.click();
+  await expect(rows(page)).toHaveCount(3);
+
   // A subtask has its parent's company, and no subtasks of its own; its sheet goes back to the parent.
   await rows(page).nth(2).getByRole("link", { name: "Book the trial room" }).click();
   await expect(sheet(page).getByText("Subtask of")).toBeVisible();

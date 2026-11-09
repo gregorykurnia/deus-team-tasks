@@ -470,6 +470,24 @@
   gap: 4px;
 }
 
+/* A parent's count, when its subtasks sit under it, hides or shows them (N29). Above the title's link, so a click on it
+   never opens the task. */
+.subToggle {
+  position: relative;
+  z-index: 1;
+  margin: -3px -6px;
+  padding: 3px 6px;
+  border-radius: var(--r-xs);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.subToggle:hover {
+  background: rgba(47, 107, 234, .07);
+  color: var(--blue-ink);
+}
+
 /* ---------- Day (Plan's Day view, a person's page) ---------- */
 .day {
   display: grid;

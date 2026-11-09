@@ -179,6 +179,9 @@ export interface SubtaskLine {
   nested?: boolean;
   parent?: string; // the parent's description
   count?: SubtaskCount;
+  // Set when the parent's subtasks are listed under it: the count becomes a button that hides or shows them (N29).
+  folded?: boolean;
+  onFold?: () => void;
 }
 
 // What an editable cell holds, in words, for its button's name.
@@ -329,12 +332,18 @@ export function TaskListRow(input: ListRowProps) {
         Subtask of {subtask.parent}
       </span>
     ),
-    subtask?.count && (
-      <span key="subtasks" className={styles.subCount}>
-        <Icon name="tree" size={13} />
-        {countLabel(subtask.count)}
-      </span>
-    ),
+    subtask?.count &&
+      (subtask.onFold ? (
+        <button key="subtasks" type="button" className={`${styles.subCount} ${styles.subToggle}`} aria-expanded={!subtask.folded} title={subtask.folded ? "Show subtasks" : "Hide subtasks"} onClick={subtask.onFold}>
+          <Icon name={subtask.folded ? "right" : "down"} size={13} />
+          {countLabel(subtask.count)}
+        </button>
+      ) : (
+        <span key="subtasks" className={styles.subCount}>
+          <Icon name="tree" size={13} />
+          {countLabel(subtask.count)}
+        </span>
+      )),
     !columns.includes("company") && company && (
       <span key="company" className={styles.place}>
         {company}

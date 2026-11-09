@@ -53,6 +53,8 @@ interface TaskListProps {
   leaving: ReadonlySet<string>;
   all: ReadonlyMap<string, Task>; // every task by id, for a subtask's parent
   subtaskCounts: ReadonlyMap<string, SubtaskCount>;
+  // Parents with subtasks listed under them, the ones whose subtasks are hidden, and the toggle on the count (N29).
+  folding?: { foldable: ReadonlySet<string>; folded: ReadonlySet<string>; onFold: (id: string) => void };
   hrefFor: (id: string) => string;
   onSort: (key: TaskSortKey) => void;
   onToggleDone: (task: Task, done: boolean) => void;
@@ -61,7 +63,7 @@ interface TaskListProps {
   selecting?: { head: boolean | "mixed"; chosen: ReadonlySet<string>; onHead: () => void; onToggle: (id: string) => void };
 }
 
-export default function TaskList({ tasks, hidden, pageSize, columns: chosen, widths, onWidths, view, sort, inGroup, companies, groupLooks, today, leaving, all, subtaskCounts, hrefFor, onSort, onToggleDone, onMore, onEdit, selecting }: TaskListProps) {
+export default function TaskList({ tasks, hidden, pageSize, columns: chosen, widths, onWidths, view, sort, inGroup, companies, groupLooks, today, leaving, all, subtaskCounts, folding, hrefFor, onSort, onToggleDone, onMore, onEdit, selecting }: TaskListProps) {
   const columns = inGroup ? chosen.filter((c) => c !== "group") : chosen;
   const shown = new Set(tasks.map((t) => t.id));
   const tableRef = useRef<HTMLDivElement>(null);
@@ -183,6 +185,8 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, wid
                   nested: !!t.parentId && shown.has(t.parentId),
                   parent: t.parentId && !shown.has(t.parentId) ? all.get(t.parentId)?.task : undefined,
                   count: subtaskCounts.get(t.id),
+                  folded: folding?.foldable.has(t.id) ? folding.folded.has(t.id) : undefined,
+                  onFold: folding?.foldable.has(t.id) ? () => folding.onFold(t.id) : undefined,
                 }}
                 onToggleDone={(done) => onToggleDone(t, done)}
                 onEdit={onEdit && !selecting ? (column, anchor) => onEdit(t, column, anchor) : undefined}

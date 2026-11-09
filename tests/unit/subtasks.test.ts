@@ -1,7 +1,7 @@
 // Subtasks (lib/subtasks, N24): a subtask names its parent, sits under it on the list, and is counted on the parent's row.
 import { describe, expect, it } from "vitest";
 import { companiesById } from "@/lib/kinds";
-import { canHoldSubtasks, countLabel, nestSubtasks, newSubtask, parentOf, subtaskCounts, subtasksOf } from "@/lib/subtasks";
+import { canHoldSubtasks, countLabel, foldSubtasks, nestSubtasks, parentsWithNested, newSubtask, parentOf, subtaskCounts, subtasksOf } from "@/lib/subtasks";
 import { listTasks, parseTaskView } from "@/lib/taskView";
 import type { Task } from "@/lib/types";
 
@@ -81,5 +81,25 @@ describe("subtask helpers", () => {
       endDate: "",
       order: 5,
     });
+  });
+});
+
+describe("folding subtasks (N29)", () => {
+  const list = nestSubtasks([task("p"), task("s1", { parentId: "p" }), task("q"), task("s2", { parentId: "q" }), task("lone", { parentId: "gone" })]);
+
+  it("finds the parents with subtasks listed under them", () => {
+    expect([...parentsWithNested(list)].sort()).toEqual(["p", "q"]);
+    expect([...parentsWithNested([task("a"), task("s", { parentId: "missing" })])]).toEqual([]);
+  });
+
+  it("hides only the subtasks under a folded parent, keeping a subtask listed without its parent", () => {
+    expect(ids(foldSubtasks(list, new Set()))).toEqual(["p", "s1", "q", "s2", "lone"]);
+    expect(ids(foldSubtasks(list, new Set(["p"])))).toEqual(["p", "q", "s2", "lone"]);
+    expect(ids(foldSubtasks(list, new Set(["p", "q", "gone"])))).toEqual(["p", "q", "lone"]);
+  });
+
+  it("hides deeper rows from data that breaks the one level with their folded ancestor", () => {
+    const deep = nestSubtasks([task("a"), task("b", { parentId: "a" }), task("c", { parentId: "b" })]);
+    expect(ids(foldSubtasks(deep, new Set(["a"])))).toEqual(["a"]);
   });
 });

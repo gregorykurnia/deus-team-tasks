@@ -62,6 +62,27 @@ export function nestSubtasks<T extends Pick<Task, "id" | "parentId">>(sorted: re
   return out;
 }
 
+// The parents in a nested list (nestSubtasks) with subtasks listed under them: the ones whose subtasks can be hidden.
+export function parentsWithNested<T extends Pick<Task, "id" | "parentId">>(nested: readonly T[]): Set<string> {
+  const listed = new Set(nested.map((t) => t.id));
+  return new Set(nested.flatMap((t) => (t.parentId && t.parentId !== t.id && listed.has(t.parentId) ? [t.parentId] : [])));
+}
+
+// A nested list without the subtasks under a folded parent (N29). A subtask listed without its parent always shows.
+export function foldSubtasks<T extends Pick<Task, "id" | "parentId">>(nested: readonly T[], folded: ReadonlySet<string>): T[] {
+  if (folded.size === 0) return [...nested];
+  const listed = new Set(nested.map((t) => t.id));
+  const gone = new Set<string>();
+  return nested.filter((t) => {
+    const under = !!t.parentId && t.parentId !== t.id && listed.has(t.parentId);
+    if (under && (folded.has(t.parentId!) || gone.has(t.parentId!))) {
+      gone.add(t.id);
+      return false;
+    }
+    return true;
+  });
+}
+
 // A new subtask: the description typed, with its parent's company and group so it shows where the parent does. Its
 // dates, people and the rest start empty: a subtask keeps its own.
 export function newSubtask(parent: Pick<Task, "id" | "linkedClientId" | "taskGroup">, task: string, order = Date.now()): NewTask {
