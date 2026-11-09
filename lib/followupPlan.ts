@@ -119,7 +119,7 @@ export function findCompanies(query: string, companies: readonly PipelineEntry[]
 }
 
 export interface FollowupPlanWarning {
-  code: "invalid-date" | "start-after-end" | "past-date" | "deal-done" | "followup-exists";
+  code: "invalid-date" | "start-after-end" | "past-date" | "deal-done" | "followup-exists" | "already-saved";
   message: string;
   step?: number; // Zero-based index in the input; the message uses the human step number.
   field?: "startDate" | "endDate";
@@ -142,12 +142,30 @@ export interface FollowupPlanPreview {
   parent: NewTask | null; // New parent only; never replaces an existing parent.
   parentUpdate: Pick<NewTask, "endDate"> | null; // Appending can only extend its deadline.
   subtasks: NewTask[];
+  alreadySaved: { parentId: string; subtaskIds: string[] } | null; // A retried add returns this instead of writing again.
+}
+
+const stepKey = (name: string, startDate: string, endDate: string) => `${name.trim().toLowerCase()}|${startDate}|${endDate}`;
+
+// The plan is already saved when one follow-up holds a subtask for every step (same name and dates).
+function findSaved(steps: readonly FollowupStepInput[], parents: readonly Task[], tasks: readonly Task[]) {
+  for (const parent of parents) {
+    const children = subtasksOf(tasks, parent.id);
+    const used = new Set<string>();
+    const subtaskIds = steps.map((step) => {
+      const match = children.find((c) => !used.has(c.id) && stepKey(c.task, c.startDate, c.endDate) === stepKey(step.name, step.startDate, step.endDate));
+      if (match) used.add(match.id);
+      return match?.id;
+    });
+    if (subtaskIds.every((id) => id !== undefined)) return { parentId: parent.id, subtaskIds: subtaskIds as string[] };
+  }
+  return null;
 }
 
 export function buildFollowupPlan(input: unknown, context: FollowupPlanContext): FollowupPlanPreview {
   const { plan, errors } = validateFollowupPlan(input);
   const result: FollowupPlanPreview = {
-    errors, warnings: [], canWrite: false, parentId: context.parentId, parent: null, parentUpdate: null, subtasks: [],
+    errors, warnings: [], canWrite: false, parentId: context.parentId, parent: null, parentUpdate: null, subtasks: [], alreadySaved: null,
   };
   if (!plan) return result;
   const company = context.companies.find((c) => c.id === plan.companyId);
@@ -179,13 +197,24 @@ export function buildFollowupPlan(input: unknown, context: FollowupPlanContext):
   }
   const followups = openFollowups(company, context.tasks);
   for (const parent of followups) {
-    warnings.push({ code: "followup-exists", message: `Follow-up task "${parent.task}" already exists (${parent.id}). Confirm adding the new steps to it.`, taskId: parent.id });
+    warnings.push({ code: "followup-exists", message: `Follow-up task "${parent.task}" already exists (${parent.id}). Ask the owner whether to add the new steps to it; set existingParentId only after they say yes.`, taskId: parent.id });
   }
   const existing = followups.find((parent) => parent.id === plan.existingParentId);
   if (plan.existingParentId && !existing) {
     errors.push("existingParentId must name an open follow-up parent for the selected company.");
   }
   if (existing) result.parentId = existing.id;
+  const saved = errors.length ? null : findSaved(plan.steps, existing ? [existing] : followups, context.tasks);
+  if (saved) {
+    const parent = followups.find((p) => p.id === saved.parentId)!;
+    warnings.splice(0, warnings.length, ...warnings.filter((w) => w.code !== "followup-exists"), {
+      code: "already-saved", taskId: parent.id,
+      message: `These steps are already saved under "${parent.task}" (${parent.id}). Nothing new will be written; share its link instead of adding them again.`,
+    });
+    result.parentId = saved.parentId;
+    result.alreadySaved = saved;
+    return result;
+  }
   if (!existing && (!context.parentId.trim() || context.tasks.some((t) => t.id === context.parentId))) {
     errors.push("parentId must be an unused, non-empty task ID.");
   }

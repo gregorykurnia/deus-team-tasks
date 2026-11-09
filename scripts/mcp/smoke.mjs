@@ -176,6 +176,9 @@ try {
     assert.deepEqual(task.responsible, []);
     assert.deepEqual(task.informed, []);
   }
+  const retried = payload(await client.callTool({ name: "add_followup_plan", arguments: { plan } }));
+  assert.deepEqual(retried, { ...added, alreadySaved: true });
+  assert.equal((await readAll("tasks", "tasks")).length, 7);
   const existing = payload(await client.callTool({ name: "find_company", arguments: { query: company.company } }));
   assert.equal(existing.companies[0].followups[0].parent.id, added.parentId);
   assert.equal(existing.companies[0].followups[0].subtasks.length, 6);

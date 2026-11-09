@@ -152,7 +152,7 @@ describe("preview warnings", () => {
   it("warns about an existing follow-up and exposes no write docs until explicitly selected", () => {
     const result = buildFollowupPlan(plan(), context({ tasks: [parent()] }));
     expect(result).toMatchObject({ canWrite: false, parent: null, parentUpdate: null, subtasks: [], errors: [] });
-    expect(result.warnings).toEqual([{ code: "followup-exists", taskId: "existing-parent", message: expect.stringContaining("Confirm adding") }]);
+    expect(result.warnings).toEqual([{ code: "followup-exists", taskId: "existing-parent", message: expect.stringContaining("Ask the owner whether to add") }]);
   });
 
   it("collects all applicable warnings in one preview", () => {
@@ -289,5 +289,38 @@ describe("adding steps to an existing follow-up", () => {
 
   it("allows a new parent when the previous follow-up is completed", () => {
     expect(buildFollowupPlan(plan(), context({ tasks: [parent({ completed: true })] }))).toMatchObject({ canWrite: true, warnings: [] });
+  });
+});
+
+describe("a repeated add (retry)", () => {
+  const savedTasks = (parentTask: Task, steps = fixture.steps) => [parentTask, ...steps.map((step, i) => parent({
+    id: `saved-${i}`, task: step.name, parentId: parentTask.id, startDate: step.startDate, endDate: step.endDate, order: 600 + i,
+  }))];
+
+  it("returns the follow-up already holding every step instead of a second parent or duplicate steps", () => {
+    const tasks = savedTasks(parent());
+    for (const input of [plan(), { ...plan(), existingParentId: "existing-parent" }]) {
+      const result = buildFollowupPlan(input, context({ tasks }));
+      expect(result).toMatchObject({ canWrite: false, errors: [], parent: null, subtasks: [], parentId: "existing-parent" });
+      expect(result.alreadySaved).toEqual({ parentId: "existing-parent", subtaskIds: fixture.steps.map((_, i) => `saved-${i}`) });
+      expect(result.warnings.map((w) => w.code)).toEqual(["already-saved"]);
+    }
+  });
+
+  it("matches names ignoring case and spacing, but not a changed date or a missing step", () => {
+    const renamed = fixture.steps.map((step) => ({ ...step, name: `  ${step.name.toUpperCase()} ` }));
+    expect(buildFollowupPlan({ ...plan(), steps: renamed }, context({ tasks: savedTasks(parent()) })).alreadySaved).not.toBeNull();
+    const moved = fixture.steps.map((step, i) => (i === 5 ? { ...step, endDate: "2027-02-09" } : step));
+    expect(buildFollowupPlan({ ...plan(), steps: moved }, context({ tasks: savedTasks(parent()) })).alreadySaved).toBeNull();
+    const partial = savedTasks(parent(), fixture.steps.slice(0, 5));
+    const result = buildFollowupPlan({ ...plan(), existingParentId: "existing-parent" }, context({ tasks: partial }));
+    expect(result).toMatchObject({ alreadySaved: null, canWrite: true });
+    expect(result.subtasks).toHaveLength(6);
+  });
+
+  it("needs one saved subtask per step when two steps share a name and dates", () => {
+    const twice = [fixture.steps[0], fixture.steps[0]];
+    const once = savedTasks(parent(), [fixture.steps[0]]);
+    expect(buildFollowupPlan({ ...plan(), steps: twice, existingParentId: "existing-parent" }, context({ tasks: once })).alreadySaved).toBeNull();
   });
 });

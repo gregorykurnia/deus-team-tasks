@@ -7,7 +7,7 @@ import { clearAll, EMULATOR_HOST, PROJECTS, readAll, readFields, seed } from "..
 import { USE_EMULATOR } from "./emulator";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
-import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData } from "./followupServer";
+import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData, wibToday } from "./followupServer";
 import type { Task } from "./types";
 
 // Importing taskWrites or a browser data hook would pull in this module and fail the suite.
@@ -151,6 +151,36 @@ service cloud.firestore {
     await clearAll();
     await expect(addFollowupPlan(fixture)).rejects.toThrow("Company not found");
     expect(await readAll("tasks", "tasks")).toEqual([]);
+  });
+
+  it("returns the saved follow-up on a retried add, with no second parent and no duplicate steps", async () => {
+    const first = await addFollowupPlan(fixture);
+    expect(first.alreadySaved).toBe(false);
+    const retry = await addFollowupPlan(fixture);
+    expect(retry).toEqual({ ...first, alreadySaved: true });
+    const appendRetry = await addFollowupPlan({ ...fixture, existingParentId: first.parentId });
+    expect(appendRetry).toEqual({ ...first, alreadySaved: true });
+    expect(await readAll("tasks", "tasks")).toHaveLength(7);
+  });
+
+  it("writes two racing identical adds to the same seven documents", async () => {
+    const [a, b] = await Promise.all([addFollowupPlan(fixture), addFollowupPlan(fixture)]);
+    expect(b.parentId).toBe(a.parentId);
+    expect(b.subtaskIds).toEqual(a.subtaskIds);
+    expect(await readAll("tasks", "tasks")).toHaveLength(7);
+  });
+
+  it("never overwrites a stored task whose ID a plan would reuse", async () => {
+    const first = await addFollowupPlan(fixture);
+    await seed("tasks", "tasks", [{ ...parent, id: first.parentId, completed: true, task: "Renamed and finished" }]);
+    const again = await addFollowupPlan(fixture);
+    expect(again.parentId).not.toBe(first.parentId);
+    expect(await readFields("tasks", `tasks/${first.parentId}`)).toMatchObject({ task: "Renamed and finished", completed: true });
+  });
+
+  it("dates today in WIB, also across the year end", () => {
+    expect(wibToday(new Date("2026-12-31T17:30:00Z"))).toBe("2027-01-01");
+    expect(wibToday(new Date("2026-12-31T16:59:00Z"))).toBe("2026-12-31");
   });
 
   it("refuses a plan larger than one batch instead of splitting it", async () => {
