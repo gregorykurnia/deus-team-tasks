@@ -21,7 +21,7 @@ const planSchema = z.object({
     endDate: text.describe("The confirmed end date, yyyy-mm-dd; use the start date for a one-day step."),
     owners: text.describe("Owners as written in the plan; kept in Key points, never Responsible."),
     what: text, why: text, bring: text, watch: text, doneWhen: text,
-  })).min(1).max(499).describe("Only the dated Path steps, excluding slips and side opportunities."),
+  })).min(1).max(499).describe("Only the dated Path steps the owner chose to add, one step at a time; leave out skipped steps, slips and side opportunities."),
 });
 const inputs = {
   find_company: z.object({ query: text.describe("The company name to search in the pipeline.") }),
@@ -52,13 +52,13 @@ function registerTools(server: McpServer, origin: string) {
   }, "Could not read companies and tasks. Try again shortly."));
 
   server.registerTool("preview_followup_plan", {
-    description: "Preview exactly the parent and dated subtasks that would be written, without writing anything. Warns about dates outside yyyy-mm-dd, starts after ends, past dates, Deal done companies (shown under Clients), existing follow-up tasks, and steps already saved (a repeat of an earlier add). Review warnings with the owner; if a follow-up exists, ask before selecting existingParentId. Owners stay in Key points; Responsible and Informed stay empty.",
+    description: "Preview exactly the parent and dated subtasks that would be written, without writing anything. Pass only the steps the owner chose to add. Warns about dates outside yyyy-mm-dd, starts after ends, past dates, Deal done companies (shown under Clients), existing follow-up tasks, and steps already saved (a repeat of an earlier add). Review warnings with the owner; if a follow-up exists, ask before selecting existingParentId. Owners stay in Key points; Responsible and Informed stay empty.",
     inputSchema: inputs.preview_followup_plan.shape,
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, ({ plan }) => runTool(() => previewFollowupPlan(plan), "Could not preview the plan because companies and tasks could not be read. Try again shortly."));
 
   server.registerTool("add_followup_plan", {
-    description: "Write a follow-up plan ONLY AFTER the owner has confirmed the selected company and EACH start and end date in chat, and you have called preview_followup_plan and resolved its warnings with the owner. Writes the parent and every subtask in one atomic batch, with empty Responsible and Informed. If appending to a confirmed existingParentId, preserves old steps and only extends the parent's end date when needed. Returns the task link. If the same steps are already saved (a retry), writes nothing and returns that task's link with alreadySaved: true. Never call this tool before that confirmation.",
+    description: "Write a follow-up plan ONLY AFTER the owner has confirmed the selected company and answered for EACH step, one step at a time in chat (one question per step, never one question for all): add it with its confirmed start and end date, or skip it. Include only the steps the owner chose to add. You must also have called preview_followup_plan and resolved its warnings with the owner. Writes the parent and every subtask in one atomic batch, with empty Responsible and Informed. If appending to a confirmed existingParentId, preserves old steps and only extends the parent's end date when needed. Returns the task link. If the same steps are already saved (a retry), writes nothing and returns that task's link with alreadySaved: true. Never call this tool before that confirmation.",
     inputSchema: inputs.add_followup_plan.shape,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   }, ({ plan }) => runTool(async () => {

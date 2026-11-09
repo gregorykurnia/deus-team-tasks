@@ -146,7 +146,7 @@ try {
   }));
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), ["add_followup_plan", "find_company", "preview_followup_plan"]);
-  assert.match(tools.find((tool) => tool.name === "add_followup_plan").description, /ONLY AFTER.*confirmed.*company.*EACH start and end date.*chat/);
+  assert.match(tools.find((tool) => tool.name === "add_followup_plan").description, /ONLY AFTER.*confirmed.*company.*EACH step, one step at a time in chat.*start and end date.*skip it.*only the steps the owner chose/);
   const found = payload(await client.callTool({ name: "find_company", arguments: { query: "contOH aurora fiktif" } }));
   assert.deepEqual(found.companies, [{ id: company.id, name: company.company, group: "Active", pic: company.pic, followups: [] }]);
 
