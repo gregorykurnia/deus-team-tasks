@@ -443,14 +443,18 @@
 
 /* A subtask listed under its parent (lib/subtasks): its title steps in behind a small elbow. A parent counts its
    subtasks done. */
-.list[data-sub] .main {
+.list[data-sub] .title {
   position: relative;
+}
+
+.list[data-sub] .title,
+.list[data-sub] .meta {
   padding-left: 22px;
 }
 
-.list[data-sub] .main::before {
+.list[data-sub] .title::before {
   position: absolute;
-  top: 0;
+  top: 5px;
   left: 4px;
   width: 10px;
   height: 10px;
@@ -464,18 +468,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-@media (min-width: 761px) {
-  .list[data-sub] .main {
-    position: sticky;
-    padding-left: 36px;
-  }
-
-  .list[data-sub] .main::before {
-    top: 11px;
-    left: 18px;
-  }
 }
 
 /* ---------- Day (Plan's Day view, a person's page) ---------- */

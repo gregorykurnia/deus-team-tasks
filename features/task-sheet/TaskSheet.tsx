@@ -6,7 +6,7 @@
 // refused with the sheet left open and nothing lost (5.8). A company task's dates stay in step with the company (B12).
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { over } from "@/desk/areas";
 import QuickCapture from "@/features/today/QuickCapture";
 import ParkMenu from "@/features/tasks/ParkMenu";
@@ -103,6 +103,30 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
 
   // "Add details" opens the rest and moves on to the first new field.
   const body = useRef<HTMLDivElement>(null);
+  // Keep the whole description and notes in the sheet's one scroll area, including after typing or a width change.
+  useLayoutEffect(() => {
+    const form = body.current;
+    if (!form) return;
+    const fields = [...form.querySelectorAll("textarea")];
+    let disposed = false;
+    const fit = () => {
+      if (disposed) return;
+      for (const field of fields) {
+        field.style.height = "auto";
+        field.style.height = `${field.scrollHeight}px`;
+      }
+    };
+    fit();
+    void document.fonts.ready.then(fit);
+    let width = form.clientWidth;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === width) return;
+      width = entry.contentRect.width;
+      fit();
+    });
+    observer.observe(form);
+    return () => { disposed = true; observer.disconnect(); };
+  }, [draft.task, draft.keyPoints, full]);
   const opening = useRef(false);
   useEffect(() => {
     if (!full || !opening.current) return;
@@ -322,7 +346,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
         <Icon name={finished ? "undo" : "check"} />
         {finished ? "Mark not done" : "Mark done"}
       </Button>
-      <Button variant="main" onClick={() => void save()} busy={busy === "save"} busyLabel="Saving…" disabled={!!busy && busy !== "save"}>
+      <Button className={styles.saveButton} variant="main" onClick={() => void save()} busy={busy === "save"} busyLabel="Saving…" disabled={!!busy && busy !== "save"}>
         Save changes
       </Button>
     </>

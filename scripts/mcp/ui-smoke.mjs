@@ -52,6 +52,36 @@ async function capture(page, directory, name, crops = false) {
         errors.push(`Overflowing text: ${el.textContent}`);
       }
     }
+    for (const el of root.querySelectorAll("textarea")) {
+      if (el.scrollHeight > el.clientHeight + 1) errors.push("Task text is hidden inside a textarea");
+      if (getComputedStyle(el).resize !== "none") errors.push("Task textarea has a native resize grip");
+    }
+    const canvas = document.createElement("canvas").getContext("2d");
+    for (const el of root.querySelectorAll('input[type="date"]')) {
+      const style = getComputedStyle(el);
+      canvas.font = style.font;
+      const text = el.value ? `${el.value.slice(5, 7)}/${el.value.slice(8)}/${el.value.slice(0, 4)}` : "mm/dd/yyyy";
+      // Chromium does not expose the native date control's internal boxes; reserve the picker and a visible gap.
+      const space = canvas.measureText(text).width + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+        + 22;
+      if (el.clientWidth + 1 < space) errors.push(`Date text and calendar do not fit: ${el.clientWidth}px available, ${Math.ceil(space)}px needed`);
+    }
+    for (const row of document.querySelectorAll('[data-sub="true"]')) {
+      const title = row.querySelector("a[data-row-link]")?.closest("p");
+      const marker = title && getComputedStyle(title, "::before");
+      const baseline = marker && parseFloat(marker.top) + parseFloat(marker.height);
+      if (!title || !baseline || baseline > parseFloat(getComputedStyle(title).lineHeight)) {
+        errors.push("Child marker does not align with the first title line");
+      }
+    }
+    if (innerWidth <= 640 && root.getAttribute("role") === "dialog") {
+      const save = [...root.querySelectorAll("button")].find((el) => el.textContent.trim() === "Save changes");
+      if (save && save.getBoundingClientRect().width < root.clientWidth - 40) errors.push("Phone Save button leaves its row empty");
+      for (const option of root.querySelectorAll('[role="group"][aria-label="Priority"] button')) {
+        canvas.font = getComputedStyle(option).font;
+        if (option.clientWidth - canvas.measureText(option.textContent).width < 16) errors.push("Priority choices are cramped");
+      }
+    }
     return errors;
   });
   assert.deepEqual(faults, [], `${name}: layout audit`);
@@ -94,9 +124,6 @@ export async function checkFollowupUI({ root, origin, added, company, plan }) {
         const subtasks = sheet.getByRole("group", { name: "Subtasks", exact: true });
         await expect(subtasks.getByRole("article")).toHaveCount(6);
         await emptyResponsible(sheet);
-        await capture(page, directory, "parent-open");
-        await sheet.getByRole("combobox", { name: /^Responsible/ }).scrollIntoViewIfNeeded();
-        await capture(page, directory, "parent-responsible");
         await sheet.getByRole("button", { name: "Close", exact: true }).click();
 
         const prospects = page.getByRole("group", { name: "Kind of work" }).getByRole("button", { name: /^Prospects/ });
@@ -110,29 +137,43 @@ export async function checkFollowupUI({ root, origin, added, company, plan }) {
         await capture(page, directory, "parent-list", true);
         await rows.last().getByRole("link").first().click({ trial: true });
 
-        // Reach the child through the parent, rather than constructing its link ourselves.
+        // Capture the sheet opened from this same Prospects list, keeping its filter and order behind it.
         await parent.getByRole("link", { name: `${company.company} Follow Up`, exact: true }).click();
+        await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(`${company.company} Follow Up`);
+        await capture(page, directory, "parent-open");
+        await subtasks.evaluate((el) => el.scrollIntoView({ block: "center" }));
+        await capture(page, directory, "parent-subtasks");
+        await subtasks.getByRole("textbox", { name: "Add a subtask" }).click({ trial: true });
+        await sheet.getByRole("combobox", { name: /^Responsible/ }).scrollIntoViewIfNeeded();
+        await capture(page, directory, "parent-responsible");
+        // Reach the child through the parent, rather than constructing its link ourselves.
         await subtasks.getByRole("link", { name: plan.steps[0].name, exact: true }).click();
         await expect.poll(() => new URL(page.url()).searchParams.get("task")).toBe(added.subtaskIds[0]);
         await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(plan.steps[0].name);
         await expect(sheet.getByRole("link", { name: `${company.company} Follow Up`, exact: true })).toBeVisible();
         await emptyResponsible(sheet);
         await capture(page, directory, "subtask-open");
+        await sheet.getByRole("group", { name: "Touch point", exact: true }).evaluate((el) => el.scrollIntoView({ block: "center" }));
+        await expect(sheet.getByRole("button", { name: "Visit", exact: true })).toBeInViewport();
+        await capture(page, directory, "subtask-touch-points");
         const start = sheet.getByLabel(/^Start/);
         await expect(start).toHaveValue(plan.steps[0].startDate);
         await expect(sheet.getByLabel(/^Deadline/)).toHaveValue(plan.steps[0].endDate);
-        await start.scrollIntoViewIfNeeded();
+        await start.evaluate((el) => el.scrollIntoView({ block: "center" }));
         await capture(page, directory, "subtask-dates", true);
         const points = sheet.getByLabel(/^Key points/);
         await expect(points).toHaveValue([
           ["Owner", plan.steps[0].owners], ["What", plan.steps[0].what], ["Why", plan.steps[0].why],
           ["Bring", plan.steps[0].bring], ["Watch", plan.steps[0].watch], ["Done when", plan.steps[0].doneWhen],
         ].map(([label, value]) => `${label}: ${value}`).join("\n\n"));
-        await points.scrollIntoViewIfNeeded();
-        for (const [part, fraction] of [["start", 0], ["middle", 0.5], ["end", 1]]) {
-          await points.evaluate((el, value) => { el.scrollTop = (el.scrollHeight - el.clientHeight) * value; }, fraction);
-          await capture(page, directory, `subtask-points-${part}`);
-        }
+        await points.evaluate((el) => el.scrollIntoView({ block: "center" }));
+        await expect(points).toBeInViewport({ ratio: 1 });
+        await capture(page, directory, "subtask-points");
+        const originalPoints = await points.inputValue();
+        // Growing after typing matters too; rendering an initially long value is not sufficient.
+        await points.fill(`${originalPoints}\n\n${"More fictional detail. ".repeat(60)}`);
+        await expect.poll(() => points.evaluate((el) => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+        await points.fill(originalPoints);
         assert.deepEqual(errors, [], `${name}: browser errors`);
         console.log(`MCP UI smoke passed: ${name}; screenshots in ${path.relative(root, directory)}.`);
       } catch (error) {

@@ -7,6 +7,10 @@
   margin-top: 4px;
 }
 
+.form textarea {
+  resize: none; /* The task description and notes grow with their content. */
+}
+
 .loading {
   display: grid;
   gap: 14px;
@@ -191,6 +195,14 @@
 
 /* 640px and under (--bp-phone): the three dates become two plus one. */
 @media (max-width: 640px) {
+  .row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .saveButton {
+    flex: 1 0 100%;
+  }
+
   .row3 {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }

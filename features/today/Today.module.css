@@ -400,6 +400,7 @@
   background: none;
   font-weight: var(--w-medium);
   outline: none;
+  text-overflow: ellipsis;
 }
 
 .capture input::placeholder {

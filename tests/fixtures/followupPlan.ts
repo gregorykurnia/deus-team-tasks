@@ -22,7 +22,7 @@ export const SIX_STEP_FOLLOWUP_FIXTURE: FollowupPlanInput = {
   ].map((step) => ({
     ...step,
     owners: "Test owner with Test contact",
-    what: `Discuss: ${step.name}.`,
+    what: `${step.name}.`,
     why: "Agree a concrete next step.",
     bring: "A fictional pilot outline.",
     watch: "A change in the budget window.",
