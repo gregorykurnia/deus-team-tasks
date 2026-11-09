@@ -51,7 +51,7 @@ company (so it shows under Prospects), with six subtasks ("Ask budget date and o
 - [x] R1 Phase 1 review: diff of F1–F5 for data loss, double writes (a retried `add` must not create a second parent: same company + same title in the last 10 minutes → return the existing one), the secret check, date handling across the year end, and tool descriptions that could let Claude write before confirming. Fix what it confirms; rerun only the checks the fixes touch · Opus 5.5 High: review by the other family after Codex-built work. Done 2026-11-09: a retried add now returns the saved task (`alreadySaved`), identical racing adds share plan-derived IDs, "today" is WIB, and the "already exists" warning tells Claude to ask the owner
 
 ## Owner steps (after the run)
-- [ ] O1 *owner* Vercel → Settings → Environment Variables: add `MCP_SECRET` (Production) = output of `openssl rand -hex 24`; redeploy.
+- [x] O1 *owner* Vercel → Settings → Environment Variables: add `MCP_SECRET` (Production) = output of `openssl rand -hex 24`; redeploy. Done 2026-11-09 via CLI; copy of the secret in `~/.config/deus-team-tasks/mcp-secret` on the server; live check: wrong secret 404, three tools listed.
 - [ ] O2 *owner* claude.ai → Settings → Connectors → Add custom connector: `https://<app domain>/api/mcp/<MCP_SECRET>`.
 - [ ] O3 *owner* claude.ai → Skills: replace `deus-deal-followup` with `docs/skills/deus-deal-followup.zip`.
 - [ ] O4 *owner* Real try: run the skill on the Mayora meeting, confirm, then check in the app that "Mayora Indah Follow Up" shows under Prospects with six subtasks and that opening one shows its description.
