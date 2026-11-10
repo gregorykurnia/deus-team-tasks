@@ -312,6 +312,21 @@ using the tools' `--only`/`--size` filters and keep before/after pictures. If no
 Done when every finding is fixed and checked, assigned a named justified later task, or dropped with a reason;
 no unresolved data-loss, wrong-destination or inaccessible-main-action issue may be deferred to activation.
 
+## R1eb — Remaining audit coverage
+
+Finish the accessibility coverage interrupted by R1d's exhausted emulator, separately from R1e's shared-component
+repairs. Read **Checks**, R1d/R1e's findings and `test-results/task-plan-connector/r1d/audit-coverage.json`.
+Use its two exact `retryScopes` (38 states at both sizes, then `250-flows-no-steps-yet` on phone only), split into
+smaller fresh emulator batches if needed; never repeat the 207 assessed entries or regenerate prototype references.
+Save each batch's report before the next run overwrites it. Keep total waiting below roughly 30 minutes; split a
+remaining batch into a named row before R1 if necessary. This row captures findings; assign any confirmed repairs
+by app area to named tasks before R1, rather than looping audits or leaving issues only in the report.
+
+Done when:
+- All 77 previously unassessed state/size entries have a saved result, or a named scoped continuation task.
+- Every new finding has a source/state, evidence and a named repair task or justified dismissal.
+- No new data-loss, wrong-destination or inaccessible-main-action finding is deferred to activation.
+
 ## R1 — Final phase review
 
 Read the requirements table, all recorded findings/dispositions, final diff and test/capture evidence. Map C1–C10

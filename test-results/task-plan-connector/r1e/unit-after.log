@@ -1,0 +1,12 @@
+
+> deus-team-tasks@0.1.0 test:unit
+> vitest run --project unit
+
+
+ RUN  v4.1.12 /home/ubuntu/deus-team-tasks
+
+
+ Test Files  41 passed (41)
+      Tests  984 passed (984)
+   Start at  11:42:03
+   Duration  13.00s (transform 1.21s, setup 0ms, import 3.49s, tests 2.86s, environment 7ms)

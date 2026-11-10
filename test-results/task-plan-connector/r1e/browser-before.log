@@ -1,0 +1,213 @@
+[WebServer] (node:1388348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388362) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1388423) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388436) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388448) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388481) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1388488) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:1388511) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone (5.1s)
+(node:1388608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [desktop] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone (4.3s)
+(node:1388716) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [phone] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone (3.6s)
+(node:1388807) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 [phone] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone (3.9s)
+
+
+  1) [desktop] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 13
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "nodes": Array [
+    +       Array [
+    +         "article:nth-child(2) > .TaskRow-module__yV1rWW__deadline[aria-label=\"Deadline: None. Change\"][data-col=\"end\"]",
+    +       ],
+    +       Array [
+    +         "article:nth-child(3) > .TaskRow-module__yV1rWW__deadline[aria-label=\"Deadline: None. Change\"][data-col=\"end\"]",
+    +       ],
+    +     ],
+    +     "rule": "label-content-name-mismatch",
+    +   },
+    + ]
+
+      22 |   await page.screenshot({ path: info.outputPath("task-dates.png"), animations: "disabled" });
+      23 |   const result = await new AxeBuilder({ page }).withRules(["label-content-name-mismatch"]).analyze();
+    > 24 |   expect(result.violations.map((v) => ({ rule: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual([]);
+         |                                                                                               ^
+      25 |   await expect(page.getByRole("button", { name: "Deadline: No dates. Change", exact: true })).toBeVisible();
+      26 |   await expect(page.getByRole("button", { name: "Deadline: No deadline. Change", exact: true })).toBeVisible();
+      27 | });
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:24:95
+
+    Error Context: test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 10
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "nodes": Array [
+    +       Array [
+    +         ".Menu-module__ZyHG9q__menu",
+    +       ],
+    +     ],
+    +     "rule": "region",
+    +   },
+    + ]
+
+      35 |   await page.screenshot({ path: info.outputPath("details-menu.png"), animations: "disabled" });
+      36 |   const result = await new AxeBuilder({ page }).withRules(["region"]).analyze();
+    > 37 |   expect(result.violations.map((v) => ({ rule: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual([]);
+         |                                                                                               ^
+      38 |   const box = await menu.boundingBox();
+      39 |   const viewport = page.viewportSize()!;
+      40 |   expect(box!.x).toBeGreaterThanOrEqual(12);
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:37:95
+
+    Error Context: test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [phone] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 19
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "nodes": Array [
+    +       Array [
+    +         "article:nth-child(2) > .TaskRow-module__yV1rWW__deadline[aria-label=\"Deadline: None. Change\"][data-col=\"end\"]",
+    +       ],
+    +       Array [
+    +         "article:nth-child(2) > .TaskRow-module__yV1rWW__edit.TaskRow-module__yV1rWW__cell[data-col=\"last\"]",
+    +       ],
+    +       Array [
+    +         "article:nth-child(3) > .TaskRow-module__yV1rWW__deadline[aria-label=\"Deadline: None. Change\"][data-col=\"end\"]",
+    +       ],
+    +       Array [
+    +         "article:nth-child(3) > .TaskRow-module__yV1rWW__edit.TaskRow-module__yV1rWW__cell[data-col=\"last\"]",
+    +       ],
+    +     ],
+    +     "rule": "label-content-name-mismatch",
+    +   },
+    + ]
+
+      22 |   await page.screenshot({ path: info.outputPath("task-dates.png"), animations: "disabled" });
+      23 |   const result = await new AxeBuilder({ page }).withRules(["label-content-name-mismatch"]).analyze();
+    > 24 |   expect(result.violations.map((v) => ({ rule: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual([]);
+         |                                                                                               ^
+      25 |   await expect(page.getByRole("button", { name: "Deadline: No dates. Change", exact: true })).toBeVisible();
+      26 |   await expect(page.getByRole("button", { name: "Deadline: No deadline. Change", exact: true })).toBeVisible();
+      27 | });
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:24:95
+
+    Error Context: test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [phone] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 10
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "nodes": Array [
+    +       Array [
+    +         ".Menu-module__ZyHG9q__menu",
+    +       ],
+    +     ],
+    +     "rule": "region",
+    +   },
+    + ]
+
+      35 |   await page.screenshot({ path: info.outputPath("details-menu.png"), animations: "disabled" });
+      36 |   const result = await new AxeBuilder({ page }).withRules(["region"]).analyze();
+    > 37 |   expect(result.violations.map((v) => ({ rule: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual([]);
+         |                                                                                               ^
+      38 |   const box = await menu.boundingBox();
+      39 |   const viewport = page.viewportSize()!;
+      40 |   expect(box!.x).toBeGreaterThanOrEqual(12);
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:37:95
+
+    Error Context: test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [desktop] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone
+    [desktop] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone
+    [phone] › tests/smoke/audit-repairs.spec.ts:21:5 › task dates keep their visible words in their accessible names @phone
+    [phone] › tests/smoke/audit-repairs.spec.ts:29:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone

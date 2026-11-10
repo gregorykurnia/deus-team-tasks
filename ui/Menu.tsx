@@ -110,8 +110,12 @@ function MenuPanel({ anchorRef, onClose, label, alignRight, form, initialFocus, 
   return (
     <MenuContext.Provider value={{ close: onClose }}>
       <div className={overDialog ? `${styles.catcher} ${styles.overDialog}` : styles.catcher} onClick={onClose} aria-hidden="true" />
-      <div ref={panel} className={[styles.menu, form && styles.form, overDialog && styles.overDialog].filter(Boolean).join(" ")} role={form ? "dialog" : "menu"} aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
-        {children}
+      {/* Portals sit outside main. Keep the menu role and give its content a
+          named landmark; quick-editor dialogs already provide their own scope. */}
+      <div role={form ? undefined : "region"} aria-label={form ? undefined : `${label} menu`}>
+        <div ref={panel} className={[styles.menu, form && styles.form, overDialog && styles.overDialog].filter(Boolean).join(" ")} role={form ? "dialog" : "menu"} aria-label={label} onKeyDown={onKeyDown} style={{ visibility: "hidden" }}>
+          {children}
+        </div>
       </div>
     </MenuContext.Provider>
   );

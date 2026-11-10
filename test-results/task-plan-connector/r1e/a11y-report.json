@@ -1,0 +1,350 @@
+[
+ {
+  "id": "017-all-tasks-normal-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "017-all-tasks-normal-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "034-all-tasks-details-shown-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "034-all-tasks-details-shown-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "035-all-tasks-sort-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "035-all-tasks-sort-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "036-all-tasks-no-action-for-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "036-all-tasks-no-action-for-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "038-all-tasks-offline-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "038-all-tasks-offline-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "040-all-tasks-open-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "040-all-tasks-open-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "045-selecting-several-tasks-open-desktop",
+  "url": "http://localhost:3100/tasks?select=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "045-selecting-several-tasks-open-phone",
+  "url": "http://localhost:3100/tasks?select=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "049-task-groups-q4-planning-desktop",
+  "url": "http://localhost:3100/tasks/groups/q4",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "049-task-groups-q4-planning-phone",
+  "url": "http://localhost:3100/tasks/groups/q4",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "052-task-groups-open-desktop",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "052-task-groups-open-phone",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "053-task-groups-name-missing-desktop",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "053-task-groups-name-missing-phone",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "054-task-groups-name-taken-desktop",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "054-task-groups-name-taken-phone",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "055-task-groups-couldn-t-create-desktop",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "055-task-groups-couldn-t-create-phone",
+  "url": "http://localhost:3100/tasks?newGroup=1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "059-task-details-quick-desktop",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "059-task-details-quick-phone",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "060-task-details-all-details-desktop",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "060-task-details-all-details-phone",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "061-task-details-open-desktop",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "061-task-details-open-phone",
+  "url": "http://localhost:3100/tasks?task=new",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "062-task-details-company-desktop",
+  "url": "http://localhost:3100/tasks?task=t1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "062-task-details-company-phone",
+  "url": "http://localhost:3100/tasks?task=t1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "063-task-details-internal-desktop",
+  "url": "http://localhost:3100/tasks?task=t7",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "063-task-details-internal-phone",
+  "url": "http://localhost:3100/tasks?task=t7",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "064-task-details-finished-desktop",
+  "url": "http://localhost:3100/tasks?task=d1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "064-task-details-finished-phone",
+  "url": "http://localhost:3100/tasks?task=d1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "066-task-details-suggestions-desktop",
+  "url": "http://localhost:3100/tasks?task=t5",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "066-task-details-suggestions-phone",
+  "url": "http://localhost:3100/tasks?task=t5",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "067-task-details-new-name-desktop",
+  "url": "http://localhost:3100/tasks?task=t5",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "067-task-details-new-name-phone",
+  "url": "http://localhost:3100/tasks?task=t5",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "068-task-details-confirm-desktop",
+  "url": "http://localhost:3100/tasks?task=t1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "068-task-details-confirm-phone",
+  "url": "http://localhost:3100/tasks?task=t1",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "082-plan-timeline-rows-desktop",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "082-plan-timeline-rows-phone",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "083-plan-timeline-person-desktop",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "083-plan-timeline-person-phone",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "084-plan-timeline-work-desktop",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "084-plan-timeline-work-phone",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "137-companies-the-four-groups-sort-menu-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "137-companies-the-four-groups-sort-menu-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "146-companies-one-detail-one-step-status-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "146-companies-one-detail-one-step-status-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "149-companies-one-detail-one-step-open-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "149-companies-one-detail-one-step-open-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "224-past-clients-order-menu-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "224-past-clients-order-menu-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "234-past-clients-parent-menu-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "234-past-clients-parent-menu-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ }
+]

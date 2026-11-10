@@ -179,6 +179,24 @@ describe("list row (All tasks)", () => {
   it("says 'No dates' for an undated task", () => {
     expect(html(<TaskListRow {...props} task={{ ...base, startDate: "", endDate: "" }} />)).toContain("No dates");
   });
+
+  it.each([
+    ["", "No dates"],
+    ["2026-10-10", "No deadline"],
+  ])("names the visible undated deadline pill with start %s", (startDate, words) => {
+    const markup = html(<TaskListRow {...props} task={{ ...base, startDate, endDate: "" }} columns={["end"]} onEdit={() => {}} />);
+    expect(markup).toContain(`aria-label="Deadline: ${words}. Change"`);
+  });
+
+  it.each([
+    ["2026-10-19", "Yesterday"],
+    ["2026-10-18", "2 days ago"],
+    ["2026-10-11", "9 days ago"],
+    ["2026-10-05", "No action for 15 days"],
+  ])("includes the visible last-action words for %s without repeating the heading", (lastActionDate, words) => {
+    const markup = html(<TaskListRow {...props} task={{ ...base, lastActionDate }} columns={["last"]} onEdit={() => {}} />);
+    expect(markup).toContain(`aria-label="Last action: ${words}. Change"`);
+  });
 });
 
 describe("day row (Plan's Day view, a person's page)", () => {

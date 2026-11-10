@@ -1,0 +1,118 @@
+[
+  {
+    "file": "before-desktop-dates.png",
+    "source": "test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-desktop/task-dates.png",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "file": "before-desktop-menu.png",
+    "source": "test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/details-menu.png",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "file": "after-desktop-dates.png",
+    "source": "test-results/task-plan-connector/r1e/attempt-2/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-desktop/task-dates.png",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "file": "after-desktop-menu.png",
+    "source": "test-results/task-plan-connector/r1e/attempt-2/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/details-menu.png",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "file": "after-desktop-menu-bottom.png",
+    "source": "test-results/task-plan-connector/r1e/attempt-2/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-desktop/details-menu-bottom.png",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "comparison": "desktop-dates",
+    "changedPixels": 0
+  },
+  {
+    "comparison": "desktop-menu",
+    "changedPixels": 174
+  },
+  {
+    "file": "crop-desktop-dates.png",
+    "crop": {
+      "left": 960,
+      "top": 330,
+      "width": 320,
+      "height": 210
+    },
+    "scale": 1
+  },
+  {
+    "file": "crop-desktop-menu-bottom.png",
+    "crop": {
+      "left": 1140,
+      "top": 198,
+      "width": 250,
+      "height": 457
+    },
+    "scale": 1
+  },
+  {
+    "file": "before-phone-dates.png",
+    "source": "test-results/task-plan-connector/r1e/before/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/task-dates.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "before-phone-menu.png",
+    "source": "test-results/task-plan-connector/r1e/before/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/details-menu.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "after-phone-dates.png",
+    "source": "test-results/task-plan-connector/r1e/after/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/task-dates.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "after-phone-menu.png",
+    "source": "test-results/task-plan-connector/r1e/after/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/details-menu.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "after-phone-menu-bottom.png",
+    "source": "test-results/task-plan-connector/r1e/after/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/details-menu-bottom.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "comparison": "phone-dates",
+    "changedPixels": 0
+  },
+  {
+    "comparison": "phone-menu",
+    "changedPixels": 0
+  },
+  {
+    "file": "crop-phone-dates.png",
+    "crop": {
+      "left": 180,
+      "top": 485,
+      "width": 190,
+      "height": 273
+    },
+    "scale": 1
+  },
+  {
+    "file": "crop-phone-menu-bottom.png",
+    "crop": {
+      "left": 115,
+      "top": 388,
+      "width": 250,
+      "height": 456
+    },
+    "scale": 1
+  }
+]

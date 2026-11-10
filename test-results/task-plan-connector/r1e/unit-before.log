@@ -1,0 +1,97 @@
+
+ RUN  v4.1.12 /home/ubuntu/deus-team-tasks
+
+ ❯ |unit| tests/unit/taskRows.test.tsx (29 tests | 5 failed) 133ms
+     × names the visible undated deadline pill with start  12ms
+     × names the visible undated deadline pill with start 2026-10-10 6ms
+     × includes the visible last-action words for 2026-10-19 without repeating the heading 5ms
+     × includes the visible last-action words for 2026-10-18 without repeating the heading 2ms
+     × includes the visible last-action words for 2026-10-11 without repeating the heading 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| tests/unit/taskRows.test.tsx > list row (All tasks) > names the visible undated deadline pill with start
+AssertionError: expected '<article data-kind="prospect" style="…' to contain 'aria-label="Deadline: No dates. Chang…'
+
+Expected: "aria-label="Deadline: No dates. Change""
+Received: "<article data-kind="prospect" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink);--cols:26px minmax(200px, 2.2fr) 118px" class="_row_015750 _list_015750"><span class="_lead_015750"><button type="button" class="_circle_d8543e" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink)" aria-label="Mark done: Follow up on the trial"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button></span><div class="_main_015750"><p class="_title_015750"><a class="_open_015750" data-row-link="true" href="?task=t1">Follow up on the trial</a></p><p class="_meta_015750"><span class="_place_015750">Pelita Foods</span></p></div><button type="button" class="_cell_015750 _deadline_015750 _edit_015750" data-col="end" aria-label="Deadline: None. Change"><span aria-hidden="true" class="_label_015750">Deadline</span><span class="_lift_015750 _pillBox_015750"><span class="_pill_d530c6 _none_d530c6" title="No deadline set">No dates</span></span></button></article>"
+
+ ❯ tests/unit/taskRows.test.tsx:188:20
+    186|   ])("names the visible undated deadline pill with start %s", (startDa…
+    187|     const markup = html(<TaskListRow {...props} task={{ ...base, start…
+    188|     expect(markup).toContain(`aria-label="Deadline: ${words}. Change"`…
+       |                    ^
+    189|   });
+    190|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |unit| tests/unit/taskRows.test.tsx > list row (All tasks) > names the visible undated deadline pill with start 2026-10-10
+AssertionError: expected '<article data-kind="prospect" style="…' to contain 'aria-label="Deadline: No deadline. Ch…'
+
+Expected: "aria-label="Deadline: No deadline. Change""
+Received: "<article data-kind="prospect" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink);--cols:26px minmax(200px, 2.2fr) 118px" class="_row_015750 _list_015750"><span class="_lead_015750"><button type="button" class="_circle_d8543e" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink)" aria-label="Mark done: Follow up on the trial"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button></span><div class="_main_015750"><p class="_title_015750"><a class="_open_015750" data-row-link="true" href="?task=t1">Follow up on the trial</a></p><p class="_meta_015750"><span class="_place_015750">Pelita Foods</span></p></div><button type="button" class="_cell_015750 _deadline_015750 _edit_015750" data-col="end" aria-label="Deadline: None. Change"><span aria-hidden="true" class="_label_015750">Deadline</span><span class="_lift_015750 _pillBox_015750"><span class="_pill_d530c6 _none_d530c6" title="No deadline set">No deadline</span></span></button></article>"
+
+ ❯ tests/unit/taskRows.test.tsx:188:20
+    186|   ])("names the visible undated deadline pill with start %s", (startDa…
+    187|     const markup = html(<TaskListRow {...props} task={{ ...base, start…
+    188|     expect(markup).toContain(`aria-label="Deadline: ${words}. Change"`…
+       |                    ^
+    189|   });
+    190|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |unit| tests/unit/taskRows.test.tsx > list row (All tasks) > includes the visible last-action words for 2026-10-19 without repeating the heading
+AssertionError: expected '<article data-kind="prospect" style="…' to contain 'aria-label="Last action: Yesterday. C…'
+
+Expected: "aria-label="Last action: Yesterday. Change""
+Received: "<article data-kind="prospect" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink);--cols:26px minmax(200px, 2.2fr) 150px" class="_row_015750 _list_015750"><span class="_lead_015750"><button type="button" class="_circle_d8543e" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink)" aria-label="Mark done: Follow up on the trial"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button></span><div class="_main_015750"><p class="_title_015750"><a class="_open_015750" data-row-link="true" href="?task=t1">Follow up on the trial</a></p><p class="_meta_015750"><span class="_place_015750">Pelita Foods</span><span>2 days late</span></p></div><button type="button" class="_cell_015750 _edit_015750" data-col="last" aria-label="Last action: Last action yesterday. Change"><span aria-hidden="true" class="_label_015750">Last action</span><span title="Last action yesterday">Yesterday</span></button></article>"
+
+ ❯ tests/unit/taskRows.test.tsx:198:20
+    196|   ])("includes the visible last-action words for %s without repeating …
+    197|     const markup = html(<TaskListRow {...props} task={{ ...base, lastA…
+    198|     expect(markup).toContain(`aria-label="Last action: ${words}. Chang…
+       |                    ^
+    199|   });
+    200| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |unit| tests/unit/taskRows.test.tsx > list row (All tasks) > includes the visible last-action words for 2026-10-18 without repeating the heading
+AssertionError: expected '<article data-kind="prospect" style="…' to contain 'aria-label="Last action: 2 days ago. …'
+
+Expected: "aria-label="Last action: 2 days ago. Change""
+Received: "<article data-kind="prospect" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink);--cols:26px minmax(200px, 2.2fr) 150px" class="_row_015750 _list_015750"><span class="_lead_015750"><button type="button" class="_circle_d8543e" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink)" aria-label="Mark done: Follow up on the trial"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button></span><div class="_main_015750"><p class="_title_015750"><a class="_open_015750" data-row-link="true" href="?task=t1">Follow up on the trial</a></p><p class="_meta_015750"><span class="_place_015750">Pelita Foods</span><span>2 days late</span></p></div><button type="button" class="_cell_015750 _edit_015750" data-col="last" aria-label="Last action: Last action 2 days ago. Change"><span aria-hidden="true" class="_label_015750">Last action</span><span title="Last action 2 days ago">2 days ago</span></button></article>"
+
+ ❯ tests/unit/taskRows.test.tsx:198:20
+    196|   ])("includes the visible last-action words for %s without repeating …
+    197|     const markup = html(<TaskListRow {...props} task={{ ...base, lastA…
+    198|     expect(markup).toContain(`aria-label="Last action: ${words}. Chang…
+       |                    ^
+    199|   });
+    200| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |unit| tests/unit/taskRows.test.tsx > list row (All tasks) > includes the visible last-action words for 2026-10-11 without repeating the heading
+AssertionError: expected '<article data-kind="prospect" style="…' to contain 'aria-label="Last action: 9 days ago. …'
+
+Expected: "aria-label="Last action: 9 days ago. Change""
+Received: "<article data-kind="prospect" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink);--cols:26px minmax(200px, 2.2fr) 150px" class="_row_015750 _list_015750"><span class="_lead_015750"><button type="button" class="_circle_d8543e" style="--kind:var(--pro);--kind-soft:var(--pro-soft);--kind-ink:var(--pro-ink)" aria-label="Mark done: Follow up on the trial"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button></span><div class="_main_015750"><p class="_title_015750"><a class="_open_015750" data-row-link="true" href="?task=t1">Follow up on the trial</a></p><p class="_meta_015750"><span class="_place_015750">Pelita Foods</span><span>2 days late</span></p></div><button type="button" class="_cell_015750 _edit_015750" data-col="last" aria-label="Last action: Last action 9 days ago. Change"><span aria-hidden="true" class="_label_015750">Last action</span><span class="_amber_015750" title="Last action 9 days ago">9 days ago</span></button></article>"
+
+ ❯ tests/unit/taskRows.test.tsx:198:20
+    196|   ])("includes the visible last-action words for %s without repeating …
+    197|     const markup = html(<TaskListRow {...props} task={{ ...base, lastA…
+    198|     expect(markup).toContain(`aria-label="Last action: ${words}. Chang…
+       |                    ^
+    199|   });
+    200| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 24 passed (29)
+   Start at  11:25:31
+   Duration  711ms (transform 268ms, setup 0ms, import 376ms, tests 133ms, environment 0ms)

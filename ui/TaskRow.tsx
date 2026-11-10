@@ -197,9 +197,9 @@ function cellWords(id: EditableColumn, task: Task, row: RowModel, today: string)
     case "start":
       return task.startDate ? shortDate(task.startDate, today) : undefined;
     case "end":
-      return task.endDate ? row.deadline.label : undefined;
+      return row.deadline.label;
     case "last":
-      return row.lastAction?.label;
+      return lastActionWords(row);
     case "type":
       return task.taskType;
     case "touch":
@@ -209,6 +209,13 @@ function cellWords(id: EditableColumn, task: Task, row: RowModel, today: string)
     case "key":
       return task.keyPoints;
   }
+}
+
+// The phone shows the column label next to this text, so the accessible name must
+// contain that same phrase without inserting a second "Last action" between them.
+function lastActionWords(row: RowModel): string | undefined {
+  const words = row.lastAction?.label.replace(/^Last action /, "");
+  return words && words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 // One of the chosen details. Empty ones say so with a dash, and drop out of the phone's card. With onEdit, one that can
@@ -254,10 +261,10 @@ function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; 
     case "last": {
       const last = row.lastAction;
       // Under the "Last action" head, "Last action 9 days ago" says it twice: the words that follow are enough.
-      const words = last?.label.replace(/^Last action /, "");
+      const words = lastActionWords(row);
       content = last && words && (
         <span className={TONE_CLASS[last.tone]} title={last.label}>
-          {words.charAt(0).toUpperCase() + words.slice(1)}
+          {words}
         </span>
       );
       break;
@@ -293,7 +300,7 @@ function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; 
       >
         {!(id === "last" && row.lastAction?.tone === "red") && (
           <span aria-hidden="true" className={styles.label}>
-            {label}
+            {label}{" "}
           </span>
         )}
         {empty ? (

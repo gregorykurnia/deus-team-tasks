@@ -1,0 +1,32 @@
+[WebServer] (node:1390979) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1390992) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1391061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1391075) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1391087) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1391106) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:1391126) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [phone] › tests/smoke/audit-repairs.spec.ts:45:5 › task dates keep their visible words in their accessible names @phone (4.4s)
+  ✓  2 [phone] › tests/smoke/audit-repairs.spec.ts:53:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone (4.0s)
+
+  2 passed (18.1s)

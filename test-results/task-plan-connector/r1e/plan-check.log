@@ -1,0 +1,6 @@
+Plan:      docs/IMPLEMENTATION_PLAN.md
+Next task: R1eb · Finish the 77 audit entries missed after emulator exhaustion, on fresh scoped stacks. [R1eb](implementation/chat-task-connector.md#r1eb--remaining-audit-coverage) [no look]
+Model:     Astra xHigh  (codex --model gpt-6-astra, effort xhigh)
+Execution: GPT-only (including retries and visual checks; no Claude fallback)
+
+autorun is already running here. See it: autorun watch

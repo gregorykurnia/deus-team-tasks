@@ -1,0 +1,104 @@
+[WebServer] (node:1390382) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1390400) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1390459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1390472) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1390484) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1390507) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:1390526) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/smoke/audit-repairs.spec.ts:45:5 › task dates keep their visible words in their accessible names @phone (4.7s)
+  ✓  2 [desktop] › tests/smoke/audit-repairs.spec.ts:53:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone (4.7s)
+(node:1390656) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [phone] › tests/smoke/audit-repairs.spec.ts:45:5 › task dates keep their visible words in their accessible names @phone (3.6s)
+(node:1390750) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 [phone] › tests/smoke/audit-repairs.spec.ts:53:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone (4.4s)
+
+
+  1) [phone] › tests/smoke/audit-repairs.spec.ts:45:5 › task dates keep their visible words in their accessible names @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "unloaded image",
+    + ]
+
+      40 |     return issues;
+      41 |   });
+    > 42 |   expect(faults).toEqual([]);
+         |                  ^
+      43 | });
+      44 |
+      45 | test("task dates keep their visible words in their accessible names", { tag: "@phone" }, async ({ page }, info) => {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:42:18
+
+    Error Context: test-results/task-plan-connector/r1e/after/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/after/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/after/audit-repairs-task-dates-k-4b3e7-s-in-their-accessible-names-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [phone] › tests/smoke/audit-repairs.spec.ts:53:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "unloaded image",
+    + ]
+
+      40 |     return issues;
+      41 |   });
+    > 42 |   expect(faults).toEqual([]);
+         |                  ^
+      43 | });
+      44 |
+      45 | test("task dates keep their visible words in their accessible names", { tag: "@phone" }, async ({ page }, info) => {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/audit-repairs.spec.ts:42:18
+
+    Error Context: test-results/task-plan-connector/r1e/after/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1e/after/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1e/after/audit-repairs-portalled-De-94505-eyboard-focus-and-placement-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [phone] › tests/smoke/audit-repairs.spec.ts:45:5 › task dates keep their visible words in their accessible names @phone
+    [phone] › tests/smoke/audit-repairs.spec.ts:53:5 › portalled Details menu has a landmark and keeps keyboard focus and placement @phone
+  2 passed (29.7s)
