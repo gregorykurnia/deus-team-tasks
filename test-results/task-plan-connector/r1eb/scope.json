@@ -1,0 +1,213 @@
+{
+  "source": "test-results/task-plan-connector/r1d/audit-coverage.json",
+  "expectedEntries": 77,
+  "batches": [
+    {
+      "name": "01-today-tasks-plan",
+      "stateIds": [
+        "006-today-no-client-work",
+        "007-today-normal",
+        "009-today-open",
+        "015-today-nothing-loaded",
+        "032-all-tasks-no-client-work",
+        "033-all-tasks-nothing-yet",
+        "039-all-tasks-offline-nothing-loaded",
+        "081-plan-timeline-nothing-yet",
+        "091-plan-timeline-offline-nothing-loaded",
+        "104-plan-one-day-open"
+      ],
+      "sizes": [
+        "desktop",
+        "phone"
+      ],
+      "expectedIds": [
+        "006-today-no-client-work-desktop",
+        "006-today-no-client-work-phone",
+        "007-today-normal-desktop",
+        "007-today-normal-phone",
+        "009-today-open-desktop",
+        "009-today-open-phone",
+        "015-today-nothing-loaded-desktop",
+        "015-today-nothing-loaded-phone",
+        "032-all-tasks-no-client-work-desktop",
+        "032-all-tasks-no-client-work-phone",
+        "033-all-tasks-nothing-yet-desktop",
+        "033-all-tasks-nothing-yet-phone",
+        "039-all-tasks-offline-nothing-loaded-desktop",
+        "039-all-tasks-offline-nothing-loaded-phone",
+        "081-plan-timeline-nothing-yet-desktop",
+        "081-plan-timeline-nothing-yet-phone",
+        "091-plan-timeline-offline-nothing-loaded-desktop",
+        "091-plan-timeline-offline-nothing-loaded-phone",
+        "104-plan-one-day-open-desktop",
+        "104-plan-one-day-open-phone"
+      ],
+      "commands": [
+        [
+          "node",
+          "scripts/a11y/axe.mjs",
+          "--distinct",
+          "--only",
+          "^(006-today-no-client-work|007-today-normal|009-today-open|015-today-nothing-loaded|032-all-tasks-no-client-work|033-all-tasks-nothing-yet|039-all-tasks-offline-nothing-loaded|081-plan-timeline-nothing-yet|091-plan-timeline-offline-nothing-loaded|104-plan-one-day-open)$"
+        ]
+      ]
+    },
+    {
+      "name": "02-companies-notes-past",
+      "stateIds": [
+        "140-companies-the-four-groups-no-companies",
+        "141-companies-the-four-groups-no-or-not-now-is-empty",
+        "144-companies-the-four-groups-offline-nothing-loaded",
+        "204-qualification-notes-nothing-yet",
+        "206-qualification-notes-offline-nothing-loaded",
+        "216-past-clients-nothing-counted-yet",
+        "233-past-clients-no-other-parent",
+        "242-past-clients-nothing-yet",
+        "245-past-clients-offline-nothing-loaded"
+      ],
+      "sizes": [
+        "desktop",
+        "phone"
+      ],
+      "expectedIds": [
+        "140-companies-the-four-groups-no-companies-desktop",
+        "140-companies-the-four-groups-no-companies-phone",
+        "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+        "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+        "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+        "144-companies-the-four-groups-offline-nothing-loaded-phone",
+        "204-qualification-notes-nothing-yet-desktop",
+        "204-qualification-notes-nothing-yet-phone",
+        "206-qualification-notes-offline-nothing-loaded-desktop",
+        "206-qualification-notes-offline-nothing-loaded-phone",
+        "216-past-clients-nothing-counted-yet-desktop",
+        "216-past-clients-nothing-counted-yet-phone",
+        "233-past-clients-no-other-parent-desktop",
+        "233-past-clients-no-other-parent-phone",
+        "242-past-clients-nothing-yet-desktop",
+        "242-past-clients-nothing-yet-phone",
+        "245-past-clients-offline-nothing-loaded-desktop",
+        "245-past-clients-offline-nothing-loaded-phone"
+      ],
+      "commands": [
+        [
+          "node",
+          "scripts/a11y/axe.mjs",
+          "--distinct",
+          "--only",
+          "^(140-companies-the-four-groups-no-companies|141-companies-the-four-groups-no-or-not-now-is-empty|144-companies-the-four-groups-offline-nothing-loaded|204-qualification-notes-nothing-yet|206-qualification-notes-offline-nothing-loaded|216-past-clients-nothing-counted-yet|233-past-clients-no-other-parent|242-past-clients-nothing-yet|245-past-clients-offline-nothing-loaded)$"
+        ]
+      ]
+    },
+    {
+      "name": "03-flows",
+      "stateIds": [
+        "247-flows-onboarding",
+        "254-flows-edit-a-flow",
+        "255-flows-saving",
+        "256-flows-name-suggestions",
+        "257-flows-adding-a-decision",
+        "258-flows-new-flow",
+        "259-flows-name-missing",
+        "260-flows-menu",
+        "261-flows-delete",
+        "262-flows-nothing-yet",
+        "263-flows-loading",
+        "264-flows-offline-read-only",
+        "265-flows-offline-nothing-loaded",
+        "266-flows-open"
+      ],
+      "sizes": [
+        "desktop",
+        "phone"
+      ],
+      "phoneOnly": [
+        "250-flows-no-steps-yet"
+      ],
+      "expectedIds": [
+        "247-flows-onboarding-desktop",
+        "247-flows-onboarding-phone",
+        "254-flows-edit-a-flow-desktop",
+        "254-flows-edit-a-flow-phone",
+        "255-flows-saving-desktop",
+        "255-flows-saving-phone",
+        "256-flows-name-suggestions-desktop",
+        "256-flows-name-suggestions-phone",
+        "257-flows-adding-a-decision-desktop",
+        "257-flows-adding-a-decision-phone",
+        "258-flows-new-flow-desktop",
+        "258-flows-new-flow-phone",
+        "259-flows-name-missing-desktop",
+        "259-flows-name-missing-phone",
+        "260-flows-menu-desktop",
+        "260-flows-menu-phone",
+        "261-flows-delete-desktop",
+        "261-flows-delete-phone",
+        "262-flows-nothing-yet-desktop",
+        "262-flows-nothing-yet-phone",
+        "263-flows-loading-desktop",
+        "263-flows-loading-phone",
+        "264-flows-offline-read-only-desktop",
+        "264-flows-offline-read-only-phone",
+        "265-flows-offline-nothing-loaded-desktop",
+        "265-flows-offline-nothing-loaded-phone",
+        "266-flows-open-desktop",
+        "266-flows-open-phone",
+        "250-flows-no-steps-yet-phone"
+      ],
+      "commands": [
+        [
+          "node",
+          "scripts/a11y/axe.mjs",
+          "--distinct",
+          "--only",
+          "^(247-flows-onboarding|254-flows-edit-a-flow|255-flows-saving|256-flows-name-suggestions|257-flows-adding-a-decision|258-flows-new-flow|259-flows-name-missing|260-flows-menu|261-flows-delete|262-flows-nothing-yet|263-flows-loading|264-flows-offline-read-only|265-flows-offline-nothing-loaded|266-flows-open)$"
+        ],
+        [
+          "node",
+          "scripts/a11y/axe.mjs",
+          "--distinct",
+          "--only",
+          "^(250-flows-no-steps-yet)$",
+          "--size",
+          "phone"
+        ]
+      ]
+    },
+    {
+      "name": "04-install-navigation",
+      "stateIds": [
+        "270-installing-and-opening-with-no-connection-browser-offers-it",
+        "271-installing-and-opening-with-no-connection-iphone",
+        "272-installing-and-opening-with-no-connection-installed",
+        "275-installing-and-opening-with-no-connection-back-online",
+        "276-moving-around-on-phones-more-sheet"
+      ],
+      "sizes": [
+        "desktop",
+        "phone"
+      ],
+      "expectedIds": [
+        "270-installing-and-opening-with-no-connection-browser-offers-it-desktop",
+        "270-installing-and-opening-with-no-connection-browser-offers-it-phone",
+        "271-installing-and-opening-with-no-connection-iphone-desktop",
+        "271-installing-and-opening-with-no-connection-iphone-phone",
+        "272-installing-and-opening-with-no-connection-installed-desktop",
+        "272-installing-and-opening-with-no-connection-installed-phone",
+        "275-installing-and-opening-with-no-connection-back-online-desktop",
+        "275-installing-and-opening-with-no-connection-back-online-phone",
+        "276-moving-around-on-phones-more-sheet-desktop",
+        "276-moving-around-on-phones-more-sheet-phone"
+      ],
+      "commands": [
+        [
+          "node",
+          "scripts/a11y/axe.mjs",
+          "--distinct",
+          "--only",
+          "^(270-installing-and-opening-with-no-connection-browser-offers-it|271-installing-and-opening-with-no-connection-iphone|272-installing-and-opening-with-no-connection-installed|275-installing-and-opening-with-no-connection-back-online|276-moving-around-on-phones-more-sheet)$"
+        ]
+      ]
+    }
+  ]
+}

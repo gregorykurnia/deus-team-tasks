@@ -1,0 +1,16 @@
+(node:1396073) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/ubuntu/deus-team-tasks/tests/support/emulator.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/ubuntu/deus-team-tasks/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+## moderate heading-order: Heading levels should only increase by one (2 elements)
+  .Today-module__oQdbCa__heroNote > .EmptyState-module__HP6AWW__empty > h3
+    <h3 class="EmptyState-module__HP6AWW__title">No connection</h3>
+    Heading order invalid
+    in 2 states, e.g. 015-today-nothing-loaded-desktop, 015-today-nothing-loaded-phone
+  h3
+    <h3 class="EmptyState-module__HP6AWW__title">Nothing on the list yet</h3>
+    Heading order invalid
+    in 10 states, e.g. 033-all-tasks-nothing-yet-desktop, 033-all-tasks-nothing-yet-phone
+
+20 state runs, 0 failed, 1 rules hit

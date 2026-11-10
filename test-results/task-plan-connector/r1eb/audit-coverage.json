@@ -1,0 +1,552 @@
+{
+  "expected": 77,
+  "recorded": 77,
+  "assessed": 77,
+  "cleanEntries": 47,
+  "entriesWithViolations": 30,
+  "ruleOccurrences": 30,
+  "nodeOccurrences": 30,
+  "rules": [
+    {
+      "rule": "heading-order",
+      "impact": "moderate",
+      "affectedEntries": 30,
+      "nodeOccurrences": 30
+    }
+  ],
+  "missing": [],
+  "extra": [],
+  "duplicates": [],
+  "failures": [],
+  "setupErrors": [],
+  "repeatedPreviouslyAssessedEntries": [],
+  "originalAssessedEntries": 207,
+  "combinedAssessedEntries": 284,
+  "preservedPriorEvidenceFiles": 144,
+  "expectedIds": [
+    "006-today-no-client-work-desktop",
+    "006-today-no-client-work-phone",
+    "007-today-normal-desktop",
+    "007-today-normal-phone",
+    "009-today-open-desktop",
+    "009-today-open-phone",
+    "015-today-nothing-loaded-desktop",
+    "015-today-nothing-loaded-phone",
+    "032-all-tasks-no-client-work-desktop",
+    "032-all-tasks-no-client-work-phone",
+    "033-all-tasks-nothing-yet-desktop",
+    "033-all-tasks-nothing-yet-phone",
+    "039-all-tasks-offline-nothing-loaded-desktop",
+    "039-all-tasks-offline-nothing-loaded-phone",
+    "081-plan-timeline-nothing-yet-desktop",
+    "081-plan-timeline-nothing-yet-phone",
+    "091-plan-timeline-offline-nothing-loaded-desktop",
+    "091-plan-timeline-offline-nothing-loaded-phone",
+    "104-plan-one-day-open-desktop",
+    "104-plan-one-day-open-phone",
+    "140-companies-the-four-groups-no-companies-desktop",
+    "140-companies-the-four-groups-no-companies-phone",
+    "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+    "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+    "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+    "144-companies-the-four-groups-offline-nothing-loaded-phone",
+    "204-qualification-notes-nothing-yet-desktop",
+    "204-qualification-notes-nothing-yet-phone",
+    "206-qualification-notes-offline-nothing-loaded-desktop",
+    "206-qualification-notes-offline-nothing-loaded-phone",
+    "216-past-clients-nothing-counted-yet-desktop",
+    "216-past-clients-nothing-counted-yet-phone",
+    "233-past-clients-no-other-parent-desktop",
+    "233-past-clients-no-other-parent-phone",
+    "242-past-clients-nothing-yet-desktop",
+    "242-past-clients-nothing-yet-phone",
+    "245-past-clients-offline-nothing-loaded-desktop",
+    "245-past-clients-offline-nothing-loaded-phone",
+    "247-flows-onboarding-desktop",
+    "247-flows-onboarding-phone",
+    "250-flows-no-steps-yet-phone",
+    "254-flows-edit-a-flow-desktop",
+    "254-flows-edit-a-flow-phone",
+    "255-flows-saving-desktop",
+    "255-flows-saving-phone",
+    "256-flows-name-suggestions-desktop",
+    "256-flows-name-suggestions-phone",
+    "257-flows-adding-a-decision-desktop",
+    "257-flows-adding-a-decision-phone",
+    "258-flows-new-flow-desktop",
+    "258-flows-new-flow-phone",
+    "259-flows-name-missing-desktop",
+    "259-flows-name-missing-phone",
+    "260-flows-menu-desktop",
+    "260-flows-menu-phone",
+    "261-flows-delete-desktop",
+    "261-flows-delete-phone",
+    "262-flows-nothing-yet-desktop",
+    "262-flows-nothing-yet-phone",
+    "263-flows-loading-desktop",
+    "263-flows-loading-phone",
+    "264-flows-offline-read-only-desktop",
+    "264-flows-offline-read-only-phone",
+    "265-flows-offline-nothing-loaded-desktop",
+    "265-flows-offline-nothing-loaded-phone",
+    "266-flows-open-desktop",
+    "266-flows-open-phone",
+    "270-installing-and-opening-with-no-connection-browser-offers-it-desktop",
+    "270-installing-and-opening-with-no-connection-browser-offers-it-phone",
+    "271-installing-and-opening-with-no-connection-iphone-desktop",
+    "271-installing-and-opening-with-no-connection-iphone-phone",
+    "272-installing-and-opening-with-no-connection-installed-desktop",
+    "272-installing-and-opening-with-no-connection-installed-phone",
+    "275-installing-and-opening-with-no-connection-back-online-desktop",
+    "275-installing-and-opening-with-no-connection-back-online-phone",
+    "276-moving-around-on-phones-more-sheet-desktop",
+    "276-moving-around-on-phones-more-sheet-phone"
+  ],
+  "results": [
+    {
+      "id": "009-today-open-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "009-today-open-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "015-today-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "015-today-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "033-all-tasks-nothing-yet-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "033-all-tasks-nothing-yet-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "039-all-tasks-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "039-all-tasks-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "081-plan-timeline-nothing-yet-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "081-plan-timeline-nothing-yet-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "091-plan-timeline-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "091-plan-timeline-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "104-plan-one-day-open-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "104-plan-one-day-open-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "006-today-no-client-work-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "006-today-no-client-work-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "032-all-tasks-no-client-work-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "032-all-tasks-no-client-work-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "007-today-normal-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "007-today-normal-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json"
+    },
+    {
+      "id": "140-companies-the-four-groups-no-companies-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "140-companies-the-four-groups-no-companies-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "144-companies-the-four-groups-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "204-qualification-notes-nothing-yet-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "204-qualification-notes-nothing-yet-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "206-qualification-notes-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "206-qualification-notes-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "242-past-clients-nothing-yet-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "242-past-clients-nothing-yet-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "245-past-clients-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "245-past-clients-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "233-past-clients-no-other-parent-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "233-past-clients-no-other-parent-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "216-past-clients-nothing-counted-yet-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "216-past-clients-nothing-counted-yet-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json"
+    },
+    {
+      "id": "247-flows-onboarding-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "247-flows-onboarding-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "254-flows-edit-a-flow-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "254-flows-edit-a-flow-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "255-flows-saving-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "255-flows-saving-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "256-flows-name-suggestions-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "256-flows-name-suggestions-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "257-flows-adding-a-decision-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "257-flows-adding-a-decision-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "258-flows-new-flow-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "258-flows-new-flow-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "259-flows-name-missing-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "259-flows-name-missing-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "260-flows-menu-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "260-flows-menu-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "261-flows-delete-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "261-flows-delete-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "263-flows-loading-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "263-flows-loading-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "264-flows-offline-read-only-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "264-flows-offline-read-only-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "266-flows-open-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "266-flows-open-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "262-flows-nothing-yet-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "262-flows-nothing-yet-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "265-flows-offline-nothing-loaded-desktop",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "265-flows-offline-nothing-loaded-phone",
+      "ruleIds": [
+        "heading-order"
+      ],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json"
+    },
+    {
+      "id": "250-flows-no-steps-yet-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-2.json"
+    },
+    {
+      "id": "270-installing-and-opening-with-no-connection-browser-offers-it-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "270-installing-and-opening-with-no-connection-browser-offers-it-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "271-installing-and-opening-with-no-connection-iphone-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "271-installing-and-opening-with-no-connection-iphone-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "272-installing-and-opening-with-no-connection-installed-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "272-installing-and-opening-with-no-connection-installed-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "275-installing-and-opening-with-no-connection-back-online-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "275-installing-and-opening-with-no-connection-back-online-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "276-moving-around-on-phones-more-sheet-desktop",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    },
+    {
+      "id": "276-moving-around-on-phones-more-sheet-phone",
+      "ruleIds": [],
+      "evidence": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json"
+    }
+  ]
+}

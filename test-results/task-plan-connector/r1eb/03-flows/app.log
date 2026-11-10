@@ -1,0 +1,85 @@
+▲ Next.js 16.3.1 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://10.0.0.217:3100
+- Environments: .env.local
+✓ Ready in 386ms
+✓ Running next.config.ts took 47ms
+
+ GET /flows/f1 200 in 859ms (next.js: 538ms, application-code: 320ms)
+ GET /flows/f1 200 in 212ms (next.js: 53ms, application-code: 158ms)
+ GET /flows/f3?edit=1 200 in 124ms (next.js: 35ms, application-code: 90ms)
+ GET /flows/f3?edit=1 200 in 66ms (next.js: 14ms, application-code: 52ms)
+ GET /flows/f3?edit=1 200 in 125ms (next.js: 18ms, application-code: 107ms)
+ GET /flows/f3?edit=1 200 in 91ms (next.js: 14ms, application-code: 76ms)
+ GET /flows/f1?edit=1 200 in 81ms (next.js: 16ms, application-code: 66ms)
+ GET /flows/f1?edit=1 200 in 108ms (next.js: 18ms, application-code: 90ms)
+ GET /flows/f5?edit=1 200 in 118ms (next.js: 22ms, application-code: 96ms)
+ GET /flows/f5?edit=1 200 in 102ms (next.js: 16ms, application-code: 86ms)
+ GET /flows?newFlow=1 200 in 107ms (next.js: 31ms, application-code: 76ms)
+ GET /flows/f3?newFlow=1 200 in 84ms (next.js: 21ms, application-code: 63ms)
+ GET /flows?newFlow=1 200 in 68ms (next.js: 3ms, application-code: 65ms)
+ GET /flows?newFlow=1 200 in 63ms (next.js: 4ms, application-code: 59ms)
+ GET /flows/f3?newFlow=1 200 in 88ms (next.js: 29ms, application-code: 60ms)
+ GET /flows?newFlow=1 200 in 60ms (next.js: 3ms, application-code: 57ms)
+ GET /flows/f3 200 in 93ms (next.js: 16ms, application-code: 77ms)
+ GET /flows/f3 200 in 102ms (next.js: 20ms, application-code: 82ms)
+ GET /flows/f3 200 in 95ms (next.js: 20ms, application-code: 74ms)
+ GET /flows/f3 200 in 111ms (next.js: 17ms, application-code: 93ms)
+ GET /flows 200 in 64ms (next.js: 3ms, application-code: 60ms)
+ GET /flows 200 in 58ms (next.js: 3ms, application-code: 55ms)
+ GET /flows/f1 200 in 84ms (next.js: 16ms, application-code: 69ms)
+[browser] [2026-10-20T02:00:03.562Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d18245 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.610Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d18246 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.779Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d18247 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.786Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d18248 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.573Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d1824a transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.577Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x28d18249 transport errored. Name: undefined Message: undefined
+ GET /flows/f1 200 in 118ms (next.js: 17ms, application-code: 101ms)
+[browser] [2026-10-20T02:00:03.640Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c775 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.645Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c776 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.870Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c777 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.877Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c778 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.353Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c779 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.644Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c77a transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.914Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x8716c77b transport errored. Name: undefined Message: undefined
+ GET /flows/f1 200 in 89ms (next.js: 14ms, application-code: 75ms)
+ GET /flows/f1 200 in 96ms (next.js: 17ms, application-code: 80ms)
+ GET /flows 200 in 63ms (next.js: 5ms, application-code: 58ms)
+ GET /flows 200 in 55ms (next.js: 5ms, application-code: 50ms)
+ GET /flows 200 in 73ms (next.js: 16ms, application-code: 57ms)
+[browser] [2026-10-20T02:00:01.120Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d710 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.122Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[browser] [2026-10-20T02:00:01.241Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d711 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.270Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d70f transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.271Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[browser] [2026-10-20T02:00:01.368Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d712 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:02.214Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d713 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:02.273Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d714 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.901Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d715 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:04.396Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d716 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:05.960Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d717 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:06.023Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d718 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:07.648Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d719 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:09.612Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d71a transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:10.668Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x59b9d71b transport errored. Name: undefined Message: undefined
+ GET /flows 200 in 85ms (next.js: 22ms, application-code: 63ms)
+[browser] [2026-10-20T02:00:01.096Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222167 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.098Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[browser] [2026-10-20T02:00:01.209Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222168 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.237Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222166 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:01.239Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[browser] [2026-10-20T02:00:01.325Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222169 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:02.295Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216a transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:02.666Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216b transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.527Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216c transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:03.926Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216d transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:06.549Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216e transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:07.021Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x5822216f transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:10.374Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222170 transport errored. Name: undefined Message: undefined
+[browser] [2026-10-20T02:00:10.850Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x58222171 transport errored. Name: undefined Message: undefined
+ GET /flows/f6 200 in 97ms (next.js: 18ms, application-code: 79ms)
+[?25h

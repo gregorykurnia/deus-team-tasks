@@ -1,0 +1,278 @@
+[
+ {
+  "id": "009-today-open-desktop",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "009-today-open-phone",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "015-today-nothing-loaded-desktop",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": ".Today-module__oQdbCa__heroNote > .EmptyState-module__HP6AWW__empty > h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "015-today-nothing-loaded-phone",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": ".Today-module__oQdbCa__heroNote > .EmptyState-module__HP6AWW__empty > h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "033-all-tasks-nothing-yet-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing on the list yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "033-all-tasks-nothing-yet-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing on the list yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "039-all-tasks-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "039-all-tasks-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/tasks",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "081-plan-timeline-nothing-yet-desktop",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing planned yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "081-plan-timeline-nothing-yet-phone",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing planned yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "091-plan-timeline-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "091-plan-timeline-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/plan",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "104-plan-one-day-open-desktop",
+  "url": "http://localhost:3100/plan?view=day",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "104-plan-one-day-open-phone",
+  "url": "http://localhost:3100/plan?view=day",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "006-today-no-client-work-desktop",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "006-today-no-client-work-phone",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "032-all-tasks-no-client-work-desktop",
+  "url": "http://localhost:3100/tasks?kind=client",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No open client work</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "032-all-tasks-no-client-work-phone",
+  "url": "http://localhost:3100/tasks?kind=client",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No open client work</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "007-today-normal-desktop",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "007-today-normal-phone",
+  "url": "http://localhost:3100/",
+  "errors": [],
+  "violations": []
+ }
+]

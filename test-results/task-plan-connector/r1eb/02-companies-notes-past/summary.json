@@ -1,0 +1,23 @@
+{
+  "batch": "02-companies-notes-past",
+  "seconds": 148.9,
+  "expected": 18,
+  "recorded": 18,
+  "assessed": 18,
+  "failures": [],
+  "setupErrors": [],
+  "violations": 14,
+  "missing": [],
+  "extra": [],
+  "exitCodes": [
+    0
+  ],
+  "error": null,
+  "portsFreeAfter": [
+    3100,
+    8180,
+    4400,
+    4500,
+    9150
+  ]
+}

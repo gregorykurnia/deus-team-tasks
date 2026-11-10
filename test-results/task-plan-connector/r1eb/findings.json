@@ -1,0 +1,407 @@
+[
+  {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "occurrences": [
+      {
+        "id": "015-today-nothing-loaded-desktop",
+        "url": "http://localhost:3100/",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": ".Today-module__oQdbCa__heroNote > .EmptyState-module__HP6AWW__empty > h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "015-today-nothing-loaded-phone",
+        "url": "http://localhost:3100/",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": ".Today-module__oQdbCa__heroNote > .EmptyState-module__HP6AWW__empty > h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "033-all-tasks-nothing-yet-desktop",
+        "url": "http://localhost:3100/tasks",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing on the list yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "033-all-tasks-nothing-yet-phone",
+        "url": "http://localhost:3100/tasks",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing on the list yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "039-all-tasks-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/tasks",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "039-all-tasks-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/tasks",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "081-plan-timeline-nothing-yet-desktop",
+        "url": "http://localhost:3100/plan",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing planned yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "081-plan-timeline-nothing-yet-phone",
+        "url": "http://localhost:3100/plan",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nothing planned yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "091-plan-timeline-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/plan",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "091-plan-timeline-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/plan",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "032-all-tasks-no-client-work-desktop",
+        "url": "http://localhost:3100/tasks?kind=client",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No open client work</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "032-all-tasks-no-client-work-phone",
+        "url": "http://localhost:3100/tasks?kind=client",
+        "evidence": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No open client work</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "140-companies-the-four-groups-no-companies-desktop",
+        "url": "http://localhost:3100/companies",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No companies yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "140-companies-the-four-groups-no-companies-phone",
+        "url": "http://localhost:3100/companies",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No companies yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/companies",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "144-companies-the-four-groups-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/companies",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "204-qualification-notes-nothing-yet-desktop",
+        "url": "http://localhost:3100/notes",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No qualification notes yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "204-qualification-notes-nothing-yet-phone",
+        "url": "http://localhost:3100/notes",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No qualification notes yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "206-qualification-notes-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/notes",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "206-qualification-notes-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/notes",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "242-past-clients-nothing-yet-desktop",
+        "url": "http://localhost:3100/past",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No past clients yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "242-past-clients-nothing-yet-phone",
+        "url": "http://localhost:3100/past",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No past clients yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "245-past-clients-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/past",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "245-past-clients-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/past",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+        "url": "http://localhost:3100/companies?group=no-or-not-now",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nobody has said no or not now</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+        "url": "http://localhost:3100/companies?group=no-or-not-now",
+        "evidence": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nobody has said no or not now</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "262-flows-nothing-yet-desktop",
+        "url": "http://localhost:3100/flows",
+        "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No flows yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "262-flows-nothing-yet-phone",
+        "url": "http://localhost:3100/flows",
+        "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No flows yet</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "265-flows-offline-nothing-loaded-desktop",
+        "url": "http://localhost:3100/flows",
+        "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      },
+      {
+        "id": "265-flows-offline-nothing-loaded-phone",
+        "url": "http://localhost:3100/flows",
+        "evidence": "test-results/task-plan-connector/r1eb/03-flows/report-1.json",
+        "nodes": [
+          {
+            "target": "h3",
+            "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+            "why": "Heading order invalid"
+          }
+        ]
+      }
+    ],
+    "affectedEntries": 30,
+    "nodeOccurrences": 30,
+    "repairScopes": [
+      {
+        "sizes": [
+          "desktop",
+          "phone"
+        ],
+        "stateIds": [
+          "015-today-nothing-loaded",
+          "032-all-tasks-no-client-work",
+          "033-all-tasks-nothing-yet",
+          "039-all-tasks-offline-nothing-loaded",
+          "081-plan-timeline-nothing-yet",
+          "091-plan-timeline-offline-nothing-loaded",
+          "140-companies-the-four-groups-no-companies",
+          "141-companies-the-four-groups-no-or-not-now-is-empty",
+          "144-companies-the-four-groups-offline-nothing-loaded",
+          "204-qualification-notes-nothing-yet",
+          "206-qualification-notes-offline-nothing-loaded",
+          "242-past-clients-nothing-yet",
+          "245-past-clients-offline-nothing-loaded",
+          "262-flows-nothing-yet",
+          "265-flows-offline-nothing-loaded"
+        ],
+        "regex": "^(015-today-nothing-loaded|032-all-tasks-no-client-work|033-all-tasks-nothing-yet|039-all-tasks-offline-nothing-loaded|081-plan-timeline-nothing-yet|091-plan-timeline-offline-nothing-loaded|140-companies-the-four-groups-no-companies|141-companies-the-four-groups-no-or-not-now-is-empty|144-companies-the-four-groups-offline-nothing-loaded|204-qualification-notes-nothing-yet|206-qualification-notes-offline-nothing-loaded|242-past-clients-nothing-yet|245-past-clients-offline-nothing-loaded|262-flows-nothing-yet|265-flows-offline-nothing-loaded)$"
+      }
+    ],
+    "findingId": "R1eb-A1",
+    "source": {
+      "file": "ui/EmptyState.tsx",
+      "line": 21
+    },
+    "contextSource": {
+      "file": "desk/PageHeader.tsx",
+      "line": 34
+    },
+    "disposition": "Assigned to R1ec before R1 and activation; not repaired in R1eb."
+  }
+]

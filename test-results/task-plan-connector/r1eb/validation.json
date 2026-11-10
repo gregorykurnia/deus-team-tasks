@@ -1,0 +1,11 @@
+{
+  "coverage": "77 exact entries, zero overlap with original 207; all 284 covered",
+  "findings": "30 heading-order occurrences assigned R1ec; exact repair scope checked",
+  "evidencePaths": "all 77 resolve",
+  "markdownLinksAndAnchorsChecked": 36,
+  "priorEvidenceFilesUnchanged": 144,
+  "plan": "R1eb ticked; R1ec next and unticked; R1 untouched",
+  "source": "ui/EmptyState.tsx:21; desk/PageHeader.tsx:34",
+  "ports": "3100, 8180, 4400, 4500, 9150 free after shutdown",
+  "logWhitespace": "Initial staged diff check caught trailing spaces; normalized log endings only."
+}

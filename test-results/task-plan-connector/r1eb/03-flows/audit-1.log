@@ -1,0 +1,12 @@
+(node:1398153) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/ubuntu/deus-team-tasks/tests/support/emulator.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/ubuntu/deus-team-tasks/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+## moderate heading-order: Heading levels should only increase by one (1 elements)
+  h3
+    <h3 class="EmptyState-module__HP6AWW__title">No flows yet</h3>
+    Heading order invalid
+    in 4 states, e.g. 262-flows-nothing-yet-desktop, 262-flows-nothing-yet-phone
+
+28 state runs, 0 failed, 1 rules hit

@@ -1,0 +1,23 @@
+{
+  "batch": "01-today-tasks-plan",
+  "seconds": 166.3,
+  "expected": 20,
+  "recorded": 20,
+  "assessed": 20,
+  "failures": [],
+  "setupErrors": [],
+  "violations": 12,
+  "missing": [],
+  "extra": [],
+  "exitCodes": [
+    0
+  ],
+  "error": null,
+  "portsFreeAfter": [
+    3100,
+    8180,
+    4400,
+    4500,
+    9150
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "seconds": 613.2,
+  "batches": [
+    {
+      "batch": "01-today-tasks-plan",
+      "seconds": 166.3,
+      "expected": 20,
+      "recorded": 20,
+      "assessed": 20,
+      "failures": [],
+      "setupErrors": [],
+      "violations": 12,
+      "missing": [],
+      "extra": [],
+      "exitCodes": [
+        0
+      ],
+      "error": null,
+      "portsFreeAfter": [
+        3100,
+        8180,
+        4400,
+        4500,
+        9150
+      ]
+    },
+    {
+      "batch": "02-companies-notes-past",
+      "seconds": 148.9,
+      "expected": 18,
+      "recorded": 18,
+      "assessed": 18,
+      "failures": [],
+      "setupErrors": [],
+      "violations": 14,
+      "missing": [],
+      "extra": [],
+      "exitCodes": [
+        0
+      ],
+      "error": null,
+      "portsFreeAfter": [
+        3100,
+        8180,
+        4400,
+        4500,
+        9150
+      ]
+    },
+    {
+      "batch": "03-flows",
+      "seconds": 211.7,
+      "expected": 29,
+      "recorded": 29,
+      "assessed": 29,
+      "failures": [],
+      "setupErrors": [],
+      "violations": 4,
+      "missing": [],
+      "extra": [],
+      "exitCodes": [
+        0,
+        0
+      ],
+      "error": null,
+      "portsFreeAfter": [
+        3100,
+        8180,
+        4400,
+        4500,
+        9150
+      ]
+    },
+    {
+      "batch": "04-install-navigation",
+      "seconds": 86.3,
+      "expected": 10,
+      "recorded": 10,
+      "assessed": 10,
+      "failures": [],
+      "setupErrors": [],
+      "violations": 0,
+      "missing": [],
+      "extra": [],
+      "exitCodes": [
+        0
+      ],
+      "error": null,
+      "portsFreeAfter": [
+        3100,
+        8180,
+        4400,
+        4500,
+        9150
+      ]
+    }
+  ],
+  "environment": {
+    "NODE_ENV": "development",
+    "NEXT_PUBLIC_USE_EMULATOR": "1",
+    "FIRESTORE_EMULATOR_HOST": "127.0.0.1:8180",
+    "MCP_TASK_PLANS_ENABLED": "0",
+    "JAVA_TOOL_OPTIONS": "-Xmx2g"
+  }
+}

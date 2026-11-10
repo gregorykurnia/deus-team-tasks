@@ -1,0 +1,23 @@
+{
+  "batch": "04-install-navigation",
+  "seconds": 86.3,
+  "expected": 10,
+  "recorded": 10,
+  "assessed": 10,
+  "failures": [],
+  "setupErrors": [],
+  "violations": 0,
+  "missing": [],
+  "extra": [],
+  "exitCodes": [
+    0
+  ],
+  "error": null,
+  "portsFreeAfter": [
+    3100,
+    8180,
+    4400,
+    4500,
+    9150
+  ]
+}

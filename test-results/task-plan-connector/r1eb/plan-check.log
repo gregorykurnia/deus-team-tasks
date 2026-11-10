@@ -1,0 +1,7 @@
+Plan:      docs/IMPLEMENTATION_PLAN.md
+Next task: R1ec · Repair empty/offline heading order and recheck its 30 affected entries. [R1ec](implementation/chat-task-connector.md#r1ec--empty-state-headings) [look]
+Model:     Astra xHigh  (codex --model gpt-6-astra, effort xhigh)
+Execution: GPT-only (including retries and visual checks; no Claude fallback)
+Codex:     2 open tasks need about 8% of the weekly limit (1 on Astra, about 6.5% each); 12% used, resets Tue 17 Nov 02:31
+
+Nothing started. Start: autorun (this phase), autorun one (this task) or autorun all (to the end).

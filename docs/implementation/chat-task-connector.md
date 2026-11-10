@@ -327,6 +327,26 @@ Done when:
 - Every new finding has a source/state, evidence and a named repair task or justified dismissal.
 - No new data-loss, wrong-destination or inaccessible-main-action finding is deferred to activation.
 
+## R1ec — Empty-state headings
+
+Give empty and offline messages the correct heading level so people navigating by headings can follow the page.
+Read **Checks**, R1eb's findings in `chat-task-results.md`,
+`test-results/task-plan-connector/r1eb/findings.json`, `ui/EmptyState.tsx`, `desk/PageHeader.tsx`,
+and design-guide §4.15. Start with `ui/EmptyState.tsx:21`: its unconditional `h3` follows a page `h1`
+without an `h2` in 15 states at both sizes. Inspect affected callers only as needed; retain appropriate
+nested headings in panels and documents rather than blindly replacing every `h3`.
+
+This is one shared-component repair for **R1eb-A1**, not another cross-app audit. Add a regression assertion
+that fails before the fix, then rerun only the 30 affected entries from `findings.json`'s `repairScopes`,
+splitting fresh emulator stacks if needed. Preserve R1eb's reports and all prototype references. Keep wording,
+styling and actions; inspect representative before/after desktop and phone empty/offline captures at full size.
+
+Done when:
+- All 30 affected entries have zero heading-order findings, setup errors or new violations.
+- Regression checks cover page-level and nested empty states; required light checks pass.
+- Desktop and phone captures retain readable messages and reachable actions without a layout change.
+- R1eb-A1 is closed with evidence before R1 and activation; no unrelated audit is repeated.
+
 ## R1 — Final phase review
 
 Read the requirements table, all recorded findings/dispositions, final diff and test/capture evidence. Map C1–C10

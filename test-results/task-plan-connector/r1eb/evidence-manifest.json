@@ -1,0 +1,154 @@
+{
+  "files": [
+    {
+      "path": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/app.log",
+      "bytes": 19550,
+      "sha256": "44af0fdc3818c366c35d6e295633e92c0307f1f4fd99e0d9a311a2b9043ea9b9"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/audit-1.log",
+      "bytes": 1021,
+      "sha256": "fb787ff227bca1d14ce51abaf5399adecb64f65fc54c4fef68998ceac6465691"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/emulator.log",
+      "bytes": 2016,
+      "sha256": "2fc6b84aa5d39ffe9ad343fb438037bf27b45c24bd49efa2db24f5a16a95c92c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/report-1.json",
+      "bytes": 6352,
+      "sha256": "68482d8d02304fc4499e692bbd53b439ba254f2de56d6292b5b7f3826e21db5a"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/01-today-tasks-plan/summary.json",
+      "bytes": 323,
+      "sha256": "b54890590c1565ceea1f770fea6ecc197e3d84b4647552eed9e5cfe552a803e1"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/02-companies-notes-past/app.log",
+      "bytes": 19669,
+      "sha256": "5a7bc3150012fe04c3bf569a13e343fbe400e1690dbe69d01110b3315ef6829d"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/02-companies-notes-past/audit-1.log",
+      "bytes": 792,
+      "sha256": "5253d3920abe2c77ef8229933268f9f8f2967960ada6a6be59ebdc9fafd48069"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/02-companies-notes-past/emulator.log",
+      "bytes": 2016,
+      "sha256": "2fc6b84aa5d39ffe9ad343fb438037bf27b45c24bd49efa2db24f5a16a95c92c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/02-companies-notes-past/report-1.json",
+      "bytes": 6918,
+      "sha256": "ed295fdcf687b8086c166b83ab9859d0f035e28a92eca52f0c5ce462b99e1123"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/02-companies-notes-past/summary.json",
+      "bytes": 327,
+      "sha256": "9dbb0f18271e6827496b8c2f215b5fe038b1f295b38390972486b616ad5825d6"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/app.log",
+      "bytes": 11189,
+      "sha256": "756246d8c0fabf6f3db7b1485da30a43289ceff932fea8c5b1060aaa7d7addb1"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/audit-1.log",
+      "bytes": 745,
+      "sha256": "8b668d9024de52176abdbd893c55b338cb7d50a3b839d3ca64ee22563f975366"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/audit-2.log",
+      "bytes": 481,
+      "sha256": "312b01a37c384629529ca49e8dd70ba0f2be93d4622db662f2dd6dd2b7dbe19e"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/emulator.log",
+      "bytes": 2016,
+      "sha256": "2fc6b84aa5d39ffe9ad343fb438037bf27b45c24bd49efa2db24f5a16a95c92c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/report-1.json",
+      "bytes": 4772,
+      "sha256": "113755603cf50871e3c1db6c0bbc1b06f54038eacc12518a635e2a788d644ec9"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/report-2.json",
+      "bytes": 127,
+      "sha256": "5d6e8be367a0f7f9dbe84645c51301e44d6de510e42166d78ffe85ce1fbd0e73"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/03-flows/summary.json",
+      "bytes": 318,
+      "sha256": "0e7d0f3bac19e4b8ad989f5273033c7f4029846d9fe5d3884e022cf9c4ed8312"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/04-install-navigation/app.log",
+      "bytes": 1353,
+      "sha256": "f1f974b8cf18202ce414d57b42cdae7e29bed177f8e76905fbfe7b574d204824"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/04-install-navigation/audit-1.log",
+      "bytes": 482,
+      "sha256": "f388bfce0fc64b13ef663197c85a2156a7cf3c5c0503bc895e75171d432682af"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/04-install-navigation/emulator.log",
+      "bytes": 2016,
+      "sha256": "2fc6b84aa5d39ffe9ad343fb438037bf27b45c24bd49efa2db24f5a16a95c92c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/04-install-navigation/report-1.json",
+      "bytes": 1566,
+      "sha256": "872556125579168924f2500b69fdcc1c19c5ba1326f23f147e6793574b59eb13"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/04-install-navigation/summary.json",
+      "bytes": 323,
+      "sha256": "e7334bb6689bd3af21379252bf9cb78e81595901b77bd55e9e86b0ac937fc44c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/README.md",
+      "bytes": 4248,
+      "sha256": "d155f8799e7562e50c35fd7c1939e174b27ef1236e29ce106d5b18a36291d98a"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/audit-coverage.json",
+      "bytes": 18661,
+      "sha256": "0abdfc9f834ed8c113e318b60c176f19d2ab300009f5844fa15a43c47c5583fe"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/findings.json",
+      "bytes": 15209,
+      "sha256": "63abf8bb8809d62d810c2832b659ae3c6ef0b5aa9435e4e9186b878f45c368a7"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/guard.json",
+      "bytes": 46,
+      "sha256": "014f5f6453339002a27e1b9a0ffca2886fcac9adbf76a89f085d7a4bbe3fac8c"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/plan-check.log",
+      "bytes": 577,
+      "sha256": "d0d43663994fd035d9370c1734b99de059192fe590e54b28d63e2b9dbe4d3cc2"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/run-summary.json",
+      "bytes": 1919,
+      "sha256": "8d752c8d0d96785979f45d1c1a8be578c8804a1922d83a110df474f65f206798"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/scope.json",
+      "bytes": 8370,
+      "sha256": "cce8fa585b3908c109176d21a0e0ea5d3513ba00e00068bf7cd5d334d6e2f34e"
+    },
+    {
+      "path": "test-results/task-plan-connector/r1eb/validation.json",
+      "bytes": 576,
+      "sha256": "04af7f82ba81fd015fa85e3fb244f881c99bd4cd3a2715053aec18b952cc3305"
+    }
+  ]
+}

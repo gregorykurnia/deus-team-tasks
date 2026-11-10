@@ -1,0 +1,24 @@
+{
+  "batch": "03-flows",
+  "seconds": 211.7,
+  "expected": 29,
+  "recorded": 29,
+  "assessed": 29,
+  "failures": [],
+  "setupErrors": [],
+  "violations": 4,
+  "missing": [],
+  "extra": [],
+  "exitCodes": [
+    0,
+    0
+  ],
+  "error": null,
+  "portsFreeAfter": [
+    3100,
+    8180,
+    4400,
+    4500,
+    9150
+  ]
+}

@@ -1,0 +1,292 @@
+[
+ {
+  "id": "140-companies-the-four-groups-no-companies-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No companies yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "140-companies-the-four-groups-no-companies-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No companies yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "144-companies-the-four-groups-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "204-qualification-notes-nothing-yet-desktop",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No qualification notes yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "204-qualification-notes-nothing-yet-phone",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No qualification notes yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "206-qualification-notes-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "206-qualification-notes-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "242-past-clients-nothing-yet-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No past clients yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "242-past-clients-nothing-yet-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No past clients yet</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "245-past-clients-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "245-past-clients-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">No connection</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+  "url": "http://localhost:3100/companies?group=no-or-not-now",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nobody has said no or not now</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+  "url": "http://localhost:3100/companies?group=no-or-not-now",
+  "errors": [],
+  "violations": [
+   {
+    "rule": "heading-order",
+    "impact": "moderate",
+    "help": "Heading levels should only increase by one",
+    "nodes": [
+     {
+      "target": "h3",
+      "html": "<h3 class=\"EmptyState-module__HP6AWW__title\">Nobody has said no or not now</h3>",
+      "why": "Heading order invalid"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "233-past-clients-no-other-parent-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "233-past-clients-no-other-parent-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "216-past-clients-nothing-counted-yet-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "216-past-clients-nothing-counted-yet-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ }
+]

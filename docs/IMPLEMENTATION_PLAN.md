@@ -57,7 +57,8 @@ Each row has one pick. The linked section contains files, required reading, edge
 | R1c | Fix the recorded end-to-end failures and rerun only affected tests. [R1c](implementation/chat-task-connector.md#r1c--end-to-end-repairs) [no look] | Sol Max | 2026-11-10; export failure closed; 1 affected e2e and 978 unit cases passed |
 | R1d | Run accessibility and scoped prototype comparison once; record findings. [R1d](implementation/chat-task-connector.md#r1d--accessibility-and-comparison) [look] | Sol xHigh | 2026-11-10; 16 comparisons; partial audit and findings assigned to R1e |
 | R1e | Fix confirmed accessibility/visual findings and recheck their states. [R1e](implementation/chat-task-connector.md#r1e--audit-repairs) [look] | Astra xHigh | 2026-11-10; labels/landmarks fixed; 58 audit entries clear; coverage assigned R1eb |
-| R1eb | Finish the 77 audit entries missed after emulator exhaustion, on fresh scoped stacks. [R1eb](implementation/chat-task-connector.md#r1eb--remaining-audit-coverage) [no look] | Astra xHigh | |
+| R1eb | Finish the 77 audit entries missed after emulator exhaustion, on fresh scoped stacks. [R1eb](implementation/chat-task-connector.md#r1eb--remaining-audit-coverage) [no look] | Astra xHigh | 2026-11-10; 77 assessed; 30 heading findings assigned R1ec |
+| R1ec | Repair empty/offline heading order and recheck its 30 affected entries. [R1ec](implementation/chat-task-connector.md#r1ec--empty-state-headings) [look] | Astra xHigh | |
 | R1 | Phase 1 review: prove requirements, close findings and prepare activation handoff. [R1](implementation/chat-task-connector.md#r1--final-phase-review) [no look] | Sol Max | |
 
 ## Owner steps after the run
