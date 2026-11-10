@@ -30,12 +30,11 @@ The returned link opens that main task directly. Existing Plan views show its da
 
 ## Before the run
 
-- [ ] O0 *owner / runner-maintenance session*: complete [the GPT-only runner prerequisite](implementation/gpt-only-autorun-prerequisite.md), then tick this line. The installed runner still calls Claude for retries, quota fallback and fresh-eyes checks; GPT task rows alone do not prevent that. This belongs in the shared config repo, not a copy of the runner here. No Claude login, new connector secret or production data is needed for the app build.
+- [x] O0 GPT-only runner installed and tested, 2026-11-10: shared config commit `e120a15`; 13 offline regression checks and shell syntax checks pass. Retries, visual checks, resumes and keepalive stay on GPT; the Claude quota guard leaves this run alone. See [verification and commands](implementation/gpt-only-autorun-prerequisite.md).
 
-After O0, run `AUTORUN_GPT_ONLY=1 autorun check docs/IMPLEMENTATION_PLAN.md` (the proposed option must first
-be implemented and verified); it must select G01 on Sol xHigh, report no open
-prerequisites, and report GPT-only execution. Then run the verified GPT-only launch command recorded by O0.
-Do not start this plan with unmodified `autorun all` while Claude is unavailable.
+Run `AUTORUN_GPT_ONLY=1 autorun check docs/IMPLEMENTATION_PLAN.md`; it must report GPT-only execution and no
+open prerequisites. Start with `AUTORUN_GPT_ONLY=1 autorun all docs/IMPLEMENTATION_PLAN.md`. The mode is saved
+for this project's resumes/restarts; `autorun status` shows progress and `autorun stop` stops after its current task.
 
 ## Phase 1: general task connector, checked before activation
 
@@ -77,4 +76,4 @@ Claude reviews for this run; do not use Astra Max or quietly fall back to Claude
 A fresh Astra xHigh critique was applied: legacy task type, source-link storage, retry precedence and parked-task
 return dates now have explicit acceptance cases. `autorun check` recognizes 16 GPT rows and selects G01 on
 Sol xHigh; it correctly reports O0 still open. Local links/anchors and archive preservation were checked.
-The app build and its tests have not started; the shared runner prerequisite has not been implemented.
+O0 was subsequently completed on 2026-11-10; app implementation progress is recorded in the task rows above.
