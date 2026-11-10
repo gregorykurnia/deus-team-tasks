@@ -95,3 +95,19 @@ this fixes the padded-clamp fault while preserving the approved surface and full
 
 DECISION: Add a Plan-only harness selector rather than rerun G08's whole flow gallery; it preserves the
 original evidence and rechecks both affected shapes using the same fixtures and safety guards.
+
+## Runner evidence recheck — 2026-11-10
+
+The runner did not recognize the earlier template-string image paths. Reopened all 26 original key images,
+the two freshly recaptured repaired views and 15 native-pixel crops with explicit literal paths and
+`detail: "original"`. The runner's own `images_opened` function now reports **43** unique image paths.
+The observations and fault dispositions above were checked again: only the original Plan previews leak
+fourth-line fragments; both repaired views have clean padding and no further confirmed visual fault.
+
+`npm run mcp:smoke -- --only=task-plan-visual` passed again on both shapes (`/tmp/g09-look-recheck.log`).
+The refreshed screenshots, crops and manifest are byte-for-byte identical to the committed after evidence;
+the original before crops and comparison artifacts are preserved. This follow-up changes evidence records
+only, so the already-passing type/lint/unit/build checks were not repeated.
+
+DECISION: Use explicit image paths rather than modify the runner; its existing reader can now verify the
+actual full-size opens, and the visual repair remains unchanged.
