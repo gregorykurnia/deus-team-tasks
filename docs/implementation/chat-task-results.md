@@ -62,3 +62,21 @@ Checks:
 - Build: `npm run build` passed with the G01-established sandbox escalation; compilation, TypeScript and static generation succeeded. Compile only, with no data-writing checks.
 - Diff review: checked secret handling, signature/expiry ordering, canonical binding, blocking errors and retry-gate separation; no unresolved findings. `git diff --check` passed.
 - Data/browser/look checks do not apply: no Firestore I/O, exposed tools or screens changed. A full check is worth running for shared logic at the planned phase review; production flags/settings are unchanged.
+
+## G05 — Atomic saving and retries (2026-11-10)
+
+- `lib/taskPlanServer.ts` adds Node discovery/preview/save entry points; canonical full-input hashes reserve stable parent/step IDs. Transactions read every reserved ID and the selected parent before creating anything, guard enumerated existing task reads, and write no existing parent/child/company fields. New people arrays, prose, dates, inheritance and ordering match the pure preview.
+- Completed-operation lookup follows token authentication/expiry/input verification and precedes current-state/warning checks. Original-token lost-response retries and refreshed previews return original IDs/summary without resetting edited records. Missing/moved members, unrelated reserved IDs and missing/conflicting receipts stop with a conflict.
+- `lib/taskPlanServer.data.test.ts` proves all six create/append forms, zero-write previews, complete rollback (including receipt), simultaneous calls, lost responses, edits during/after commit, partial/complete deletion, one-step append deletion, stale parents/companies, warning gates, company-outage isolation and the 499-step boundary. Before/after comparisons preserve companies, existing parents, an old child and unrelated tasks.
+- DECISION: Store an atomic operation receipt in the existing `settings` collection rather than relying only on markers in created tasks; it survives deletion of every created member and requires no new collection or rules.
+- DECISION: Keep all 499 selected steps plus the receipt in one transaction rather than lowering the input cap; the SDK reference surfaced by Context7 retains the old 500-write wording, but [Firestore's current release notes](https://cloud.google.com/firestore/docs/release-notes#March_29_2023) confirm that cap was removed in 2023, and the emulator passed the 501-write boundary.
+- Limitation: company status is reread immediately before the task transaction; the separate company/task projects cannot share an atomic transaction, and subsequent company status changes still determine the app's category. No production data/settings were touched; tools remain unexposed pending G06 and owner activation.
+
+Checks:
+
+- Type check: `npx tsc --noEmit` passed on final code; log `/tmp/g05-checks.yKByzp/types-final.log`.
+- Lint: both new executable files passed on final code; log `/tmp/g05-checks.yKByzp/lint-final.log`.
+- Unit tests: `npm run test:unit -- --reporter=dot` passed 926/926; log `/tmp/g05-checks.yKByzp/unit.log`.
+- Data tests: `npm run test:data` passed 151/151; after the deletion-edge review added durable receipts, only the affected file reran and passed all 62 current cases (95 unchanged existing data cases passed in the initial run); logs `/tmp/g05-checks.yKByzp/data.log`, `/tmp/g05-checks.yKByzp/data-final.log`.
+- Build: `npm run build` passed compilation, TypeScript and static generation; log `/tmp/g05-checks.yKByzp/build.log`. Compile only; all data runs used the local emulator with invented fixtures.
+- Review: checked the write diff for read-before-create preconditions, parent concurrency, retry precedence, receipt deletion, settings-reader isolation and atomic rollback; fixed the confirmed all-members-deleted retry gap with receipts and regression cases. `git diff --check` passed; no unresolved findings. No exposed/app flow or screen changed, so browser/look checks remain with G07/G08; a full check is worth running at the planned phase review for this shared code.
