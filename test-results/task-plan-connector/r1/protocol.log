@@ -1,0 +1,9 @@
+
+> deus-team-tasks@0.1.0 mcp:smoke
+> node scripts/mcp/smoke.mjs --only=protocol
+
+Checking legacy MCP with task-plan activation explicitly off (emulator only).
+Checking all general-task categories with task-plan activation explicitly on.
+General MCP: six create/append destinations, selected steps, exact records, concurrent/lost-response/refreshed retries passed.
+General MCP: schema/destination failures, skip/no-write, warning gates, token expiry/tampering, stale state, atomic failure/recovery and preserved edits passed.
+MCP smoke passed (protocol); 112 database-preservation comparisons; owned servers only.

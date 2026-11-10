@@ -1,0 +1,15 @@
+
+> deus-team-tasks@0.1.0 test:data
+> firebase emulators:exec --only firestore --project demo-deus --log-verbosity QUIET "vitest run --project data"
+
+i  Running script: vitest run --project data
+
+ RUN  v4.1.12 /home/ubuntu/deus-team-tasks
+
+
+ Test Files  8 passed (8)
+      Tests  161 passed (161)
+   Start at  09:48:47
+   Duration  41.14s (transform 582ms, setup 0ms, import 2.14s, tests 36.59s, environment 1ms)
+
+✔  Script exited successfully (code 0)

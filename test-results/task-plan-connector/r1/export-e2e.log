@@ -1,0 +1,35 @@
+[WebServer] (node:1371767) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371780) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1371877) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371890) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371902) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371922) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371933) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1371940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:1371971) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/smoke/companies-settings.spec.ts:131:5 › E1: export downloads the companies shown with the fields the list shows, and says when there's nothing to export (7.0s)
+
+  1 passed (20.9s)

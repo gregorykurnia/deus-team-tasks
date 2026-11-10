@@ -256,3 +256,60 @@ Checks (logs in `/tmp/r1c-checks.ji9vzP/`):
 - **Exact scope clean:** all 30 affected desktop/phone entries have zero violations, setup errors, missing or extra entries. An initial signal-15/exit-143 interruption left eight clean assessments; those were preserved and only the remaining 22 resumed on fresh stacks. All prior R1eb evidence and prototype references retain their hashes. [Coverage](../../test-results/task-plan-connector/r1ec/audit-summary.json), [commands/timings](../../test-results/task-plan-connector/r1ec/audit-runs.json).
 - **Regression and light checks pass:** page-level assertion and four browser cases failed before the fix (`Expected: "H2", Received: "H3"`); afterward 988 unit tests, four final browser cases, type checking, changed-file lint and the production build passed. Nested-heading tests cover a real panel and size-independent overrides. No Firestore read/write changes, data-suite rerun or broad phase audit applies.
 - **Look reviewed at full resolution:** desktop/phone empty and offline messages retain their exact pixels, readable wording and reachable actions; viewport and hit tests also cover navigation. An apparent missing bar in the batched image display was a review mistake: individual full-size reopening and identical file hashes prove it was always present, so no application or capture fault is claimed. [Before/after frames](../../test-results/task-plan-connector/r1ec/README.md#visual-review). Only R1ec is ticked; R1 remains the final review, and a full check remains worth running after this shared-component change.
+
+## R1 — Final phase review (2026-11-10)
+
+### Findings and final dispositions
+
+The fresh hunt reviewed the `bd3f9d1..a8c659f` implementation diff, input/destination/token/write boundaries,
+chat guidance, packaging and the recorded failures. Locations below identify the original breaking code/state.
+
+| Finding | Source and breaking input/state | Final disposition |
+|---|---|---|
+| G08-V1 | `ui/TaskRow.module.css:597`: long Plan notes leak a fourth line through clamp padding on desktop/phone. | Closed by G09's inner clamp; [before/after regression and captures](../../test-results/task-plan-connector/G09-review.md). |
+| R1a-F1 | `lib/taskPlanServer.ts:159–174` before R1a: force a transaction retry after inserting a duplicate/similar task or changing company category. | Closed: reread context inside every attempt; all three before-fix failures and 66 task-plan cases covered by the [161-case data run](../../test-results/task-plan-connector/r1/data.log). |
+| R1b-F1 | `tests/smoke/companies-settings.spec.ts:137,144–145`: filtered Active export expects seven columns while the app exports eight. | Closed by R1c's three exact expectations; [download, full CSV and empty-export rerun passed](../../test-results/task-plan-connector/r1/export-e2e.log). |
+| R1d-A1/A2 | `ui/TaskRow.tsx:199–202,291` and `ui/Menu.tsx:113` before R1e: undated/phone labels disagree with accessible names; open menus lack a landmark. | Closed: [failing regressions, four passing browser cases and 58 clean audit entries](../../test-results/task-plan-connector/r1e/README.md). |
+| R1d-H1 | `scripts/a11y/axe.mjs:143–148`: heap-exhausted emulator leaves 77 entries unassessed. | Closed by [R1eb's exact missing-coverage batches](../../test-results/task-plan-connector/r1eb/audit-coverage.json); its new heading finding was assigned and repaired in R1ec. |
+| R1eb-A1 | `ui/EmptyState.tsx:21` before R1ec: page-level empty/offline `h3` follows `h1`, skipping `h2`. | Closed: [page/panel regressions, four browser cases and all 30 affected audit entries](../../test-results/task-plan-connector/r1ec/README.md). |
+
+No new confirmed fault or open must-fix remains. G09's [independent visual candidates](../../test-results/task-plan-connector/G09-fresh-eyes.md#decisions-covering-every-reported-item)
+and R1d's [comparison candidates](../../test-results/task-plan-connector/r1d/README.md#visual-candidates-inspected)
+all have explicit dispositions: reachable scroll boundaries, guide-defined truncation, or no reproduced defect.
+No design gap remains unassigned.
+
+### Requirements mapped to evidence
+
+These are local code/protocol/browser proofs. Chat questions and human confirmation are verified as instructions;
+no automated test proves that Claude followed them in a real chat. That acceptance remains **owner O2**.
+
+| Requirement | Actual checks and evidence | Acceptance boundary |
+|---|---|---|
+| C1 | Standalone initialization/tool guidance in [52 adapter cases](../../tests/unit/taskPlanTools.test.ts), plus [real MCP initialize/list/call results](../../test-results/task-plan-connector/r1/protocol.log). | No skill dependency; actual ordinary-Claude invocation is O2. |
+| C2 | [Discovery/preview cases](../../lib/taskPlan.test.ts) require one category/destination per group; adapter guidance and [mixed/partial-success walkthrough](chat-task-walkthrough.md#4-mixed-groups-and-partial-success) require separate confirmations and saves. | Mixed-chat behavior remains O2; no transaction across groups is claimed. |
+| C3 | Six category/new-or-append protocol cases and mismatch/stale/deleted-destination refusals; [transaction tests](../../lib/taskPlanServer.data.test.ts) prove preserved companies and Internal operation when company reads throw. | Company status is never changed by these tools. |
+| C4 | Discovery rejects completed, parked, nested and orphaned targets; pure/data cases prove company/group inheritance and one subtask level; [G08 saved-state manifest](../../test-results/task-plan-connector/manifest.json) covers all six destinations. | Only explicitly selected eligible main tasks are used. |
+| C5 | [Validation/preview cases](../../lib/taskPlan.test.ts) preserve independent dates, long prose and supplied names; real MCP checks selected-only/zero-step refusals; [eight illustrative examples](chat-task-walkthrough.md) specify individual add/change/skip. | No invented dates/assignments/details; actual questioning is O2. |
+| C6 | [95 signed-preview cases](../../lib/taskPlanToken.test.ts), zero-write preview/data checks and real MCP refusals cover changed/expired/tampered tokens and every warning gate. | Tokens bind integrity, never prove human consent. |
+| C7 | [66 transaction cases](../../lib/taskPlanServer.data.test.ts) within the 161-case data run, plus protocol concurrency/lost-response/refreshed-retry/rollback cases; includes R1a's three retry regressions. | Atomic within one group; edits survive and deleted members conflict rather than being recreated. |
+| C8 | [12 category/mode/shape UI cases and 26 captures](../../test-results/task-plan-connector/README.md), G09 repair/reachability, [16 prototype comparisons](../../test-results/task-plan-connector/r1d/README.md) and repaired audit evidence. | Desktop 1440×900 / emulated phone 390×844; physical-phone acceptance is O2. |
+| C9 | Real MCP proves three legacy tools with flag off, six with `1`, legacy six-step preview/save/retry, and disabled direct general calls; [ZIP/source parity](../../test-results/task-plan-connector/r1/evidence.json). | Old skill flow remains available; optional updated-skill upload is O3. |
+| C10 | [Emulator-only safety setup](chat-task-connector.md#checks), original full-suite failure/disposition, all named repairs above and [final evidence reconciliation](../../test-results/task-plan-connector/r1/evidence.json). | No production activation, data writes, skill upload or actual Claude acceptance performed by R1. |
+
+### Final checks and remaining limits
+
+- **Source/evidence freshness:** final executable code is `a8c659f`; task-plan/data/protocol sources are unchanged since R1a (`e016925`). Later UI repairs have their own regressions/audits; R1 changes documentation/evidence only.
+- **Light checks retained:** final [type check](../../test-results/task-plan-connector/r1ec/typecheck-final.log), [changed-file lint](../../test-results/task-plan-connector/r1ec/lint-final.log), [988 unit cases](../../test-results/task-plan-connector/r1ec/unit-after.log), [161 data cases](../../test-results/task-plan-connector/r1/data.log) and [production compile](../../test-results/task-plan-connector/r1ec/build.log) passed. Builds were never used for data-writing checks.
+- **End-to-end reconciliation:** R1b ran once: 379 passed, nine intentional desktop skips of phone-only cases, one export failure; R1c's affected rerun passed. R1e/R1ec each added four passing focused browser cases. This is composed evidence, not a claim of another clean full-suite invocation.
+- **Audit/comparison reconciliation:** latest saved assessments cover **284/284 unique entries, zero violations/setup errors/failures** after overlaying R1e/R1eb/R1ec repairs on R1d. The deliberately manual install storyboard stays excluded at both sizes. All 16 scoped comparisons completed and their differences were reviewed; pixel equality is not claimed.
+- **Artifacts/handoff:** three packaged files match source bytes, archive integrity passes, referenced captures/reports and 47 R1ec-preserved evidence hashes are intact, and local links/anchors and the final diff pass checks. New registration/direct calls/retained callbacks all require the exact flag value `1`; no production configuration was inspected or changed.
+- **Scope:** no new executable or screen change warrants another build, suite, audit or screenshot run. Existing company-status reads cannot join the separate tasks-project transaction; other writers can insert after task enumeration, so duplicate/similarity warnings reflect observed records. App-wide/cross-project locking remains intentionally outside this connector scope; deterministic receipts/IDs still protect exact retries.
+
+### Activation handoff — owner actions still unperformed
+
+1. **O1:** Read this evidence and its limits, then set server-only `MCP_TASK_PLANS_ENABLED=1` in Vercel Production and redeploy. Keep the existing private connector URL/`MCP_SECRET`. **Rollback:** unset the flag and redeploy; the three general tools become unavailable, while legacy tools and saved records remain.
+2. **O2, when Claude is available:** [Install/reconnect the connector and start a fresh ordinary chat](../skills/README.md#add-or-refresh-the-connector), with the deal skill off. Use [the walkthrough](chat-task-walkthrough.md) with genuine intended actions in each category; check category/company/main-task selection, each step's dates/add/skip, warning confirmation and the returned task on desktop and a real phone. Illustrative transcripts and local fixtures are not completed owner acceptance.
+3. **O3, optional:** [Upload the matching deal-skill ZIP](../skills/README.md#optional-update-the-deal-follow-up-skill). Generic chat needs no upload; the legacy fallback remains usable before activation. Previous-plan owner actions are still historical, not silently completed.
+
+DECISION: Reuse the full run plus scoped repair evidence rather than repeat broad checks; the final source and all 284 audit entries reconcile without a new executable change.
+DECISION: Leave activation and real-chat/phone acceptance to O1–O3 rather than enable production unattended; those owner actions are explicitly outside R1's build completion.

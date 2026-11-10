@@ -1,0 +1,135 @@
+{
+  "task": "R1",
+  "date": "2026-11-10",
+  "reviewedSource": "a8c659f8a920702b36ea8f8ad2bc78389d27141a",
+  "diffBase": "bd3f9d1",
+  "result": "No open must-fix; local build evidence complete; owner acceptance pending",
+  "retainedChecks": {
+    "unit": 988,
+    "data": 161,
+    "taskPlanData": 66,
+    "lastCoreRepair": "e016925",
+    "coreSourcesUnchangedSinceRepair": true,
+    "typecheckLintBuild": "r1ec final logs; no executable changes in R1"
+  },
+  "protocol": {
+    "categoryModes": 6,
+    "databasePreservationComparisons": 112,
+    "legacyTrioAndDisabledDirectCallsProven": true,
+    "gateAndLegacySourcesUnchangedSinceG07": true,
+    "log": "protocol.log"
+  },
+  "fullEndToEnd": {
+    "originalRunCounts": {
+      "passed": 379,
+      "skipped": 9,
+      "failed": 1
+    },
+    "skippedByProject": {
+      "desktop": 9
+    },
+    "openFailures": 0,
+    "originalFailures": [
+      {
+        "file": "companies-settings.spec.ts",
+        "line": 131,
+        "project": "desktop",
+        "title": "E1: export downloads the companies shown with the fields the list shows, and says when there's nothing to export",
+        "closedBy": "R1c",
+        "passingRerun": "export-e2e.log"
+      }
+    ],
+    "laterFocusedBrowserPasses": {
+      "R1e": 4,
+      "R1ec": 4
+    },
+    "originalReport": "/tmp/r1b-smoke.CZenky/report.json",
+    "originalReportSha256": "ff885404f0b667f8926461744f926bc2f811603c9ad7d1b3d086958ac5af6280",
+    "anotherFullRunPerformed": false
+  },
+  "accessibility": {
+    "originalAssessed": 207,
+    "missingCoverageCompleted": 77,
+    "R1eRepaired": 58,
+    "R1ecRepaired": 30,
+    "latestUniqueAssessed": 284,
+    "latestViolations": 0,
+    "latestSetupErrors": 0,
+    "latestFailures": 0,
+    "manualStoryboardExcludedAtBothSizes": true,
+    "sourceLayers": [
+      "r1d/a11y-report.json",
+      "r1eb/01-today-tasks-plan/report-1.json",
+      "r1eb/02-companies-notes-past/report-1.json",
+      "r1eb/03-flows/report-1.json",
+      "r1eb/03-flows/report-2.json",
+      "r1eb/04-install-navigation/report-1.json",
+      "r1e/a11y-report.json",
+      "r1ec/01-interrupted-report.json",
+      "r1ec/01-resume-today-tasks-plan.json",
+      "r1ec/02-companies-notes-past-flows.json"
+    ]
+  },
+  "artifacts": {
+    "prototypeComparisons": 16,
+    "comparisonExecutionErrors": 0,
+    "comparisonDifferencesDisposition": "../r1d/README.md; no pixel-equality claim",
+    "nativeCaptureDimensions": {
+      "1440x900": 14,
+      "390x844": 14
+    },
+    "preservedPriorHashes": 47,
+    "zip": "../../../docs/skills/deus-deal-followup.zip",
+    "zipSha256": "ebf717d23ac27e5d22729e2998d8691229623ef2b8ffeeee118b9778728ac48b",
+    "packagedSourceFiles": [
+      "deus-deal-followup/SKILL.md",
+      "deus-deal-followup/references/deus-offer.md",
+      "deus-deal-followup/references/sales-playbook.md"
+    ],
+    "zipMatchesSource": true
+  },
+  "activation": {
+    "exactEnablingValue": "1",
+    "disabledByDefault": true,
+    "productionInspectedOrChanged": false,
+    "actualClaudeAcceptancePerformed": false,
+    "physicalPhoneAcceptancePerformed": false,
+    "ownerPending": [
+      "O1 activation/redeploy after reviewing limits",
+      "O2 real ordinary-Claude and phone acceptance",
+      "O3 optional skill upload"
+    ],
+    "rollback": "Unset MCP_TASK_PLANS_ENABLED and redeploy; legacy tools and saved records remain"
+  },
+  "inputHashes": {
+    "r1d/a11y-report.json": "3777943f399260065ff956471611399879f316839e89896df476ff1b88d0eac6",
+    "r1d/audit-coverage.json": "dd10750c346ee7924e4678677401f9cf57ac91c19775a702eaceca71ee16637e",
+    "r1d/compare-report.json": "5b22a74aaa64adbf63f6e87f5cf092570c2983f8ee8ac084dfe90b591b811c3b",
+    "r1e/a11y-report.json": "239dbe7318281f467d6fbaf4f1a958327d349d8c446e5176ffdffc3539373fb6",
+    "r1eb/audit-coverage.json": "0abdfc9f834ed8c113e318b60c176f19d2ab300009f5844fa15a43c47c5583fe",
+    "r1ec/01-interrupted-report.json": "81ef5aa9e53adcf24a391e2f2d4f5bd8fbe96bd626077c79da4ca532c4c448b1",
+    "r1ec/01-resume-today-tasks-plan.json": "3567a1617c01215069e9ab99d848d62044d208ca2aca4863553f4c5c08be15c4",
+    "r1ec/02-companies-notes-past-flows.json": "c580904b0418d99d5e5cc22d0157fc58a20f3a4da7b95a58e416aad83b946984",
+    "r1ec/preserved-evidence.json": "9470bdfa3d2d49ae522840fa89b690fc324cfab02d842917e446f41fe30756b8",
+    "r1ec/unit-after.log": "334149a3e241c6f0cfe82d07335a06f961f08fcd39fe051c48ccdaafa343eaa1",
+    "r1ec/browser-final.log": "04fa408367beca0cd68cbe3f1475d7c92cc2df4e1b33519c8e1aac4fc7e33220",
+    "r1ec/typecheck-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "r1ec/lint-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "r1ec/build.log": "2d6c811ed64df1ca7eac7b582c57db4d2537a1729dba79dde3ebd570d59bf1b8"
+  },
+  "retainedLogSources": {
+    "protocol.log": {
+      "source": "/tmp/g07-protocol-retry.log",
+      "sha256": "384e0f71957eb4db5f19f0b21eee00026371ae28d1c356466c4f4848e331c574"
+    },
+    "data.log": {
+      "source": "/tmp/r1a-checks.RtsKXa/data.log",
+      "sha256": "bd8cbe12b7fde6fad287edc316e581dd0dc5683e6f4bdb8008e025e989ca6dc3"
+    },
+    "export-e2e.log": {
+      "source": "/tmp/r1c-checks.ji9vzP/export-e2e.log",
+      "sha256": "b99c8484c2546ce88369921b464785b3d14c7d5e962ac9acb761ec9bdfa15d02"
+    }
+  },
+  "evidenceRoot": "test-results/task-plan-connector"
+}
