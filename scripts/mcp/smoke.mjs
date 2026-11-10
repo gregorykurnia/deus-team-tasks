@@ -11,7 +11,14 @@ import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { createJiti } from "jiti";
-import { checkFollowupUI } from "./ui-smoke.mjs";
+import { checkLegacyProtocol } from "./legacy-smoke.mjs";
+import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
+
+const selection = process.argv[2] ?? "--only=all";
+assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser)$/.test(selection),
+  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser]");
+const protocol = selection !== "--only=browser";
+const browser = selection !== "--only=protocol";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const HOST = "127.0.0.1";
@@ -23,12 +30,15 @@ const ENDPOINT = `${ORIGIN}/api/mcp/${SECRET}`;
 const EMULATOR_HOST = `${HOST}:8180`;
 // Ignore caller overrides: every data helper and server must use this local emulator.
 process.env.FIRESTORE_EMULATOR_HOST = EMULATOR_HOST;
-const jiti = createJiti(import.meta.url);
+const jiti = createJiti(import.meta.url, {
+  alias: { "server-only": path.join(ROOT, "node_modules/next/dist/compiled/server-only/empty.js") },
+});
 const { FOLLOWUP_COMPANY_FIXTURE: company, SIX_STEP_FOLLOWUP_FIXTURE: plan } = await jiti.import("../../tests/fixtures/followupPlan.ts");
 const { openClientTrackerRules, seed, readAll } = await jiti.import("../../tests/support/emulator.ts");
 const logs = await mkdtemp(path.join(tmpdir(), "mcp-smoke-"));
 const children = new Set();
-const client = new Client({ name: "deus-mcp-smoke", version: "1.0.0" });
+const clients = new Set();
+let snapshots = 0;
 
 async function assertPortFree(port) {
   const probe = createServer();
@@ -43,7 +53,7 @@ function start(name, args, env = {}) {
   const fd = openSync(path.join(logs, `${name}.log`), "w");
   const child = spawn(process.execPath, args, {
     cwd: ROOT, detached: true, stdio: ["ignore", fd, fd],
-    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", ...env },
+    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", MCP_TASK_PLANS_ENABLED: "0", ...env },
   });
   closeSync(fd);
   const entry = { name, child, failure: null };
@@ -83,35 +93,61 @@ async function stop(entry) {
   children.delete(entry);
 }
 
-async function stopAll() {
-  try {
-    await client.close();
-  } finally {
-    for (const entry of [...children].reverse()) await stop(entry);
-  }
+let stopping;
+function stopAll() {
+  return stopping ??= (async () => {
+    try { await Promise.all([...clients].map((client) => client.close())); }
+    finally { for (const entry of [...children].reverse()) await stop(entry); }
+  })();
 }
 for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
   process.once(signal, () => { void stopAll().finally(() => process.exit(code)); });
 }
 
-function startNext(name, secret) {
-  return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], { MCP_SECRET: secret });
+function startNext(name, secret, flag = "0") {
+  return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], { MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag });
 }
 
 const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
 async function raw(body, url = ENDPOINT, method = "POST") {
   const response = await fetch(url, { method, headers, ...(method === "POST" && { body }), signal: AbortSignal.timeout(30_000) });
   const text = await response.text();
-  if (response.status === 404) return { response };
+  safe(text);
+  if (response.status === 404 || method === "HEAD") return { response };
   const data = response.headers.get("content-type")?.includes("text/event-stream")
     ? JSON.parse(text.split("\n").find((line) => line.startsWith("data: ")).slice(6)) : JSON.parse(text);
   return { response, data };
 }
 
-function payload(result) {
-  const text = result.content.find((part) => part.type === "text")?.text;
-  assert.equal(result.isError, undefined, text);
-  return JSON.parse(text);
+function safe(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  assert.ok(!text.includes(SECRET), "A response exposed the secret.");
+  assert.doesNotMatch(text, /node:internal|\bat \S+ \([^\n]*:\d+:\d+\)/, "A response exposed a stack trace.");
+}
+async function snapshot() {
+  return Promise.all([["tasks", "tasks"], ["tasks", "settings"], ["tasks", "flows"], ["tasks", "taskGroups"], ["clients", "pipeline"]]
+    .map(async ([project, collection]) => (await readAll(project, collection)).sort((a, b) => a.id.localeCompare(b.id))));
+}
+async function unchanged(label, work) {
+  const before = await snapshot();
+  try { return await work(); }
+  finally {
+    assert.deepEqual(await snapshot(), before, `${label}: database changed`);
+    snapshots++;
+  }
+}
+async function connect() {
+  const client = new Client({ name: "deus-mcp-smoke", version: "1.0.0" });
+  clients.add(client);
+  await client.connect(new StreamableHTTPClientTransport(new URL(ENDPOINT), {
+    fetch: async (url, init) => {
+      const response = await fetch(url, { ...init, signal: AbortSignal.any([...(init?.signal ? [init.signal] : []), AbortSignal.timeout(30_000)]) });
+      assert.equal(response.headers.get("mcp-session-id"), null, "The connector must stay stateless.");
+      safe(await response.clone().text());
+      return response;
+    },
+  }));
+  return client;
 }
 
 try {
@@ -122,94 +158,75 @@ try {
   await openClientTrackerRules();
   await seed("clients", "pipeline", [company], { keepIdField: true });
 
-  console.log("Checking the disabled endpoint, then starting the enabled endpoint on the emulator.");
-  const disabled = startNext("next-disabled", "");
-  await ready(disabled, ENDPOINT, 404);
-  for (const method of METHODS) assert.equal((await raw("{", ENDPOINT, method)).response.status, 404);
-  await stop(disabled);
+  if (protocol) {
+    const disabled = startNext("next-disabled", "");
+    await ready(disabled, ENDPOINT, 404);
+    for (const method of METHODS) await unchanged(`missing secret/${method}`, async () => {
+      assert.equal((await raw("{", ENDPOINT, method)).response.status, 404);
+    });
+    await stop(disabled);
+  }
 
+  console.log("Checking legacy MCP with task-plan activation explicitly off (emulator only).");
   const enabled = startNext("next-enabled", SECRET);
   await ready(enabled, `${ORIGIN}/api/mcp/wrong-secret`, 404);
-  for (const method of METHODS) {
-    for (const wrong of ["wrong-secret", `${SECRET}x`]) {
-      assert.equal((await raw("{", `${ORIGIN}/api/mcp/${wrong}`, method)).response.status, 404);
+  const client = await connect();
+  if (protocol) {
+    for (const method of METHODS) {
+      for (const wrong of ["wrong-secret", `${SECRET}x`]) await unchanged(`wrong secret/${method}`, async () => {
+        assert.equal((await raw("{", `${ORIGIN}/api/mcp/${wrong}`, method)).response.status, 404);
+      });
     }
+    for (const method of METHODS.filter((method) => method !== "POST")) await unchanged(`unsupported HTTP/${method}`, async () => {
+      assert.equal((await raw(undefined, ENDPOINT, method)).response.status, 405);
+    });
+    await checkDisabledTools({ client, unchanged, safe, plan });
   }
-  for (const method of ["GET", "DELETE"]) assert.equal((await raw(undefined, ENDPOINT, method)).response.status, 405);
-
-  await client.connect(new StreamableHTTPClientTransport(new URL(ENDPOINT), {
-    fetch: async (url, init) => {
-      const response = await fetch(url, { ...init, signal: AbortSignal.any([...(init?.signal ? [init.signal] : []), AbortSignal.timeout(30_000)]) });
-      assert.equal(response.headers.get("mcp-session-id"), null, "The connector must stay stateless.");
-      return response;
-    },
-  }));
-  const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((tool) => tool.name).sort(), ["add_followup_plan", "find_company", "preview_followup_plan"]);
-  assert.match(tools.find((tool) => tool.name === "add_followup_plan").description, /ONLY AFTER.*confirmed.*company.*EACH step, one step at a time in chat.*start and end date.*skip it.*only the steps the owner chose/);
-  const found = payload(await client.callTool({ name: "find_company", arguments: { query: "contOH aurora fiktif" } }));
-  assert.deepEqual(found.companies, [{ id: company.id, name: company.company, group: "Active", pic: company.pic, followups: [] }]);
-
-  const preview = payload(await client.callTool({ name: "preview_followup_plan", arguments: { plan } }));
-  assert.equal(preview.canWrite, true);
-  assert.equal(preview.parent.task, `${company.company} Follow Up`);
-  assert.equal(preview.subtasks.length, 6);
-  assert.deepEqual(await readAll("tasks", "tasks"), [], "Finding and previewing must not write.");
-  const invalid = { ...plan, steps: [{ ...plan.steps[0], startDate: "tomorrow" }] };
-  const warning = payload(await client.callTool({ name: "preview_followup_plan", arguments: { plan: invalid } }));
-  assert.equal(warning.canWrite, false);
-  assert.ok(warning.warnings.some((item) => item.code === "invalid-date"));
-  const refused = await client.callTool({ name: "add_followup_plan", arguments: { plan: invalid } });
-  assert.equal(refused.isError, true);
-  assert.match(refused.content[0].text, /yyyy-mm-dd/);
-  assert.deepEqual(await readAll("tasks", "tasks"), []);
-
-  const added = payload(await client.callTool({ name: "add_followup_plan", arguments: { plan } }));
-  assert.equal(added.url, `${ORIGIN}/tasks?task=${added.parentId}`);
-  assert.equal(added.subtaskIds.length, 6);
-  const saved = await readAll("tasks", "tasks");
-  assert.equal(saved.length, 7);
-  assert.deepEqual(saved.find((task) => task.id === added.parentId), { ...preview.parent, id: added.parentId, order: saved.find((task) => task.id === added.parentId).order });
-  for (const [index, id] of added.subtaskIds.entries()) {
-    const task = saved.find((doc) => doc.id === id);
-    assert.deepEqual(task, { ...preview.subtasks[index], id, parentId: added.parentId, order: task.order });
-    assert.deepEqual(task.responsible, []);
-    assert.deepEqual(task.informed, []);
+  const added = await checkLegacyProtocol({ client, company, plan, readAll, unchanged, origin: ORIGIN, protocol });
+  if (browser) {
+    console.log("Checking the returned task link on desktop and phone (emulator only).");
+    const { checkFollowupUI } = await import("./ui-smoke.mjs");
+    await checkFollowupUI({ root: ROOT, origin: ORIGIN, added, company, plan });
   }
-  const retried = payload(await client.callTool({ name: "add_followup_plan", arguments: { plan } }));
-  assert.deepEqual(retried, { ...added, alreadySaved: true });
-  assert.equal((await readAll("tasks", "tasks")).length, 7);
-  const existing = payload(await client.callTool({ name: "find_company", arguments: { query: company.company } }));
-  assert.equal(existing.companies[0].followups[0].parent.id, added.parentId);
-  assert.equal(existing.companies[0].followups[0].subtasks.length, 6);
 
-  console.log("Checking the returned task link and subtask details on desktop and phone (emulator only).");
-  await checkFollowupUI({ root: ROOT, origin: ORIGIN, added, company, plan });
+  if (protocol) {
 
-  const malformed = await raw("{");
-  assert.equal(malformed.response.status, 400);
-  assert.equal(malformed.data.error.code, -32700);
-  assert.match(malformed.data.error.message, /not valid JSON/);
-  for (const invalid of [{ hello: "world" }, [], [{ jsonrpc: "2.0", id: 70, method: "tools/list" }]]) {
-    const invalidRpc = await raw(JSON.stringify(invalid));
-    assert.equal(invalidRpc.data.error.code, -32600);
+    const malformed = await unchanged("invalid JSON", () => raw("{"));
+    assert.equal(malformed.response.status, 400);
+    assert.equal(malformed.data.error.code, -32700);
+    assert.match(malformed.data.error.message, /not valid JSON/);
+    for (const invalid of [{ hello: "world" }, [], [{ jsonrpc: "2.0", id: 70, method: "tools/list" }]]) {
+      const invalidRpc = await unchanged("invalid JSON-RPC", () => raw(JSON.stringify(invalid)));
+      assert.equal(invalidRpc.data.error.code, -32600);
+    }
+    const invalidInput = await unchanged("invalid legacy inputs", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 71, method: "tools/call", params: { name: "find_company", arguments: { query: 12 } } })));
+    assert.equal(invalidInput.data.id, 71);
+    assert.equal(invalidInput.data.error.code, -32602);
+    assert.match(invalidInput.data.error.message, /Check the tool inputs.*query/);
+    const unknown = await unchanged("unsupported RPC method", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 72, method: "unknown_method" })));
+    assert.equal(unknown.data.error.code, -32601);
+    assert.match(unknown.data.error.message, /not found/i);
   }
-  const invalidInput = await raw(JSON.stringify({ jsonrpc: "2.0", id: 71, method: "tools/call", params: { name: "find_company", arguments: { query: 12 } } }));
-  assert.equal(invalidInput.data.id, 71);
-  assert.equal(invalidInput.data.error.code, -32602);
-  assert.match(invalidInput.data.error.message, /Check the tool inputs.*query/);
-  const unknown = await raw(JSON.stringify({ jsonrpc: "2.0", id: 72, method: "unknown_method" }));
-  assert.equal(unknown.data.error.code, -32601);
-  assert.match(unknown.data.error.message, /not found/i);
-  console.log("MCP smoke passed: three tools, read-only preview, six-step write, desktop/phone task details, secret gate, stateless HTTP, and readable errors.");
+  await client.close();
+  clients.delete(client);
+  await stop(enabled);
+  if (protocol) {
+    console.log("Checking all general-task categories with task-plan activation explicitly on.");
+    const general = startNext("next-general", SECRET, "1");
+    await ready(general, `${ORIGIN}/api/mcp/wrong-secret`, 404);
+    await checkGeneralProtocol({ client: await connect(), jiti, readAll, seed, unchanged, safe,
+      root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, secret: SECRET });
+  }
+  console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);
 } catch (error) {
-  console.error(error.message);
-  for (const name of ["firestore", "next-disabled", "next-enabled"]) {
+  console.error(error.stack?.replaceAll(SECRET, "[redacted]") ?? error.message);
+  for (const name of ["firestore", "next-disabled", "next-enabled", "next-general"]) {
     const text = await readFile(path.join(logs, `${name}.log`), "utf8").catch(() => "");
-    if (text) console.error(`${name}:\n${text.trim().split("\n").slice(-12).join("\n")}`);
+    if (text) console.error(`${name}:\n${text.replaceAll(SECRET, "[redacted]").trim().split("\n").slice(-12).join("\n")}`);
   }
+  console.error(`Failure logs retained in ${logs}`);
   process.exitCode = 1;
 } finally {
   await stopAll();
-  await rm(logs, { recursive: true, force: true });
+  if (!process.exitCode) await rm(logs, { recursive: true, force: true });
 }
