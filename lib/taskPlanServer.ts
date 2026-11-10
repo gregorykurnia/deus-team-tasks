@@ -156,14 +156,14 @@ export async function addTaskPlan(
   const saved = await completedOperation(plan, ids);
   if (saved) return saved;
 
-  const tasks = await readTasks();
-  // Companies live in another project. Re-read immediately before the task transaction, without claiming
-  // cross-project atomicity. Internal operations never perform this read, even if company reads are unavailable.
-  const companies = plan.kind === "internal" ? undefined : await readCompanies();
   return runTransaction(db, async (transaction) => {
     const operation = await readOperation(transaction, plan, ids);
     if (operation.saved) return operation.saved; // A simultaneous request may have finished after the fast path.
 
+    // A retry must discover new tasks and recheck company state, not reuse the first attempt's snapshots.
+    // Company reads are still not atomic with writes in the separate tasks project. Internal never reads them.
+    const tasks = await readTasks();
+    const companies = plan.kind === "internal" ? undefined : await readCompanies();
     // The web SDK transacts document reads, not queries. Guard each enumerated record against edits/deletion,
     // and always include the selected parent (even if absent from the earlier collection read).
     const reserved = new Map(operation.snapshots.map((entry) => [entry.id, entry]));

@@ -281,6 +281,42 @@ describe("general task-plan transactions", () => {
     expect(intervened).toBe(true);
   });
 
+  it.each(["duplicate step", "similar parent", "company category"])("refreshes save context after a transaction retry: %s", async (change) => {
+    const plan = change === "duplicate step" ? cases.find(({ name }) => name === "internal/append")!.plan
+      : change === "similar parent" ? TASK_PLAN_INTERNAL_NEW : TASK_PLAN_PROSPECT_NEW;
+    const shown = await preview(plan);
+    expect(shown.warnings).toEqual([]);
+    let intervened = false;
+    let expectedTasks: Awaited<ReturnType<typeof readAll>> | undefined;
+    let expectedCompanies: Awaited<ReturnType<typeof readAll>> | undefined;
+    vi.mocked(firestore.runTransaction).mockImplementation((database, update, settings) => real.runTransaction(database, async (transaction) => {
+      const result = await update(transaction);
+      if (!intervened && result && typeof result === "object" && "alreadySaved" in result && result.alreadySaved === false) {
+        intervened = true;
+        if (change === "company category") {
+          await seed("clients", "pipeline", [{ ...TASK_PLAN_PROSPECT, status: TASK_PLAN_CLIENT.status }], { keepIdField: true });
+        } else {
+          await seed("tasks", "tasks", [{ ...TASK_PLAN_INTERNAL_PARENT, id: "concurrent-task",
+            ...(change === "similar parent" ? { task: plan.newParent!.title } : {
+              parentId: plan.existingParentId, task: plan.steps[0].name,
+              startDate: plan.steps[0].startDate, endDate: plan.steps[0].endDate,
+            }),
+          }]);
+        }
+        // Invalidate a document read by the first attempt, forcing a real SDK retry.
+        await seed("tasks", "tasks", [{ ...unrelated, keyPoints: "Concurrent owner edit must survive" }]);
+        expectedTasks = await readAll("tasks", "tasks");
+        expectedCompanies = await readAll("clients", "pipeline");
+      }
+      return result;
+    }, settings));
+    await expect(save(plan, shown)).rejects.toThrow(/Invalid task preview|destination or warnings changed/);
+    expect(intervened).toBe(true);
+    expect(await readAll("tasks", "tasks")).toEqual(expectedTasks);
+    expect(await readAll("clients", "pipeline")).toEqual(expectedCompanies);
+    expect(await readAll("tasks", "settings")).toEqual([]);
+  });
+
   it.each(cases.filter(({ name }) => name.startsWith("internal")))("conflicts on partial deletion rather than repairing a saved group: $name", async ({ plan }) => {
     const shown = await preview(plan);
     const result = await save(plan, shown);

@@ -165,3 +165,18 @@ Checks:
 - ZIP rebuilt with the README's existing command and inspected: one `deus-deal-followup/` root, three files matching source bytes, both reference files unchanged and no corrupt entries (`/tmp/g10-checks.VTaIXH/artifacts.log`).
 - Local artifact links/anchors, placeholder-only connector paths and `git diff --check` passed; current official connector/skill settings guidance is cited in the README (checked 2026-11-10).
 - Docs-only **Checks** applied: no executable changes, build, data/browser suite or screenshots; production activation, optional upload and real Claude/phone acceptance remain existing owner O1–O3, not blockers for G10. No later task was started.
+
+## R1a — Risk review (2026-11-10)
+
+- **R1a-F1 fixed — stale context on transaction retries:** baseline `lib/taskPlanServer.ts:159–174` reused task/company snapshots outside the retry callback. After preview, insert an identical child, insert a similar main task, or change the prospect to Clients, then edit an enumerated task to force an SDK retry: all three saves incorrectly succeeded without a fresh preview. Reads now run inside every attempt, after completed-operation detection; changed warnings/category reject the save and preserve the concurrent edit. Regressions: `lib/taskPlanServer.data.test.ts:284`.
+- Fresh hunt covered the `bd3f9d1..05c2223` implementation and G01–G10 evidence: strict unknown-field/date/ID/size validation, company/parent identity, token authenticity/expiry/input/warnings, receipt/member races, deletion conflicts, independent dates/notes, 499-step rollback/retries, activation/auth guards and individual chat confirmation. No additional confirmed overwrite, token or legacy-contract fault. Instructions require owner confirmation; server tokens cannot prove it or actual Claude acceptance (owner O2).
+- Retained limits/disposition: company reads cannot join the separate tasks-project transaction; a change after the final read remains possible. Collection enumeration also cannot lock later inserts from other writers, so duplicate/similarity warnings are based on the observed task set. App-wide/cross-project coordination is dropped from this connector review because it would change every writer/architecture; exact-plan retries still use atomically guarded deterministic IDs/receipts, not those advisory warnings. No production data/settings changed; activation remains owner O1.
+- DECISION: Refresh task/company context per transaction attempt rather than add shared locks or change storage shape; it fixes the reproduced retry faults while preserving existing records, Internal company-outage isolation and completed-retry precedence.
+
+Checks:
+- Before-fix regressions: all three failed with `AssertionError: promise resolved … instead of rejecting`; `/tmp/r1a-checks.RtsKXa/retry-before.log`.
+- Type/lint: `npx tsc --noEmit` and ESLint on both changed TS files passed; `/tmp/r1a-checks.RtsKXa/{types,lint}.log`.
+- Unit: 978/978 passed; `/tmp/r1a-checks.RtsKXa/unit.log`.
+- Data: 161/161 passed, including all 66 task-plan transaction cases and the three regressions; invented data on the local emulator only; `/tmp/r1a-checks.RtsKXa/data.log`.
+- Build: `npm run build` passed compilation, TypeScript and static generation; compile only, never used for data writes; `/tmp/r1a-checks.RtsKXa/build.log`.
+- Diff review: the repair changes only read placement, preserving token/ack gates and every existing-record write boundary; `git diff --check` passed. No screen or flow was added; browser/full/a11y/compare checks stay with R1b–R1e, which are worth running for this shared code. No later task started.
