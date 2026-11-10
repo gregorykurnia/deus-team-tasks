@@ -1,0 +1,7 @@
+
+> deus-team-tasks@0.1.0 mcp:smoke
+> node scripts/mcp/smoke.mjs --only=task-plan-reachability
+
+Checking all general-task categories with task-plan activation explicitly on.
+Task-plan phone reachability passed; all fresh-eyes boundary/ellipsis findings checked.
+MCP smoke passed (task-plan-reachability); 0 database-preservation comparisons; owned servers only.

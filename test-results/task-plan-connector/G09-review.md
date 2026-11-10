@@ -111,3 +111,6 @@ only, so the already-passing type/lint/unit/build checks were not repeated.
 
 DECISION: Use explicit image paths rather than modify the runner; its existing reader can now verify the
 actual full-size opens, and the visual repair remains unchanged.
+
+The subsequent independent checker findings are individually covered in the
+[fresh-eyes dispositions and supplementary phone captures](G09-fresh-eyes.md).

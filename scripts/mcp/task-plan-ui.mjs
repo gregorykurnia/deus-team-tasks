@@ -80,14 +80,87 @@ async function scrollNotes(points, position) {
   }, position);
 }
 
+// G09 fresh-eyes findings: prove that phone scroll boundaries and compact labels do not hide content permanently.
+async function checkReachability(page, scenarios, companies, shoot, origin) {
+  const sheet = page.getByRole("dialog", { name: "Task", exact: true });
+  for (const kind of ["prospect", "client", "internal"]) {
+    await page.goto(`${origin}/tasks?kind=${kind}`);
+    const rows = page.getByRole("main").getByRole("article");
+    await expect(rows).toHaveCount(6);
+    const last = rows.last();
+    await last.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    const rowBox = await last.boundingBox();
+    const navBox = await page.getByRole("navigation", { name: "Main navigation" }).boundingBox();
+    assert.ok(rowBox.y >= 0 && rowBox.y + rowBox.height <= navBox.y,
+      `${kind}: final task row must scroll completely above navigation`);
+    await last.getByRole("link").first().click({ trial: true });
+    await shoot(`${kind}-list-scrolled`, true);
+
+    if (kind !== "client") {
+      await page.evaluate(() => scrollTo(0, 0));
+      const toolbar = page.getByRole("toolbar", { name: "Filter and sort" });
+      const filter = toolbar.getByRole("button", { name: kind === "internal" ? /^Sort/ : /^No action for/ });
+      await filter.evaluate((el) => el.scrollIntoView({ inline: "center", block: "nearest" }));
+      const box = await filter.boundingBox(), bounds = await toolbar.boundingBox();
+      assert.ok(box.x >= bounds.x && box.x + box.width <= bounds.x + bounds.width,
+        `${kind}: clipped filter must scroll fully into view`);
+      await filter.click({ trial: true });
+      await shoot(`${kind}-filters-scrolled`);
+    }
+
+    const scenario = scenarios.find((item) => item.kind === kind && item.mode === "new");
+    await page.goto(scenario.added.url);
+    await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(scenario.parent.task);
+    if (kind !== "internal") {
+      const company = companies.find((item) => item.id === String(scenario.parent.linkedClientId));
+      await sheet.getByRole("link", { name: "Open company", exact: true }).click();
+      const heading = page.getByRole("dialog", { name: company.company, exact: true })
+        .getByRole("heading", { name: company.company, exact: true });
+      await expect(heading).toBeVisible();
+      assert.ok(await heading.evaluate((el) => el.scrollWidth <= el.clientWidth + 1
+        && el.scrollHeight <= el.clientHeight + 1), "Full company name must fit in its record heading");
+      await shoot(`${kind}-company-open`);
+    } else {
+      const type = sheet.getByLabel(/^Task type/);
+      await type.evaluate((el) => el.scrollIntoView({ block: "center" }));
+      await type.click({ trial: true });
+      await shoot("internal-task-type", true);
+    }
+  }
+
+  const prospect = scenarios.find((item) => item.kind === "prospect" && item.mode === "append");
+  await page.goto(`${origin}/tasks?task=${prospect.children[1].id}`);
+  await verifyChild(page, prospect, 1);
+  await shoot("prospect-full-subtask-title");
+  // The source/end captures were at the very end of an 80-paragraph expanded field. Move those boundary
+  // paragraphs into the body; no field is edited and no save action is invoked.
+  for (const [target, note, name] of [
+    [prospect.children[0], 48, "prospect-note-48"],
+    [scenarios[0].parent, 74, "prospect-source-note-74"],
+  ]) {
+    await page.goto(`${origin}/tasks?task=${target.id}`);
+    const points = sheet.getByLabel(/^Key points/);
+    await expect(points).toHaveValue(target.keyPoints);
+    await points.evaluate((el, note) => {
+      let body = el.parentElement;
+      while (body && !/(auto|scroll)/.test(getComputedStyle(body).overflowY)) body = body.parentElement;
+      if (!body) throw new Error("Missing sheet scroll body");
+      body.scrollTop += el.getBoundingClientRect().top - body.getBoundingClientRect().top
+        + el.clientHeight * (note - 1) / 80 - 80;
+    }, note);
+    await shoot(name);
+  }
+}
+
 export async function checkTaskPlanUI(context) {
-  const { root, origin, emulatorHost, readAll, planOnly = false } = context;
+  const { root, origin, emulatorHost, readAll, planOnly = false, reachabilityOnly = false } = context;
   // Check before any fixture write; inherited URLs must never redirect these helpers to live data.
   assert.equal(new URL(origin).hostname, "127.0.0.1");
   assert.equal(emulatorHost, "127.0.0.1:8180");
   assert.equal(process.env.FIRESTORE_EMULATOR_HOST, emulatorHost);
   const scenarios = await prepare(context);
-  const output = path.join(root, "test-results", "task-plan-connector", ...(planOnly ? ["g09"] : []));
+  const output = path.join(root, "test-results", "task-plan-connector",
+    ...(reachabilityOnly ? ["reachability"] : planOnly ? ["g09"] : []));
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
   const before = sortRecords(await readAll("tasks", "tasks"));
@@ -95,7 +168,7 @@ export async function checkTaskPlanUI(context) {
   const manifest = { viewports: shapes, scenarios, captures: [], checks: [] };
   const browser = await chromium.launch();
   try {
-    for (const { name, ...options } of shapes) {
+    for (const { name, ...options } of shapes.filter((shape) => !reachabilityOnly || shape.name === "phone")) {
       const directory = path.join(output, name);
       await mkdir(directory, { recursive: true });
       const browserContext = await browser.newContext({ ...options, reducedMotion: "reduce" });
@@ -119,6 +192,13 @@ export async function checkTaskPlanUI(context) {
         manifest.captures.push(`${name}/${id}.png`);
       };
       try {
+        if (reachabilityOnly) {
+          await checkReachability(page, scenarios, companiesBefore, shoot, origin);
+          assert.deepEqual(errors, [], "Phone reachability: console/page/network errors");
+          manifest.checks.push("phone: last rows clear navigation; filters scroll fully into view; full company names and task title readable; Task type reachable; boundary notes readable; no console/network/layout faults");
+          console.log("Task-plan phone reachability passed; all fresh-eyes boundary/ellipsis findings checked.");
+          continue;
+        }
         for (const scenario of planOnly ? [] : scenarios) {
           const { kind, mode, parent, added, plan, oldChild } = scenario;
           await page.goto(added.url);
