@@ -134,14 +134,14 @@ test("E1: export downloads the companies shown with the fields the list shows, a
   await toolbar(page).getByRole("button", { name: "Export" }).click();
   const dialog = page.getByRole("dialog", { name: "Export Active" });
   await expect(dialog.getByText(/^1 active prospect/)).toBeVisible();
-  await expect(dialog.getByText(", as filtered now, in the current order, with the 7 fields the list shows:")).toBeVisible();
+  await expect(dialog.getByText(", as filtered now, in the current order, with the 8 fields the list shows:")).toBeVisible();
   const file = `companies-active-${isoDay(0)}.csv`;
   await expect(dialog.getByText(file)).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Download" }).click()]);
   expect(download.suggestedFilename()).toBe(file);
   const lines = readFileSync((await download.path())!, "utf8").replace(/^﻿/, "").trim().split("\r\n");
-  expect(lines[0]).toBe('"Company","Status","Priority","Last action","Target date","Products","Next actions"');
-  expect(lines.slice(1)).toEqual([`"Pelita Foods","Meeting Soon","High","${isoDay(-2)}","","","Send the quote"`]);
+  expect(lines[0]).toBe('"Company","Status","Priority","Last action","Target date","Products","GBA trials","Next actions"');
+  expect(lines.slice(1)).toEqual([`"Pelita Foods","Meeting Soon","High","${isoDay(-2)}","","","","Send the quote"`]);
   await expect(toasts(page).getByText(`Downloaded ${file}`)).toBeVisible();
 
   await page.goto("/companies?q=nothing-like-this");

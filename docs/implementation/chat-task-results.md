@@ -207,3 +207,21 @@ Checks:
 - Safety: read the emulator/server setup and R1a findings before the run; no competing build/test was running and all five test ports were free. Used `next dev`, `NODE_ENV=development`, `NEXT_PUBLIC_USE_EMULATOR=1`, `FIRESTORE_EMULATOR_HOST=127.0.0.1:8180`, `demo-deus` emulator and invented fixtures; `MCP_TASK_PLANS_ENABLED=0`. No production data/settings or app code changed.
 - Report: recursively reconciled every JSON test result with the 389-case totals and the console failure list; all recorded attachment paths exist. After completion, no test listeners remained on 3100/8180/4400/4500/9150 and no repo-owned test browser/server/emulator remained.
 - Docs-only checks: verified evidence/plan links, unchanged prior tracked captures and `git diff --check`. No type/lint/unit/data/build rerun or new screenshot review was needed; R1d/R1e retain their audits. Only R1b is ticked; R1c and later tasks were not started.
+
+## R1c — End-to-end repairs (2026-11-10)
+
+Findings before repair:
+- **R1b-F1, closed:** `tests/smoke/companies-settings.spec.ts:137` expects seven fields after `seedAll()` → `/companies?q=pelita` → Export; Active has eight, including GBA trials. R1b's saved failure proves the mismatch before this repair.
+- The same case's `:144–145` also omits GBA trials from the exact CSV header and its empty cell from Pelita's row; those assertions were unreachable in R1b. Fixed all three expectations together, keeping the full filename/header/row, filter and empty-export assertions.
+
+This was pre-existing test drift from `91816d4`, which intentionally added GBA trials to Active. `lib/companySettings.ts`, `features/companies/ExportDialog.tsx` and `lib/exports.ts` agree on the eight-column export. No application, fixture, Firestore or screen code changed; no remaining R1b failures or deferred repair findings.
+
+DECISION: Update the three exact export expectations rather than remove the GBA trials column or relax assertions; the existing defaults and export behavior are correct.
+
+Checks (logs in `/tmp/r1c-checks.ji9vzP/`):
+- Type check: `npx tsc --noEmit` passed (`types.log`).
+- Lint: `npx eslint tests/smoke/companies-settings.spec.ts` passed (`lint.log`).
+- Unit: `npm run test:unit -- --reporter=dot` passed, 978/978 in 41 files (`unit.log`).
+- Build: `NODE_ENV=production npm run build` passed (`build-production.log`); the first invocation mistakenly inherited `NODE_ENV=development` and failed prerendering `/_global-error` with `TypeError: Cannot read properties of null (reading 'useContext')` (`build.log`), then passed after correcting only the command environment.
+- Affected e2e only: `npx playwright test tests/smoke/companies-settings.spec.ts:131 --project=desktop --last-failed --output=/tmp/r1c-checks.ji9vzP/artifacts` passed 1/1 in 20.9 seconds (`export-e2e.log`); copied R1b's failure selection into this separate output folder first. The download, exact eight-column CSV and empty-export checks all ran; `artifacts/.last-run.json` reports `passed` with no failed tests.
+- Safety/review: emulator-only `next dev`, local Firestore on 8180, invented fixtures and activation flag off; all five test ports have no listeners and are reusable after shutdown. `git diff --check` and the three-assertion diff review passed. R1b/G08/G09 evidence is preserved; no data/full-suite/visual reruns were warranted, and R1d/later rows remain untouched.

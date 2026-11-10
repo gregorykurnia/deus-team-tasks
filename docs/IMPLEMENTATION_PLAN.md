@@ -54,7 +54,7 @@ Each row has one pick. The linked section contains files, required reading, edge
 | G10 | Update the existing skill, generic-chat instructions and owner walkthrough. [G10](implementation/chat-task-connector.md#g10--instructions-and-packaging) [no look] | Sol Max | 2026-11-10; skill/ZIP, 8 examples and artifact checks passed |
 | R1a | Review the write path and confirmation workflow; fix confirmed faults before broad checks. [R1a](implementation/chat-task-connector.md#r1a--risk-review) [no look] | Sol Max | 2026-11-10; retry snapshot fault fixed; 161 data cases passed |
 | R1b | Run the full end-to-end suite once and save the complete failure list. [R1b](implementation/chat-task-connector.md#r1b--full-end-to-end-run) [no look] | Sol xHigh | 2026-11-10; 379 passed, 9 skipped, 1 failure saved for R1c |
-| R1c | Fix the recorded end-to-end failures and rerun only affected tests. [R1c](implementation/chat-task-connector.md#r1c--end-to-end-repairs) [no look] | Sol Max | |
+| R1c | Fix the recorded end-to-end failures and rerun only affected tests. [R1c](implementation/chat-task-connector.md#r1c--end-to-end-repairs) [no look] | Sol Max | 2026-11-10; export failure closed; 1 affected e2e and 978 unit cases passed |
 | R1d | Run accessibility and scoped prototype comparison once; record findings. [R1d](implementation/chat-task-connector.md#r1d--accessibility-and-comparison) [look] | Sol xHigh | |
 | R1e | Fix confirmed accessibility/visual findings and recheck their states. [R1e](implementation/chat-task-connector.md#r1e--audit-repairs) [look] | Astra xHigh | |
 | R1 | Phase 1 review: prove requirements, close findings and prepare activation handoff. [R1](implementation/chat-task-connector.md#r1--final-phase-review) [no look] | Sol Max | |
