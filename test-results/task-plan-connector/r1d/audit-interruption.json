@@ -1,0 +1,10 @@
+{
+  "reason": "Firestore emulator Java heap exhausted; seeding returns HTTP 500; stopped stalled one-shot audit",
+  "at": "2026-11-10T11:10:00.752319+00:00",
+  "heapOption": "-Xmx2g",
+  "completedRecords": 213,
+  "rerun": "No broad rerun; unassessed IDs recorded for focused follow-up in R1e",
+  "finalSavedRecords": 213,
+  "assessed": 207,
+  "failed": 6
+}

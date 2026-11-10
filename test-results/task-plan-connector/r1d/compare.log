@@ -1,0 +1,24 @@
+
+> deus-team-tasks@0.1.0 compare
+> JAVA_TOOL_OPTIONS=-Xmx2g node scripts/compare/run.mjs --servers --only ^(017-all-tasks-normal|019-all-tasks-prospects|020-all-tasks-clients|021-all-tasks-internal|062-task-details-company|063-task-details-internal|064-task-details-finished|102-plan-one-day-normal)$
+
+(node:1385113) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/ubuntu/deus-team-tasks/tests/support/emulator.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/ubuntu/deus-team-tasks/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+017-all-tasks-normal desktop 11s
+017-all-tasks-normal phone 8s
+019-all-tasks-prospects desktop 8s
+019-all-tasks-prospects phone 7s
+020-all-tasks-clients desktop 8s
+020-all-tasks-clients phone 7s
+021-all-tasks-internal desktop 8s
+021-all-tasks-internal phone 7s
+062-task-details-company desktop 9s
+062-task-details-company phone 8s
+063-task-details-internal desktop 9s
+063-task-details-internal phone 8s
+064-task-details-finished desktop 9s
+064-task-details-finished phone 8s
+102-plan-one-day-normal desktop 9s
+102-plan-one-day-normal phone 7s

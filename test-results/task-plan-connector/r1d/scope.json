@@ -1,0 +1,26 @@
+{
+  "stateIds": [
+    "017-all-tasks-normal",
+    "019-all-tasks-prospects",
+    "020-all-tasks-clients",
+    "021-all-tasks-internal",
+    "062-task-details-company",
+    "063-task-details-internal",
+    "064-task-details-finished",
+    "102-plan-one-day-normal"
+  ],
+  "regex": "^(017-all-tasks-normal|019-all-tasks-prospects|020-all-tasks-clients|021-all-tasks-internal|062-task-details-company|063-task-details-internal|064-task-details-finished|102-plan-one-day-normal)$",
+  "sizes": {
+    "desktop": [
+      1440,
+      900
+    ],
+    "phone": [
+      390,
+      844
+    ]
+  },
+  "a11yCommand": "npm run a11y",
+  "comparisonCommand": "npm run compare -- --only '^(017-all-tasks-normal|019-all-tasks-prospects|020-all-tasks-clients|021-all-tasks-internal|062-task-details-company|063-task-details-internal|064-task-details-finished|102-plan-one-day-normal)$'",
+  "mode": "next dev; local Firestore 127.0.0.1:8180; activation unchanged"
+}

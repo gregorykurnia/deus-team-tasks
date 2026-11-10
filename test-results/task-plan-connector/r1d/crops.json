@@ -1,0 +1,145 @@
+[
+  {
+    "source": "new/017-all-tasks-normal-phone.png",
+    "target": "crops/017-all-tasks-normal-phone-first-frame.png",
+    "rect": {
+      "left": 0,
+      "top": 0,
+      "width": 390,
+      "height": 844
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/019-all-tasks-prospects-phone.png",
+    "target": "crops/019-all-tasks-prospects-phone-first-frame.png",
+    "rect": {
+      "left": 0,
+      "top": 0,
+      "width": 390,
+      "height": 844
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/020-all-tasks-clients-phone.png",
+    "target": "crops/020-all-tasks-clients-phone-first-frame.png",
+    "rect": {
+      "left": 0,
+      "top": 0,
+      "width": 390,
+      "height": 844
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/021-all-tasks-internal-phone.png",
+    "target": "crops/021-all-tasks-internal-phone-first-frame.png",
+    "rect": {
+      "left": 0,
+      "top": 0,
+      "width": 390,
+      "height": 844
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/102-plan-one-day-normal-phone.png",
+    "target": "crops/102-plan-one-day-normal-phone-first-frame.png",
+    "rect": {
+      "left": 0,
+      "top": 0,
+      "width": 390,
+      "height": 844
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/062-task-details-company-phone.png",
+    "target": "crops/062-task-details-company-phone-footer.png",
+    "rect": {
+      "left": 0,
+      "top": 624,
+      "width": 390,
+      "height": 220
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/063-task-details-internal-phone.png",
+    "target": "crops/063-task-details-internal-phone-footer.png",
+    "rect": {
+      "left": 0,
+      "top": 624,
+      "width": 390,
+      "height": 220
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/064-task-details-finished-phone.png",
+    "target": "crops/064-task-details-finished-phone-footer.png",
+    "rect": {
+      "left": 0,
+      "top": 624,
+      "width": 390,
+      "height": 220
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/063-task-details-internal-desktop.png",
+    "target": "crops/063-task-details-internal-desktop-dates-footer.png",
+    "rect": {
+      "left": 884,
+      "top": 650,
+      "width": 540,
+      "height": 250
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/062-task-details-company-desktop.png",
+    "target": "crops/062-task-details-company-desktop-footer.png",
+    "rect": {
+      "left": 884,
+      "top": 740,
+      "width": 540,
+      "height": 160
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/102-plan-one-day-normal-desktop.png",
+    "target": "crops/102-plan-one-day-normal-desktop-preview-base.png",
+    "rect": {
+      "left": 350,
+      "top": 980,
+      "width": 700,
+      "height": 170
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/102-plan-one-day-normal-phone.png",
+    "target": "crops/102-plan-one-day-normal-phone-preview-base.png",
+    "rect": {
+      "left": 40,
+      "top": 1440,
+      "width": 330,
+      "height": 280
+    },
+    "scale": 1
+  },
+  {
+    "source": "new/020-all-tasks-clients-phone.png",
+    "target": "crops/020-all-tasks-clients-phone-second-deadline.png",
+    "rect": {
+      "left": 250,
+      "top": 620,
+      "width": 140,
+      "height": 110
+    },
+    "scale": 1
+  }
+]

@@ -1,0 +1,42 @@
+WARNING: [ERROR] NETWORK_ERROR ()
+Nov 10, 2026 11:07:48 AM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: Java heap space
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.Arrays.copyOf(Arrays.java:3541)
+	at java.base/java.lang.AbstractStringBuilder.ensureCapacityInternal(AbstractStringBuilder.java:242)
+	at java.base/java.lang.AbstractStringBuilder.append(AbstractStringBuilder.java:811)
+	at java.base/java.lang.StringBuffer.append(StringBuffer.java:425)
+	at java.base/java.text.SimpleDateFormat.format(SimpleDateFormat.java:994)
+	at java.base/java.text.SimpleDateFormat.format(SimpleDateFormat.java:973)
+	at java.base/java.text.DateFormat.format(DateFormat.java:378)
+	at com.google.protobuf.util.Timestamps.toString(Timestamps.java:226)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printTimestamp(JsonFormat.java:971)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl$3.print(JsonFormat.java:851)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:751)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1224)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1114)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printField(JsonFormat.java:1037)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:799)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:754)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1224)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1114)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printField(JsonFormat.java:1037)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:799)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:754)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1224)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printSingleFieldValue(JsonFormat.java:1114)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.printField(JsonFormat.java:1037)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:799)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$PrinterImpl.print(JsonFormat.java:754)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$Printer.appendTo(JsonFormat.java:338)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.jsonformatfork.JsonFormat$Printer.print(JsonFormat.java:348)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.FirestoreV1WebChannelAdapter$WebChannelObserver.onNext(FirestoreV1WebChannelAdapter.java:208)
+	at com.google.cloud.datastore.emulator.firestore.webchannel.FirestoreV1WebChannelAdapter$WebChannelObserver.onNext(FirestoreV1WebChannelAdapter.java:198)
+	at com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver.onNext(WrappedStreamObserver.java:28)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1ListenStream.sendResponse(CloudFirestoreV1ListenStream.java:211)
+
+Nov 10, 2026 11:07:48 AM io.gapi.emulators.netty.HttpHandler$1 onError
+INFO: Exception when handling request: UNKNOWN
+Nov 10, 2026 11:07:48 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+Nov 10, 2026 11:07:48 AM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead

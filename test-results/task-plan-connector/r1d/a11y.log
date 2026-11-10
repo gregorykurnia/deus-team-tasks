@@ -1,0 +1,143 @@
+
+> deus-team-tasks@0.1.0 a11y
+> node scripts/a11y/axe.mjs --servers --distinct
+
+(node:1373234) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/ubuntu/deus-team-tasks/tests/support/emulator.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/ubuntu/deus-team-tasks/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAILED 247-flows-onboarding desktop Seeding tasks/flows failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 247-flows-onboarding phone Clearing tasks failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 250-flows-no-steps-yet phone Seeding tasks/tasks failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 254-flows-edit-a-flow desktop Clearing tasks failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 254-flows-edit-a-flow phone Seeding tasks/tasks failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 255-flows-saving desktop Clearing tasks failed: 500 {"error":{"code":500,"status":"UNKNOWN"}}
+FAILED 255-flows-saving phone fetch failed
+FAILED 256-flows-name-suggestions desktop fetch failed
+FAILED 256-flows-name-suggestions phone fetch failed
+FAILED 257-flows-adding-a-decision desktop fetch failed
+FAILED 257-flows-adding-a-decision phone fetch failed
+FAILED 258-flows-new-flow desktop fetch failed
+FAILED 258-flows-new-flow phone fetch failed
+FAILED 259-flows-name-missing desktop fetch failed
+FAILED 259-flows-name-missing phone fetch failed
+FAILED 260-flows-menu desktop fetch failed
+FAILED 260-flows-menu phone fetch failed
+FAILED 261-flows-delete desktop fetch failed
+FAILED 261-flows-delete phone fetch failed
+FAILED 263-flows-loading desktop fetch failed
+FAILED 263-flows-loading phone fetch failed
+FAILED 264-flows-offline-read-only desktop fetch failed
+FAILED 264-flows-offline-read-only phone fetch failed
+FAILED 266-flows-open desktop fetch failed
+FAILED 266-flows-open phone fetch failed
+FAILED 270-installing-and-opening-with-no-connection-browser-offers-it desktop fetch failed
+FAILED 270-installing-and-opening-with-no-connection-browser-offers-it phone fetch failed
+FAILED 271-installing-and-opening-with-no-connection-iphone desktop fetch failed
+FAILED 271-installing-and-opening-with-no-connection-iphone phone fetch failed
+FAILED 272-installing-and-opening-with-no-connection-installed desktop fetch failed
+FAILED 272-installing-and-opening-with-no-connection-installed phone fetch failed
+FAILED 275-installing-and-opening-with-no-connection-back-online desktop fetch failed
+FAILED 275-installing-and-opening-with-no-connection-back-online phone fetch failed
+FAILED 276-moving-around-on-phones-more-sheet desktop fetch failed
+FAILED 276-moving-around-on-phones-more-sheet phone fetch failed
+FAILED 009-today-open desktop fetch failed
+FAILED 009-today-open phone fetch failed
+FAILED 015-today-nothing-loaded desktop fetch failed
+FAILED 015-today-nothing-loaded phone fetch failed
+FAILED 033-all-tasks-nothing-yet desktop fetch failed
+FAILED 033-all-tasks-nothing-yet phone fetch failed
+FAILED 039-all-tasks-offline-nothing-loaded desktop fetch failed
+FAILED 039-all-tasks-offline-nothing-loaded phone fetch failed
+FAILED 081-plan-timeline-nothing-yet desktop fetch failed
+FAILED 081-plan-timeline-nothing-yet phone fetch failed
+FAILED 091-plan-timeline-offline-nothing-loaded desktop fetch failed
+FAILED 091-plan-timeline-offline-nothing-loaded phone fetch failed
+FAILED 140-companies-the-four-groups-no-companies desktop fetch failed
+FAILED 140-companies-the-four-groups-no-companies phone fetch failed
+FAILED 144-companies-the-four-groups-offline-nothing-loaded desktop fetch failed
+FAILED 144-companies-the-four-groups-offline-nothing-loaded phone fetch failed
+FAILED 204-qualification-notes-nothing-yet desktop fetch failed
+FAILED 204-qualification-notes-nothing-yet phone fetch failed
+FAILED 206-qualification-notes-offline-nothing-loaded desktop fetch failed
+FAILED 206-qualification-notes-offline-nothing-loaded phone fetch failed
+FAILED 242-past-clients-nothing-yet desktop fetch failed
+FAILED 242-past-clients-nothing-yet phone fetch failed
+FAILED 245-past-clients-offline-nothing-loaded desktop fetch failed
+FAILED 245-past-clients-offline-nothing-loaded phone fetch failed
+FAILED 262-flows-nothing-yet desktop fetch failed
+FAILED 262-flows-nothing-yet phone fetch failed
+FAILED 265-flows-offline-nothing-loaded desktop fetch failed
+FAILED 265-flows-offline-nothing-loaded phone fetch failed
+FAILED 141-companies-the-four-groups-no-or-not-now-is-empty desktop fetch failed
+FAILED 141-companies-the-four-groups-no-or-not-now-is-empty phone fetch failed
+FAILED 104-plan-one-day-open desktop fetch failed
+FAILED 104-plan-one-day-open phone fetch failed
+FAILED 006-today-no-client-work desktop fetch failed
+FAILED 006-today-no-client-work phone fetch failed
+FAILED 032-all-tasks-no-client-work desktop fetch failed
+FAILED 032-all-tasks-no-client-work phone fetch failed
+FAILED 233-past-clients-no-other-parent desktop fetch failed
+FAILED 233-past-clients-no-other-parent phone fetch failed
+FAILED 007-today-normal desktop fetch failed
+FAILED 007-today-normal phone fetch failed
+FAILED 216-past-clients-nothing-counted-yet desktop fetch failed
+FAILED 216-past-clients-nothing-counted-yet phone fetch failed
+
+## serious label-content-name-mismatch: Elements must have their visible text as part of their accessible name (17 elements)
+  article[data-kind="internal"]:nth-child(28) > .TaskRow-module__yV1rWW__deadline[aria-label="Deadline: None. Change"][data-col="end"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__deadline TaskRow-module__yV1rWW__edit" data-col="end" aria-label="Deadline: No
+    Text inside the element is not included in the accessible name
+    in 38 states, e.g. 017-all-tasks-normal-desktop, 017-all-tasks-normal-phone
+  article[data-kind="internal"]:nth-child(29) > .TaskRow-module__yV1rWW__deadline[aria-label="Deadline: None. Change"][data-col="end"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__deadline TaskRow-module__yV1rWW__edit" data-col="end" aria-label="Deadline: No
+    Text inside the element is not included in the accessible name
+    in 38 states, e.g. 017-all-tasks-normal-desktop, 017-all-tasks-normal-phone
+  article[data-kind="prospect"]:nth-child(30) > .TaskRow-module__yV1rWW__deadline[aria-label="Deadline: None. Change"][data-col="end"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__deadline TaskRow-module__yV1rWW__edit" data-col="end" aria-label="Deadline: No
+    Text inside the element is not included in the accessible name
+    in 38 states, e.g. 017-all-tasks-normal-desktop, 017-all-tasks-normal-phone
+  article[data-kind="internal"]:nth-child(31) > .TaskRow-module__yV1rWW__deadline[aria-label="Deadline: None. Change"][data-col="end"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__deadline TaskRow-module__yV1rWW__edit" data-col="end" aria-label="Deadline: No
+    Text inside the element is not included in the accessible name
+    in 38 states, e.g. 017-all-tasks-normal-desktop, 017-all-tasks-normal-phone
+  article[data-kind="prospect"]:nth-child(2) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 6 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 18 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="prospect"]:nth-child(5) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 3 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="client"]:nth-child(6) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 2 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="prospect"]:nth-child(7) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 3 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="prospect"]:nth-child(10) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 6 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="prospect"]:nth-child(13) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 3 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="prospect"]:nth-child(14) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action 4 days ago. Change"
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+  article[data-kind="client"]:nth-child(16) > .TaskRow-module__yV1rWW__edit[data-col="last"][type="button"]
+    <button type="button" class="TaskRow-module__yV1rWW__cell TaskRow-module__yV1rWW__edit" data-col="last" aria-label="Last action: Last action yesterday. Change">
+    Text inside the element is not included in the accessible name
+    in 19 states, e.g. 017-all-tasks-normal-phone, 034-all-tasks-details-shown-phone
+
+## moderate region: All page content should be contained by landmarks (1 elements)
+  .Menu-module__ZyHG9q__menu
+    <div class="Menu-module__ZyHG9q__menu" role="menu" aria-label="Details shown" style="visibility: visible; left: 1147px; top: 205.844px; max-height: calc(440px);
+    Some page content is not contained by landmarks
+    in 24 states, e.g. 034-all-tasks-details-shown-desktop, 034-all-tasks-details-shown-phone
+
+284 state runs, 77 failed, 2 rules hit
