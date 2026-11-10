@@ -1,0 +1,40 @@
+
+> deus-team-tasks@0.1.0 build
+> next build
+
+▲ Next.js 16.3.1 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 33ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.6s
+  Running TypeScript ...
+  Finished TypeScript in 18.1s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/12) ...
+  Generating static pages using 1 worker (3/12)
+  Generating static pages using 1 worker (6/12)
+  Generating static pages using 1 worker (9/12)
+✓ Generating static pages using 1 worker (12/12) in 498ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/calendar
+├ ƒ /api/mcp/[secret]
+├ ○ /companies
+├ ○ /flows
+├ ƒ /flows/[flowId]
+├ ○ /gallery
+├ ○ /manifest.webmanifest
+├ ○ /notes
+├ ƒ /notes/[notesId]
+├ ○ /past
+├ ○ /plan
+├ ○ /tasks
+└ ƒ /tasks/groups/[groupId]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

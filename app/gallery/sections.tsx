@@ -233,6 +233,7 @@ export function Empty() {
       <div className="grid w-full gap-6 md:grid-cols-2">
         <div className="rounded-panel bg-glass-strong">
           <EmptyState
+            headingLevel={3}
             icon="flow"
             title="No flows yet"
             actions={<Button variant="main" small>New flow</Button>}

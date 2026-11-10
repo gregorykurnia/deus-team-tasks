@@ -1,0 +1,35 @@
+
+ RUN  v4.1.12 /home/ubuntu/deus-team-tasks
+
+ ❯ |unit| tests/unit/display.test.tsx (26 tests | 1 failed) 44ms
+     × puts a page-level empty message immediately below the page heading 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| tests/unit/display.test.tsx > empty states (guide 4.15) > puts a page-level empty message immediately below the page heading
+AssertionError: expected [ 1, 3 ] to deeply equal [ 1, 2 ]
+
+- Expected
++ Received
+
+  [
+    1,
+-   2,
++   3,
+  ]
+
+ ❯ tests/unit/display.test.tsx:149:83
+    147|   it("puts a page-level empty message immediately below the page headi…
+    148|     const markup = renderToStaticMarkup(<><h1>Flows</h1><EmptyState ic…
+    149|     expect([...markup.matchAll(/<h([1-6])\b/g)].map((match) => Number(…
+       |                                                                                   ^
+    150|   });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 25 passed (26)
+   Start at  12:04:55
+   Duration  573ms (transform 211ms, setup 0ms, import 290ms, tests 44ms, environment 0ms)

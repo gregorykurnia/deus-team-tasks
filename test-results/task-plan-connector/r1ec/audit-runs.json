@@ -1,0 +1,32 @@
+[
+  {
+    "batch": "01-resume-today-tasks-plan",
+    "command": [
+      "npm",
+      "run",
+      "a11y",
+      "--",
+      "--only",
+      "^(032-all-tasks-no-client-work|091-plan-timeline-offline-nothing-loaded)$"
+    ],
+    "seconds": 44.4,
+    "exitCode": 0,
+    "entries": 4,
+    "portsBusyAfter": []
+  },
+  {
+    "batch": "02-companies-notes-past-flows",
+    "command": [
+      "npm",
+      "run",
+      "a11y",
+      "--",
+      "--only",
+      "^(140-companies-the-four-groups-no-companies|141-companies-the-four-groups-no-or-not-now-is-empty|144-companies-the-four-groups-offline-nothing-loaded|204-qualification-notes-nothing-yet|206-qualification-notes-offline-nothing-loaded|242-past-clients-nothing-yet|245-past-clients-offline-nothing-loaded|262-flows-nothing-yet|265-flows-offline-nothing-loaded)$"
+    ],
+    "seconds": 153.7,
+    "exitCode": 0,
+    "entries": 18,
+    "portsBusyAfter": []
+  }
+]

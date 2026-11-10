@@ -1,0 +1,64 @@
+[WebServer] (node:1406741) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1406765) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1406825) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1406838) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1406850) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:1406881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone (5.2s)
+[WebServer] [browser] [2026-11-10T12:19:14.849Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37420 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:14.850Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:19:14.967Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37421 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:15.065Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b3741f transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:15.068Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:19:15.148Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37422 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:15.857Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37423 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:16.037Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37424 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:17.346Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37425 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:18.089Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37426 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:18.658Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37427 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:20.957Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37428 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:21.814Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x14b37429 transport errored. Name: undefined Message: undefined
+  ✓  2 [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone (10.3s)
+(node:1407020) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone (3.0s)
+[WebServer] [browser] [2026-11-10T12:19:28.890Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09bf transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:28.895Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:19:28.997Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c0 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:29.076Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09be transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:29.076Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:19:29.148Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c1 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:29.610Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c2 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:29.624Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c3 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:30.687Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c4 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:31.650Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c5 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:32.581Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c6 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:34.561Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c7 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:19:37.215Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x492d09c8 transport errored. Name: undefined Message: undefined
+  ✓  4 [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone (10.4s)
+
+  4 passed (39.0s)

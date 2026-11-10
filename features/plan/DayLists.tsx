@@ -57,6 +57,7 @@ export default function DayLists(props: DayListsProps) {
       <section className={styles.dayEmpty}>
         <EmptyState
           size={compact ? "small" : "large"}
+          headingLevel={3}
           icon="cal"
           title={`Nothing on ${dayHeading(iso, today)}`}
           actions={

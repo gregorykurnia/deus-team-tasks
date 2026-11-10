@@ -1,0 +1,46 @@
+[
+  {
+    "frame": "desktop-empty",
+    "changedPixels": 19,
+    "messageRegion": {
+      "left": 610,
+      "top": 205,
+      "width": 490,
+      "height": 220
+    },
+    "changedMessagePixels": 0
+  },
+  {
+    "frame": "desktop-offline",
+    "changedPixels": 0,
+    "messageRegion": {
+      "left": 290,
+      "top": 150,
+      "width": 380,
+      "height": 275
+    },
+    "changedMessagePixels": 0
+  },
+  {
+    "frame": "phone-empty",
+    "changedPixels": 0,
+    "messageRegion": {
+      "left": 0,
+      "top": 80,
+      "width": 390,
+      "height": 370
+    },
+    "changedMessagePixels": 0
+  },
+  {
+    "frame": "phone-offline",
+    "changedPixels": 0,
+    "messageRegion": {
+      "left": 0,
+      "top": 80,
+      "width": 390,
+      "height": 370
+    },
+    "changedMessagePixels": 0
+  }
+]

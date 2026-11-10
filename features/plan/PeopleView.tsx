@@ -199,6 +199,7 @@ function PersonPage(props: PeopleViewProps & { row: PersonRow }) {
         {head}
         <section className={styles.panel} aria-label={`Nothing open for ${row.name}`}>
           <EmptyState
+            headingLevel={3}
             icon="people"
             title={`Nothing open for ${row.name}`}
             actions={

@@ -1,0 +1,180 @@
+[WebServer] (node:1401759) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1401772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer]     at warnOnDeactivatedColors (node:internal/tty:112:13)
+[WebServer]     at Object.getColorDepth (node:internal/tty:131:9)
+[WebServer]     at Object.shouldColorize (node:internal/util/colors:20:32)
+[WebServer]     at Object.refresh (node:internal/util/colors:27:24)
+[WebServer]     at node:internal/util/colors:51:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer]     at node:internal/assert/assertion_error:23:16
+[WebServer]     at BuiltinModule.compileForInternalLoader (node:internal/bootstrap/realm:422:7)
+[WebServer]     at requireBuiltin (node:internal/bootstrap/realm:453:14)
+[WebServer] (node:1401834) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1401847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1401859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1401881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1401892) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:1401911) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone (5.5s)
+(node:1402003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [browser] [2026-11-10T12:05:28.338Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab6450c transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:28.343Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:05:28.421Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab6450d transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:28.430Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab6450b transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:28.430Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:05:28.550Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab6450e transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:28.933Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab6450f transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:29.735Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64510 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:30.155Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64511 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:31.271Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64512 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:32.359Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64513 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:32.524Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64514 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:34.873Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x1ab64515 transport errored. Name: undefined Message: undefined
+  ✘  2 [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone (10.9s)
+(node:1402101) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone (2.7s)
+(node:1402179) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [browser] [2026-11-10T12:05:43.624Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286d8 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:43.627Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:05:43.716Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286d9 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:43.796Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286d7 transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:43.799Z]  @firebase/firestore: Firestore (12.18.0): Could not reach Cloud Firestore backend. Connection failed 1 times. Most recent error: FirebaseError: [code=unavailable]: The operation could not be completed
+[WebServer] This typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.
+[WebServer] [browser] [2026-11-10T12:05:43.858Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286da transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:44.399Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286db transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:45.269Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286dc transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:45.702Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286dd transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:46.540Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286de transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:48.182Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286df transport errored. Name: undefined Message: undefined
+[WebServer] [browser] [2026-11-10T12:05:48.250Z]  @firebase/firestore: Firestore (12.18.0): WebChannelConnection RPC 'Listen' stream 0x69c286e0 transport errored. Name: undefined Message: undefined
+  ✘  4 [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone (10.8s)
+
+
+  1) [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone ────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "H2"
+    Received: "H3"
+
+      13 |     await page.evaluate(() => document.fonts.ready);
+      14 |     await page.screenshot({ path: info.outputPath(`${offline ? "offline" : "empty"}.png`), animations: "disabled" });
+    > 15 |     expect(await message.evaluate((el) => el.tagName)).toBe("H2");
+         |                                                        ^
+      16 |     await expect(message).toBeInViewport();
+      17 |     const content = message.locator("..");
+      18 |     if (!offline) {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/empty-headings.spec.ts:15:56
+
+    Error Context: test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone ───────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "H2"
+    Received: "H3"
+
+      13 |     await page.evaluate(() => document.fonts.ready);
+      14 |     await page.screenshot({ path: info.outputPath(`${offline ? "offline" : "empty"}.png`), animations: "disabled" });
+    > 15 |     expect(await message.evaluate((el) => el.tagName)).toBe("H2");
+         |                                                        ^
+      16 |     await expect(message).toBeInViewport();
+      17 |     const content = message.locator("..");
+      18 |     if (!offline) {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/empty-headings.spec.ts:15:56
+
+    Error Context: test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone ──────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "H2"
+    Received: "H3"
+
+      13 |     await page.evaluate(() => document.fonts.ready);
+      14 |     await page.screenshot({ path: info.outputPath(`${offline ? "offline" : "empty"}.png`), animations: "disabled" });
+    > 15 |     expect(await message.evaluate((el) => el.tagName)).toBe("H2");
+         |                                                        ^
+      16 |     await expect(message).toBeInViewport();
+      17 |     const content = message.locator("..");
+      18 |     if (!offline) {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/empty-headings.spec.ts:15:56
+
+    Error Context: test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-online-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone ─────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "H2"
+    Received: "H3"
+
+      13 |     await page.evaluate(() => document.fonts.ready);
+      14 |     await page.screenshot({ path: info.outputPath(`${offline ? "offline" : "empty"}.png`), animations: "disabled" });
+    > 15 |     expect(await message.evaluate((el) => el.tagName)).toBe("H2");
+         |                                                        ^
+      16 |     await expect(message).toBeInViewport();
+      17 |     const content = message.locator("..");
+      18 |     if (!offline) {
+        at /home/ubuntu/deus-team-tasks/tests/smoke/empty-headings.spec.ts:15:56
+
+    Error Context: test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-phone/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-phone/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/task-plan-connector/r1ec/before/empty-headings-empty-flow-headings-offline-phone/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone ─────────
+    [desktop] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone ────────
+    [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings online @phone ───────────
+    [phone] › tests/smoke/empty-headings.spec.ts:5:7 › empty flow headings offline @phone ──────────

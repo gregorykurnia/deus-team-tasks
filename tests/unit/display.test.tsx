@@ -11,6 +11,7 @@ import AvatarStack from "@/ui/AvatarStack";
 import PersonChip from "@/ui/PersonChip";
 import Notice from "@/ui/Notice";
 import EmptyState from "@/ui/EmptyState";
+import Panel from "@/ui/Panel";
 import { LoadingLine, Skeleton, SkeletonRow } from "@/ui/Skeleton";
 import { LikelihoodMeter, LoadMeter } from "@/ui/Meter";
 
@@ -143,6 +144,27 @@ describe("notices (guide 4.14)", () => {
 });
 
 describe("empty states (guide 4.15)", () => {
+  it("puts a page-level empty message immediately below the page heading", () => {
+    const markup = renderToStaticMarkup(<><h1>Flows</h1><EmptyState icon="flow" title="No flows yet" /></>);
+    expect([...markup.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]))).toEqual([1, 2]);
+  });
+
+  it("keeps a small panel message nested below its panel heading", () => {
+    const markup = renderToStaticMarkup(
+      <><h1>Today</h1><Panel title="Calendar today"><EmptyState size="small" icon="cal" title="No events today" /></Panel></>
+    );
+    expect([...markup.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]))).toEqual([1, 2, 3]);
+  });
+
+  it.each(["large", "small"] as const)("allows a %s message to follow its actual heading context", (size) => {
+    const nested = renderToStaticMarkup(
+      <><h1>Plan</h1><h2>Monday</h2><EmptyState size={size} headingLevel={3} icon="cal" title="Nothing on Monday" /></>
+    );
+    expect([...nested.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]))).toEqual([1, 2, 3]);
+    const page = renderToStaticMarkup(<><h1>Plan</h1><EmptyState size={size} headingLevel={2} icon="cal" title="Nothing planned yet" /></>);
+    expect([...page.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]))).toEqual([1, 2]);
+  });
+
   it("a large empty state has its title, what will appear, and its actions", () => {
     const markup = renderToStaticMarkup(
       <EmptyState

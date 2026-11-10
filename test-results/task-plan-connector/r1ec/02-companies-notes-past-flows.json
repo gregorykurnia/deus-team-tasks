@@ -1,0 +1,110 @@
+[
+ {
+  "id": "140-companies-the-four-groups-no-companies-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "140-companies-the-four-groups-no-companies-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "144-companies-the-four-groups-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "144-companies-the-four-groups-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/companies",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "204-qualification-notes-nothing-yet-desktop",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "204-qualification-notes-nothing-yet-phone",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "206-qualification-notes-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "206-qualification-notes-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/notes",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "242-past-clients-nothing-yet-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "242-past-clients-nothing-yet-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "245-past-clients-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "245-past-clients-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/past",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "262-flows-nothing-yet-desktop",
+  "url": "http://localhost:3100/flows",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "262-flows-nothing-yet-phone",
+  "url": "http://localhost:3100/flows",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "265-flows-offline-nothing-loaded-desktop",
+  "url": "http://localhost:3100/flows",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "265-flows-offline-nothing-loaded-phone",
+  "url": "http://localhost:3100/flows",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "141-companies-the-four-groups-no-or-not-now-is-empty-desktop",
+  "url": "http://localhost:3100/companies?group=no-or-not-now",
+  "errors": [],
+  "violations": []
+ },
+ {
+  "id": "141-companies-the-four-groups-no-or-not-now-is-empty-phone",
+  "url": "http://localhost:3100/companies?group=no-or-not-now",
+  "errors": [],
+  "violations": []
+ }
+]

@@ -1,0 +1,10 @@
+
+> deus-team-tasks@0.1.0 a11y
+> node scripts/a11y/axe.mjs --servers --distinct --only ^(032-all-tasks-no-client-work|091-plan-timeline-offline-nothing-loaded)$
+
+(node:1404212) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/ubuntu/deus-team-tasks/tests/support/emulator.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/ubuntu/deus-team-tasks/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+4 state runs, 0 failed, 0 rules hit
