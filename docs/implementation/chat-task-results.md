@@ -180,3 +180,30 @@ Checks:
 - Data: 161/161 passed, including all 66 task-plan transaction cases and the three regressions; invented data on the local emulator only; `/tmp/r1a-checks.RtsKXa/data.log`.
 - Build: `npm run build` passed compilation, TypeScript and static generation; compile only, never used for data writes; `/tmp/r1a-checks.RtsKXa/build.log`.
 - Diff review: the repair changes only read placement, preserving token/ack gates and every existing-record write boundary; `git diff --check` passed. No screen or flow was added; browser/full/a11y/compare checks stay with R1b–R1e, which are worth running for this shared code. No later task started.
+
+## R1b — Full end-to-end run (2026-11-10)
+
+**Complete failure list (one; assigned to R1c, unrepaired):**
+
+- **R1b-F1 — company export expects seven fields but the dialog shows eight.** Desktop test `tests/smoke/companies-settings.spec.ts:131`, “E1: export downloads the companies shown with the fields the list shows, and says when there's nothing to export”, fails at `:137:112`. With `seedAll()` fixtures, open `/companies?q=pelita`, then Export → Export Active. The one-prospect assertion passes; `expect(dialog.getByText(", as filtered now, in the current order, with the 7 fields the list shows:")).toBeVisible()` fails after 10,000 ms with `Error: element(s) not found`. The saved dialog snapshot instead says “1 active prospect, as filtered now, in the current order, with the 8 fields the list shows:” and lists Company, Status, Priority, Last action, Target date, Products, GBA trials, Next actions. The download, CSV contents and empty-export assertions after this line were not reached; R1c must inspect their expectations too. No repair or rerun in R1b.
+
+Run: `npm run test:smoke -- --reporter=list,json --output=/tmp/r1b-smoke.CZenky/artifacts`, exactly once against commit `e016925`; 2026-11-10 09:54:51–10:22:15 UTC, 27.4 minutes, exit **1**. All 389 cases completed their scheduled disposition: **379 passed, 9 skipped, 1 failed**, no flaky cases/retries and no global/harness errors.
+
+| Project | Passed | Skipped | Failed |
+|---|---:|---:|---:|
+| desktop | 293 | 9 | 1 |
+| phone (`@phone` only) | 37 | 0 | 0 |
+| jakarta (Plan, Today, Tasks) | 49 | 0 | 0 |
+
+All nine skips are desktop executions of phone-only cases: `tests/smoke/a11y.spec.ts:108`; `gallery-overlays.spec.ts:121,197`; `shell.spec.ts:67,89,113,119,136`; `tasks-screen.spec.ts:164` (remaining paths also under `tests/smoke/`). Their 390×844 phone-project counterparts passed; desktop is 1440×900.
+
+Evidence (retained on this machine):
+- Complete console log: `/tmp/r1b-smoke.CZenky/suite.log`; full machine-readable report: `/tmp/r1b-smoke.CZenky/report.json`; start/end timestamps and exit status are alongside them.
+- Failure snapshot: `/tmp/r1b-smoke.CZenky/artifacts/companies-settings-E1-expo-1e736-n-there-s-nothing-to-export-desktop/error-context.md` (observed dialog at lines 119–124); trace: the same directory's `trace.zip`.
+
+DECISION: Use a separate temporary Playwright output directory rather than its default `test-results/`, so the full run preserves G08/G09's tracked captures and keeps this failure evidence separate from R1c's reruns.
+
+Checks:
+- Safety: read the emulator/server setup and R1a findings before the run; no competing build/test was running and all five test ports were free. Used `next dev`, `NODE_ENV=development`, `NEXT_PUBLIC_USE_EMULATOR=1`, `FIRESTORE_EMULATOR_HOST=127.0.0.1:8180`, `demo-deus` emulator and invented fixtures; `MCP_TASK_PLANS_ENABLED=0`. No production data/settings or app code changed.
+- Report: recursively reconciled every JSON test result with the 389-case totals and the console failure list; all recorded attachment paths exist. After completion, no test listeners remained on 3100/8180/4400/4500/9150 and no repo-owned test browser/server/emulator remained.
+- Docs-only checks: verified evidence/plan links, unchanged prior tracked captures and `git diff --check`. No type/lint/unit/data/build rerun or new screenshot review was needed; R1d/R1e retain their audits. Only R1b is ticked; R1c and later tasks were not started.
