@@ -15,11 +15,12 @@ import { checkLegacyProtocol } from "./legacy-smoke.mjs";
 import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
 
 const selection = process.argv[2] ?? "--only=all";
-assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser)$/.test(selection),
-  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser|--only=task-plan-browser]");
+assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser|task-plan-visual)$/.test(selection),
+  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser|--only=task-plan-browser|--only=task-plan-visual]");
 const protocol = ["--only=all", "--only=protocol"].includes(selection);
 const browser = ["--only=all", "--only=browser"].includes(selection);
-const taskPlanBrowser = browser || selection === "--only=task-plan-browser";
+const planOnly = selection === "--only=task-plan-visual";
+const taskPlanBrowser = browser || selection === "--only=task-plan-browser" || planOnly;
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const HOST = "127.0.0.1";
@@ -223,7 +224,7 @@ try {
     if (taskPlanBrowser) {
       const { checkTaskPlanUI } = await import("./task-plan-ui.mjs");
       await checkTaskPlanUI({ client: generalClient, jiti, readAll, seed, clearAll,
-        root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST });
+        root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, planOnly });
     }
   }
   console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);

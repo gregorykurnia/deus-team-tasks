@@ -134,3 +134,18 @@ Checks:
 - Browser/captures: `npm run mcp:smoke -- --only=task-plan-browser` passed all 12 category/mode/shape cases, both Plan links and final saved-state comparisons; `/tmp/g08-browser.log`. All 26 key images and 20 crops were opened at original size; G08-V1 is assigned above.
 - Main-page flow: `npx playwright test tests/smoke/tasks.spec.ts --output=test-results/task-plan-page-spec` passed 12/12 (desktop/Jakarta); `/tmp/g08-tasks.log`. Only this required page spec ran; phone layout is checked in the focused harness, and the separate output folder preserves its gallery.
 - Build: `npm run build` passed compilation, TypeScript and static generation; `/tmp/g08-build.log`. Compile only; all browser/data runs used the emulator-enabled development app. Broader phase checks and actual Claude chat/real-phone acceptance remain in their existing later rows/owner steps.
+
+## G09 — Visual finish (2026-11-10)
+
+- Inspected all 26 original captures at 1440×900 and 390×844 before reading implementation, plus native-pixel boundary/overlap crops. [Picture observations and fault dispositions](../../test-results/task-plan-connector/G09-review.md).
+- **G08-V1 fixed:** Plan's Key points previews leaked a partial fourth line beneath their ellipsis. `ui/TaskRow.tsx` / `.module.css` now clamp an inner span, keeping padding on the existing outer surface. Task identity, categories, discoverable subtasks, readable dates/notes and fixed-action clearance remain intact. No additional confirmed fault or design gap.
+- Added `--only=task-plan-visual` to the existing MCP harness: only the affected Plan scenario runs on both shapes; original G08 captures remain unchanged. After images, crops, saved-state manifest, pixel comparison and regression logs are in `test-results/task-plan-connector/g09/`.
+- DECISION: Keep the three-line preview with an inner clamp rather than shorten notes; full saved text and the approved layout remain available.
+- DECISION: Recheck only Plan on desktop/phone rather than repeat all G08 flows; the existing emulator setup and guards still apply.
+
+Checks:
+- Regression before/after: initial run failed `desktop: Key points preview exposes text below three lines (74.53125px > 56.550000000000004px)`; repaired run passed both viewports, child links, exact dates/notes, unchanged task/company snapshots and console/network/layout audits.
+- Look/artifacts: opened both repaired images and native-pixel notes/base/edge crops; phone pixel changes are only the removed stray lines, desktop also has 21 negligible edge/shadow raster differences. Original and after image paths/dimensions checked.
+- Type/lint/unit: `npx tsc --noEmit`, ESLint on the three changed JS/TS files, and 978/978 unit tests passed. Initial foreground type/unit runs ended with SIGTERM/143; detached retries passed (`/tmp/g09-types-retry.log`, `/tmp/g09-lint.log`, `/tmp/g09-unit-retry.log`).
+- Build: `npm run build` passed compilation, TypeScript and static generation (`/tmp/g09-build.log`); compile only, no production data/settings touched.
+- Scope/diff: `git diff --check` passed. No save/load logic changed, so no data suite or unrelated page specs reran. Shared `ui/` changed: a full check is worth running in the already-planned phase review; G10 and later tasks remain untouched.

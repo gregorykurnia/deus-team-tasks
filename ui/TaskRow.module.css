@@ -595,15 +595,19 @@
 }
 
 .key {
-  display: -webkit-box;
   margin: 10px 0 0;
   padding: 9px 12px;
-  overflow: hidden;
   border-radius: var(--r-s);
   background: var(--fill);
   font-size: 13px;
   font-weight: var(--w-medium);
   color: var(--ink-2);
+}
+
+/* Keep padding outside the clamp so it cannot reveal part of a fourth line. */
+.key > span {
+  display: -webkit-box;
+  overflow: hidden;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }

@@ -1,0 +1,7 @@
+> deus-team-tasks@0.1.0 mcp:smoke
+> node scripts/mcp/smoke.mjs --only=task-plan-visual
+
+Checking all general-task categories with task-plan activation explicitly on.
+AssertionError [ERR_ASSERTION]: desktop: Key points preview exposes text below three lines (74.53125px > 56.550000000000004px)
+    at checkTaskPlanUI (file:///home/ubuntu/deus-team-tasks/scripts/mcp/task-plan-ui.mjs:215:48)
+    at async file:///home/ubuntu/deus-team-tasks/scripts/mcp/smoke.mjs:226:7

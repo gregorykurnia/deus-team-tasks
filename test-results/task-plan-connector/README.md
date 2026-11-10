@@ -1,5 +1,9 @@
 # G08 — Saved connector tasks in the app
 
+G09 inspected these originals and repaired the Plan notes preview. See [G09 observations and before/after
+evidence](G09-review.md); reproduce only the repaired states with
+`npm run mcp:smoke -- --only=task-plan-visual` (output: `g09/`).
+
 Invented data only, saved through `preview_task_plan` / `add_task_plan` on the real local MCP endpoint.
 The development app and all fixtures use Firestore at `127.0.0.1:8180`. Calendar responses are mocked;
 external browser requests fail the run. No production setting, account or record is involved.

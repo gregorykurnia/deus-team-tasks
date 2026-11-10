@@ -1,0 +1,8 @@
+
+> deus-team-tasks@0.1.0 mcp:smoke
+> node scripts/mcp/smoke.mjs --only=task-plan-visual
+
+Checking all general-task categories with task-plan activation explicitly on.
+Task-plan UI passed: desktop; Plan visual regression; 1 captures.
+Task-plan UI passed: phone; Plan visual regression; 1 captures.
+MCP smoke passed (task-plan-visual); 0 database-preservation comparisons; owned servers only.

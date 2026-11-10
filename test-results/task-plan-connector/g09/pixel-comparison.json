@@ -1,0 +1,54 @@
+[
+  {
+    "shape": "desktop",
+    "width": 1440,
+    "height": 900,
+    "changedPixels": 3646,
+    "xBounds": [
+      21,
+      1350
+    ],
+    "changedYBands": [
+      [
+        21,
+        23
+      ],
+      [
+        39,
+        43
+      ],
+      [
+        666,
+        671
+      ],
+      [
+        857,
+        863
+      ],
+      [
+        877,
+        879
+      ]
+    ]
+  },
+  {
+    "shape": "phone",
+    "width": 390,
+    "height": 844,
+    "changedPixels": 978,
+    "xBounds": [
+      86,
+      340
+    ],
+    "changedYBands": [
+      [
+        400,
+        405
+      ],
+      [
+        688,
+        693
+      ]
+    ]
+  }
+]

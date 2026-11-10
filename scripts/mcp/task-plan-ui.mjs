@@ -81,13 +81,13 @@ async function scrollNotes(points, position) {
 }
 
 export async function checkTaskPlanUI(context) {
-  const { root, origin, emulatorHost, readAll } = context;
+  const { root, origin, emulatorHost, readAll, planOnly = false } = context;
   // Check before any fixture write; inherited URLs must never redirect these helpers to live data.
   assert.equal(new URL(origin).hostname, "127.0.0.1");
   assert.equal(emulatorHost, "127.0.0.1:8180");
   assert.equal(process.env.FIRESTORE_EMULATOR_HOST, emulatorHost);
   const scenarios = await prepare(context);
-  const output = path.join(root, "test-results", "task-plan-connector");
+  const output = path.join(root, "test-results", "task-plan-connector", ...(planOnly ? ["g09"] : []));
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
   const before = sortRecords(await readAll("tasks", "tasks"));
@@ -119,7 +119,7 @@ export async function checkTaskPlanUI(context) {
         manifest.captures.push(`${name}/${id}.png`);
       };
       try {
-        for (const scenario of scenarios) {
+        for (const scenario of planOnly ? [] : scenarios) {
           const { kind, mode, parent, added, plan, oldChild } = scenario;
           await page.goto(added.url);
           const sheet = page.getByRole("dialog", { name: "Task", exact: true });
@@ -204,11 +204,24 @@ export async function checkTaskPlanUI(context) {
         await expect(childRow).toContainText(scenario.parent.task);
         await childRow.scrollIntoViewIfNeeded();
         await shoot("plan-parent-and-subtask", true);
+        // A clamped text box with vertical padding exposes the next line underneath its ellipsis.
+        // Measure the actual rendered box, so the G08 fourth-line fault fails before the repair.
+        const previews = await tasks.evaluate((el) => [...el.querySelectorAll("*")].flatMap((node) => {
+          const style = getComputedStyle(node);
+          if (style.webkitLineClamp !== "3") return [];
+          return [{ height: node.getBoundingClientRect().height, maxHeight: 3 * parseFloat(style.lineHeight) }];
+        }));
+        assert.equal(previews.length, 2, "Both long-note previews must be checked");
+        for (const preview of previews) assert.ok(preview.height <= preview.maxHeight + 1,
+          `${name}: Key points preview exposes text below three lines (${preview.height}px > ${preview.maxHeight}px)`);
+        if (planOnly) await childRow.locator("p").filter({ hasText: "Note 1:" }).screenshot({
+          path: path.join(directory, "key-points-crop.png"), animations: "disabled",
+        });
         await childRow.getByRole("link", { name: scenario.children[0].task, exact: true }).click();
         await verifyChild(page, scenario);
         assert.deepEqual(errors, [], `${name}: console/page/network errors`);
-        manifest.checks.push(`${name}/plan: parent breadcrumb, independent child link, no console/network/layout faults`);
-        console.log(`Task-plan UI passed: ${name}; all six new/append groups, saved reloads, Plan; ${manifest.captures.filter((file) => file.startsWith(`${name}/`)).length} captures.`);
+        manifest.checks.push(`${name}/plan: parent breadcrumb, independent child link, three whole preview lines, no console/network/layout faults`);
+        console.log(`Task-plan UI passed: ${name}; ${planOnly ? "Plan visual regression" : "all six new/append groups, saved reloads, Plan"}; ${manifest.captures.filter((file) => file.startsWith(`${name}/`)).length} captures.`);
       } catch (error) {
         await page.screenshot({ path: path.join(directory, "failure.png"), animations: "disabled" }).catch(() => {});
         throw error;

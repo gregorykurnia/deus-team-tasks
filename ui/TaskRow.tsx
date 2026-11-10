@@ -437,7 +437,7 @@ export function TaskDayRow(input: DayRowProps) {
             </span>
           </div>
         )}
-        {task.keyPoints && <p className={styles.key}>{task.keyPoints}</p>}
+        {task.keyPoints && <p className={styles.key}><span>{task.keyPoints}</span></p>}
       </div>
     </article>
   );
