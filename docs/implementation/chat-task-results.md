@@ -46,3 +46,19 @@ Checks:
 - Unit tests: `npm run test:unit -- --reporter=dot` passed 829/829; after correcting that table and adding two cases, five affected cases passed, then all 64 G03 cases passed after the final Unicode-order repair (235 total cases in this file).
 - Build: `npm run build` passed outside the sandbox using the G01-established escalation; compilation, TypeScript and static generation succeeded.
 - Review: inspected the preview/validation diff and confirmed `git diff --check` passed; no database I/O, tools, screens or production settings changed, so data/browser/look checks do not apply. A full check is worth running at the planned phase review for this shared logic.
+
+## G04 — Preview integrity (2026-11-10)
+
+- `lib/taskPlanToken.ts` is guarded by `server-only`: HMAC-SHA256 tokens use the existing server secret, expire after 30 minutes and bind validated/trimmed input, selected destination state and stable warning IDs. Fixed-length signature hashes use Node's constant-time comparison, including wrong-length signatures. Tokens contain hashes/times only, with no secret or supplied prose.
+- `lib/taskPlanToken.test.ts` covers 95 cases: six destination forms, controlled expiry/clock, missing/malformed/tampered/wrong-secret tokens, schema checks, changed input/state, all warning kinds, WIB midnight warnings and invalid-input rejection. Canonical fingerprints reuse G03's validator and preserve step order/text; refreshed timestamps/keys do not change operation identity. `vitest.config.mts` resolves the server marker to Next's empty module for Node tests only.
+- DECISION: Separate token/input verification from the current-preview warning/state gate rather than combining them, so G05 can recognize completed lost-response retries before their own records generate duplicate warnings.
+- DECISION: Bind hashes of input/state/sorted warning IDs rather than embedding preview text, keeping tokens bounded and supplied notes out of their payloads; acknowledgement order and repeated current IDs are harmless, but unknown IDs are rejected.
+
+Checks:
+
+- Type check: `npx tsc --noEmit` passed on final files; the build also passed TypeScript.
+- Lint: all three changed executable files passed, with the modified test file checked again after the hook repair.
+- Unit tests: initial `npm run test:unit -- --reporter=dot` passed all 831 existing cases; all 95 new cases reported `TypeError: The "buf1" argument must be an instance of ArrayBuffer, Buffer, TypedArray, or DataView.` because the new `beforeEach` returned the crypto spy and Vitest invoked it as cleanup. Stopped returning that function; `npx vitest run --project unit lib/taskPlanToken.test.ts --reporter=dot` then passed 95/95. Full initial failure output and affected-file rerun: `/tmp/g04-checks.dDBNSv/unit.log`, `/tmp/g04-checks.dDBNSv/token-unit.log`.
+- Build: `npm run build` passed with the G01-established sandbox escalation; compilation, TypeScript and static generation succeeded. Compile only, with no data-writing checks.
+- Diff review: checked secret handling, signature/expiry ordering, canonical binding, blocking errors and retry-gate separation; no unresolved findings. `git diff --check` passed.
+- Data/browser/look checks do not apply: no Firestore I/O, exposed tools or screens changed. A full check is worth running for shared logic at the planned phase review; production flags/settings are unchanged.

@@ -13,7 +13,11 @@ const dataTests = [dir, "lib"].flatMap((folder) => readdirSync(folder)
   .filter((file) => /\.data\.test\.tsx?$/.test(file) || /from "@\/lib\/firebase"|support\/emulator/.test(readFileSync(file, "utf8")));
 
 const shared = {
-  resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
+  resolve: { alias: {
+    "@": fileURLToPath(new URL(".", import.meta.url)),
+    // Node-only tests may import server modules; Next still enforces this boundary in app builds.
+    "server-only": fileURLToPath(new URL("./node_modules/next/dist/compiled/server-only/empty.js", import.meta.url)),
+  } },
 };
 
 export default defineConfig({
