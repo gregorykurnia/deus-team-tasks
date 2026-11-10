@@ -1,6 +1,13 @@
-// Pure general task-plan inputs. Destination lookups and writes belong to the server modules.
+// Pure general task-plan validation and discovery over supplied records. I/O belongs to server modules.
+import type { PipelineEntry } from "./clientTypes";
+import { companyGroup, normalizeKey } from "./companies";
+import type { CompanyGroup } from "./companies";
+import { matchingCompanies } from "./companySearch";
 import { isIsoDay } from "./dates";
+import { isDealDone, KIND_LABELS, kindOf } from "./kinds";
 import type { Kind } from "./kinds";
+import { isParked } from "./parking";
+import type { Task } from "./types";
 
 export const MAX_TASK_PLAN_STEPS = 499;
 // UTF-8 bytes of the complete JSON input, before trimming. Reject, never truncate.
@@ -36,6 +43,142 @@ export type TaskPlanValidation = { plan: TaskPlanInput | null; errors: string[] 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     && [Object.prototype, null].includes(Object.getPrototypeOf(value));
+}
+
+export interface TaskDestinationQuery {
+  kind: Kind;
+  companyQuery?: string;
+  companyId?: number;
+  parentQuery?: string;
+}
+
+export interface TaskCompanyMatch {
+  id: number;
+  name: string;
+  kind: Exclude<Kind, "internal">;
+  group: CompanyGroup;
+  status: string;
+  pic: string;
+  eligible: boolean;
+  reason?: string;
+}
+
+export interface TaskParentMatch {
+  id: string;
+  name: string;
+  kind: Kind;
+  companyId?: number;
+  companyName?: string;
+  taskGroup: string;
+  taskType: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface TaskDestinationMatches {
+  companies: TaskCompanyMatch[];
+  parents: TaskParentMatch[];
+  hasMore: { companies: boolean; parents: boolean };
+  guidance: string[];
+  errors: string[];
+}
+
+export interface TaskDestinationContext {
+  companies?: readonly PipelineEntry[]; // Internal work never needs company data.
+  tasks: readonly Task[];
+  today: string; // Explicit Asia/Jakarta day; no clock or database access in discovery.
+}
+
+// Company name searches only suggest matches. Only an explicit companyId enables parent lookup.
+export function findTaskDestinations(input: unknown, context: TaskDestinationContext): TaskDestinationMatches {
+  const result: TaskDestinationMatches = {
+    companies: [], parents: [], hasMore: { companies: false, parents: false }, guidance: [], errors: [],
+  };
+  if (!isRecord(input)) return { ...result, errors: ["Destination query must be an object."] };
+  for (const field of Object.keys(input)) {
+    if (!["kind", "companyQuery", "companyId", "parentQuery"].includes(field)) {
+      result.errors.push(`${field} is not a supported destination field.`);
+    }
+  }
+  const { kind, companyId } = input;
+  if (kind !== "prospect" && kind !== "client" && kind !== "internal") {
+    result.errors.push("kind must be prospect, client or internal.");
+  }
+  for (const field of ["companyQuery", "parentQuery"] as const) {
+    if (Object.hasOwn(input, field) && (typeof input[field] !== "string" || !input[field].trim())) {
+      result.errors.push(`${field} must be non-empty text when supplied.`);
+    }
+  }
+  if (kind === "internal") {
+    if (Object.hasOwn(input, "companyId") || Object.hasOwn(input, "companyQuery")) {
+      result.errors.push("Internal work forbids companyId and companyQuery.");
+    }
+  } else {
+    if (Object.hasOwn(input, "companyId") && (typeof companyId !== "number" || !Number.isSafeInteger(companyId) || companyId < 0)) {
+      result.errors.push("companyId must be the selected company's non-negative safe integer ID.");
+    }
+    if (!Object.hasOwn(input, "companyId") && !Object.hasOwn(input, "companyQuery")) {
+      result.errors.push("Supply companyQuery or an explicitly selected companyId for company work.");
+    }
+  }
+  if (result.errors.length) return result;
+
+  let company: PipelineEntry | undefined;
+  if (kind !== "internal") {
+    const companies = context.companies ?? [];
+    // An explicit ID takes precedence over a previous name query; never fall back to a name on a missing ID.
+    company = typeof companyId === "number" ? companies.find((c) => c.id === companyId) : undefined;
+    const matches = typeof companyId === "number"
+      ? (company ? [company] : []) : matchingCompanies(input.companyQuery as string, companies);
+    result.hasMore.companies = matches.length > 5;
+    result.companies = matches.slice(0, 5).map((candidate) => {
+      const actualKind = isDealDone(candidate) ? "client" : "prospect";
+      const eligible = actualKind === kind;
+      return {
+        id: candidate.id, name: candidate.company, kind: actualKind, group: companyGroup(candidate),
+        status: candidate.status ?? "", pic: candidate.pic ?? "", eligible,
+        ...(!eligible && { reason: `${candidate.company} belongs to ${KIND_LABELS[actualKind]}, not ${KIND_LABELS[kind as Kind]}. Choose that category or another company; no company was moved.` }),
+      };
+    });
+    if (typeof companyId === "number" && !company) {
+      result.errors.push(`Company ${companyId} was not found. Search again and select an existing company ID.`);
+      return result;
+    }
+    if (company && !result.companies[0].eligible) {
+      result.guidance.push(result.companies[0].reason!);
+      return result;
+    }
+    if (!company) {
+      result.guidance.push(matches.length
+        ? "Select a company by its numeric ID and matching category before searching main tasks; no destination was selected."
+        : "No companies matched. Refine companyQuery; no company was created or selected.");
+      if (result.hasMore.companies) result.guidance.push("More companies match; refine companyQuery to see the remaining matches.");
+      return result;
+    }
+  }
+
+  const companyMap = new Map(company ? [[company.id, company]] : []);
+  const key = typeof input.parentQuery === "string" ? normalizeKey(input.parentQuery) : "";
+  const parents = context.tasks.filter((task) =>
+    !task.completed && task.parentId == null && !isParked(task, context.today)
+    && (kind === "internal" ? task.linkedClientId == null : task.linkedClientId === companyId)
+    && kindOf(task, companyMap) === kind,
+  ).map((task) => {
+    const name = normalizeKey(task.task);
+    return { task, name, rank: !key || name === key ? 0 : name.startsWith(key) ? 1 : name.includes(key) ? 2 : 3 };
+  }).filter(({ rank }) => rank < 3)
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || a.task.id.localeCompare(b.task.id));
+  result.hasMore.parents = parents.length > 5;
+  result.parents = parents.slice(0, 5).map(({ task }) => ({
+    id: task.id, name: task.task, kind: kind as Kind,
+    ...(company && { companyId: company.id, companyName: company.company }),
+    taskGroup: task.taskGroup ?? "", taskType: task.taskType ?? "", startDate: task.startDate, endDate: task.endDate,
+  }));
+  if (result.hasMore.parents) result.guidance.push("More main tasks match; refine parentQuery to see the remaining matches.");
+  result.guidance.push(result.parents.length
+    ? "Select an existing main task by ID, or supply a title for a new main task; no main task was selected."
+    : "No eligible main tasks matched. Refine parentQuery or supply a title for a new main task.");
+  return result;
 }
 
 // Only explicit calendar days are accepted. Past dates are valid here; previews warn about them.

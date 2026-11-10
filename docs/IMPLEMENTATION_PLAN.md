@@ -43,7 +43,7 @@ Each row has one pick. The linked section contains files, required reading, edge
 | ID | Task and acceptance reference | Pick | Done |
 |---|---|---|---|
 | G01 | Define general task inputs and fictional fixtures; reject invalid dates and destinations. [G01](implementation/chat-task-connector.md#g01--inputs-and-fixtures) [no look] | Sol xHigh | 2026-11-10; 111 tests passed |
-| G02 | Find matching companies and eligible existing main tasks for each category. [G02](implementation/chat-task-connector.md#g02--destination-discovery) [no look] | Sol xHigh | |
+| G02 | Find matching companies and eligible existing main tasks for each category. [G02](implementation/chat-task-connector.md#g02--destination-discovery) [no look] | Sol xHigh | 2026-11-10; 60 discovery cases checked |
 | G03 | Build exact read-only previews for new and existing main tasks. [G03](implementation/chat-task-connector.md#g03--pure-previews) [no look] | Sol xHigh | |
 | G04 | Bind a save to its preview and acknowledged warnings. [G04](implementation/chat-task-connector.md#g04--preview-integrity) [no look] | Sol Max | |
 | G05 | Save atomically, preserve existing data and make retries safe. [G05](implementation/chat-task-connector.md#g05--atomic-saving-and-retries) [no look] | Sol Max | |

@@ -1,6 +1,7 @@
 // Pure connector planning: no database access, and no dates or owners guessed from prose.
 import type { PipelineEntry } from "./clientTypes";
 import { companyGroup } from "./companies";
+import { companyNameKey as companyKey, matchingCompanies } from "./companySearch";
 import { isIsoDay, todayIso } from "./dates";
 import { isDealDone } from "./kinds";
 import { newSubtask, subtasksOf } from "./subtasks";
@@ -78,12 +79,6 @@ export function validateFollowupPlan(input: unknown): Validation {
   return { plan: { companyId: companyId as number, shortAnswer, steps, ...(docUrl && { docUrl }), ...(existingParentId && { existingParentId }) }, errors: [] };
 }
 
-// Drop legal suffixes as whole words, preserving names such as "PTara" and "Tbkarya".
-function companyKey(name: string): string {
-  return name.toLowerCase().replace(/\./g, "").replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim().split(/\s+/).filter((word) => word !== "pt" && word !== "tbk").join("");
-}
-
 function openFollowups(company: PipelineEntry, tasks: readonly Task[]): Task[] {
   const title = companyKey(`${company.company} Follow Up`);
   return tasks.filter((t) => !t.completed && !t.parentId && t.linkedClientId === company.id && companyKey(t.task) === title)
@@ -100,19 +95,11 @@ export interface FollowupCompanyMatch {
 
 // Exact names first, then prefixes, then other substrings; ties are stable by name and ID.
 export function findCompanies(query: string, companies: readonly PipelineEntry[], tasks: readonly Task[] = []): FollowupCompanyMatch[] {
-  const key = companyKey(query);
-  if (!key) return [];
   const groups: Record<ReturnType<typeof companyGroup>, FollowupCompanyMatch["group"]> = {
     active: "Active", toApproach: "Raw", noOrNotNow: "On hold", dealDone: "Deal done",
   };
-  return companies.map((company) => {
-    const name = companyKey(company.company);
-    const rank = name === key ? 0 : name.startsWith(key) ? 1 : name.includes(key) ? 2 : 3;
-    return { company, name, rank };
-  }).filter(({ rank }) => rank < 3)
-    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || a.company.id - b.company.id)
-    .slice(0, 5)
-    .map(({ company }) => ({
+  return matchingCompanies(query, companies).slice(0, 5)
+    .map((company) => ({
       id: company.id, name: company.company, group: groups[companyGroup(company)], pic: company.pic ?? "",
       followups: openFollowups(company, tasks).map((parent) => ({ parent, subtasks: subtasksOf(tasks, parent.id) })),
     }));
