@@ -63,7 +63,7 @@ Each row has one pick. The linked section contains files, required reading, edge
 
 ## Owner steps after the run
 
-- [ ] O1 *owner*: read the final evidence/limitations; enable `MCP_TASK_PLANS_ENABLED=1` in Vercel Production and redeploy. The existing secret and URL stay the same. Rollback: unset this flag and redeploy; this hides only the new tools and does not remove saved tasks.
+- [x] O1 *owner*: completed on the owner's behalf, 2026-11-10. Read the final evidence/limitations, enabled `MCP_TASK_PLANS_ENABLED=1` in Vercel Production, and redeployed reviewed commit `00ed29c`. All six live tools were discovered; the existing secret and URL still work. [Activation record](implementation/chat-task-results.md#production-activation--2026-11-10). Rollback: unset this flag and redeploy; this hides only the new tools and does not remove saved tasks.
 - [ ] O2 *owner, when Claude is available*: confirm the custom connector is installed, reconnect/refresh it if the new tools are missing, and enable it in an ordinary chat. Test a real intended action in each category using the walkthrough, with the deal-follow-up skill off. These are owner acceptance actions, not automated production fixtures.
 - [ ] O3 *owner, optional for the generic flow*: upload the rebuilt `docs/skills/deus-deal-followup.zip` to update that skill; its old-tool fallback continues to work before activation. Previous-plan O2–O4 remain historical owner steps, not evidence they were performed.
 

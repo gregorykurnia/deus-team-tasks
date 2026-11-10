@@ -305,7 +305,7 @@ no automated test proves that Claude followed them in a real chat. That acceptan
 - **Artifacts/handoff:** three packaged files match source bytes, archive integrity passes, referenced captures/reports and 47 R1ec-preserved evidence hashes are intact, and local links/anchors and the final diff pass checks. New registration/direct calls/retained callbacks all require the exact flag value `1`; no production configuration was inspected or changed.
 - **Scope:** no new executable or screen change warrants another build, suite, audit or screenshot run. Existing company-status reads cannot join the separate tasks-project transaction; other writers can insert after task enumeration, so duplicate/similarity warnings reflect observed records. App-wide/cross-project locking remains intentionally outside this connector scope; deterministic receipts/IDs still protect exact retries.
 
-### Activation handoff — owner actions still unperformed
+### Activation handoff — status at R1 completion
 
 1. **O1:** Read this evidence and its limits, then set server-only `MCP_TASK_PLANS_ENABLED=1` in Vercel Production and redeploy. Keep the existing private connector URL/`MCP_SECRET`. **Rollback:** unset the flag and redeploy; the three general tools become unavailable, while legacy tools and saved records remain.
 2. **O2, when Claude is available:** [Install/reconnect the connector and start a fresh ordinary chat](../skills/README.md#add-or-refresh-the-connector), with the deal skill off. Use [the walkthrough](chat-task-walkthrough.md) with genuine intended actions in each category; check category/company/main-task selection, each step's dates/add/skip, warning confirmation and the returned task on desktop and a real phone. Illustrative transcripts and local fixtures are not completed owner acceptance.
@@ -313,3 +313,14 @@ no automated test proves that Claude followed them in a real chat. That acceptan
 
 DECISION: Reuse the full run plus scoped repair evidence rather than repeat broad checks; the final source and all 284 audit entries reconcile without a new executable change.
 DECISION: Leave activation and real-chat/phone acceptance to O1–O3 rather than enable production unattended; those owner actions are explicitly outside R1's build completion.
+
+## Production activation — 2026-11-10
+
+The owner subsequently requested activation. O1 is complete; O2 and optional O3 remain unperformed.
+
+- Confirmed Vercel project `prj_oMM6t9rk8Wo8MCgYU5hzpZ2qSgaW`, team `gregorykurnia-8729s-projects`, Production, and Git source `main` at reviewed commit `00ed29c5f9998a4dd7c5a16f0c3b866c9f91a728` before changing configuration.
+- Added only server-side Config `MCP_TASK_PLANS_ENABLED=1` in Production; redeployment `dpl_G7KcXCpBGue5yds4d6vxEPnFpQfi` completed its production build and reached Ready with `team.deushcs.com` assigned. No secret or connector URL was changed.
+- Live MCP initialize/tools-list at **13:24 UTC** returned all six tools: `find_company`, `preview_followup_plan`, `add_followup_plan`, `find_task_destinations`, `preview_task_plan`, `add_task_plan`; the same private credential had returned only the legacy three before activation.
+- Live metadata includes ordinary-chat instructions, marks preview as read-only and saving as a write, and requires `previewToken` and `acknowledgedWarnings` for the general save. Invalid credentials return 404 and the app homepage returns 200.
+- Verification used only initialize, initialized notification, tools-list and HTTP status requests: **zero data-tool calls, zero writes**. The existing emulator-based write/flow evidence above remains applicable; no production fixtures or new test suite was run.
+- The available browser is isolated and cannot access the owner's signed-in Claude session. Start a fresh Claude chat and enable Deus Team Tasks; reconnect if discovery still shows only three tools. Real chat/physical-phone acceptance remains O2; optional skill upload remains O3 and is unnecessary for the generic flow.
