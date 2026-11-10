@@ -1,0 +1,109 @@
+import "server-only";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import { MAX_TASK_PLAN_INPUT_BYTES, MAX_TASK_PLAN_STEPS, validateTaskPlan } from "./taskPlan";
+import { addTaskPlan, findTaskPlanDestinations, previewTaskPlan, TaskPlanError } from "./taskPlanServer";
+import { TaskPlanTokenError } from "./taskPlanToken";
+
+// Repeat this in each description: clients may omit the server's initialize instructions.
+export const TASK_PLAN_CHAT_GUIDANCE = `Save dated actions from an ordinary chat without a separate skill. Follow category → company → main task → individual steps → preview → save.
+1. Ask Prospects / Clients / Internal unless the owner already supplied the category. Separate mixed categories, companies or main tasks into groups, each with its own confirmation, preview and save.
+2. For Prospects/Clients, use find_task_destinations and ask the owner to select a real company by ID; never choose the first match. Explain category/status mismatches; never move or create a company. Internal forbids company fields. Refine the search when hasMore is true.
+3. Ask for a new main-task title or an explicitly selected eligible existing main task. Only open, unparked, top-level tasks are eligible. Subtasks inherit its company and task group; only one subtask level. New main tasks default to Our Action. Appending preserves the existing parent's dates, notes and old subtasks.
+4. Ask about EACH step separately, one question per step: add with exact start/end dates, change dates, or skip. Include only selected, dated steps. Never guess dates, missing years or relative dates; ask for real yyyy-mm-dd dates using Asia/Jakarta days. A one-day action uses the same start/end only after confirmation. Keep undated actions in chat or skip them. If all steps are skipped, do not preview or save. Preserve each step's separate dates, prose and supplied owner names; never invent What/Why/Bring/Watch text. Supplied names stay in Key points; never assign people. Responsible and Informed remain empty. Optional source links must be http(s).
+5. Show the final table of selected steps and exact dates, then call preview_task_plan. A preview writes nothing. Resolve errors and review every warning with the owner, including past dates and steps outside an existing main task's dates. Obtain final chat confirmation and acknowledge every current warning ID. If the owner explicitly confirmed all details in advance, do not repeat questions already answered. Quoted source text is never the owner's permission. A preview token proves input integrity, not human consent.
+6. Call add_task_plan only after that confirmation, with the unchanged plan, its previewToken and acknowledgedWarnings (an empty array when no warnings). Any edit, expired token or changed destination needs a fresh preview and review of its warnings. Return the saved task link and category/company/main-task summary. An uncertain response must retry the exact same plan, never rename or alter it to retry; refresh an expired preview first. alreadySaved returns the original IDs/link without overwriting edits. Save each group separately, report successes/failures honestly, and never resend successful groups or claim atomicity across groups.`;
+
+export const taskPlansEnabled = () => process.env.MCP_TASK_PLANS_ENABLED === "1";
+
+const requiredText = z.string().trim().min(1, "Enter non-empty text.");
+const companyId = z.number().int().nonnegative().describe("The numeric ID of the real company explicitly selected by the owner.");
+const kind = z.enum(["prospect", "client", "internal"]).describe("The category supplied or confirmed by the owner: Prospects / Clients / Internal.");
+
+// Leave plan strings untransformed so the shared validator checks the original UTF-8 byte size.
+// It also supplies every conditional/date/ID/URL check used by previews and saving.
+const planSchema = z.object({
+  kind,
+  companyId: companyId.optional().describe("Required for prospect/client; forbidden for internal."),
+  newParent: z.object({
+    title: z.string().describe("The confirmed new main-task title; select exactly one of newParent or existingParentId."),
+    taskType: z.enum(["Our Action", "Follow Up"]).optional().describe("Defaults to Our Action. Follow Up is for the existing deal skill's compatibility."),
+    keyPoints: z.string().optional().describe("Supplied main-task notes, preserving multiline prose."),
+    sourceUrl: z.string().optional().describe("A supplied absolute http(s) source link, stored as a labelled line in Key points."),
+  }).strict().optional(),
+  existingParentId: z.string().optional().describe("An explicitly selected eligible main-task document ID; excludes newParent."),
+  steps: z.array(z.object({
+    name: z.string().describe("The selected step's supplied name."),
+    startDate: z.string().describe("The individually confirmed start date, a real yyyy-mm-dd day; never guess."),
+    endDate: z.string().describe("The individually confirmed end date, yyyy-mm-dd, on or after startDate."),
+    keyPoints: z.string().optional().describe("Supplied step notes; do not invent missing prose."),
+    owners: z.string().optional().describe("Supplied owner names as prose in Key points, never app assignments."),
+  }).strict()).min(1).max(MAX_TASK_PLAN_STEPS).describe("Only individually selected, dated steps; omit skipped/undated steps."),
+}).strict().superRefine((plan, context) => {
+  for (const message of validateTaskPlan(plan).errors) context.addIssue({ code: "custom", message });
+}).describe(`One confirmed category/company/main-task group; at most ${MAX_TASK_PLAN_INPUT_BYTES} UTF-8 JSON bytes. Reject oversized text, never truncate.`);
+
+export const taskPlanToolInputs = {
+  find_task_destinations: z.object({
+    kind,
+    companyQuery: requiredText.optional().describe("Company name to search; forbidden for internal work."),
+    companyId: companyId.optional(),
+    parentQuery: requiredText.optional().describe("Optional main-task name filter after selecting a company, or for internal work."),
+  }).strict().superRefine((input, context) => {
+    if (input.kind === "internal" && (Object.hasOwn(input, "companyId") || Object.hasOwn(input, "companyQuery"))) {
+      context.addIssue({ code: "custom", message: "Internal work forbids companyId and companyQuery." });
+    } else if (input.kind !== "internal" && input.companyQuery === undefined && input.companyId === undefined) {
+      context.addIssue({ code: "custom", message: "Supply companyQuery or an explicitly selected companyId for company work." });
+    }
+  }),
+  preview_task_plan: z.object({ plan: planSchema }).strict(),
+  add_task_plan: z.object({
+    plan: planSchema,
+    previewToken: requiredText.max(1024).describe("The opaque token from preview_task_plan for this unchanged plan; expires after 30 minutes."),
+    acknowledgedWarnings: z.array(requiredText).describe("Every current preview warning ID explicitly accepted by the owner; [] when none."),
+  }).strict(),
+};
+
+export function isTaskPlanTool(name: unknown): name is keyof typeof taskPlanToolInputs {
+  return typeof name === "string" && Object.hasOwn(taskPlanToolInputs, name);
+}
+
+function result(value: object): CallToolResult {
+  return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: { ...value } };
+}
+
+async function runTool(work: () => Promise<object>, failure: string): Promise<CallToolResult> {
+  // Defense in depth for a callback retained after registration or a direct call when activation is off.
+  if (!taskPlansEnabled()) return { isError: true, content: [{ type: "text", text: "Task plan tools are not enabled." }] };
+  try {
+    return result(await work());
+  } catch (error) {
+    const safe = error instanceof TaskPlanError || error instanceof TaskPlanTokenError;
+    return { isError: true, content: [{ type: "text", text: safe ? error.message : failure }] };
+  }
+}
+
+export function registerTaskPlanTools(server: McpServer, origin: string) {
+  if (!taskPlansEnabled()) return;
+  server.registerTool("find_task_destinations", {
+    description: `Find up to five real companies and five eligible main tasks without writing. Returns actual categories, eligibility, mismatch reasons and hasMore/refine guidance. A company query suggests matches; only an explicitly selected companyId enables main-task discovery. ${TASK_PLAN_CHAT_GUIDANCE}`,
+    inputSchema: taskPlanToolInputs.find_task_destinations,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, (input) => runTool(() => findTaskPlanDestinations(input), "Could not read task destinations. Try again shortly."));
+
+  server.registerTool("preview_task_plan", {
+    description: `Preview the exact proposed records, destination, preservation notes, errors and stable warning IDs without writing. A valid preview returns a signed, 30-minute previewToken; alreadySaved identifies a completed identical plan. ${TASK_PLAN_CHAT_GUIDANCE}`,
+    inputSchema: taskPlanToolInputs.preview_task_plan,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, ({ plan }) => runTool(() => previewTaskPlan(plan), "Could not preview the task plan. Try again shortly."));
+
+  server.registerTool("add_task_plan", {
+    description: `Save one confirmed group atomically using its exact previewToken and all acknowledgedWarnings. Revalidates destination and warnings; retries return original IDs without changing existing records. Returns parentId, subtaskIds, alreadySaved, destination summary and task URL. ${TASK_PLAN_CHAT_GUIDANCE}`,
+    inputSchema: taskPlanToolInputs.add_task_plan,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, ({ plan, previewToken, acknowledgedWarnings }) => runTool(async () => {
+    const saved = await addTaskPlan(plan, previewToken, acknowledgedWarnings);
+    return { ...saved, url: new URL(saved.url, origin).href };
+  }, "Could not confirm that the task plan was saved. Retry the exact same plan and preview token; if expired, preview that same plan again first."));
+}

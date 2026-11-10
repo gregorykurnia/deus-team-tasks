@@ -143,6 +143,34 @@ describe("general task-plan transactions", () => {
     expect(await readAll("tasks", "tasks")).toHaveLength(5 + plan.steps.length + (plan.newParent ? 1 : 0));
   });
 
+  it("retries when an identical save commits between the receipt and member reads", async () => {
+    const plan = cases.find(({ name }) => name === "internal/append")!.plan;
+    const shown = await preview(plan);
+    let intervened = false;
+    vi.mocked(firestore.runTransaction).mockImplementation((database, update, settings) => real.runTransaction(database, async (transaction) => {
+      if (intervened) return update(transaction);
+      const get = transaction.get.bind(transaction);
+      let committed: ReturnType<typeof get> | undefined;
+      transaction.get = ((reference) => {
+        if (!intervened && reference.path.startsWith("settings/task-plan-")) {
+          intervened = true;
+          committed = get(reference).then(async (snapshot) => {
+            // Return the earlier absent receipt only after the other save has created every member.
+            await save(plan, shown);
+            return snapshot;
+          });
+          return committed;
+        }
+        return Promise.resolve(committed).then(() => get(reference));
+      }) as typeof transaction.get;
+      return update(transaction);
+    }, settings));
+    expect(await save(plan, shown)).toMatchObject({ alreadySaved: true, parentId: shown.parentId });
+    expect(intervened).toBe(true);
+    expect(await readAll("tasks", "tasks")).toHaveLength(5 + plan.steps.length);
+    expect(await readAll("tasks", "settings")).toHaveLength(1);
+  });
+
   it.each(cases)("lost-response retry precedes its own duplicate warnings and keeps subsequent edits: $name", async ({ plan }) => {
     const shown = await preview(plan);
     let responseLost = false;

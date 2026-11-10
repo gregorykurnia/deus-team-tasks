@@ -91,7 +91,12 @@ async function readOperation(transaction: Transaction, plan: TaskPlanInput, ids:
   const members = plan.newParent ? snapshots : children;
   const conflict = () => { throw new TaskPlanConflictError(); };
   if (!receipt.exists()) {
-    if (members.some((entry) => entry.exists())) conflict();
+    if (members.some((entry) => entry.exists())) {
+      // Parallel document reads can straddle another save's commit. A changed receipt makes the SDK
+      // abort/retry this transaction; a still-absent receipt means a genuine occupied-ID conflict.
+      await transaction.get(receipt.ref);
+      conflict();
+    }
     return { snapshots, saved: null };
   }
   if (receipt.data()!.version !== 1 || receipt.data()!.hash !== ids.operation) conflict();

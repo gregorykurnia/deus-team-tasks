@@ -47,7 +47,7 @@ Each row has one pick. The linked section contains files, required reading, edge
 | G03 | Build exact read-only previews for new and existing main tasks. [G03](implementation/chat-task-connector.md#g03--pure-previews) [no look] | Sol xHigh | 2026-11-10; 64 preview cases checked |
 | G04 | Bind a save to its preview and acknowledged warnings. [G04](implementation/chat-task-connector.md#g04--preview-integrity) [no look] | Sol Max | 2026-11-10; 95 integrity cases checked |
 | G05 | Save atomically, preserve existing data and make retries safe. [G05](implementation/chat-task-connector.md#g05--atomic-saving-and-retries) [no look] | Sol Max | 2026-11-10; 62 transaction cases passed |
-| G06 | Expose the three general tools behind the activation flag with chat instructions. [G06](implementation/chat-task-connector.md#g06--mcp-tools-and-chat-guidance) [no look] | Sol Max | |
+| G06 | Expose the three general tools behind the activation flag with chat instructions. [G06](implementation/chat-task-connector.md#g06--mcp-tools-and-chat-guidance) [no look] | Sol Max | 2026-11-10; 52 tool cases; 63 transaction cases |
 | G07 | Test the actual MCP protocol for all categories, failures and legacy compatibility. [G07](implementation/chat-task-connector.md#g07--protocol-checks) [no look] | Sol xHigh | |
 | G08 | Open connector-created tasks on desktop and phone and capture their saved state. [G08](implementation/chat-task-connector.md#g08--app-flow-and-captures) [look] | Sol xHigh | |
 | G09 | Inspect full-size captures and repair confirmed visual faults. [G09](implementation/chat-task-connector.md#g09--visual-finish) [look] | Astra xHigh | |
