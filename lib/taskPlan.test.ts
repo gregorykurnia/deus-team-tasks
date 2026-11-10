@@ -9,8 +9,8 @@ import type { PipelineEntry } from "./clientTypes";
 import { DEAL_DONE_STATUS } from "./companies";
 import { findCompanies } from "./followupPlan";
 import { companiesById, isDealDone, kindOf } from "./kinds";
-import { findTaskDestinations, MAX_TASK_PLAN_INPUT_BYTES, MAX_TASK_PLAN_STEPS, validateTaskPlan } from "./taskPlan";
-import type { TaskDestinationContext, TaskPlanInput } from "./taskPlan";
+import { buildTaskPlan, findTaskDestinations, MAX_TASK_PLAN_INPUT_BYTES, MAX_TASK_PLAN_STEPS, validateTaskPlan } from "./taskPlan";
+import type { TaskDestinationContext, TaskPlanContext, TaskPlanInput } from "./taskPlan";
 import type { Task } from "./types";
 
 const plan = () => structuredClone(TASK_PLAN_PROSPECT_NEW);
@@ -460,5 +460,293 @@ describe("fictional shared task-plan fixtures", () => {
     expect(result.plan?.newParent).toMatchObject({ title: `${TASK_PLAN_PROSPECT.company} Follow Up`, taskType: "Follow Up" });
     for (const label of ["What:", "Why:", "Bring:", "Watch:", "Done when:"]) expect(result.plan?.steps[0].keyPoints).toContain(label);
     expect(result.plan?.steps[0].owners).toBe("Fictional Nara with Fictional contact");
+  });
+});
+
+const previewContext = (overrides: Partial<TaskPlanContext> = {}): TaskPlanContext => ({
+  ...destinationContext(), parentId: "new-fictional-parent", order: 1000, ...overrides,
+});
+const previewForms = [
+  { input: TASK_PLAN_PROSPECT_NEW, parent: TASK_PLAN_PROSPECT_PARENT, category: "Prospects" },
+  { input: TASK_PLAN_CLIENT_NEW, parent: TASK_PLAN_CLIENT_PARENT, category: "Clients" },
+  { input: TASK_PLAN_INTERNAL_NEW, parent: TASK_PLAN_INTERNAL_PARENT, category: "Internal" },
+];
+
+describe("exact read-only task previews", () => {
+  it.each(previewForms)("builds exactly one new main task and the selected steps for $category", ({ input, category }) => {
+    const preview = buildTaskPlan(input, previewContext());
+    const companyId = input.companyId;
+    expect(preview.errors).toEqual([]);
+    expect(preview.warnings).toEqual([]);
+    expect(preview.canWrite).toBe(true);
+    expect(preview.parentId).toBe("new-fictional-parent");
+    expect(preview.parent).toEqual({
+      task: input.newParent!.title, taskType: "Our Action", ...(companyId !== undefined && { linkedClientId: companyId }),
+      responsible: [], informed: [], order: 1000,
+      startDate: "2026-12-28", endDate: "2027-01-05",
+      keyPoints: input.kind === "prospect" ? `${TASK_PLAN_LONG_TEXT}\n\nSource: https://example.com/fictional-pilot` : "",
+    } satisfies Partial<Task>);
+    expect(preview.subtasks).toEqual(input.steps.map((step, i) => ({
+      task: step.name, parentId: preview.parentId, linkedClientId: companyId, taskGroup: undefined,
+      responsible: [], informed: [], keyPoints: [step.keyPoints, step.owners && `Owner: ${step.owners}`].filter(Boolean).join("\n\n"),
+      startDate: step.startDate, endDate: step.endDate, order: 1001 + i,
+    })));
+    expect(preview.destination).toMatchObject({
+      kind: input.kind, category,
+      company: companyId === undefined ? null : { id: companyId },
+      parent: { id: preview.parentId, name: input.newParent!.title, mode: "new", startDate: "2026-12-28", endDate: "2027-01-05" },
+    });
+    expect(preview.preservationNotes.join(" ")).toContain("each subtask keeps its own dates");
+  });
+
+  it.each(previewForms)("appends only new subtasks with independent people/dates/text for $category", ({ input, parent, category }) => {
+    const oldChild: Task = { ...parent, id: "old-child", parentId: parent.id, completed: true, order: 1500 };
+    const tasks = [structuredClone(parent), oldChild];
+    const before = structuredClone(tasks);
+    const preview = buildTaskPlan({ kind: input.kind, ...(input.companyId !== undefined && { companyId: input.companyId }),
+      existingParentId: parent.id, steps: input.steps }, previewContext({ tasks, parentId: undefined }));
+    expect(preview.errors).toEqual([]);
+    expect(preview.warnings).toEqual([]);
+    expect(preview.canWrite).toBe(true);
+    expect(preview.parent).toBeNull();
+    expect(preview.parentId).toBe(parent.id);
+    expect(preview.subtasks).toEqual(input.steps.map((step, i) => ({
+      task: step.name, parentId: parent.id, linkedClientId: parent.linkedClientId, taskGroup: parent.taskGroup,
+      responsible: [], informed: [], keyPoints: [step.keyPoints, step.owners && `Owner: ${step.owners}`].filter(Boolean).join("\n\n"),
+      startDate: step.startDate, endDate: step.endDate, order: 1501 + i,
+    })));
+    expect(preview.destination).toMatchObject({ kind: input.kind, category,
+      parent: { id: parent.id, name: parent.task, mode: "existing", taskGroup: parent.taskGroup, startDate: parent.startDate, endDate: parent.endDate },
+    });
+    expect(preview).not.toHaveProperty("parentUpdate");
+    expect(preview.preservationNotes.join(" ")).toContain("Every existing main-task field stays unchanged");
+    expect(tasks).toEqual(before);
+  });
+
+  it("uses the full selected range even when steps arrive out of date order", () => {
+    const steps = [...TASK_PLAN_INTERNAL_NEW.steps].reverse();
+    const preview = buildTaskPlan({ ...TASK_PLAN_INTERNAL_NEW, steps }, previewContext());
+    expect(preview.parent).toMatchObject({ startDate: "2026-12-28", endDate: "2027-01-05" });
+    expect(preview.subtasks.map((step) => [step.task, step.startDate, step.endDate])).toEqual(steps.map((step) => [step.name, step.startDate, step.endDate]));
+  });
+
+  it("preserves deal-skill title/type, detailed prose and the parent's labelled source link", () => {
+    const preview = buildTaskPlan(TASK_PLAN_DEAL_SKILL, previewContext());
+    expect(preview.parent).toMatchObject({
+      task: `${TASK_PLAN_PROSPECT.company} Follow Up`, taskType: "Follow Up",
+      keyPoints: `${TASK_PLAN_DEAL_SKILL.newParent!.keyPoints}\n\nSource: https://example.com/fictional-deal`,
+    });
+    expect(preview.subtasks[0].keyPoints).toBe(`${TASK_PLAN_DEAL_SKILL.steps[0].keyPoints}\n\nOwner: ${TASK_PLAN_DEAL_SKILL.steps[0].owners}`);
+    for (const label of ["What:", "Why:", "Bring:", "Watch:", "Done when:"]) expect(preview.subtasks[0].keyPoints).toContain(label);
+  });
+
+  it("trims only surrounding whitespace and adds no absent prose, owner, source or assignment", () => {
+    const preview = buildTaskPlan({ kind: "internal", newParent: { title: "  Keep the wording  ", keyPoints: "  \n " },
+      steps: [{ name: "  Plain action  ", startDate: "2026-11-10", endDate: "2026-11-10" },
+        { name: "Notes", startDate: "2026-11-10", endDate: "2026-11-10", keyPoints: " \nFirst line\n  Indented line\n ", owners: " Fictional Nara\n  with Fictional Bima " }],
+    }, previewContext());
+    expect(preview.parent).toMatchObject({ task: "Keep the wording", keyPoints: "", responsible: [], informed: [] });
+    expect(preview.parent).not.toHaveProperty("linkedClientId");
+    expect(preview.subtasks[0]).toMatchObject({ task: "Plain action", keyPoints: "", responsible: [], informed: [] });
+    expect(preview.subtasks[1].keyPoints).toBe("First line\n  Indented line\n\nOwner: Fictional Nara\n  with Fictional Bima");
+    expect(preview.warnings).toEqual([]); // Today is not past.
+  });
+
+  it.each([TASK_PLAN_INTERNAL_NEW, TASK_PLAN_INTERNAL_APPEND])("does not access company data for Internal (%#)", (input) => {
+    const context = previewContext();
+    Object.defineProperty(context, "companies", { get() { throw new Error("company database unavailable"); } });
+    expect(buildTaskPlan(input, context).canWrite).toBe(true);
+  });
+
+  it("does not mutate frozen inputs, companies, parents or old subtasks; outputs share no mutable records", () => {
+    const freeze = <T>(value: T): T => {
+      if (value && typeof value === "object") { Object.values(value).forEach(freeze); Object.freeze(value); }
+      return value;
+    };
+    const input = freeze(structuredClone(TASK_PLAN_INTERNAL_APPEND));
+    const context = freeze(previewContext());
+    const before = structuredClone(context);
+    const preview = buildTaskPlan(input, context);
+    expect(preview.canWrite).toBe(true);
+    preview.plan!.steps[0].keyPoints = "changed result";
+    preview.subtasks[0].responsible.push("changed result");
+    preview.destination!.parent.name = "changed result";
+    expect(context).toEqual(before);
+    expect(input).toEqual(TASK_PLAN_INTERNAL_APPEND);
+  });
+});
+
+describe("task preview destination and input errors", () => {
+  const noWrites = (input: unknown, context: TaskPlanContext, error: string) => {
+    const preview = buildTaskPlan(input, context);
+    expect(preview.errors.join(" ")).toContain(error);
+    expect(preview).toMatchObject({ canWrite: false, parent: null, subtasks: [], destination: null });
+  };
+
+  it.each([TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW])("rejects missing selected companies ($kind)", (input) => {
+    noWrites(input, previewContext({ companies: [] }), "was not found");
+  });
+  it.each([TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW])("rejects changed company categories instead of moving them ($kind)", (input) => {
+    const company = input.kind === "prospect" ? { ...TASK_PLAN_PROSPECT, status: DEAL_DONE_STATUS } : { ...TASK_PLAN_CLIENT, status: "" };
+    noWrites(input, previewContext({ companies: [company] }), "belongs to");
+  });
+  it("rejects a missing parent without falling back to a similar title", () => {
+    noWrites(TASK_PLAN_INTERNAL_APPEND, previewContext({ tasks: [{ ...TASK_PLAN_INTERNAL_PARENT, id: "another-parent" }] }), "was not found");
+  });
+  it.each([
+    { changes: { completed: true }, error: "completed" },
+    { changes: { parkedAt: 1 }, error: "parked" },
+    { changes: { parkedAt: 1, parkedUntil: "2026-11-11" }, error: "parked" },
+    { changes: { parentId: "another-parent" }, error: "top-level" },
+    { changes: { parentId: "missing-parent" }, error: "top-level" },
+    { changes: { parentId: "" }, error: "top-level" },
+    { changes: { linkedClientId: 777777 }, error: "no longer belongs" },
+  ])("rejects stale/ineligible selected parents ($error, $changes)", ({ changes, error }) => {
+    noWrites(TASK_PLAN_INTERNAL_APPEND, previewContext({ tasks: [{ ...TASK_PLAN_INTERNAL_PARENT, ...changes }] }), error);
+  });
+  it.each([undefined, TASK_PLAN_CLIENT.id, 777777])("rejects a parent moved from the selected company (%s)", (linkedClientId) => {
+    const input = { kind: "prospect", companyId: TASK_PLAN_PROSPECT.id, existingParentId: TASK_PLAN_PROSPECT_PARENT.id, steps: plan().steps };
+    noWrites(input, previewContext({ tasks: [{ ...TASK_PLAN_PROSPECT_PARENT, linkedClientId }] }), "no longer belongs");
+  });
+  it.each(["2026-11-10", "2026-11-09"])("accepts parked tasks whose return day has arrived (%s)", (parkedUntil) => {
+    expect(buildTaskPlan(TASK_PLAN_INTERNAL_APPEND, previewContext({ tasks: [{ ...TASK_PLAN_INTERNAL_PARENT, parkedAt: 1, parkedUntil }] })).canWrite).toBe(true);
+  });
+  it.each(["", "next Friday", "2026-02-29"])("rejects an invalid supplied WIB day (%s)", (today) => {
+    noWrites(TASK_PLAN_INTERNAL_NEW, previewContext({ today }), "today");
+  });
+  it.each([undefined, "", "   ", "tasks/nested", ".", "..", "__reserved__", "x".repeat(1501), "\ud800", "fixture-internal-parent"])("rejects invalid or occupied caller-allocated IDs (%#)", (parentId) => {
+    noWrites(TASK_PLAN_INTERNAL_NEW, previewContext({ parentId }), "parentId");
+  });
+  it.each([NaN, Infinity, Number.MAX_SAFE_INTEGER])("rejects unusable ordering (%s)", (order) => {
+    noWrites(TASK_PLAN_INTERNAL_NEW, previewContext({ order }), "Task order");
+  });
+  it.each([
+    { steps: [] },
+    { steps: [{ name: "", startDate: "", endDate: "" }] },
+    { steps: [TASK_PLAN_INTERNAL_NEW.steps[0], { name: "Bad date", startDate: "2026-02-29", endDate: "2026-12-31" }] },
+  ])("exposes no partial writes with zero/all/some invalid steps (%#)", ({ steps }) => {
+    noWrites({ ...TASK_PLAN_INTERNAL_NEW, steps }, previewContext(), "plan.steps");
+  });
+});
+
+describe("stable task preview warnings", () => {
+  it("warns about each past date, preserves exact dates and still exposes the confirmable proposal", () => {
+    const input = { ...TASK_PLAN_INTERNAL_NEW, steps: [{ name: "Past action", startDate: "2026-11-08", endDate: "2026-11-09" }] };
+    const preview = buildTaskPlan(input, previewContext());
+    expect(preview.canWrite).toBe(true);
+    expect(preview.warnings).toMatchObject([
+      { id: "past-date:0:startDate", code: "past-date", step: 0, field: "startDate", message: expect.stringContaining("confirm this exact date") },
+      { id: "past-date:0:endDate", code: "past-date", step: 0, field: "endDate" },
+    ]);
+    expect(preview.subtasks[0]).toMatchObject({ startDate: "2026-11-08", endDate: "2026-11-09" });
+  });
+
+  it("warns for steps before/after an existing parent's bounds and never updates that parent", () => {
+    const steps = [{ name: "Earlier", startDate: "2026-11-30", endDate: "2026-12-01" },
+      { name: "Later", startDate: "2027-01-31", endDate: "2027-02-01" }];
+    const preview = buildTaskPlan({ ...TASK_PLAN_INTERNAL_APPEND, steps }, previewContext());
+    expect(preview.warnings).toMatchObject([
+      { id: "outside-parent-range:0:startDate", code: "outside-parent-range", step: 0, field: "startDate", taskId: TASK_PLAN_INTERNAL_PARENT.id },
+      { id: "outside-parent-range:1:endDate", code: "outside-parent-range", step: 1, field: "endDate", taskId: TASK_PLAN_INTERNAL_PARENT.id },
+    ]);
+    expect(preview.warnings.every((warning) => warning.message.includes("main task's dates will stay unchanged"))).toBe(true);
+    expect(preview.parent).toBeNull();
+    expect(preview.subtasks.map(({ startDate, endDate }) => [startDate, endDate])).toEqual(steps.map(({ startDate, endDate }) => [startDate, endDate]));
+    expect(preview.destination!.parent).toMatchObject({ startDate: "2026-12-01", endDate: "2027-01-31" });
+  });
+
+  it.each([
+    { startDate: "", endDate: "", warnings: 0 },
+    { startDate: "invalid legacy date", endDate: "", warnings: 0 },
+    { startDate: "2027-01-01", endDate: "", warnings: 1 },
+    { startDate: "", endDate: "2026-12-31", warnings: 3 },
+  ])("checks only existing parent boundaries that are real dates (%#)", ({ startDate, endDate, warnings }) => {
+    const preview = buildTaskPlan(TASK_PLAN_INTERNAL_APPEND, previewContext({ tasks: [{ ...TASK_PLAN_INTERNAL_PARENT, startDate, endDate }] }));
+    expect(preview.canWrite).toBe(true);
+    expect(preview.warnings.filter(({ code }) => code === "outside-parent-range")).toHaveLength(warnings);
+    expect(preview.destination!.parent).toMatchObject({ startDate, endDate });
+  });
+
+  it("keeps all duplicate selected steps including differing notes/owners, asking for an explicit choice", () => {
+    const step = TASK_PLAN_INTERNAL_NEW.steps[0];
+    const steps = [step, { ...step, name: ` ${step.name.toUpperCase().replaceAll(" ", "  ")} `, keyPoints: "Different notes", owners: "Different owner" }, { ...step }];
+    const preview = buildTaskPlan({ ...TASK_PLAN_INTERNAL_NEW, steps }, previewContext());
+    expect(preview.warnings).toMatchObject([
+      { id: "duplicate-step:1:input:0", code: "duplicate-step", step: 1, relatedStep: 0, message: expect.stringContaining("Ask the owner to choose") },
+      { id: "duplicate-step:2:input:0", code: "duplicate-step", step: 2, relatedStep: 0 },
+    ]);
+    expect(preview.subtasks).toHaveLength(3);
+    expect(preview.subtasks[1].keyPoints).toBe("Different notes\n\nOwner: Different owner");
+    expect(preview.canWrite).toBe(true);
+  });
+
+  it("warns for matching old subtasks regardless of completion, without treating them as a saved operation", () => {
+    const step = TASK_PLAN_INTERNAL_NEW.steps[0];
+    const matching: Task = { ...TASK_PLAN_INTERNAL_PARENT, id: "child:with:punctuation", parentId: TASK_PLAN_INTERNAL_PARENT.id,
+      task: step.name.toUpperCase(), startDate: step.startDate, endDate: step.endDate, completed: true };
+    const unrelated = [{ ...matching, id: "different-date", endDate: "2027-01-05" }, { ...matching, id: "another-parent-child", parentId: "other-parent" },
+      { ...matching, id: "different-name", task: "A different step" }, { ...matching, id: "grandchild", parentId: matching.id }];
+    const preview = buildTaskPlan(TASK_PLAN_INTERNAL_APPEND, previewContext({ tasks: [TASK_PLAN_INTERNAL_PARENT, matching, ...unrelated] }));
+    expect(preview.warnings).toMatchObject([
+      { id: "duplicate-step:0:task:child%3Awith%3Apunctuation", code: "duplicate-step", step: 0, taskId: matching.id, message: expect.stringContaining("add it again") },
+    ]);
+    expect(preview.subtasks).toHaveLength(2);
+    expect(preview.canWrite).toBe(true);
+    expect(preview).not.toHaveProperty("alreadySaved"); // Stable operation identity belongs to the later write path.
+  });
+
+  it.each(["Agree the fictional pilot", "AGREE  THE FICTIONAL PILOT!", "Agree the fictional pilot phase two", "Fictional pilot"])("asks about a similar new-parent title without auto-appending (%s)", (task) => {
+    const existing = { ...TASK_PLAN_PROSPECT_PARENT, task };
+    const preview = buildTaskPlan(TASK_PLAN_PROSPECT_NEW, previewContext({ tasks: [existing] }));
+    expect(preview.warnings).toMatchObject([{ code: "similar-parent", taskId: existing.id, message: expect.stringContaining("keep a separate new main task") }]);
+    expect(preview.parent?.task).toBe(TASK_PLAN_PROSPECT_NEW.newParent!.title);
+    expect(preview.parentId).toBe("new-fictional-parent");
+    expect(preview.subtasks.every((step) => step.parentId === preview.parentId)).toBe(true);
+    expect(preview.canWrite).toBe(true);
+  });
+
+  it("only compares eligible titles in the selected destination, excluding word fragments", () => {
+    const base = { ...TASK_PLAN_PROSPECT_PARENT, task: TASK_PLAN_PROSPECT_NEW.newParent!.title };
+    const tasks = [{ ...base, id: "completed", completed: true }, { ...base, id: "parked", parkedAt: 1 },
+      { ...base, id: "nested", parentId: "missing-parent" }, { ...base, id: "different-company", linkedClientId: TASK_PLAN_CLIENT.id },
+      { ...base, id: "orphan", linkedClientId: 777777 }, { ...base, id: "internal", linkedClientId: undefined },
+      { ...base, id: "unrelated", task: "Different main task" }, { ...base, id: "word-fragment", task: "pilotage" }];
+    expect(buildTaskPlan(TASK_PLAN_PROSPECT_NEW, previewContext({ tasks })).warnings).toEqual([]);
+    expect(buildTaskPlan(TASK_PLAN_INTERNAL_NEW, previewContext({ tasks: [{ ...tasks[4], task: TASK_PLAN_INTERNAL_NEW.newParent!.title }] })).warnings).toEqual([]);
+  });
+
+  it("keeps warning IDs/order and destination snapshots stable when supplied records are shuffled", () => {
+    const task = TASK_PLAN_PROSPECT_PARENT;
+    // These distinct Unicode IDs collate equally in some locales; their binary order must still be stable.
+    const tasks = [{ ...task, id: "é", task: TASK_PLAN_PROSPECT_NEW.newParent!.title }, { ...task, id: "e\u0301", task: "Fictional pilot" }];
+    const context = previewContext({ tasks });
+    const preview = buildTaskPlan(TASK_PLAN_PROSPECT_NEW, context);
+    expect(preview.warnings).toHaveLength(2);
+    expect(new Set(preview.warnings.map(({ id }) => id)).size).toBe(2);
+    expect(preview).toEqual(buildTaskPlan(TASK_PLAN_PROSPECT_NEW, { ...context, tasks: [...tasks].reverse(), companies: [...context.companies!].reverse() }));
+    expect(preview).toEqual(buildTaskPlan(TASK_PLAN_PROSPECT_NEW, context));
+  });
+
+  it("keeps multiple existing-duplicate/date warning IDs unique and stable across record order", () => {
+    const step = { name: "Past duplicated step", startDate: "2026-11-08", endDate: "2026-11-09" };
+    const tasks = [TASK_PLAN_INTERNAL_PARENT, ...["child-one", "child-two"].map((id) => ({
+      ...TASK_PLAN_INTERNAL_PARENT, id, parentId: TASK_PLAN_INTERNAL_PARENT.id, task: step.name, startDate: step.startDate, endDate: step.endDate,
+    }))];
+    const input = { ...TASK_PLAN_INTERNAL_APPEND, steps: [step, step] };
+    const preview = buildTaskPlan(input, previewContext({ tasks }));
+    expect(preview.warnings).toHaveLength(13); // Eight date warnings, one selected duplicate, four existing duplicates.
+    expect(new Set(preview.warnings.map(({ id }) => id)).size).toBe(preview.warnings.length);
+    expect(preview).toEqual(buildTaskPlan(input, previewContext({ tasks: [...tasks].reverse() })));
+    expect(preview.subtasks).toHaveLength(2);
+  });
+
+  it("previews all 499 selected steps without silently dropping repeated work", () => {
+    const step = { name: "Selected action", startDate: "2026-12-31", endDate: "2026-12-31" };
+    const preview = buildTaskPlan({ ...TASK_PLAN_INTERNAL_NEW, steps: Array(MAX_TASK_PLAN_STEPS).fill(step) }, previewContext());
+    expect(preview.canWrite).toBe(true);
+    expect(preview.parent).not.toBeNull();
+    expect(preview.subtasks).toHaveLength(499);
+    expect(preview.warnings).toHaveLength(498);
+    expect(preview.subtasks.at(-1)).toMatchObject({ task: step.name, order: 1499 });
   });
 });

@@ -31,3 +31,18 @@ Checks:
 - Unit tests: `npm run test:unit` ran 767 cases: 766 passed, one new partial-query assertion failed because its query correctly matched both fictional companies. Narrowed that test's query, then `npx vitest run --project unit lib/taskPlan.test.ts -t 'matches exact, partial'` passed all six affected cases. All 60 new discovery cases and 707 existing cases have passing coverage across those runs; no executable behavior changed to fix the assertions.
 - Build: `npm run build` passed with the sandbox escalation already established by G01; compilation, TypeScript and static generation succeeded.
 - Review: inspected discovery filtering, summary isolation and the legacy extraction diff; `git diff --check` passed. No screen or database I/O changes, so data/browser checks do not apply. A full check is worth running for shared logic at the planned phase review.
+
+## G03 — Pure previews (2026-11-10)
+
+- `buildTaskPlan` in `lib/taskPlan.ts` returns normalized input, destination/category/company/main-task state, exact new records, preservation notes and stable warning IDs; no clock, random IDs or I/O. Existing parents have no update document; all new people arrays stay empty, with supplied names in Key points.
+- `lib/taskPlan.test.ts` adds 64 cases for all six destination forms, independent dates/group inheritance, unchanged frozen records, long/deal-skill prose and source links, stale/closed/wrong-category targets, warning choices, Unicode-stable warning ordering, invalid/empty steps and the 499-step boundary. Duplicate steps remain in the proposal; saved-operation identity is reserved for G05.
+- DECISION: Similar titles use normalized exact/whole-phrase matching rather than fuzzy scoring, keeping confirmation prompts deterministic without choosing a destination.
+- DECISION: Label parent links `Source:` rather than `Claude Doc:` because ordinary chat plans may cite any supplied http(s) source.
+
+Checks:
+
+- Type check: first run caught `TS2345` in an array-row test table; changed it to object rows, then `npx tsc --noEmit` passed (the build also passed TypeScript).
+- Lint: `npx eslint lib/taskPlan.ts lib/taskPlan.test.ts` passed on the final code.
+- Unit tests: `npm run test:unit -- --reporter=dot` passed 829/829; after correcting that table and adding two cases, five affected cases passed, then all 64 G03 cases passed after the final Unicode-order repair (235 total cases in this file).
+- Build: `npm run build` passed outside the sandbox using the G01-established escalation; compilation, TypeScript and static generation succeeded.
+- Review: inspected the preview/validation diff and confirmed `git diff --check` passed; no database I/O, tools, screens or production settings changed, so data/browser/look checks do not apply. A full check is worth running at the planned phase review for this shared logic.
