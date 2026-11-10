@@ -1,62 +1,80 @@
-# Deal follow-up → Prospects tasks (MCP connector)
+# Any chat → dated subtasks in Prospects, Clients or Internal
 
-Written 2026-11-09 (Opus 5.5 High). Built by `autorun all`, one task per fresh session, on `main` (this project's rule;
-every push goes live). The connector stays off in production until the owner sets `MCP_SECRET` (O1), so a half-built
-state can't be reached.
+Prepared 2026-11-10 for `autorun all`. This is the active plan; the completed deal-follow-up build and its
+outstanding owner steps are preserved in [the previous plan](implementation/deal-followup-2026-11-09.md).
+All task picks are GPT because Claude is out of quota. This plan is written, not implemented.
 
-## Goal
-In a claude.ai chat, after the `deus-deal-followup` skill writes a deal plan, Claude offers to add it to Deus Team
-Tasks. It finds the company, shows the steps with their dates and owners, and writes only after the owner confirms
-the company and every date. Result, for the Mayora sample: one task **"Mayora Indah Follow Up"** linked to the
-company (so it shows under Prospects), with six subtasks ("Ask budget date and owner" 2026-11-10 → 11-13, …, "Ask for a
-2027 budget slot" 2027-02-08), each holding its What / Why / Bring / Watch / Done when in Key points.
+## Outcome
 
-**Won't change:** task, company and subtask storage (existing fields only: `task`, `taskType`, `keyPoints`,
-`startDate`, `endDate`, `responsible`, `linkedClientId`, `parentId`, `order`), any screen, Firestore rules.
+With Deus Team Tasks enabled in an ordinary Claude chat, ask to save dated actions. Claude asks where they
+belong, which company/main task when needed, and confirms or skips each subtask individually. It previews
+the selected actions, saves them, and returns a link. The deal-follow-up skill is not required for this path.
+From the app's main navigation: **Tasks → All tasks → Prospects / Clients / Internal → main task → subtasks**.
+The returned link opens that main task directly. Existing Plan views show its dated subtasks as they do today.
 
-## Decisions (defaults; the owner can override before the run)
-- **Where it runs:** a remote MCP server inside this Next.js app, `app/api/mcp/[secret]/route.ts`, Streamable HTTP,
-  stateless (no Redis). Added in claude.ai as a custom connector; works in claude.ai web, phone and Claude Code.
-- **Access:** the URL carries a long random secret (`MCP_SECRET` env var, constant-time compare). No secret set, or a
-  wrong one → 404. Writes use the same Firebase web config the app uses.
-- **Tools (three):**
-  1. `find_company(query)` → up to 5 matches from the pipeline: id, name, group (Active / Raw / On hold / Deal done),
-     PIC, and any open "<Company> Follow Up" task with its subtasks.
-  2. `preview_followup_plan(plan)` → writes nothing; returns exactly what would be written plus warnings (date not
-     yyyy-mm-dd, start after end, a date in the past, company is Deal done so it would show under Clients, a
-     follow-up task already exists).
-  3. `add_followup_plan(plan)` → writes the parent and all subtasks in one batch (all or nothing); returns the link
-     `https://<app>/tasks?task=<parentId>`. Its description says to call it only after the owner confirmed the company
-     and each date in chat.
-- **Parent task:** "<Company name as stored> Follow Up", type "Follow Up", dates = first start → last end, Key points =
-  the deal plan's short answer (plus the Claude Doc link when there is one).
-- **Subtasks:** the dated steps of "Path to …" only (not the slips or side opportunities). Name = step name, Key points
-  = What / Why / Bring / Watch / Done when. A one-day step ("around Feb 8") has the same start and end.
-- **Owners:** nobody goes in Responsible (owner, 2026-11-09): parent and subtasks are written with `responsible: []`
-  and `informed: []`. The step's owners stay as a line in its Key points ("Owner: Greg with Ansevana").
-- **Company not found:** nothing is written; Claude asks the owner to add it under Prospects first, then retries.
-- **Follow-up already exists** (a later meeting): the preview says so and Claude asks; on yes, the new steps are
-  added under the existing parent and its end date moves out if needed. Old steps are never changed or deleted.
-- **Tests never touch live data:** unit tests are pure, data tests run on the emulator (`npm run test:data`), the
-  smoke script runs `next dev` with `NEXT_PUBLIC_USE_EMULATOR=1`. Fixtures use a made-up company, never the real
-  deal plans (they're internal).
+## Run rules
 
-## Phase 1: connector
+- Read only the assigned section in [the build brief](implementation/chat-task-connector.md), plus its named
+  source files. The brief's numbered requirements and defaults are settled for this run; no brainstorming pause.
+- Work sequentially in this folder on `main`, commit/push each task and tick only its row in that commit.
+  This is the project's explicit branch rule. Never start a parallel builder or edit a running task's files.
+- Every push deploys. New tools remain unavailable unless the new server-only `MCP_TASK_PLANS_ENABLED=1` flag
+  is set. Keep it unset in production throughout the run; the old three tools retain their current contract.
+  Owner activation comes after the run, never as a blocker inside a build task.
+- Run the brief's **Checks** for changed code, with emulator-only data/browser runs. Browser checks use the
+  existing development server because `lib/emulator.ts` disables the emulator in production builds.
+- Save findings in `docs/implementation/chat-task-results.md`, using task IDs and short evidence paths.
+  Tick progress only in this table; map requirements to evidence in the final review. Do not edit runner logs.
+- No new app screen or redesign is planned. Screenshot repairs must follow `redesign/design/design-guide.md`.
+  A real design gap goes to the existing open-items and handoff files, with a named disposition.
 
-- [x] F1 Plan logic, `lib/followupPlan.ts` + `lib/followupPlan.test.ts`: input type and validation, company matching (case, "PT"/"Tbk"/punctuation ignored, best first), building the parent and subtask `NewTask` docs (reuse `newSubtask` from `lib/subtasks.ts`), the warnings above, adding to an existing parent. Read `lib/types.ts`, `lib/subtasks.ts`, `lib/kinds.ts`, `lib/companies.ts` (`companyGroup`). Done when: `npm run test:unit` passes with a test per warning, per decision bullet above, and a six-step fixture that builds 1 parent + 6 subtasks with the right dates · Sol xHigh: pure logic with a pass/fail check (Terminal Bench 17, FrontierCode 11; 9 min a task)
-- [x] F2 Server reads and the write, `lib/followupServer.ts` + `lib/followupServer.data.test.ts`: read pipeline companies (`clientsDb`) and tasks (`db`) from Node, write parent + subtasks in one `writeBatch` (or only subtasks + the parent's end date when adding to an existing one). No `navigator` in this path (`assertOnline` is browser-only). Read "Data" in `redesign/ui-implementation-plan.md` §2, `lib/taskWrites.ts`, `lib/emulator.ts`. Done when: `npm run test:data` passes: a write lands in full, a failing write leaves nothing, adding to an existing parent keeps its old subtasks untouched · Sol Max: writes shared data from a server; FrontierCode 7 against Astra xHigh's 6 for about a sixth of the weekly limit (owner, 2026-11-09)
-- [x] F3 MCP route, `app/api/mcp/[secret]/route.ts` + `scripts/mcp/smoke.mjs` + `npm run mcp:smoke`: the three tools with the descriptions in Decisions, secret check (404 without `MCP_SECRET` or on a wrong one), JSON-RPC errors in plain words. Read the route-handler guide in `node_modules/next/dist/docs/` first; use Vercel's `mcp-handler` with `@modelcontextprotocol/sdk` (exact versions, Streamable HTTP only) unless the docs show it breaks on Next 16.3. The smoke script starts `next dev` on emulator ports, lists tools, runs preview then add with the F1 fixture, checks the wrong-secret 404, and stops only what it started (by PID). Done when: `npm run mcp:smoke` passes, then `npx tsc --noEmit`, `npx eslint` on changed files, `npm run build` · Sol Max: a new outside door that writes data; near Astra on coding (Terminal Bench 14, FrontierCode 7) at about 1% of the weekly limit
-- [x] F4 Skill update, `docs/skills/deus-deal-followup/SKILL.md` (copy of the synced skill at `~/.claude/skills/synced/*/deus-deal-followup/`, references unchanged) with a new "Step 5 - Add to Deus Team Tasks": only when the connector's tools are present; offer after the doc; `find_company`, then a table of steps (name, start, end, owners) and the company match, asking the owner to confirm or correct the company and each date; `preview_followup_plan`; fix warnings with the owner; `add_followup_plan`; reply with the link. Also `docs/skills/README.md`: how to zip and upload it, and how to add the connector URL in claude.ai. Done when: the zip is built at `docs/skills/deus-deal-followup.zip` and the new step names the three tools exactly as F3 registered them · Opus 5.5 High: instructions people and Claude read closely (Presentation 15, Rubric 14)
-- [x] F5 End-to-end: extend the smoke run to open `/tasks?task=<parentId>` in Playwright (emulator), screenshot the parent and one opened subtask. [look] Done when: the screenshot shows "<test company> Follow Up" under Prospects with "0/6 subtasks" and no one in Responsible, and the opened subtask shows its dates and the Owner / What / Why / Done when text, on desktop and phone width · Sol xHigh: check run judged by a screenshot (9 min a task). Evidence: `test-results/mcp-smoke/{desktop,phone}/`, 1440×900 and 390×844; 16 key shots and native-pixel crops reviewed; fresh-eyes layout repairs verified.
-- [x] R1 Phase 1 review: diff of F1–F5 for data loss, double writes (a retried `add` must not create a second parent: same company + same title in the last 10 minutes → return the existing one), the secret check, date handling across the year end, and tool descriptions that could let Claude write before confirming. Fix what it confirms; rerun only the checks the fixes touch · Opus 5.5 High: review by the other family after Codex-built work. Done 2026-11-09: a retried add now returns the saved task (`alreadySaved`), identical racing adds share plan-derived IDs, "today" is WIB, and the "already exists" warning tells Claude to ask the owner
+## Before the run
 
-## Owner steps (after the run)
-- [x] O1 *owner* Vercel → Settings → Environment Variables: add `MCP_SECRET` (Production) = output of `openssl rand -hex 24`; redeploy. Done 2026-11-09 via CLI; copy of the secret in `~/.config/deus-team-tasks/mcp-secret` on the server; live check: wrong secret 404, three tools listed.
-- [ ] O2 *owner* claude.ai → Settings → Connectors → Add custom connector: `https://<app domain>/api/mcp/<MCP_SECRET>`.
-- [ ] O3 *owner* claude.ai → Skills: replace `deus-deal-followup` with `docs/skills/deus-deal-followup.zip`.
-- [ ] O4 *owner* Real try: run the skill on the Mayora meeting, confirm, then check in the app that "Mayora Indah Follow Up" shows under Prospects with six subtasks and that opening one shows its description.
+- [ ] O0 *owner / runner-maintenance session*: complete [the GPT-only runner prerequisite](implementation/gpt-only-autorun-prerequisite.md), then tick this line. The installed runner still calls Claude for retries, quota fallback and fresh-eyes checks; GPT task rows alone do not prevent that. This belongs in the shared config repo, not a copy of the runner here. No Claude login, new connector secret or production data is needed for the app build.
 
-## Later (not in this plan; pick if wanted)
-- Create the company from chat when it isn't found.
-- Update or tick existing steps from chat after a later meeting.
-- A task type per subtask (Trial Pending, Send Proposal/Quote) guessed from the step.
+After O0, run `AUTORUN_GPT_ONLY=1 autorun check docs/IMPLEMENTATION_PLAN.md` (the proposed option must first
+be implemented and verified); it must select G01 on Sol xHigh, report no open
+prerequisites, and report GPT-only execution. Then run the verified GPT-only launch command recorded by O0.
+Do not start this plan with unmodified `autorun all` while Claude is unavailable.
+
+## Phase 1: general task connector, checked before activation
+
+Each row has one pick. The linked section contains files, required reading, edge cases and a measurable Done when.
+
+| ID | Task and acceptance reference | Pick | Done |
+|---|---|---|---|
+| G01 | Define general task inputs and fictional fixtures; reject invalid dates and destinations. [G01](implementation/chat-task-connector.md#g01--inputs-and-fixtures) [no look] | Sol xHigh | |
+| G02 | Find matching companies and eligible existing main tasks for each category. [G02](implementation/chat-task-connector.md#g02--destination-discovery) [no look] | Sol xHigh | |
+| G03 | Build exact read-only previews for new and existing main tasks. [G03](implementation/chat-task-connector.md#g03--pure-previews) [no look] | Sol xHigh | |
+| G04 | Bind a save to its preview and acknowledged warnings. [G04](implementation/chat-task-connector.md#g04--preview-integrity) [no look] | Sol Max | |
+| G05 | Save atomically, preserve existing data and make retries safe. [G05](implementation/chat-task-connector.md#g05--atomic-saving-and-retries) [no look] | Sol Max | |
+| G06 | Expose the three general tools behind the activation flag with chat instructions. [G06](implementation/chat-task-connector.md#g06--mcp-tools-and-chat-guidance) [no look] | Sol Max | |
+| G07 | Test the actual MCP protocol for all categories, failures and legacy compatibility. [G07](implementation/chat-task-connector.md#g07--protocol-checks) [no look] | Sol xHigh | |
+| G08 | Open connector-created tasks on desktop and phone and capture their saved state. [G08](implementation/chat-task-connector.md#g08--app-flow-and-captures) [look] | Sol xHigh | |
+| G09 | Inspect full-size captures and repair confirmed visual faults. [G09](implementation/chat-task-connector.md#g09--visual-finish) [look] | Astra xHigh | |
+| G10 | Update the existing skill, generic-chat instructions and owner walkthrough. [G10](implementation/chat-task-connector.md#g10--instructions-and-packaging) [no look] | Sol Max | |
+| R1a | Review the write path and confirmation workflow; fix confirmed faults before broad checks. [R1a](implementation/chat-task-connector.md#r1a--risk-review) [no look] | Sol Max | |
+| R1b | Run the full end-to-end suite once and save the complete failure list. [R1b](implementation/chat-task-connector.md#r1b--full-end-to-end-run) [no look] | Sol xHigh | |
+| R1c | Fix the recorded end-to-end failures and rerun only affected tests. [R1c](implementation/chat-task-connector.md#r1c--end-to-end-repairs) [no look] | Sol Max | |
+| R1d | Run accessibility and scoped prototype comparison once; record findings. [R1d](implementation/chat-task-connector.md#r1d--accessibility-and-comparison) [look] | Sol xHigh | |
+| R1e | Fix confirmed accessibility/visual findings and recheck their states. [R1e](implementation/chat-task-connector.md#r1e--audit-repairs) [look] | Astra xHigh | |
+| R1 | Phase 1 review: prove requirements, close findings and prepare activation handoff. [R1](implementation/chat-task-connector.md#r1--final-phase-review) [no look] | Sol Max | |
+
+## Owner steps after the run
+
+- [ ] O1 *owner*: read the final evidence/limitations; enable `MCP_TASK_PLANS_ENABLED=1` in Vercel Production and redeploy. The existing secret and URL stay the same. Rollback: unset this flag and redeploy; this hides only the new tools and does not remove saved tasks.
+- [ ] O2 *owner, when Claude is available*: confirm the custom connector is installed, reconnect/refresh it if the new tools are missing, and enable it in an ordinary chat. Test a real intended action in each category using the walkthrough, with the deal-follow-up skill off. These are owner acceptance actions, not automated production fixtures.
+- [ ] O3 *owner, optional for the generic flow*: upload the rebuilt `docs/skills/deus-deal-followup.zip` to update that skill; its old-tool fallback continues to work before activation. Previous-plan O2–O4 remain historical owner steps, not evidence they were performed.
+
+## Model rationale
+
+Sol xHigh handles pure logic and deterministic checks. Sol Max handles writes, protocol exposure, instructions
+and code reviews. Astra xHigh owns the visual finish. Fresh sessions and adversarial cases replace unavailable
+Claude reviews for this run; do not use Astra Max or quietly fall back to Claude.
+
+## Planning validation — 2026-11-10
+
+A fresh Astra xHigh critique was applied: legacy task type, source-link storage, retry precedence and parked-task
+return dates now have explicit acceptance cases. `autorun check` recognizes 16 GPT rows and selects G01 on
+Sol xHigh; it correctly reports O0 still open. Local links/anchors and archive preservation were checked.
+The app build and its tests have not started; the shared runner prerequisite has not been implemented.
