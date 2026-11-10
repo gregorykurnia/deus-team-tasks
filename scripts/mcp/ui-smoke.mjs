@@ -4,12 +4,12 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { chromium, expect } from "@playwright/test";
 
-const shapes = [
+export const shapes = [
   { name: "desktop", viewport: { width: 1440, height: 900 } },
   { name: "phone", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
 ];
 
-async function capture(page, directory, name, crops = false) {
+export async function capture(page, directory, name, crops = false) {
   await page.evaluate(() => document.fonts.ready);
   // As in the existing screenshot checks, omit the development-only Next.js badge.
   await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
@@ -87,7 +87,7 @@ async function capture(page, directory, name, crops = false) {
   assert.deepEqual(faults, [], `${name}: layout audit`);
 }
 
-async function emptyResponsible(sheet) {
+export async function emptyResponsible(sheet) {
   await expect(sheet.getByRole("combobox", { name: /^Responsible/ })).toHaveValue("");
   // An empty typing input alone does not rule out already-selected person chips.
   await expect(sheet.getByRole("button", { name: /^Remove / })).toHaveCount(0);

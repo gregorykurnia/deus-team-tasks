@@ -15,10 +15,11 @@ import { checkLegacyProtocol } from "./legacy-smoke.mjs";
 import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
 
 const selection = process.argv[2] ?? "--only=all";
-assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser)$/.test(selection),
-  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser]");
-const protocol = selection !== "--only=browser";
-const browser = selection !== "--only=protocol";
+assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser)$/.test(selection),
+  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser|--only=task-plan-browser]");
+const protocol = ["--only=all", "--only=protocol"].includes(selection);
+const browser = ["--only=all", "--only=browser"].includes(selection);
+const taskPlanBrowser = browser || selection === "--only=task-plan-browser";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const HOST = "127.0.0.1";
@@ -34,7 +35,7 @@ const jiti = createJiti(import.meta.url, {
   alias: { "server-only": path.join(ROOT, "node_modules/next/dist/compiled/server-only/empty.js") },
 });
 const { FOLLOWUP_COMPANY_FIXTURE: company, SIX_STEP_FOLLOWUP_FIXTURE: plan } = await jiti.import("../../tests/fixtures/followupPlan.ts");
-const { openClientTrackerRules, seed, readAll } = await jiti.import("../../tests/support/emulator.ts");
+const { openClientTrackerRules, seed, readAll, clearAll } = await jiti.import("../../tests/support/emulator.ts");
 const logs = await mkdtemp(path.join(tmpdir(), "mcp-smoke-"));
 const children = new Set();
 const clients = new Set();
@@ -167,55 +168,63 @@ try {
     await stop(disabled);
   }
 
-  console.log("Checking legacy MCP with task-plan activation explicitly off (emulator only).");
-  const enabled = startNext("next-enabled", SECRET);
-  await ready(enabled, `${ORIGIN}/api/mcp/wrong-secret`, 404);
-  const client = await connect();
-  if (protocol) {
-    for (const method of METHODS) {
-      for (const wrong of ["wrong-secret", `${SECRET}x`]) await unchanged(`wrong secret/${method}`, async () => {
-        assert.equal((await raw("{", `${ORIGIN}/api/mcp/${wrong}`, method)).response.status, 404);
+  if (protocol || browser) {
+    console.log("Checking legacy MCP with task-plan activation explicitly off (emulator only).");
+    const enabled = startNext("next-enabled", SECRET);
+    await ready(enabled, `${ORIGIN}/api/mcp/wrong-secret`, 404);
+    const client = await connect();
+    if (protocol) {
+      for (const method of METHODS) {
+        for (const wrong of ["wrong-secret", `${SECRET}x`]) await unchanged(`wrong secret/${method}`, async () => {
+          assert.equal((await raw("{", `${ORIGIN}/api/mcp/${wrong}`, method)).response.status, 404);
+        });
+      }
+      for (const method of METHODS.filter((method) => method !== "POST")) await unchanged(`unsupported HTTP/${method}`, async () => {
+        assert.equal((await raw(undefined, ENDPOINT, method)).response.status, 405);
       });
+      await checkDisabledTools({ client, unchanged, safe, plan });
     }
-    for (const method of METHODS.filter((method) => method !== "POST")) await unchanged(`unsupported HTTP/${method}`, async () => {
-      assert.equal((await raw(undefined, ENDPOINT, method)).response.status, 405);
-    });
-    await checkDisabledTools({ client, unchanged, safe, plan });
-  }
-  const added = await checkLegacyProtocol({ client, company, plan, readAll, unchanged, origin: ORIGIN, protocol });
-  if (browser) {
-    console.log("Checking the returned task link on desktop and phone (emulator only).");
-    const { checkFollowupUI } = await import("./ui-smoke.mjs");
-    await checkFollowupUI({ root: ROOT, origin: ORIGIN, added, company, plan });
-  }
-
-  if (protocol) {
-
-    const malformed = await unchanged("invalid JSON", () => raw("{"));
-    assert.equal(malformed.response.status, 400);
-    assert.equal(malformed.data.error.code, -32700);
-    assert.match(malformed.data.error.message, /not valid JSON/);
-    for (const invalid of [{ hello: "world" }, [], [{ jsonrpc: "2.0", id: 70, method: "tools/list" }]]) {
-      const invalidRpc = await unchanged("invalid JSON-RPC", () => raw(JSON.stringify(invalid)));
-      assert.equal(invalidRpc.data.error.code, -32600);
+    const added = await checkLegacyProtocol({ client, company, plan, readAll, unchanged, origin: ORIGIN, protocol });
+    if (browser) {
+      console.log("Checking the returned task link on desktop and phone (emulator only).");
+      const { checkFollowupUI } = await import("./ui-smoke.mjs");
+      await checkFollowupUI({ root: ROOT, origin: ORIGIN, added, company, plan });
     }
-    const invalidInput = await unchanged("invalid legacy inputs", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 71, method: "tools/call", params: { name: "find_company", arguments: { query: 12 } } })));
-    assert.equal(invalidInput.data.id, 71);
-    assert.equal(invalidInput.data.error.code, -32602);
-    assert.match(invalidInput.data.error.message, /Check the tool inputs.*query/);
-    const unknown = await unchanged("unsupported RPC method", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 72, method: "unknown_method" })));
-    assert.equal(unknown.data.error.code, -32601);
-    assert.match(unknown.data.error.message, /not found/i);
+
+    if (protocol) {
+
+      const malformed = await unchanged("invalid JSON", () => raw("{"));
+      assert.equal(malformed.response.status, 400);
+      assert.equal(malformed.data.error.code, -32700);
+      assert.match(malformed.data.error.message, /not valid JSON/);
+      for (const invalid of [{ hello: "world" }, [], [{ jsonrpc: "2.0", id: 70, method: "tools/list" }]]) {
+        const invalidRpc = await unchanged("invalid JSON-RPC", () => raw(JSON.stringify(invalid)));
+        assert.equal(invalidRpc.data.error.code, -32600);
+      }
+      const invalidInput = await unchanged("invalid legacy inputs", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 71, method: "tools/call", params: { name: "find_company", arguments: { query: 12 } } })));
+      assert.equal(invalidInput.data.id, 71);
+      assert.equal(invalidInput.data.error.code, -32602);
+      assert.match(invalidInput.data.error.message, /Check the tool inputs.*query/);
+      const unknown = await unchanged("unsupported RPC method", () => raw(JSON.stringify({ jsonrpc: "2.0", id: 72, method: "unknown_method" })));
+      assert.equal(unknown.data.error.code, -32601);
+      assert.match(unknown.data.error.message, /not found/i);
+    }
+    await client.close();
+    clients.delete(client);
+    await stop(enabled);
   }
-  await client.close();
-  clients.delete(client);
-  await stop(enabled);
-  if (protocol) {
+  if (protocol || taskPlanBrowser) {
     console.log("Checking all general-task categories with task-plan activation explicitly on.");
     const general = startNext("next-general", SECRET, "1");
     await ready(general, `${ORIGIN}/api/mcp/wrong-secret`, 404);
-    await checkGeneralProtocol({ client: await connect(), jiti, readAll, seed, unchanged, safe,
+    const generalClient = await connect();
+    if (protocol) await checkGeneralProtocol({ client: generalClient, jiti, readAll, seed, unchanged, safe,
       root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, secret: SECRET });
+    if (taskPlanBrowser) {
+      const { checkTaskPlanUI } = await import("./task-plan-ui.mjs");
+      await checkTaskPlanUI({ client: generalClient, jiti, readAll, seed, clearAll,
+        root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST });
+    }
   }
   console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);
 } catch (error) {

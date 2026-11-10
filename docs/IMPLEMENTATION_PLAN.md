@@ -49,7 +49,7 @@ Each row has one pick. The linked section contains files, required reading, edge
 | G05 | Save atomically, preserve existing data and make retries safe. [G05](implementation/chat-task-connector.md#g05--atomic-saving-and-retries) [no look] | Sol Max | 2026-11-10; 62 transaction cases passed |
 | G06 | Expose the three general tools behind the activation flag with chat instructions. [G06](implementation/chat-task-connector.md#g06--mcp-tools-and-chat-guidance) [no look] | Sol Max | 2026-11-10; 52 tool cases; 63 transaction cases |
 | G07 | Test the actual MCP protocol for all categories, failures and legacy compatibility. [G07](implementation/chat-task-connector.md#g07--protocol-checks) [no look] | Sol xHigh | 2026-11-10; real MCP passed; 112 preservation checks |
-| G08 | Open connector-created tasks on desktop and phone and capture their saved state. [G08](implementation/chat-task-connector.md#g08--app-flow-and-captures) [look] | Sol xHigh | |
+| G08 | Open connector-created tasks on desktop and phone and capture their saved state. [G08](implementation/chat-task-connector.md#g08--app-flow-and-captures) [look] | Sol xHigh | 2026-11-10; 12 UI cases; 26 captures |
 | G09 | Inspect full-size captures and repair confirmed visual faults. [G09](implementation/chat-task-connector.md#g09--visual-finish) [look] | Astra xHigh | |
 | G10 | Update the existing skill, generic-chat instructions and owner walkthrough. [G10](implementation/chat-task-connector.md#g10--instructions-and-packaging) [no look] | Sol Max | |
 | R1a | Review the write path and confirmation workflow; fix confirmed faults before broad checks. [R1a](implementation/chat-task-connector.md#r1a--risk-review) [no look] | Sol Max | |
