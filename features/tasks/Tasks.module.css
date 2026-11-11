@@ -237,6 +237,9 @@
 
 /* ---------- Task groups on phones ---------- */
 .chips {
+  /* Keep the absolute screen-reader labels inside this scrolling strip. Otherwise starred groups beyond its
+     right edge enlarge the mobile layout viewport and push fixed bottom sheets outside the capture. */
+  position: relative;
   display: flex;
   gap: 8px;
   margin: 14px -16px 0;

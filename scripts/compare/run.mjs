@@ -14,6 +14,7 @@ import { openClientTrackerRules, seed } from "../../tests/support/emulator.ts";
 import { convert, protoData, seedAll } from "./seed.mjs";
 import { parseMap, plan } from "./states.mjs";
 import { dataFor, recipe, colleagueChange } from "./recipes.mjs";
+import { auditLayout } from "./layout.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "redesign/compare");
@@ -35,7 +36,7 @@ async function startServers() {
     children.push(c);
   };
   run("npx", ["firebase", "emulators:start", "--only", "firestore", "--project", "demo-deus"]);
-  run("npx", ["next", "dev", "--port", "3100"], { NEXT_PUBLIC_USE_EMULATOR: "1" });
+  run("npx", ["next", "dev", "--port", "3100"], { NEXT_PUBLIC_USE_EMULATOR: "1", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar" });
   run("python3", ["-m", "http.server", "4100"], {}, path.join(ROOT, "redesign/design/prototype"));
   for (const url of ["http://127.0.0.1:8180", APP, PROTO]) for (let i = 0; i < 120; i++) { try { if ((await fetch(url)).status < 500) break; } catch {} await sleep(1000); }
 }
@@ -113,6 +114,11 @@ async function runOne(browser, entry, sizeName, report) {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));
+  page.on("console", (message) => {
+    if (message.type() !== "error") return;
+    const error = "console: " + message.text().slice(0, 400);
+    if (!errors.includes(error)) errors.push(error);
+  });
   await page.route("**/api/calendar?**", async (route) => {
     if (p.calendar === "hold") return; // never answers
     const body = p.calendar === "ok" ? { status: "ok", events } : p.calendar === "off" ? { status: "off", events: [], error: "Google Calendar not configured" } : { status: "failed", events: [], error: "Failed to fetch Google Calendar events" };
@@ -156,7 +162,7 @@ async function runOne(browser, entry, sizeName, report) {
   await settle(page);
   if (p.page === "tasks" && p.open.startsWith("task-")) {
     // The live banner and background list can settle before a large task/company snapshot opens the real form.
-    await page.getByRole("textbox", { name: "Description", exact: true }).waitFor({ state: "visible", timeout: 90000 });
+    await page.getByRole("textbox", { name: "Description", exact: true }).waitFor({ state: "visible", timeout: 90000 }).catch(() => errors.push("task editor still unavailable after 90s"));
   }
   for (const step of r.steps) {
     try { await step(page, { sleep, phone: sizeName === "phone" }); } catch (e) { errors.push("step: " + String(e.message).slice(0, 700)); }
@@ -165,13 +171,25 @@ async function runOne(browser, entry, sizeName, report) {
   await sleep(300);
   const newText = await textOf(page);
   await shoot(page, files.now, size, !!p.open);
+  const layout = await auditLayout(page, { requireTaskSheet: entry.id === "065-task-details-stress" });
+  errors.push(...layout.errors);
+  if (entry.id === "065-task-details-stress") {
+    const task = current.converted.tasks.find((t) => t.id === r.params.get("task"));
+    const company = current.converted.pipeline.find((c) => c.id === task?.linkedClientId);
+    const sheet = page.getByRole("dialog", { name: "Task", exact: true });
+    const title = await sheet.getByRole("textbox", { name: "Description", exact: true }).inputValue({ timeout: 1000 }).catch(() => null);
+    if (!task || title !== task.task) errors.push("Stress task description is missing or incorrect");
+    if (!company || !await sheet.getByText(company.company, { exact: true }).isVisible()) errors.push("Stress task company is missing or incorrect");
+    const kind = company?.status === "Client / Partner Done Deal" ? "Client work" : "Prospect work";
+    if (!await sheet.getByText(kind, { exact: true }).isVisible()) errors.push(`Stress task kind should be ${kind}`);
+  }
   await ctx.close();
 
   if (p.open && !p.stress) seeded = null; // a click may have written (a follow-up task): the next state starts from clean data
   await sideBySide(browser, files.proto, files.now, files.both, `${entry.id} · ${entry.section} · ${entry.label} · ${entry.text} · ${sizeName}`, size);
   const set = (a) => new Set(a);
   const [a, b] = [set(protoText), set(newText)];
-  report.push({ id: base, href: entry.href, newUrl: url, errors, onlyProto: protoText.filter((x) => !b.has(x)).slice(0, 40), onlyNew: newText.filter((x) => !a.has(x)).slice(0, 40) });
+  report.push({ id: base, href: entry.href, newUrl: url, errors, layout, onlyProto: protoText.filter((x) => !b.has(x)).slice(0, 40), onlyNew: newText.filter((x) => !a.has(x)).slice(0, 40) });
 }
 
 async function main() {

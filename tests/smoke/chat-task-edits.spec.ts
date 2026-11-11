@@ -1,5 +1,7 @@
 // E1: real MCP HTTP saves; R1b: task-sheet comparison and visible people suggestions.
 import type { Page } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -8,8 +10,9 @@ import type { TaskChange, TaskChangesPreview } from "../../lib/taskEdit";
 import type { FindTasksInput, TaskChangesSaved, findTasks } from "../../lib/taskEditServer";
 import { EMULATOR_HOST } from "../support/emulator";
 import { test as base, expect } from "./fixtures";
-import { isoDay, seedTasks, stored, storedById, task } from "./data";
+import { company, isoDay, seedCompanies, seedGroups, seedTasks, stored, storedById, task } from "./data";
 import { recipe } from "../../scripts/compare/recipes.mjs";
+import { auditLayout } from "../../scripts/compare/layout.mjs";
 
 const test = base.extend<{ edits: Client }>({
   edits: async ({ baseURL }, use) => {
@@ -72,6 +75,82 @@ async function events() {
   return (await stored("tasks", "testCalendarEvents"))
     .map((doc) => JSON.parse(doc.event as string) as calendar_v3.Schema$Event);
 }
+
+base("R1b.F2: long group and task text keep the task sheet inside the capture", { tag: "@phone" }, async ({ page }, testInfo) => {
+  const group = "Pengadaanperlengkapankantorcabangbaruuntukwilayahindonesiatimur";
+  const title = "ReviewtheprocurementrequirementsfortheeasternIndonesiabranchandconfirmtheproposal";
+  await seedGroups([
+    { id: "long", name: group, order: 1, starred: true },
+    { id: "budget", name: "Q4 planning and budget review for every regional office, including the new branches", order: 2, starred: true },
+    { id: "annual", name: "年度計画", order: 3, starred: true },
+  ]);
+  await seedCompanies([company(1, { company: "Halcyon Logistics", status: "Client / Partner Done Deal" })]);
+  await seedTasks([task("long", { task: title, taskGroup: group, linkedClientId: 1 })]);
+  const sheet = await openTask(page, "long");
+  await expect(sheet.getByRole("textbox", { name: "Description", exact: true })).toHaveValue(title);
+  await expect(sheet.getByText("Halcyon Logistics", { exact: true })).toBeVisible();
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+  await page.screenshot({ path: testInfo.outputPath("long-task.png"), animations: "disabled" });
+  const layout = await auditLayout(page, { requireTaskSheet: true });
+  await writeFile(testInfo.outputPath("layout.json"), JSON.stringify(layout, null, 2));
+  expect(layout.window).toEqual(page.viewportSize());
+  expect(layout.errors).toEqual([]);
+  for (const element of [sheet, sheet.getByRole("textbox", { name: "Description", exact: true }), sheet.getByText("Client work", { exact: true }), sheet.getByText("Halcyon Logistics", { exact: true }), sheet.getByRole("button", { name: "Save changes", exact: true })]) {
+    await expect(element).toBeInViewport({ ratio: 1 });
+  }
+});
+
+base("R1b.F2: capture 065 with all stress tasks and their companies", { tag: "@phone" }, async ({ page }, testInfo) => {
+  base.setTimeout(120_000);
+  // Run the existing ESM converter in Node: Playwright's CJS transform cannot load its import.meta paths.
+  const stress = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e",
+    'import {convert,protoData} from "./scripts/compare/seed.mjs"; console.log(JSON.stringify(convert(protoData(true))));',
+  ], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
+  const linked = new Set(stress.tasks.map((t: { linkedClientId?: number }) => t.linkedClientId));
+  // The emulator's documented 3,200-company Listen limit is independent of sheet layout. Keep every company
+  // referenced by the complete stress task list, so no task changes kind or loses its company in this capture.
+  const companies = stress.pipeline.filter((c: { id: number }) => linked.has(c.id));
+  await seedCompanies(companies);
+  await seedGroups(stress.taskGroups);
+  for (let i = 0; i < stress.tasks.length; i += 400) await seedTasks(stress.tasks.slice(i, i + 400));
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.clock.install({ time: new Date("2026-10-20T09:00:00+07:00") });
+  const sheet = await openTask(page, "s1");
+  const title = sheet.getByRole("textbox", { name: "Description", exact: true });
+  await expect(title).toHaveValue(stress.tasks[0].task, { timeout: 90_000 });
+  const companyName = "PT Sinar Nusantara Agribusiness and Food Processing International Holdings Group Tbk";
+  for (const element of [title, sheet.getByText(companyName, { exact: true }), sheet.getByText("Prospect work", { exact: true }), sheet.getByRole("button", { name: "Save changes", exact: true })]) {
+    await expect(element).toBeInViewport({ ratio: 1 });
+  }
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+  await page.screenshot({ path: testInfo.outputPath("065-task-details-stress.png"), animations: "disabled" });
+  const layout = await auditLayout(page, { requireTaskSheet: true });
+  errors.push(...layout.errors);
+  await writeFile(testInfo.outputPath("stress-report.json"), JSON.stringify({
+    state: "065-task-details-stress", fixture: { tasks: stress.tasks.length, groups: stress.taskGroups.length,
+      sourceCompanies: stress.pipeline.length, capturedCompanies: companies.length,
+      limitation: "3,200-company emulator Listen limit; all task-linked companies retained" },
+    expectedCompany: companyName, expectedKind: "Prospect work", layout, errors,
+  }, null, 2));
+  expect(errors).toEqual([]);
+});
+
+base("R1b.F2: layout audit rejects missing and offscreen sheets", { tag: "@phone" }, async ({ page }) => {
+  await page.setContent('<meta name="viewport" content="width=device-width, initial-scale=1">');
+  expect((await auditLayout(page, { requireTaskSheet: true })).errors).toContain("Missing task sheet control: Save changes");
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1">
+    <section role="dialog" style="position:fixed;left:0;top:120vh;width:300px;height:300px">
+      <label for="description">Description</label><textarea id="description">Task</textarea><button>Save changes</button>
+    </section>`);
+  const offscreen = await auditLayout(page, { requireTaskSheet: true });
+  expect(offscreen.errors).toEqual(expect.arrayContaining([
+    expect.stringContaining("Offscreen sheet/dialog:"), "Offscreen task sheet control: Save changes",
+  ]));
+  await page.locator("section").evaluate((el) => { el.style.top = "20px"; });
+  expect((await auditLayout(page, { requireTaskSheet: true })).errors).toEqual([]);
+});
 
 base("R1b: comparison reaches the missing-description state", { tag: "@phone" }, async ({ page }, testInfo) => {
   const scenario = recipe({ page: "tasks", open: "task-required", path: "/tasks", params: new URLSearchParams() });
