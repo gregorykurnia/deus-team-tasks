@@ -3,7 +3,7 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import type { NewTask, Task } from "@/lib/types";
 
 const io = vi.hoisted(() => ({
-  fetch: vi.fn(), add: vi.fn(), update: vi.fn(), remove: vi.fn(), commit: vi.fn(), online: vi.fn(),
+  fetch: vi.fn(), add: vi.fn(), update: vi.fn(), remove: vi.fn(), commit: vi.fn(), online: vi.fn(), read: vi.fn(),
 }));
 vi.mock("@/lib/firebase", () => ({ db: "tasks-db" }));
 vi.mock("@/lib/firebaseClients", () => ({ clientsDb: "clients-db" }));
@@ -13,6 +13,9 @@ vi.mock("@/lib/liveChanges", () => ({ expectOwnWrite: own }));
 vi.mock("firebase/firestore", () => ({
   doc: (db: string, collection: string, id: string) => ({ db, collection, id }),
   collection: (db: string, name: string) => ({ db, name }),
+  where: (field: string, _op: string, value: unknown) => ({ field, value }),
+  query: (collection: object, filter: object) => ({ ...collection, filter }),
+  getDocsFromServer: io.read,
   deleteField: () => "DELETE_FIELD",
   addDoc: io.add,
   updateDoc: io.update,
@@ -31,7 +34,7 @@ import {
   addTask, deleteTask, deleteTasks, moveTasksToGroup, PartlyChanged, setTasksDone, setTasksParked, updateTask,
 } from "@/lib/taskWrites";
 import {
-  addTaskKeptInStep, deleteCompany, moveCompany, parkCompanies, saveTaskKeptInStep, saveTaskWithUndo,
+  addTaskKeptInStep, deleteCompany, moveCompany, parkCompanies, saveTaskKeptInStep, saveTaskWithUndo, updateCompany,
 } from "@/lib/companyWrites";
 
 const task = (id = "marked", fields: Partial<NewTask> = {}): Task => ({
@@ -54,6 +57,7 @@ beforeEach(() => {
   io.update.mockResolvedValue(undefined);
   io.remove.mockResolvedValue(undefined);
   io.commit.mockResolvedValue(undefined);
+  io.read.mockResolvedValue({ docs: [] });
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -100,6 +104,71 @@ describe("nonblocking calendar requests", () => {
 });
 
 describe("calendar sync after task writes", () => {
+  it.each(["direct", "sheet"])("a %s main-task rename syncs only its marked subtasks, including done and parked ones", async (entry) => {
+    const parent = task("parent", { calendar: undefined });
+    const children = [
+      task("child", { parentId: parent.id }),
+      task("done", { parentId: parent.id, completed: true }),
+      task("parked", { parentId: parent.id, parkedAt: 1 }),
+      task("plain", { parentId: parent.id, calendar: undefined }),
+    ];
+    io.read.mockResolvedValue({ docs: children.map((t) => ({ id: t.id, data: () => t })) });
+    if (entry === "direct") await updateTask(parent.id, { task: "Renamed main task" }, parent);
+    else await saveTaskKeptInStep(parent, { task: "Renamed main task" }, companies);
+    expect(io.read).toHaveBeenCalledWith({ db: "tasks-db", name: "tasks", filter: { field: "parentId", value: parent.id } });
+    expect(requests()).toEqual([["child", "done", "parked"]]);
+  });
+
+  it("resyncs marked subtasks when a parent rename is undone or rolled back", async () => {
+    const parent = task("parent", { calendar: undefined, linkedClientId: 7 });
+    const child = task("child", { parentId: parent.id });
+    io.read.mockResolvedValue({ docs: [{ id: child.id, data: () => child }] });
+    const { undo } = await saveTaskWithUndo(parent, { task: "Renamed main task" }, companies);
+    await undo();
+    io.update.mockRejectedValueOnce(new Error("company write failed"));
+    await expect(saveTaskKeptInStep(parent, { task: "Renamed again", endDate: "2026-12-01" }, companies))
+      .rejects.toThrow("company write failed");
+    expect(requests()).toEqual([[child.id], [child.id], [child.id], [child.id]]);
+  });
+
+  it("a company rename and its Undo sync only its marked tasks and subtasks, including done and parked ones", async () => {
+    const tasks = [
+      task("linked", { linkedClientId: company.id }),
+      task("subtask", { linkedClientId: company.id, parentId: "main" }),
+      task("done", { linkedClientId: company.id, completed: true }),
+      task("parked", { linkedClientId: company.id, parkedAt: 1 }),
+      task("plain", { linkedClientId: company.id, calendar: undefined }),
+    ];
+    io.read.mockResolvedValue({ docs: tasks.map((t) => ({ id: t.id, data: () => t })) });
+    const undo = await updateCompany(company, { company: "Renamed company" });
+    await undo();
+    expect(io.read).toHaveBeenCalledTimes(2);
+    expect(io.read).toHaveBeenCalledWith({ db: "tasks-db", name: "tasks", filter: { field: "linkedClientId", value: company.id } });
+    expect(requests()).toEqual([["linked", "subtask", "done", "parked"], ["linked", "subtask", "done", "parked"]]);
+  });
+
+  it("unchanged names and unrelated company fields do not look up dependent events", async () => {
+    const parent = task("parent", { calendar: undefined });
+    await updateTask(parent.id, { task: parent.task }, parent);
+    await saveTaskKeptInStep(parent, { keyPoints: "New notes" }, companies);
+    await (await updateCompany(company, { company: company.company }))();
+    await (await updateCompany(company, { target: "2026-12-01" }))();
+    expect(io.read).not.toHaveBeenCalled();
+    expect(requests()).toEqual([]);
+  });
+
+  it.each(["pending", "rejected", "throw"])("a %s dependent-task lookup never fails or holds up a rename", async (mode) => {
+    if (mode === "pending") io.read.mockImplementation(() => new Promise(() => {}));
+    if (mode === "rejected") io.read.mockRejectedValue(new Error("offline"));
+    if (mode === "throw") io.read.mockImplementation(() => { throw new Error("offline"); });
+    const parent = task("parent", { calendar: undefined });
+    await expect(updateTask(parent.id, { task: "Renamed" }, parent)).resolves.toBeUndefined();
+    await expect(saveTaskKeptInStep(parent, { task: "Renamed" }, companies)).resolves.toEqual({ companyChanged: false });
+    await expect(updateCompany(company, { company: "Renamed" })).resolves.toBeTypeOf("function");
+    expect(io.read).toHaveBeenCalledTimes(3);
+    expect(requests()).toEqual([]);
+  });
+
   it("creates marked tasks through both entry points; plain tasks never send a request", async () => {
     await addTask(task());
     await addTaskKeptInStep(task("company-task", { linkedClientId: 7 }), companies);
@@ -221,6 +290,9 @@ describe("calendar sync after task writes", () => {
     await expect(saveTaskKeptInStep(task(), { task: "New" }, companies)).rejects.toThrow("write failed");
     io.commit.mockRejectedValueOnce(new Error("write failed"));
     await expect(deleteTask(task())).rejects.toThrow("write failed");
+    io.update.mockRejectedValueOnce(new Error("write failed"));
+    await expect(updateCompany(company, { company: "Renamed" })).rejects.toThrow("write failed");
+    expect(io.read).not.toHaveBeenCalled();
     expect(requests()).toEqual([]);
   });
 

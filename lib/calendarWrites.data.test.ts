@@ -2,12 +2,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { terminate } from "firebase/firestore";
 import { POST } from "../app/api/calendar/sync/route";
 import { clearAll, EMULATOR_HOST, readFields, seed } from "../tests/support/emulator";
-import { addTaskKeptInStep, saveTaskKeptInStep, saveTaskWithUndo } from "./companyWrites";
+import { addTaskKeptInStep, saveTaskKeptInStep, saveTaskWithUndo, updateCompany } from "./companyWrites";
 import { USE_EMULATOR } from "./emulator";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
-import { calendarEventId } from "./taskCalendar";
-import { addTask, deleteTask } from "./taskWrites";
+import { calendarEventId, calendarKey } from "./taskCalendar";
+import { addTask, deleteTask, updateTask } from "./taskWrites";
 import type { Task } from "./types";
 
 vi.mock("googleapis", () => { throw new Error("Data tests must never load Google clients."); });
@@ -47,6 +47,58 @@ afterEach(async () => {
 afterAll(async () => { await Promise.all([terminate(db), terminate(clientsDb)]); });
 
 describe("app writes through the sync route to the emulator calendar", () => {
+  it.each(["direct", "sheet"])("a %s parent rename updates its subtask's event description and synced key", async (entry) => {
+    const parent = { ...task, id: "parent", task: "Original main task", calendar: undefined };
+    const child = { ...task, parentId: parent.id, keyPoints: "Child notes" };
+    const plain = { ...child, id: "plain-child", calendar: undefined };
+    await seed("tasks", "tasks", [parent, child, plain]);
+    await saveTaskKeptInStep(child, { keyPoints: "Child notes updated" }, new Map());
+    await sync();
+    const savedChild = { ...child, keyPoints: "Child notes updated" };
+    const beforeKey = calendarKey(savedChild, parent, null);
+    expect((await event(child.id)).description).toContain("Main task: Original main task");
+    expect(await readFields("tasks", `tasks/${child.id}`)).toMatchObject({ calendarSync: { synced: beforeKey } });
+
+    const renamed = { ...parent, task: "Renamed main task" };
+    if (entry === "direct") await updateTask(parent.id, { task: renamed.task }, parent);
+    else await saveTaskKeptInStep(parent, { task: renamed.task }, new Map());
+    await vi.waitFor(async () => {
+      await sync();
+      const updatedEvent = await event(child.id);
+      expect(updatedEvent.description).toContain("Main task: Renamed main task");
+      expect(updatedEvent.description).not.toContain("Main task: Original main task");
+      expect(await readFields("tasks", `tasks/${child.id}`)).toMatchObject({
+        startDate: child.startDate, endDate: child.endDate, keyPoints: savedChild.keyPoints,
+        calendarSync: { synced: calendarKey(savedChild, renamed, null) },
+      });
+    }, { timeout: 10_000 });
+    expect(calendarKey(savedChild, renamed, null)).not.toBe(beforeKey);
+    expect(await event(plain.id)).toBeNull();
+    expect(await readFields("tasks", `tasks/${plain.id}`)).not.toHaveProperty("calendarSync");
+  }, 20_000);
+
+  it("a company rename and its Undo update linked event descriptions and synced keys without changing task dates", async () => {
+    const company = { id: 7, company: "Original company" };
+    const linked = { ...task, linkedClientId: company.id };
+    await seed("clients", "pipeline", [company]);
+    const id = await addTask(linked);
+    await sync();
+    const saved = { ...linked, id };
+    const renamed = { ...company, company: "Renamed company" };
+    const undo = await updateCompany(company, { company: renamed.company });
+    for (const current of [renamed, company]) {
+      if (current === company) await undo();
+      await vi.waitFor(async () => {
+        await sync();
+        expect((await event(id)).description).toContain(`Company: ${current.company}`);
+        expect(await readFields("tasks", `tasks/${id}`)).toMatchObject({
+          startDate: linked.startDate, endDate: linked.endDate,
+          calendarSync: { synced: calendarKey(saved, null, current) },
+        });
+      }, { timeout: 10_000 });
+    }
+  }, 20_000);
+
   it("creates, edits, undoes and deletes a marked task without a manual sync call", async () => {
     const id = await addTask(task);
     await sync();

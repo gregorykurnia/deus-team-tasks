@@ -3,6 +3,7 @@
 // is cleared, and new ids are never reused.
 import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitEach, commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
+import { requestCalendarContextSync } from "./calendarContextRequests";
 import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { expectOwnWrite } from "./liveChanges";
@@ -88,10 +89,13 @@ export async function addCompany(fields: CompanyPatch, knownMaxId: number): Prom
 export async function updateCompany(current: PipelineEntry, patch: CompanyPatch): Promise<Undo> {
   assertOnline("No connection. The change wasn't saved.");
   const before = previousValues(current, patch);
+  const renamed = "company" in patch && current.company !== patch.company;
   await updateDoc(companyRef(current.id), toCompanyUpdate(patch));
+  if (renamed) void requestCalendarContextSync("linkedClientId", current.id);
   return async () => {
     assertOnline("No connection. The change wasn't undone.");
     await updateDoc(companyRef(current.id), toCompanyUpdate(before));
+    if (renamed) void requestCalendarContextSync("linkedClientId", current.id);
   };
 }
 
@@ -102,8 +106,12 @@ function openTasksOf(companyId: number, tasks: Task[]) {
 type TaskChange = { t: Task; p: Partial<NewTask> };
 
 async function writeTaskChanges(changes: TaskChange[]): Promise<void> {
-  const sync = (written: TaskChange[]) => requestCalendarSync(written
-    .filter(({ t, p }) => taskCalendarChanged(t, p)).map(({ t }) => t.id));
+  const sync = (written: TaskChange[]) => {
+    requestCalendarSync(written.filter(({ t, p }) => taskCalendarChanged(t, p)).map(({ t }) => t.id));
+    for (const { t, p } of written) {
+      if ("task" in p && t.task !== p.task) void requestCalendarContextSync("parentId", t.id);
+    }
+  };
   try {
     await commitEach(db, changes, (b, { t, p }) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)));
   } catch (err) {

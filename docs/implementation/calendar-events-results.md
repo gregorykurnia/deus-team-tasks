@@ -349,7 +349,7 @@ LOOKED: phone/failure-detail.png · Warning rests above the partial Responsible 
 | Orphaned event after a switch-off whose sync failed or never reached the server | **Fixed here.** The task kept `calendarSync` but no mark, and the sheet showed nothing, so the event stayed with no way to see or retry it. `calendarStatus` now calls such a task stale, and the sheet shows the amber line with Try again (which removes the event and clears `calendarSync`). Test: `taskSheetCalendar.test.tsx` "isn't up to date when a switched-off task's event may still be there". |
 | Orphaned event after a delete whose request the browser drops (tab closed at once) | **Fixed here.** The sync request now uses `keepalive` (bodies under 60 KB). Test: `calendarWrites.test.ts` "asks the browser to finish the request…". |
 | Orphaned event after a delete whose Google call fails | **Stands.** The task is gone, so nothing in the app can show it or retry it; the brief settles "no background retry queue". Follow-up below. |
-| Stale description after renaming a main task (marked subtasks) or a company (marked company tasks) | **Fix row R1.F1.** The key covers both names, so the subtask's sheet turns amber, but no write asks for a sync: the event keeps the old name until Try again. |
+| Stale description after renaming a main task (marked subtasks) or a company (marked company tasks) | **Fixed in R1.F1.** Successful renames, Undo and rollback request sync for marked dependents, including done and parked tasks. Mocked-fetch tests and emulator/fake data tests prove the descriptions and synced keys follow the names. |
 | A server `calendarSync` write shown as a colleague's change | **Fixed here.** `useLiveQuery` tagged it "Just changed" for 30 s after every own save of a marked task. `requestCalendarSync` now calls `expectOwnWrite("tasks", id)`. Test: `calendarWrites.test.ts` "counts the server's calendarSync write as this device's own change". |
 | A task write blocked or lost by a sync | None: every request is fire-and-forget after the commit, wrapped against throws (C03 tests for pending, HTTP error, rejected and throwing fetch). |
 | A sync write recreating a removed mark or touching `calendar` | None: only `calendarSync.*` field paths via `updateDoc` (which can't create a deleted task); a mark removed mid-sync is caught by the re-read pass, which deletes the event and clears `calendarSync`. |
@@ -368,10 +368,32 @@ LOOKED: phone/failure-detail.png · Warning rests above the partial Responsible 
 - PASS — `npm run test:data`: 10 files, 207 tests.
 - PASS — `npx playwright test tests/smoke/calendar-events.spec.ts`: 9 passed (2.4 min). Its run rewrites `test-results/`, so the committed C04/C05 captures were restored from git.
 
+### R1.F1 — Renames refresh dependent events
+
+2026-11-11. `calendarContextRequests.ts` reads tasks by `parentId` or `linkedClientId` after a successful rename
+and requests sync only for records with a calendar mark. `taskWrites.ts` and `companyWrites.ts` cover direct
+updates, sheet/cell saves, Undo and rollback. Neither the lookup nor the sync delays or fails the saved rename;
+dependent task dates and other task fields are never written by the lookup. Only R1.F1 is newly ticked.
+
+DECISION: Use a background, server-backed query for the renamed record's dependents rather than pass live task lists through UI callers, so all write entry points refresh the current marked records, including done and parked tasks.
+
+Checks:
+
+- PASS — regression first: 7 new rename/lookup cases failed before the fix (missing dependent lookups/requests); all 40 mocked-fetch calendar-write tests pass after it.
+- PASS — `npx tsc --noEmit` and `npx eslint lib/calendarContextRequests.ts lib/taskWrites.ts lib/companyWrites.ts tests/unit/calendarWrites.test.ts lib/calendarWrites.data.test.ts`.
+- PASS — `npm run test:unit -- --reporter=dot`: 45 files, 1,164 tests (8 new); includes marked-only selection, unchanged names, Undo/rollback and pending/rejected/throwing lookups.
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 10 files, 210 tests (3 new); both parent-write entry points update a subtask's fake-event description and `calendarSync.synced`, plain subtasks stay unmarked, and company rename/Undo preserve dates.
+- PASS — `npm run build` with process permissions; compiled/generated successfully, without starting a production server.
+- PASS — own diff review and `git diff --check`: no confirmed findings; queries start only after successful writes, contain their failures, and request only marked dependents.
+
+No browser or look checks: no screen or user flow changed; this row's rename coverage uses mocked fetch and the
+Firestore emulator/fake calendar. No Google or production data was used. A full check is worth running for the
+shared `lib/` changes; it was not requested for this task. Logs: `/tmp/r1-f1-{unit-before,unit-after,types,lint,unit,data,build}.log`.
+
 ### Owner handoff
 
 **Proven on the emulator and the fake calendar:** a task or subtask goes on the calendar all day or with times from its
-sheet; edits, an edit's Undo, rollbacks, switch-off and deletes move or remove the event; a main task's delete keeps its
+sheet; edits, parent/company renames, an edit's Undo, rollbacks, switch-off and deletes update or remove the event; a main task's delete keeps its
 freed subtask's event; a failure keeps the task and shows Try again; chat steps are task only or task plus event, shown in
 the preview; a chat save adds the events, reports failures per step, and a repeated save retries only those; nothing
 shows or writes while `GOOGLE_EVENTS_CALENDAR_ID` is unset (R1a: full suite, a11y and compare green).

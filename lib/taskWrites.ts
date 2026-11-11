@@ -4,6 +4,7 @@
 // no connection.
 import { addDoc, collection, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
 import { commitEach, PartlyCommitted } from "./batches";
+import { requestCalendarContextSync } from "./calendarContextRequests";
 import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
@@ -50,6 +51,7 @@ export async function updateTask(id: string, patch: TaskPatch, current?: Task): 
   assertOnline("No connection. The task wasn't saved.");
   await updateDoc(doc(db, TASKS, id), toTaskUpdate(withCompletedAt(patch, current)));
   if (taskCalendarChanged(current, patch)) requestCalendarSync([id]);
+  if ("task" in patch && current?.task !== patch.task) void requestCalendarContextSync("parentId", id);
 }
 
 // A deleted task's subtasks (lib/subtasks) stay, as tasks of their own. Pass the records so their calendar events can
