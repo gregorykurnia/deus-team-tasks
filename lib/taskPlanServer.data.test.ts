@@ -11,7 +11,7 @@ import { clearAll, EMULATOR_HOST, PROJECTS, readAll, readFields, seed } from "..
 import { USE_EMULATOR } from "./emulator";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
-import type { TaskPlanInput } from "./taskPlan";
+import { TASK_PLAN_CALENDAR_OFF, type TaskPlanInput } from "./taskPlan";
 import {
   addTaskPlan, findTaskPlanDestinations, previewTaskPlan, TaskPlanConflictError,
   type TaskPlanServerPreview,
@@ -49,7 +49,7 @@ beforeEach(async () => {
   await seed("clients", "pipeline", [TASK_PLAN_PROSPECT, TASK_PLAN_CLIENT], { keepIdField: true });
   await seed("tasks", "tasks", [...parents, oldChild, unrelated]);
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 afterAll(async () => { await Promise.all([firestore.terminate(db), firestore.terminate(clientsDb)]); });
 
 async function taskRules(content: string) {
@@ -63,6 +63,55 @@ async function taskRules(content: string) {
 const preview = (plan: TaskPlanInput, clock = options) => previewTaskPlan(plan, clock);
 const save = (plan: TaskPlanInput, shown: TaskPlanServerPreview, clock = options) =>
   addTaskPlan(plan, shown.previewToken, shown.warnings.map((warning) => warning.id), clock);
+
+describe("M01 calendar preview activation", () => {
+  const plan: TaskPlanInput = { ...TASK_PLAN_INTERNAL_NEW, steps: [
+    { name: "All-day visit", startDate: "2026-12-05", endDate: "2026-12-05", calendar: {} },
+    { name: "Meeting", startDate: "2026-12-06", endDate: "2026-12-06", calendar: { startTime: "14:00", endTime: "15:00" } },
+    { name: "Task only", startDate: "2026-12-07", endDate: "2026-12-07" },
+  ] };
+
+  it("returns calendar choices and a bound token without writing, including on a saved-plan preview", async () => {
+    vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "test-calendar");
+    vi.stubEnv("CALENDAR_FAKE", "1");
+    const before = await readAll("tasks", "tasks");
+    const shown = await preview(plan);
+    expect(shown.canWrite).toBe(true);
+    expect(shown.previewToken).toEqual(expect.any(String));
+    expect(shown.calendarPreview).toEqual([
+      'Step 1 "All-day visit": Team calendar: all day',
+      'Step 2 "Meeting": Team calendar: 14:00–15:00',
+      'Step 3 "Task only": Task only',
+    ]);
+    expect(await readAll("tasks", "tasks")).toEqual(before);
+    const added = await save(plan, shown);
+    const stored = await readAll("tasks", "tasks");
+    expect(stored.find((task) => task.id === added.subtaskIds[0])?.calendar).toEqual({});
+    expect(stored.find((task) => task.id === added.subtaskIds[1])?.calendar).toEqual(plan.steps[1].calendar);
+    expect(stored.find((task) => task.id === added.subtaskIds[2])).not.toHaveProperty("calendar");
+    const repeated = await preview(plan);
+    expect(repeated.alreadySaved?.alreadySaved).toBe(true);
+    expect(repeated.calendarPreview).toEqual(shown.calendarPreview);
+  });
+
+  it.each([false, true])("refuses calendar plans before any database call when writes are off (already saved: %s)", async (alreadySaved) => {
+    vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "test-calendar");
+    vi.stubEnv("CALENDAR_FAKE", "1");
+    const shown = await preview(plan);
+    if (alreadySaved) await save(plan, shown);
+    vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "");
+    vi.mocked(firestore.runTransaction).mockClear();
+    vi.mocked(firestore.getDocsFromServer).mockClear();
+    const refused = await preview(plan);
+    expect(refused.errors).toEqual([TASK_PLAN_CALENDAR_OFF]);
+    expect(refused.canWrite).toBe(false);
+    expect(refused.previewToken).toBeUndefined();
+    expect(refused.calendarPreview).toBeUndefined();
+    await expect(save(plan, shown)).rejects.toThrow(TASK_PLAN_CALENDAR_OFF);
+    expect(firestore.runTransaction).not.toHaveBeenCalled();
+    expect(firestore.getDocsFromServer).not.toHaveBeenCalled();
+  });
+});
 const withoutProvenance = (data: Record<string, unknown> | null) => {
   const copy = { ...data };
   delete copy.taskPlanOperation;

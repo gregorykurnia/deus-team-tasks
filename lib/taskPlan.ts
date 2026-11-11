@@ -8,12 +8,14 @@ import { isDealDone, KIND_LABELS, kindOf } from "./kinds";
 import type { Kind } from "./kinds";
 import { isParked } from "./parking";
 import { newSubtask } from "./subtasks";
+import { validateCalendarTimes } from "./taskCalendar";
 import type { NewTask, Task } from "./types";
 
 export const MAX_TASK_PLAN_STEPS = 499;
 // UTF-8 bytes of the complete JSON input, before trimming. Reject, never truncate.
 // 512 KiB leaves room for long notes while staying below a single Firestore document's limit.
 export const MAX_TASK_PLAN_INPUT_BYTES = 512 * 1024;
+export const TASK_PLAN_CALENDAR_OFF = "The team calendar isn't connected; remove calendar from these steps.";
 
 export interface TaskPlanStepInput {
   name: string;
@@ -21,6 +23,7 @@ export interface TaskPlanStepInput {
   endDate: string;
   keyPoints?: string;
   owners?: string; // Supplied prose only; never an assignment to app people.
+  calendar?: { startTime?: string; endTime?: string };
 }
 
 export interface TaskPlanNewParentInput {
@@ -277,7 +280,7 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
         errors.push(`${path} must be an object.`);
         continue;
       }
-      knownFields(step, ["name", "startDate", "endDate", "keyPoints", "owners"], path);
+      knownFields(step, ["name", "startDate", "endDate", "keyPoints", "owners", "calendar"], path);
       const name = text(step.name, `${path}.name`);
       const startDate = text(step.startDate, `${path}.startDate`);
       const endDate = text(step.endDate, `${path}.endDate`);
@@ -286,7 +289,26 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
       if (!validStart) errors.push(`${path}.startDate must be a real yyyy-mm-dd calendar day.`);
       if (!validEnd) errors.push(`${path}.endDate must be a real yyyy-mm-dd calendar day.`);
       if (validStart && validEnd && startDate > endDate) errors.push(`${path}.startDate must not be after ${path}.endDate.`);
-      steps.push({ name, startDate, endDate, ...optionalText(step, "keyPoints", path), ...optionalText(step, "owners", path) });
+      let calendar: TaskPlanStepInput["calendar"];
+      if (step.calendar !== undefined) {
+        if (!isRecord(step.calendar)) {
+          errors.push(`${path}.calendar for step "${name}" must be an object.`);
+        } else {
+          knownFields(step.calendar, ["startTime", "endTime"], `${path}.calendar`);
+          calendar = {};
+          for (const field of ["startTime", "endTime"] as const) {
+            if (step.calendar[field] !== undefined) {
+              const time = text(step.calendar[field], `${path}.calendar.${field} for step "${name}"`, false);
+              if (time) calendar[field] = time;
+            }
+          }
+          for (const [field, message] of Object.entries(validateCalendarTimes({ startDate, endDate, calendar }))) {
+            errors.push(`${path}.calendar.${field} for step "${name}": ${message}`);
+          }
+        }
+      }
+      steps.push({ name, startDate, endDate, ...optionalText(step, "keyPoints", path), ...optionalText(step, "owners", path),
+        ...(calendar && { calendar }) });
     }
   }
   if (errors.length) return { plan: null, errors };
@@ -311,6 +333,7 @@ export interface TaskPlanWarning {
 export interface TaskPlanContext extends TaskDestinationContext {
   parentId?: string; // Caller-allocated, unused document ID; only needed for a new main task.
   order?: number; // Optional order seed. No clock, random IDs or I/O in this builder.
+  calendarEnabled?: boolean; // Server configuration; absent means calendar writes are off.
 }
 
 // Only destination fields that affect the preview, for the later server-side integrity check.
@@ -343,6 +366,14 @@ export interface TaskPlanPreview {
   parent: NewTask | null; // New main task only. There is deliberately no existing-parent update.
   subtasks: NewTask[];
   preservationNotes: string[];
+  calendarPreview?: string[]; // Input step order, including task-only steps; omitted for task-only plans.
+}
+
+export function taskPlanCalendarPreview(plan: TaskPlanInput): string[] | undefined {
+  if (!plan.steps.some((step) => step.calendar)) return;
+  return plan.steps.map((step, i) => `Step ${i + 1} "${step.name}": ${step.calendar
+    ? `Team calendar: ${step.calendar.startTime ? `${step.calendar.startTime}–${step.calendar.endTime}` : "all day"}`
+    : "Task only"}`);
 }
 
 // Similarity is exact or whole-phrase containment after case/spacing/punctuation normalization.
@@ -359,6 +390,10 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
     parentId: plan?.existingParentId ?? context.parentId ?? "", parent: null, subtasks: [], preservationNotes: [],
   };
   if (!plan) return result;
+  if (!context.calendarEnabled && plan.steps.some((step) => step.calendar)) {
+    errors.push(TASK_PLAN_CALENDAR_OFF);
+    return result;
+  }
   if (!isIsoDay(context.today)) {
     errors.push("today must be a real yyyy-mm-dd Asia/Jakarta calendar day.");
     return result;
@@ -451,6 +486,7 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
     ...newSubtask(parent, step.name, order + i + (existing ? 0 : 1)),
     startDate: step.startDate, endDate: step.endDate,
     keyPoints: [step.keyPoints, step.owners && `Owner: ${step.owners}`].filter(Boolean).join("\n\n"),
+    ...(step.calendar && { calendar: { ...step.calendar } }),
   }));
   result.destination = {
     kind: plan.kind, category: KIND_LABELS[plan.kind],
@@ -466,6 +502,8 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
     existing ? "Every existing main-task field stays unchanged, including dates, Key points, people, type, group and status. Only the previewed subtasks are added."
       : "Only the previewed new main task and subtasks are added. The main task spans the earliest selected start and latest selected end; each subtask keeps its own dates.",
   ];
+  const calendarPreview = taskPlanCalendarPreview(plan);
+  if (calendarPreview) result.calendarPreview = calendarPreview;
   result.canWrite = true;
   return result;
 }

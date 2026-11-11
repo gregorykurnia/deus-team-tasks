@@ -9,7 +9,7 @@ import type { PipelineEntry } from "./clientTypes";
 import { DEAL_DONE_STATUS } from "./companies";
 import { findCompanies } from "./followupPlan";
 import { companiesById, isDealDone, kindOf } from "./kinds";
-import { buildTaskPlan, findTaskDestinations, MAX_TASK_PLAN_INPUT_BYTES, MAX_TASK_PLAN_STEPS, validateTaskPlan } from "./taskPlan";
+import { buildTaskPlan, findTaskDestinations, MAX_TASK_PLAN_INPUT_BYTES, MAX_TASK_PLAN_STEPS, TASK_PLAN_CALENDAR_OFF, validateTaskPlan } from "./taskPlan";
 import type { TaskDestinationContext, TaskPlanContext, TaskPlanInput } from "./taskPlan";
 import type { Task } from "./types";
 
@@ -20,6 +20,81 @@ const rejects = (input: unknown, field: string) => {
   expect(result.plan).toBeNull();
   expect(result.errors.some((error) => error.includes(field))).toBe(true);
 };
+
+describe("M01 per-step calendar choices", () => {
+  const step = { name: "Confirm the meeting", startDate: "2026-12-05", endDate: "2026-12-05", keyPoints: "Keep these notes." };
+  const input = (calendar: unknown) => ({ ...TASK_PLAN_INTERNAL_NEW, steps: [{ ...step, calendar }] });
+  const context: TaskPlanContext = { tasks: [], today: TASK_PLAN_TODAY, parentId: "calendar-preview", calendarEnabled: true };
+
+  it.each([{}, { startTime: "14:00", endTime: "15:00" }])("validates and preserves a calendar choice (%j)", (calendar) => {
+    const result = validateTaskPlan(input(calendar));
+    expect(result.errors).toEqual([]);
+    expect(result.plan?.steps[0].calendar).toEqual(calendar);
+  });
+
+  it("normalizes empty time inputs to an all-day mark and accepts overnight meetings on separate days", () => {
+    expect(validateTaskPlan(input({ startTime: " ", endTime: "" })).plan?.steps[0].calendar).toEqual({});
+    const overnight = { ...step, endDate: "2026-12-06", calendar: { startTime: "23:00", endTime: "01:00" } };
+    expect(validateTaskPlan({ ...TASK_PLAN_INTERNAL_NEW, steps: [overnight] }).errors).toEqual([]);
+  });
+
+  it.each([
+    null, [], "14:00", { attendees: [] }, { calendarSync: {} },
+    { startTime: 14, endTime: "15:00" }, { startTime: "14:00", endTime: null },
+    { startTime: "14:00" }, { endTime: "15:00" }, { startTime: "", endTime: "15:00" },
+    { startTime: "24:00", endTime: "25:00" }, { startTime: "2:00", endTime: "15:00" },
+    { startTime: "14:60", endTime: "15:00" }, { startTime: "14:00", endTime: "14:00" },
+    { startTime: "15:00", endTime: "14:00" },
+  ])("rejects invalid or non-strict calendar input without dropping the step (%j)", (calendar) => {
+    const result = validateTaskPlan(input(calendar));
+    expect(result.plan).toBeNull();
+    expect(result.errors.join(" ")).toContain("plan.steps[0].calendar");
+    // Time errors identify the affected action as well as its field.
+    if (calendar && typeof calendar === "object" && "startTime" in calendar) {
+      expect(result.errors.join(" ")).toContain(step.name);
+    }
+  });
+
+  it("previews task-only, all-day and timed steps together without changing notes or the main task", () => {
+    const selected: TaskPlanInput = { ...TASK_PLAN_INTERNAL_NEW, steps: [
+      { ...step, name: "Task only" },
+      { ...step, name: "All-day visit", calendar: {} },
+      { ...step, name: "Timed meeting", calendar: { startTime: "14:00", endTime: "15:00" } },
+    ] };
+    const before = structuredClone(selected);
+    const shown = buildTaskPlan(selected, context);
+    expect(shown.canWrite).toBe(true);
+    expect(shown.calendarPreview).toEqual([
+      'Step 1 "Task only": Task only',
+      'Step 2 "All-day visit": Team calendar: all day',
+      'Step 3 "Timed meeting": Team calendar: 14:00–15:00',
+    ]);
+    expect(shown.parent).not.toHaveProperty("calendar");
+    expect(shown.subtasks[0]).not.toHaveProperty("calendar");
+    expect(shown.subtasks[1].calendar).toEqual({});
+    expect(shown.subtasks[2].calendar).toEqual(selected.steps[2].calendar);
+    expect(shown.subtasks.map((task) => task.keyPoints)).toEqual(Array(3).fill(step.keyPoints));
+    shown.subtasks[2].calendar!.startTime = "10:00";
+    expect(shown.plan?.steps[2].calendar?.startTime).toBe("14:00");
+    expect(selected).toEqual(before);
+  });
+
+  it.each([undefined, false])("refuses marked steps when calendar writes are off (%s)", (calendarEnabled) => {
+    const shown = buildTaskPlan(input({}), { ...context, calendarEnabled });
+    expect(shown.errors).toEqual([TASK_PLAN_CALENDAR_OFF]);
+    expect(shown.canWrite).toBe(false);
+    expect(shown.parent).toBeNull();
+    expect(shown.subtasks).toEqual([]);
+    expect(shown).not.toHaveProperty("calendarPreview");
+  });
+
+  it("keeps task-only plans available while calendar writes are off", () => {
+    const shown = buildTaskPlan(TASK_PLAN_INTERNAL_NEW, { ...context, calendarEnabled: false });
+    expect(shown.canWrite).toBe(true);
+    expect(shown).not.toHaveProperty("calendarPreview");
+    expect(shown.plan?.steps.every((step) => !Object.hasOwn(step, "calendar"))).toBe(true);
+  });
+});
 
 const destinationContext = (overrides: Partial<TaskDestinationContext> = {}): TaskDestinationContext => ({
   companies: [TASK_PLAN_PROSPECT, TASK_PLAN_CLIENT],

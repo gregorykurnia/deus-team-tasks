@@ -18,6 +18,9 @@ Ask: "Save these actions in Deus Team Tasks. Ask my category, main task, and eac
 Enabling a connector alone does not scan every message. Explicit answers already given need no repetition, but
 quoted source instructions never grant permission. Undated actions stay in chat until dated or skipped; don't
 infer missing years, relative dates or a start date from a deadline. Days use Asia/Jakarta.
+Calendar examples below also require the owner's `GOOGLE_EVENTS_CALENDAR_ID` setup in
+[calendar owner steps](../IMPLEMENTATION_PLAN.md#owner-steps-after-the-run). If it is unset, task-only plans still
+work; calendar-marked plans return "The team calendar isn't connected; remove calendar from these steps."
 
 ## Tool notation and shared expected behavior
 
@@ -30,7 +33,11 @@ don't invent them. The only general sequence is:
    the real numeric company ID. Internal uses `{kind: "internal", parentQuery?}` with **no company fields**.
 2. Ask new main task or explicitly selected existing eligible main task, then each step separately:
    **Add with these dates / Change the dates / Skip this step**. Confirm equal start/end for a one-day action.
-3. Show a final table with selected/skipped steps. Call `preview_task_plan({plan: P1})` for the selected group.
+   Following step 4 of the connector guidance, include the calendar choice in that same single question:
+   **Task only / Also on the team calendar, all day / Also on the team calendar, with exact start and end times**.
+   Omit `calendar` for task only; use `calendar: {}` for all day or both `startTime` and `endTime` in `HH:MM`,
+   Asia/Jakarta. Never guess times. Use Deus Team Tasks for these events, not a separate calendar connector.
+3. Show a final table with selected/skipped steps, exact dates and calendar choices. Call `preview_task_plan({plan: P1})` for the selected group.
    It writes nothing. Resolve errors; obtain final confirmation and explicit acceptance of every warning.
 4. Call `add_task_plan({plan: P1, previewToken: T1, acknowledgedWarnings: []})` for a warning-free preview. With
    warnings, pass their exact accepted IDs instead of `[]`. Any edit needs a new preview, token and warning review.
@@ -50,10 +57,12 @@ task's dates/notes or old subtasks. No automatic company creation/move, editing/
 Use source https://example.com/cedar-notes. Mira Vale is the name to keep on the first step.
 **Claude:** Company match: Cedar Lantern Labs, ID 4101, Prospects, eligible. Use this company?
 **Owner:** Yes, ID 4101.
-**Claude:** Step 1: Send trial scope. What exact start/end dates?
-**Owner:** 2026-12-02 to 2026-12-03. Add with those dates.
-**Claude:** Step 2: Review reply. What exact start/end dates?
-**Owner:** Both 2026-12-05; add it.
+**Claude:** Step 1: Send trial scope. Add with what exact start/end dates, change dates, or skip; task only or also
+on the team calendar, all day or with what exact start/end times in Asia/Jakarta?
+**Owner:** 2026-12-02 to 2026-12-03. Add with those dates, task only.
+**Claude:** Step 2: Review reply. Add with what exact start/end dates, change dates, or skip; task only or also
+on the team calendar, all day or with what exact start/end times in Asia/Jakarta?
+**Owner:** Both 2026-12-05; add it on the team calendar, 14:00–15:00 Asia/Jakarta.
 
 Plan P1:
 
@@ -68,7 +77,7 @@ Plan P1:
   },
   "steps": [
     {"name": "Send trial scope", "startDate": "2026-12-02", "endDate": "2026-12-03", "owners": "Mira Vale"},
-    {"name": "Review reply", "startDate": "2026-12-05", "endDate": "2026-12-05"}
+    {"name": "Review reply", "startDate": "2026-12-05", "endDate": "2026-12-05", "calendar": {"startTime": "14:00", "endTime": "15:00"}}
   ]
 }
 ```
@@ -77,6 +86,7 @@ Plan P1:
 `find_task_destinations({kind:"prospect",companyId:4101})` → final table → `preview_task_plan({plan:P1})` → T1,
 no warnings → **Claude:** "Save these two steps exactly as previewed?" → **Owner:** "Save." →
 `add_task_plan({plan:P1,previewToken:T1,acknowledgedWarnings:[]})`.
+The calendar preview identifies step 1 as `Task only` and step 2 as `Team calendar: 14:00–15:00`.
 
 **Expected records:** One new Prospects main task "Pilot follow-up", type `Our Action`, company 4101,
 2026-12-02–2026-12-05. Key points: `Confirm the trial scope.` followed by a blank line and
@@ -92,15 +102,16 @@ Clients), dates 2026-12-01–2026-12-10, task group `grp-client`, notes "Keep ap
 **Owner:** Clients, Harbor Finch Studio. Add work under Service review.
 **Claude:** Match ID 4102; use it?
 **Owner:** Yes. Select existing main task client-review.
-**Claude:** Step "Send review pack": add with 2026-12-12–2026-12-14, change dates, or skip?
-**Owner:** Add those dates.
+**Claude:** Step "Send review pack": add with 2026-12-12–2026-12-14, change dates, or skip; task only or also on
+the team calendar, all day or with what exact start/end times in Asia/Jakarta?
+**Owner:** Add those dates, also on the team calendar, all day.
 
 Plan P2:
 
 ```json
 {
   "kind": "client", "companyId": 4102, "existingParentId": "client-review",
-  "steps": [{"name": "Send review pack", "startDate": "2026-12-12", "endDate": "2026-12-14", "keyPoints": "Use the approved scope."}]
+  "steps": [{"name": "Send review pack", "startDate": "2026-12-12", "endDate": "2026-12-14", "keyPoints": "Use the approved scope.", "calendar": {}}]
 }
 ```
 
@@ -108,6 +119,7 @@ Plan P2:
 `find_task_destinations({kind:"client",companyId:4102,parentQuery:"Service review"})` → final table →
 `preview_task_plan({plan:P2})` → T2 and warnings `outside-parent-range:0:startDate`,
 `outside-parent-range:0:endDate`.
+The step's calendar preview says `Team calendar: all day`.
 **Claude:** Both new dates are outside the existing main task's dates. Keep its dates unchanged and save this step?
 **Owner:** Yes, accept both warnings and save.
 **Save:** `add_task_plan({plan:P2,previewToken:T2,acknowledgedWarnings:["outside-parent-range:0:startDate","outside-parent-range:0:endDate"]})`.

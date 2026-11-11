@@ -4,11 +4,12 @@ import {
   type DocumentData, type Transaction,
 } from "firebase/firestore";
 import type { PipelineEntry } from "./clientTypes";
+import { calendarWritesEnabled } from "./calendarSync";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { wibToday } from "./followupServer";
 import {
-  buildTaskPlan, findTaskDestinations, validateTaskPlan,
+  buildTaskPlan, findTaskDestinations, taskPlanCalendarPreview, TASK_PLAN_CALENDAR_OFF, validateTaskPlan,
   type TaskPlanDestinationState, type TaskPlanInput, type TaskPlanPreview,
 } from "./taskPlan";
 import {
@@ -124,15 +125,20 @@ async function completedOperation(plan: TaskPlanInput, ids: OperationIds) {
 
 export async function previewTaskPlan(input: unknown, options: TaskPlanTokenOptions = {}): Promise<TaskPlanServerPreview> {
   const { plan } = validateTaskPlan(input);
-  if (!plan) return buildTaskPlan(input, { tasks: [], today: wibToday() });
+  const calendarEnabled = calendarWritesEnabled();
+  if (!plan || (!calendarEnabled && plan.steps.some((step) => step.calendar))) {
+    return buildTaskPlan(input, { tasks: [], today: wibToday(), calendarEnabled });
+  }
   const ids = operationIds(plan);
   const saved = await completedOperation(plan, ids);
+  const calendarPreview = taskPlanCalendarPreview(plan);
   const preview: TaskPlanServerPreview = saved ? {
     plan, errors: [], warnings: [], canWrite: true, destination: saved.destination,
     parentId: saved.parentId, parent: null, subtasks: [], alreadySaved: saved,
     preservationNotes: ["This exact plan is already saved. Return the original task link; no existing record will be changed."],
+    ...(calendarPreview && { calendarPreview }),
   } : buildTaskPlan(plan, {
-    tasks: await readTasks(), today: wibToday(), parentId: ids.parentId,
+    tasks: await readTasks(), today: wibToday(), parentId: ids.parentId, calendarEnabled,
     ...(plan.kind !== "internal" && { companies: await readCompanies() }),
   });
   if (preview.canWrite) preview.previewToken = createTaskPlanToken(preview, options);
@@ -152,6 +158,7 @@ export async function addTaskPlan(
   // Authenticity, expiry and exact normalized input come before the already-saved fast path.
   const verified = verifyTaskPlanToken(input, previewToken, options);
   const plan = validateTaskPlan(input).plan!;
+  if (!calendarWritesEnabled() && plan.steps.some((step) => step.calendar)) throw new TaskPlanError(TASK_PLAN_CALENDAR_OFF);
   const ids = operationIds(plan);
   const saved = await completedOperation(plan, ids);
   if (saved) return saved;
@@ -171,7 +178,8 @@ export async function addTaskPlan(
     const current = new Map(snapshots.filter((entry) => entry.exists()).map((entry) => [entry.id, { ...entry.data() as NewTask, id: entry.id }]));
     const parent = operation.snapshots[0];
     if (parent.exists()) current.set(parent.id, { ...parent.data() as NewTask, id: parent.id });
-    const preview = buildTaskPlan(plan, { tasks: [...current.values()], companies, today: wibToday(), parentId: ids.parentId });
+    const preview = buildTaskPlan(plan, { tasks: [...current.values()], companies, today: wibToday(), parentId: ids.parentId,
+      calendarEnabled: calendarWritesEnabled() });
     assertTaskPlanPreview(verified, preview, acknowledgedWarnings);
 
     // Keep the 499-step input cap. Firestore removed its old 500-write transaction cap on 2023-03-29;

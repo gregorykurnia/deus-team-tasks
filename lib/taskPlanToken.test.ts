@@ -127,6 +127,40 @@ describe("signed task preview tokens", () => {
 });
 
 describe("canonical task-plan binding", () => {
+  it.each([
+    { input: TASK_PLAN_PROSPECT_NEW, hash: "b90efbfd1b89039b3d019bb83be902902a61b80a3232049524f730106667338d" },
+    { input: TASK_PLAN_CLIENT_NEW, hash: "66e69bfc71a0c47be6cbd1eea3eb694f1f3e92b0460a70d79e1b6b7b230db65d" },
+    { input: TASK_PLAN_INTERNAL_NEW, hash: "a688648d2858a8dcd2dc7e497919101a9e1110b5bb607ddaca3d33360acdac9d" },
+    { input: TASK_PLAN_INTERNAL_APPEND, hash: "4a65a710168d170c4bf8a3a9ba3e9c7bb0acb6e60b56113157859f6761495274" },
+  ])("preserves the pre-calendar fingerprint for $input.kind ($hash)", ({ input, hash }) => {
+    expect(taskPlanFingerprint(input)).toBe(hash);
+  });
+
+  it("verifies an unchanged token captured before calendar support", () => {
+    const token = "eyJ2ZXJzaW9uIjoxLCJpc3N1ZWRBdCI6MTc5NDMyOTk5OTAwMCwiZXhwaXJlc0F0IjoxNzk0MzMxNzk5MDAwLCJwbGFuSGFzaCI6ImE2ODg2NDhkMjg1OGE4ZGNkMmRjN2U0OTc5MTkxMDFhOWUxMTEwYjViYjYwN2RkYWNhM2QzMzM2MGFjZGFjOWQiLCJ3YXJuaW5nc0hhc2giOiI0ZjUzY2RhMThjMmJhYTBjMDM1NGJiNWY5YTNlY2JlNWVkMTJhYjRkOGUxMWJhODczYzJmMTExNjEyMDJiOTQ1IiwiZGVzdGluYXRpb25IYXNoIjoiMzcxMWI3NzMyYWM1OWZmNDhlNGI3NjEzOWIzODJlYjViNmI5NzcwZTFmNTE4MmFiMmZlOWNhM2Y2NzViNjdjMSJ9.UJZfNLlhlytZU-ZKKBHHnduLUFos77l9kM9_hB2B8qw";
+    const verified = verifyTaskPlanToken(TASK_PLAN_INTERNAL_NEW, token, options);
+    const shown = build(TASK_PLAN_INTERNAL_NEW, { tasks: [], parentId: "legacy-parent" });
+    expect(() => assertTaskPlanPreview(verified, shown, [])).not.toThrow();
+  });
+
+  it.each([
+    { from: undefined, to: {} },
+    { from: {}, to: { startTime: "14:00", endTime: "15:00" } },
+    { from: { startTime: "14:00", endTime: "15:00" }, to: { startTime: "14:00", endTime: "16:00" } },
+    { from: {}, to: undefined },
+  ])("requires a new token when only a step's calendar changes ($from → $to)", ({ from, to }) => {
+    const input: TaskPlanInput = structuredClone(TASK_PLAN_INTERNAL_NEW);
+    if (from) input.steps[0].calendar = from;
+    const shown = build(input, { calendarEnabled: true });
+    const token = createTaskPlanToken(shown, options);
+    expect(verifyTaskPlanToken(input, token, options).planHash).toBe(taskPlanFingerprint(input));
+    const changed = structuredClone(input);
+    if (to) changed.steps[0].calendar = to;
+    else delete changed.steps[0].calendar;
+    expect(taskPlanFingerprint(changed)).not.toBe(taskPlanFingerprint(input));
+    expect(() => verifyTaskPlanToken(changed, token, options)).toThrow(/plan changed/);
+  });
+
   it("shares preview trimming, preserves multiline text and ignores object key order", () => {
     const input = structuredClone(TASK_PLAN_PROSPECT_NEW);
     input.newParent!.title = `  ${input.newParent!.title}\n`;

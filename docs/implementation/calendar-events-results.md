@@ -178,3 +178,23 @@ Checks:
 - PASS — `npx playwright test tests/smoke/task-sheet.spec.ts --output=/tmp/c05-look-sheet-pw`: 16/16.
 - PASS — C05 `--grep 'app calendar flow' --last-failed --output=/tmp/c05-look-pw` passed desktop lifecycle/recovery and phone lifecycle; after correcting the wrap measurement, `--project=phone --grep 'a calendar failure' --last-failed --output=/tmp/c05-look-pw` passed the remaining case. All four flows pass; same-line word gaps measure ≥2px and the phone warning has one natural wrap.
 - PASS — 8 viewport PNGs at the exact required sizes plus 8 full-width unscaled crops; original-size look check, whole-label/visible-control/clearance audits, no console errors or sideways scroll; ports 3100 and 8180 free afterwards. No Firestore implementation changed, so `test:data` was not needed.
+
+## M01 — MCP calendar choice per step and preview
+
+2026-11-11. Added strict optional per-step calendar marks, validated with C01's time helper and copied into the
+proposed task records. Mixed plans preview each step as Task only, Team calendar: all day, or Team calendar:
+14:00–15:00. Calendar-marked previews and saves are refused before database access while writes are off,
+including already-saved requests. Existing canonical signing covers the new field without changing old hashes
+or token verification. Chat guidance asks dates and calendar choice in the same question per step; walkthrough
+examples cover task only, timed and all day. Calendar event creation/retry remains M02.
+
+Decision: add optional `calendarPreview` lines only to plans containing a calendar step, rather than expanding
+every task-only response; this preserves existing task-only previews and identifies every choice in mixed plans.
+
+Checks:
+- PASS — `npx tsc --noEmit`; corrected an initially missing test-fixture type annotation before the final passing run.
+- PASS — `npx eslint lib/taskPlan.ts lib/taskPlanServer.ts lib/taskPlanTools.ts lib/taskPlan.test.ts lib/taskPlanToken.test.ts lib/taskPlanServer.data.test.ts tests/unit/taskPlanTools.test.ts`; the only later TypeScript edit was re-linted separately.
+- RECOVERED — focused unit run: 418/419 passed, existing non-JSON-input test timed out at 5000ms; required `npm run test:unit` then passed all 1,152 tests in 45 files, including that test and 37 new cases (strict times, previews/off gate, four frozen old fingerprints, a pre-change token, calendar-only token changes, tool schemas/legacy compatibility and guidance).
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 200 tests in 10 files; three new emulator cases prove preview is read-only, saved marks read back, saved-plan previews retain choices, and off requests perform no database calls. No Google calls or production data.
+- PASS — `npm run build` outside the sandbox; the first sandbox build stalled before compilation and was stopped by its exact PID/children (exit 143), then the unchanged build passed with process permissions.
+- PASS — diff review and `git diff --check`: calendar marks stay separate from notes and server sync state; task-only behavior, destination preservation and legacy routes remain intact. Connector-only [no look]: no browser or screenshot checks; full shared-code checks remain scheduled for R1a.

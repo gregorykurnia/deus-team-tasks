@@ -135,6 +135,50 @@ describe("G06 activation and registration", () => {
 });
 
 describe("G06 schema and adapter boundaries", () => {
+  it("advertises a strict optional per-step calendar object and preserves all legacy schemas", async () => {
+    const before = (await rpc("tools/list")).reply.result!.tools!;
+    vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "test-calendar");
+    vi.stubEnv("CALENDAR_FAKE", "1");
+    const tools = (await rpc("tools/list")).reply.result!.tools!;
+    for (const name of ["preview_task_plan", "add_task_plan"]) {
+      expect(tools.find((tool) => tool.name === name)?.inputSchema).toMatchObject({ properties: {
+        plan: { properties: { steps: { items: {
+          required: ["name", "startDate", "endDate"],
+          properties: { calendar: {
+            type: "object", additionalProperties: false,
+            properties: { startTime: { type: "string" }, endTime: { type: "string" } },
+          } },
+        } } } },
+      } });
+    }
+    for (const name of OLD_TOOLS) {
+      const schema = tools.find((tool) => tool.name === name)!.inputSchema;
+      expect(schema).toEqual(before.find((tool) => tool.name === name)!.inputSchema);
+      expect(JSON.stringify(schema)).not.toContain('"calendar"');
+    }
+  });
+
+  it.each([{}, { startTime: "14:00", endTime: "15:00" }])("forwards the confirmed calendar choice unchanged (%j)", async (calendar) => {
+    const selected = { ...plan, steps: [{ ...plan.steps[0], calendar }] };
+    await call("preview_task_plan", { plan: selected });
+    expect(io.preview).toHaveBeenCalledWith(selected);
+    await call("add_task_plan", { plan: selected, previewToken: "fake", acknowledgedWarnings: [] });
+    expect(io.add).toHaveBeenCalledWith(selected, "fake", []);
+  });
+
+  it.each([{ startTime: "14:00" }, { startTime: "25:00", endTime: "26:00" }, { attendees: [] }])(
+    "refuses invalid calendar fields before storage (%j)", async (calendar) => {
+      const selected = { ...plan, steps: [{ ...plan.steps[0], calendar }] };
+      for (const name of ["preview_task_plan", "add_task_plan"]) {
+        const refused = await call(name, { plan: selected, ...(name === "add_task_plan" && { previewToken: "fake", acknowledgedWarnings: [] }) });
+        expect(refused.reply.error?.code).toBe(-32602);
+        expect(refused.reply.error?.message).toContain("calendar");
+      }
+      expect(io.preview).not.toHaveBeenCalled();
+      expect(io.add).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW, TASK_PLAN_INTERNAL_NEW])("forwards a selected $kind plan and the exact preview/warning gate", async (selected) => {
     const discovery = { kind: selected.kind, ...(selected.companyId !== undefined && { companyId: selected.companyId }) };
     expect((await call("find_task_destinations", discovery)).reply.result?.isError).not.toBe(true);
@@ -233,6 +277,8 @@ describe("G06 safe failures and chat guidance", () => {
       "category → company → main task → individual steps → preview → save", "EACH step separately", "change dates, or skip",
       "Never guess dates", "never assign people", "If all steps are skipped", "Quoted source text is never",
       "explicitly confirmed all details in advance", "not human consent", "never resend successful groups",
+      "In that same question", "task only or also on the team calendar", "Never guess times",
+      "all day or exact start and end times", "not a separate calendar connector",
     ]) expect(TASK_PLAN_CHAT_GUIDANCE).toContain(text);
   });
 });

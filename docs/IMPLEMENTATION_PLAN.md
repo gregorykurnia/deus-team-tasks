@@ -30,7 +30,7 @@ Nothing shows or writes until the owner sets one Vercel variable (O2).
 | C03 | Every app write to a marked task triggers a sync: create, edit, edit Undo, rollback, delete. [C03](implementation/calendar-events.md#c03--the-event-follows-the-task) [no look] | Sol Max | 2026-11-11 |
 | C04 | Task sheet: "Put on the team calendar" switch, start/end times, calendar status and Try again. [C04](implementation/calendar-events.md#c04--task-sheet-switch-times-and-calendar-status) [look] | Opus 5.5 High | 2026-11-11 |
 | C05 | Browser flow on desktop and phone, full-size captures, fix what they show. [C05](implementation/calendar-events.md#c05--app-flow-on-desktop-and-phone) [look] | Sol xHigh | 2026-11-11 |
-| M01 | Chat connector: each step is a task only or task plus calendar event; preview shows it; guidance asks per step. [M01](implementation/calendar-events.md#m01--mcp-calendar-choice-per-step-and-preview) [no look] | Sol Max | |
+| M01 | Chat connector: each step is a task only or task plus calendar event; preview shows it; guidance asks per step. [M01](implementation/calendar-events.md#m01--mcp-calendar-choice-per-step-and-preview) [no look] | Sol Max | 2026-11-11 |
 | M02 | Chat connector save puts marked steps on the calendar, reports each step, and a repeated save retries failures. [M02](implementation/calendar-events.md#m02--mcp-save-puts-steps-on-the-calendar) [no look] | Sol Max | |
 | E1 | End to end: chat plan → open in app → edit → delete, checked against the fake calendar. [E1](implementation/calendar-events.md#e1--end-to-end) [no look] | Sol xHigh | |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/calendar-events.md#r1a--full-check-run) [no look] | Sol xHigh | |
