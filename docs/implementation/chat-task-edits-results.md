@@ -71,3 +71,23 @@ Checks:
 - Own diff review / `git diff --check` — clean; reviewed all-or-nothing task writes, stale checks before mutation, warning gating, no browser imports, retry matching/timestamps, independent company-task dates, guarded cross-project compensation and calendar work after saving.
 
 No browser/screenshots: no screen changes (`[no look]`). All data checks used the local emulator and fake calendar; no production data/settings changed. Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. T05 was not started.
+
+## T05 — Chat guidance and MCP smoke (2026-11-11)
+
+Added one-paragraph `TASK_EDIT_CHAT_GUIDANCE` in `lib/taskEditTools.ts`, repeated in all three edit descriptions and composed with independently enabled plan guidance in the MCP route. Covers finding/showing current tasks, individual before → after changes, no guessing tasks/dates/times/people, preview, every warning and named delete confirmation, exact stamps/acknowledgements, refreshed confirmation after stale previews, exact retries, honest per-task/calendar results and separate saves for edits/new plans.
+
+Added `scripts/mcp/task-edit-smoke.mjs` through the existing protocol runner. Unset edit flags hide/refuse all three tools with plans off and on; the separate enabled server lists all nine tools and supplies both workflows. Over HTTP, the edit section finds a main task/subtask with current fields, checks read-only previews and warning confirmation, simulates a concurrent edit and refuses the entire stale list, re-previews, saves the exact after states while preserving unlisted tasks, then retries without changing values or task document update times. Database-preservation snapshots now include fake calendar events.
+
+DECISION: Keep edit guidance with the edit tools, rather than the plan module, so tool descriptions and independently gated server instructions share one source.
+DECISION: Exercise unset and enabled edit flags in one protocol run with separate owned servers, rather than rerun the whole smoke, preserving the legacy/plan tool-list contracts.
+DECISION: Compare Firestore update times as well as values on retry, rather than values alone, to detect an identical rewrite.
+
+Checks:
+- `npx tsc --noEmit` — passed.
+- `npx eslint app/api/mcp/[secret]/route.ts lib/taskEditTools.ts tests/unit/taskPlanTools.test.ts scripts/mcp/smoke.mjs scripts/mcp/protocol-smoke.mjs scripts/mcp/task-edit-smoke.mjs` — passed.
+- `npm run test:unit` — 46 files / 1,358 tests passed; instruction composition/absence is checked for independent flags, every edit description carries the guidance and its confirmation/no-guessing rules are covered.
+- `npm run test:data` — 12 files / 244 tests passed with the local emulator and fake calendar; owned emulator stopped.
+- `npm run build` and `env -u MCP_TASK_EDITS_ENABLED npm run mcp:smoke -- --only=protocol` — passed; enabled edits and unset-flag absence/refusal checked in the same run, 127 database-preservation comparisons, owned servers stopped.
+- Own diff review / `git diff --check` — clean; checked independent instruction gating, unchanged save/input handlers, full-list stale refusal assertions, exact saved records, retry update times and emulator/fake-calendar isolation.
+
+No browser/screenshots: no screen changes (`[no look]`). Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. E1 was not started. No production data/settings changed; activation remains O1.

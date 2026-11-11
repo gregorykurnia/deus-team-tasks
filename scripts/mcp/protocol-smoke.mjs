@@ -7,7 +7,7 @@ import { payload } from "./legacy-smoke.mjs";
 const GENERAL = ["add_task_plan", "find_task_destinations", "preview_task_plan"];
 const LEGACY = ["add_followup_plan", "find_company", "preview_followup_plan"];
 
-function toolsFor({ client, unchanged, safe }) {
+export function toolsFor({ client, unchanged, safe }) {
   const call = async (name, args) => payload(await client.callTool({ name, arguments: args }));
   const read = (name, args) => unchanged(name, () => call(name, args));
   async function refuse(label, name, args, pattern) {

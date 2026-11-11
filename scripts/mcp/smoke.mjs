@@ -13,6 +13,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { createJiti } from "jiti";
 import { checkLegacyProtocol } from "./legacy-smoke.mjs";
 import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
+import { checkDisabledTaskEdits, checkTaskEditProtocol } from "./task-edit-smoke.mjs";
 
 const selection = process.argv[2] ?? "--only=all";
 assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser|task-plan-visual|task-plan-reachability|task-plan-calendar)$/.test(selection),
@@ -108,9 +109,10 @@ for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
   process.once(signal, () => { void stopAll().finally(() => process.exit(code)); });
 }
 
-function startNext(name, secret, flag = "0") {
+function startNext(name, secret, flag = "0", editFlag) {
   return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], {
-    MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag, CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
+    MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag, MCP_TASK_EDITS_ENABLED: editFlag,
+    CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
   });
 }
 
@@ -131,7 +133,7 @@ function safe(value) {
   assert.doesNotMatch(text, /node:internal|\bat \S+ \([^\n]*:\d+:\d+\)/, "A response exposed a stack trace.");
 }
 async function snapshot() {
-  return Promise.all([["tasks", "tasks"], ["tasks", "settings"], ["tasks", "flows"], ["tasks", "taskGroups"], ["clients", "pipeline"]]
+  return Promise.all([["tasks", "tasks"], ["tasks", "settings"], ["tasks", "flows"], ["tasks", "taskGroups"], ["clients", "pipeline"], ["tasks", "testCalendarEvents"]]
     .map(async ([project, collection]) => (await readAll(project, collection)).sort((a, b) => a.id.localeCompare(b.id))));
 }
 async function unchanged(label, work) {
@@ -188,6 +190,7 @@ try {
         assert.equal((await raw(undefined, ENDPOINT, method)).response.status, 405);
       });
       await checkDisabledTools({ client, unchanged, safe, plan });
+      await checkDisabledTaskEdits({ client, unchanged, safe });
     }
     const added = await checkLegacyProtocol({ client, company, plan, readAll, unchanged, origin: ORIGIN, protocol });
     if (browser) {
@@ -225,8 +228,11 @@ try {
     const general = startNext("next-general", SECRET, "1");
     await ready(general, `${ORIGIN}/api/mcp/wrong-secret`, 404);
     const generalClient = await connect();
-    if (protocol) await checkGeneralProtocol({ client: generalClient, jiti, readAll, seed, unchanged, safe,
-      root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, secret: SECRET });
+    if (protocol) {
+      await checkDisabledTaskEdits({ client: generalClient, unchanged, safe });
+      await checkGeneralProtocol({ client: generalClient, jiti, readAll, seed, unchanged, safe,
+        root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, secret: SECRET });
+    }
     if (taskPlanBrowser) {
       const { checkTaskPlanUI } = await import("./task-plan-ui.mjs");
       await checkTaskPlanUI({ client: generalClient, jiti, readAll, seed, clearAll,
@@ -237,11 +243,22 @@ try {
       await checkTaskPlanCalendarUI({ client: generalClient, readAll, clearAll,
         origin: ORIGIN, emulatorHost: EMULATOR_HOST });
     }
+    await generalClient.close();
+    clients.delete(generalClient);
+    await stop(general);
+  }
+  if (protocol) {
+    console.log("Checking task edits with activation on (emulator and fake calendar only).");
+    const edits = startNext("next-edits", SECRET, "1", "1");
+    await ready(edits, `${ORIGIN}/api/mcp/wrong-secret`, 404);
+    const editClient = await connect();
+    await checkTaskEditProtocol({ client: editClient, jiti, readAll, seed, unchanged, safe,
+      origin: ORIGIN, emulatorHost: EMULATOR_HOST });
   }
   console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);
 } catch (error) {
   console.error(error.stack?.replaceAll(SECRET, "[redacted]") ?? error.message);
-  for (const name of ["firestore", "next-disabled", "next-enabled", "next-general"]) {
+  for (const name of ["firestore", "next-disabled", "next-enabled", "next-general", "next-edits"]) {
     const text = await readFile(path.join(logs, `${name}.log`), "utf8").catch(() => "");
     if (text) console.error(`${name}:\n${text.replaceAll(SECRET, "[redacted]").trim().split("\n").slice(-12).join("\n")}`);
   }

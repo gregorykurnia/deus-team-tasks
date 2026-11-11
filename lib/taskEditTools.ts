@@ -7,6 +7,9 @@ import { applyTaskChanges, findTasks, previewTaskChanges, TaskEditError } from "
 
 export const taskEditsEnabled = () => process.env.MCP_TASK_EDITS_ENABLED === "1";
 
+// Repeat this in every description: clients may omit initialize instructions.
+export const TASK_EDIT_CHAT_GUIDANCE = "Use find_tasks to find the task and show what it holds now; show each proposed change as before → after, one task at a time. Never guess dates, times, people or which task is meant: ask for missing details or show matches for the owner to select by ID. Use confirmed yyyy-mm-dd dates and, for timed calendar events, both HH:MM times in Asia/Jakarta. Call preview_task_changes with only explicitly listed tasks; a preview writes nothing and is not consent. Show every warning and get explicit confirmation of the exact changes and every warning, naming every task to delete one by one. Then call apply_task_changes with the unchanged list, all preview seen stamps (including freed subtasks) and acknowledgedWarnings IDs. If a task changed since preview, preview again and get confirmation again. Retry an uncertain save with the exact same list and stamps. Report each task's save/delete result and calendar result honestly, including failures; a calendar failure leaves task changes saved. Edits and new plans are separate saves.";
+
 const text = z.string().trim().min(1, "Enter non-empty text.");
 const changes = z.array(z.object({
   taskId: z.string().describe("The exact task ID returned by find_tasks."),
@@ -64,15 +67,15 @@ export function registerTaskEditTools(server: McpServer, origin: string) {
   if (!taskEditsEnabled()) return;
   const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   server.registerTool("find_tasks", {
-    description: "Find up to 10 tasks or subtasks by name/Key points text, company ID and/or main-task ID. Includes stored fields, main task, company, group, dates, status, parking, people, Key points, calendar mark and subtasks. Done tasks are omitted unless includeDone is true. Refine the search when hasMore is true. Reads only; nothing is saved.",
+    description: `Find up to 10 tasks or subtasks by name/Key points text, company ID and/or main-task ID. Includes stored fields, main task, company, group, dates, status, parking, people, Key points, calendar mark and subtasks. Done tasks are omitted unless includeDone is true. Refine the search when hasMore is true. Reads only; nothing is saved. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.find_tasks, annotations,
   }, (input) => runTool(() => findTasks(input), "Could not read tasks and companies. Try again shortly."));
   server.registerTool("preview_task_changes", {
-    description: "Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Show the exact changes and warnings to the owner; a preview never saves or confirms consent.",
+    description: `Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Show the exact changes and warnings to the owner; a preview never saves or confirms consent. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.preview_task_changes, annotations,
   }, ({ changes }) => runTool(() => previewTaskChanges(changes), "Could not preview task changes. Try again shortly."));
   server.registerTool("apply_task_changes", {
-    description: "Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure restores the task changes. Calendar sync runs after saving and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries calendar work. Never save an unlisted task or infer consent from a preview.",
+    description: `Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure restores the task changes. Calendar sync runs after saving and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries calendar work. Never save an unlisted task or infer consent from a preview. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.apply_task_changes,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   }, ({ changes, seen, acknowledgedWarnings }) => runTool(() => applyTaskChanges(changes, seen, acknowledgedWarnings, origin),

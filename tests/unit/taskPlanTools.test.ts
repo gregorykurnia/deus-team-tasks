@@ -6,7 +6,7 @@ import { MAX_TASK_PLAN_INPUT_BYTES } from "@/lib/taskPlan";
 import { TaskPlanError } from "@/lib/taskPlanServer";
 import { TaskPlanTokenError } from "@/lib/taskPlanToken";
 import { registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlanToolInputs } from "@/lib/taskPlanTools";
-import { registerTaskEditTools, taskEditToolInputs } from "@/lib/taskEditTools";
+import { registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditToolInputs } from "@/lib/taskEditTools";
 import { TaskEditError } from "@/lib/taskEditServer";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
 import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
@@ -144,7 +144,7 @@ describe("G06 activation and registration", () => {
   });
 });
 
-describe("T03–T04 task edit tools", () => {
+describe("T03–T05 task edit tools", () => {
   const editTools = Object.keys(taskEditToolInputs);
   const changes = [{ taskId: "fictional-task", set: { task: "Updated task" } }];
 
@@ -154,6 +154,7 @@ describe("T03–T04 task edit tools", () => {
       vi.stubEnv("MCP_TASK_PLANS_ENABLED", enabled ? "1" : "0");
       expect((await rpc("tools/list")).reply.result?.tools?.map((tool) => tool.name))
         .toEqual([...OLD_TOOLS, ...(enabled ? NEW_TOOLS : [])]);
+      expect((await initialize()).reply.result?.instructions).toBe(enabled ? TASK_PLAN_CHAT_GUIDANCE : undefined);
       for (const name of editTools) expect((await call(name, {})).reply.error)
         .toEqual({ code: -32602, message: "Tool not found." });
     }
@@ -167,7 +168,10 @@ describe("T03–T04 task edit tools", () => {
     vi.stubEnv("MCP_TASK_PLANS_ENABLED", planFlag);
     const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
     expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools]);
+    expect((await initialize()).reply.result?.instructions)
+      .toBe(planFlag === "1" ? `${TASK_PLAN_CHAT_GUIDANCE}\n\n${TASK_EDIT_CHAT_GUIDANCE}` : TASK_EDIT_CHAT_GUIDANCE);
     for (const tool of tools.filter((tool) => editTools.includes(tool.name))) {
+      expect(tool.description).toContain(TASK_EDIT_CHAT_GUIDANCE);
       expect(tool.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
       expect(tool.annotations).toEqual({ readOnlyHint: tool.name !== "apply_task_changes", destructiveHint: tool.name === "apply_task_changes", idempotentHint: true, openWorldHint: false });
     }
@@ -182,6 +186,20 @@ describe("T03–T04 task edit tools", () => {
     const seen = { "fictional-task": "a".repeat(64) };
     await call("apply_task_changes", { changes, seen, acknowledgedWarnings: ["warning"] });
     expect(io.editApply).toHaveBeenCalledWith(changes, seen, ["warning"], ORIGIN);
+  });
+
+  it("guides explicit task selection, individual changes and confirmation before saving", () => {
+    expect(TASK_EDIT_CHAT_GUIDANCE).not.toContain("\n");
+    for (const rule of [
+      /find_tasks.*show what it holds now/, /before → after, one task at a time/,
+      /Never guess dates, times, people or which task is meant: ask.*show matches.*owner to select by ID/,
+      /preview_task_changes.*preview writes nothing and is not consent/,
+      /Show every warning and get explicit confirmation.*every warning, naming every task to delete one by one/,
+      /apply_task_changes.*unchanged list, all preview seen stamps.*freed subtasks.*acknowledgedWarnings IDs/,
+      /changed since preview, preview again and get confirmation again/,
+      /Report each task's save\/delete result and calendar result honestly, including failures/,
+      /calendar failure leaves task changes saved/, /Edits and new plans are separate saves/,
+    ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });
 
   it.each([

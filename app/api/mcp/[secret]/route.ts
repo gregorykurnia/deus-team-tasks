@@ -6,7 +6,7 @@ import { z } from "zod";
 import { findCompanies } from "@/lib/followupPlan";
 import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData } from "@/lib/followupServer";
 import { isTaskPlanTool, registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
-import { isTaskEditTool, registerTaskEditTools, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
+import { isTaskEditTool, registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -126,6 +126,8 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
   // Use the handler's basePath convention without exposing the secret to its routing or logs.
   const url = new URL(request.url);
   url.pathname = "/api/mcp";
+  const instructions = [taskPlansEnabled() && TASK_PLAN_CHAT_GUIDANCE, taskEditsEnabled() && TASK_EDIT_CHAT_GUIDANCE]
+    .filter(Boolean).join("\n\n");
   const handler = createMcpHandler((server) => {
     const origin = getPublicOrigin(request);
     registerTools(server, origin);
@@ -133,7 +135,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
     registerTaskEditTools(server, origin);
   }, {
     serverInfo: { name: "Deus Team Tasks follow-up", version: "1.0.0" },
-    ...(taskPlansEnabled() && { instructions: TASK_PLAN_CHAT_GUIDANCE }),
+    ...(instructions && { instructions }),
   }, { basePath: "/api", disableSse: true, sessionIdGenerator: undefined, maxDuration });
   return handler(new Request(url, request));
 }
