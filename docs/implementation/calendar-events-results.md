@@ -312,3 +312,27 @@ the scoped comparison JSON is `/tmp/deus-r1a-20261111/compare-scoped.json`. Raw 
 `redesign/compare/{proto,new,both}/` under the state IDs above (generated evidence is git-ignored).
 
 DECISION: Refresh only the 11 scoped task-sheet states with `--force`, rather than reuse cached captures, so this run measures the current checkout.
+
+## R1b — Fix recorded failures
+
+2026-11-11. R1a recorded no failures, confirmed against its saved exit codes, smoke log and raw reports.
+No application or test changes were needed. Only R1b is newly ticked; R1 remains unstarted.
+
+DECISION: Close the empty repair list without unrelated fixes or slow reruns. The comparison tool's word differences are descriptive output, not failed assertions; broader review remains assigned to R1.
+
+Checks:
+
+- PASS — saved R1a evidence: all five exit codes are 0; smoke log ends with 397 passed / 9 skipped; a11y has 284 runs, 0 failures, setup errors or violations; scoped compare has 22 captures, 0 failures or setup errors. Its 22 word-difference entries remain explicitly qualified by R1a's comparison limits above.
+- PASS — `npx tsc --noEmit`: exit 0.
+- PASS — `npm run test:unit -- --reporter=dot`: 45 files, 1,153 tests, 18.73 seconds.
+- PASS — original-size inspection of the four existing C05 failure-state images below: no additional visual fault found. No screens changed, so captures were reused rather than regenerated; this is not a fresh browser run.
+- PASS — `git diff --check`; only the results file and R1b's Done cell changed.
+
+No changed source files require ESLint, data tests, a build or browser reruns. No failing case needs a regression test or a fix row.
+
+Existing captures under `test-results/calendar-events/c05/`, opened with `detail: "original"`:
+
+LOOKED: desktop/failure.png · Drawer rests above the blurred Tasks page; fields end above the fixed footer, no side edge cuts a control, amber warning and retry are unobstructed, all foreground text is whole.
+LOOKED: desktop/failure-detail.png · Calendar fields sit above the amber warning and people/notes fields; complete actions rest below the divider with side gutters, crop starts at the switch, no text is clipped or covered.
+LOOKED: phone/failure.png · Sheet sits in front of the blurred page; stacked times and wrapped warning clear the fixed two-row footer, Responsible continues below the scroll edge, retry and all action text are whole.
+LOOKED: phone/failure-detail.png · Warning rests above the partial Responsible field; fixed actions cover the continuing scroll area, full-width Save has side margins, the intentional crop starts at the switch and all visible labels are readable.
