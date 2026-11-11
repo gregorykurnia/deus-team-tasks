@@ -146,3 +146,41 @@ DECISION: Force fresh captures for all 11 mapped task-sheet states rather than r
 Raw local evidence: `/tmp/deus-r1a-bInwJT/` holds command logs/exit codes, the smoke JSON/artifacts, the a11y JSON and the 22-entry scoped `compare.json`. Generated pictures and reports remain in ignored `redesign/compare/` and `redesign/a11y/`. No visual inspection was performed (`[no look]`), so this does not claim visual parity with the prototype.
 
 ESLint is not applicable to these Markdown-only changes. No Firestore-I/O code changed, so no additional data/MCP run was required. Browser checks used `next dev` with the emulator and fake calendar, never a production build or Google. Owned test ports 3100/8180/4100 were closed after the runs. Smoke-generated changes to 13 historical tracked PNGs were discarded; they are not fixes or deliverables. No production data/settings changed. Only R1a is ticked; R1b and R1 were not started.
+
+## R1b — Fix recorded failures (2026-11-11)
+
+Findings first (full-size pictures and code, before accepting the comparator's empty error lists):
+
+| Finding / breaking state | Location | Disposition |
+|---|---|---|
+| People suggestions exist below the scrolling body, hidden by the pinned footer, when Responsible or Informed is near the bottom. | `ui/Combobox.tsx:47` | Fixed: reveal the list when it opens/changes. Existing and new-name choices are fully visible and clickable on desktop/phone. |
+| State 061 opens Add task type instead of showing the missing-description error: the generic Add selector matches the new type button. | `scripts/compare/recipes.mjs:98` | Fixed: click the exact Add task button. Both viewport regressions failed before and pass after. |
+| State 065's company-linked task opens as Internal without its company card; a failed/late company source is treated as usable by the initial draft. | `features/task-sheet/TaskSheetHost.tsx:94`, `features/task-sheet/TaskSheet.tsx:75` | Routed to **R1b.F1** before R1. The redesign plan's 4.4c/4.4d already record the 3,200-company emulator Listen limit; a small delayed-company regression must distinguish that from unsafe draft initialization before changing loading/saving code. |
+| State 065 phone contains only the blurred background, although compare reports no errors. The sheet is below the capture: box `(0,1613,1122,816)` in a 390×844 shot, with `innerWidth/Height=1122×2429`. | `ui/Sheet.module.css:113`, `scripts/compare/run.mjs:167` | Routed to **R1b.F2** before R1: locate the overflow source, add a failing small-fixture/layout check and recapture only 065 after F1. Waiting for Description and disabling screenshot animations did **not** fix this; no claim of stress parity. |
+
+Every R1a comparison row is accounted for at both sizes:
+
+| States | Why the remaining text differences stand |
+|---|---|
+| 059, 060, 062, 063, 064, 068, 156 | Full-size inspection found the expected quick/full, company/internal/finished and delete-confirmation sheets. Whole-page comparisons include the blurred task list/sidebar, accessible sort text, and converted fixtures. `Team desk` is explicitly a placeholder (guide §9); DEUS Team Space is the shipped name (redesign Q5). Group initials and task types come from the existing converter; status, subtasks, parking, calendar and Add task type are later features. Restoring prototype-only copy/fixtures would undo those decisions. No change or recapture needed. |
+| 061 | Correct validation state recaptured at both sizes; the above background/fixture differences remain intentionally. |
+| 066, 067 | Suggestions/new-name lists recaptured above the footer at both sizes; the above background/fixture differences remain intentionally. |
+| 065 | Unresolved company-kind and phone visibility faults are explicitly assigned to R1b.F1/F2; the large fixture's emulator limitation is retained as a limitation, not reported as a passing product check. |
+
+Checks:
+
+- Type check: `npx tsc --noEmit` — passed.
+- Changed-file ESLint: picker, comparison scripts and chat spec; 0 errors, 3 pre-existing unused-variable warnings in `recipes.mjs` (`behind`, `press`, `first`).
+- `npm run test:unit` — 46 files / 1,358 tests passed.
+- Browser: four focused regressions passed after failing before; `npx playwright test tests/smoke/chat-task-edits.spec.ts tests/smoke/task-sheet.spec.ts:151 --output=redesign/compare/r1b-final-tests` — 7 passed (3.1m), including visible/hit-tested choices, no sheet overflow, HTTP edits/calendar, moves/deletes and keyboard people entry.
+- Scoped compare: only 061/065/066/067 at desktop/phone, 8 captures; 061/066/067 corrected, 065 retained as the two explicit fix rows. No full smoke/a11y/compare rerun.
+- Build: `npm run build` — passed, including TypeScript and static-page generation; no browser/data test used the production build.
+
+Local evidence: `redesign/compare/r1b-gallery/` holds eight named key frames, eight 100% edge crops and `stress-layout.json`; originals and prototype pairs remain under `redesign/compare/{new,proto,both}/`. Before frames/crops are in `r1b-before/`; failing and passing targeted cases are in `r1b-people-before/`, `r1b-regressions-before/`, `r1b-regressions-after/`, and `r1b-final-tests/`. Logs are `/tmp/deus-r1b-*.log`. The first regression run stopped on a Playwright ESM import; that test setup was corrected. The first scoped comparator ended with signal 143 before producing captures; rerunning its four states against the same owned local servers completed. The failed Pillow crop attempt wrote no files; native-size crops were then made with the installed Sharp package.
+
+DECISION: Keep documented branding, fixture conversions and later features instead of restoring prototype placeholder text; triage the actual visible differences.
+DECISION: Split the two remaining stress areas into fresh tasks before R1 rather than mix snapshot/save changes and a viewport investigation into this quick repair. Neither follow-up nor R1 was started.
+
+All eight gallery key frames and the critical footer/edge crops were opened at original resolution. Six repaired-state pictures show whole validation/suggestion text above the pinned actions; the two stress pictures retain the faults assigned above. All R1a rows have a fix or an explicit disposition. R1b is ticked; R1b.F1/F2 and R1 stay unticked. Owned ports 3100/8180/4100 were confirmed closed.
+
+Only the picker, comparison tools, chat spec and this plan/brief/evidence changed; no Firestore read/write code or production data/settings changed, so no additional test:data/MCP smoke run was needed. A full check is worth running for the shared picker change; the full R1a suites were not repeated.

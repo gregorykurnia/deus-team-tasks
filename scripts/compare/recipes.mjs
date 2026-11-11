@@ -95,7 +95,7 @@ export function recipe(p, ctx = {}) {
     case "tasks:group-delete": S(click(/^Options for/), click(/Delete group/)); break;
     case "tasks:task-new": P("task", "new"); break;
     case "tasks:task-new-full": P("task", "new"); S(click(/Add details/)); break;
-    case "tasks:task-required": P("task", "new"); S(click(/Add details/), click(/^(Add task|Save|Add)/, { within: '[role="dialog"]' })); break;
+    case "tasks:task-required": P("task", "new"); S(click(/Add details/), click(/^Add task$/, { role: "button", within: '[role="dialog"]' })); break;
     case "tasks:task-edit": P("task", taskId("t1", "s1")); break;
     case "tasks:task-edit-int": P("task", taskId("t7", "s8")); break;
     case "tasks:task-done": P("task", ctx.db?.tasks.find((t) => t.done)?.id); break;

@@ -206,6 +206,36 @@ Done when: every failure is listed, or the file says all three passed.
 Fixes what R1a listed, rerunning only what each fix touched. [look]
 Done when: every R1a failure is fixed and its spec reruns green, or written up with why it stands.
 
+### R1b.F1 — Keep a company task linked while its company loads
+
+Resolve the stress task opening as Internal despite its stored company link; a late or failed company snapshot
+must not turn a company's task into internal work. Read R1b in the results file, `TaskSheetHost.tsx`,
+`TaskSheet.tsx`, `draft.ts` and the collection loading states they use. The redesign plan already records an
+emulator Listen-channel limit at 3,200 companies; distinguish that limit from the draft's handling of missing
+cached data with a small delayed-company fixture. Do not change company or task dates as a side effect. [look]
+
+Done when:
+- A regression with a task arriving before its company fails before the fix and passes after; the correct company
+  and kind appear without closing/reopening the sheet, and Save preserves the link and unrelated dates.
+- A missing company cache, failed load and reconnect keep the draft safe; a server-confirmed deleted company
+  still follows the app's existing internal-work rule.
+- Light checks, the affected data tests and only the affected chat/task-sheet cases pass; inspect desktop/phone
+  shots of the delayed-company state. Leave the large stress recapture to R1b.F2.
+
+### R1b.F2 — Keep the stress task sheet inside the phone capture
+
+Fix the stress phone viewport expanding to 1122×2429 inside a 390×844 capture, leaving its task sheet below the
+picture. Read R1b in the results file and inspect the overflowing element before editing its layout; use the
+new design's existing sheet and field tokens. Strengthen the comparison's layout audit so an offscreen task
+sheet cannot produce an empty error list. [look]
+
+Done when:
+- A small fixture reproduces the expanding viewport before the fix and passes after, including long unbroken
+  group/task text; task title, company/kind and the Save action remain inside the phone viewport.
+- Recapture only `065-task-details-stress` at desktop/phone after R1b.F1, with the emulator/fake calendar; the
+  sheet is present, company/kind are correct, featured text is readable and layout/page errors are reported.
+- Light checks and the affected browser cases pass; record any remaining emulator-only limit explicitly.
+
 ## R1 — Phase review
 
 A fresh review of the whole phase's diff, hunting for faults in saving, plus the owner handoff. [no look]

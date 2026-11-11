@@ -1,4 +1,4 @@
-// E1: real MCP HTTP saves, checked through the task sheet and emulator-backed fake calendar. No screenshots.
+// E1: real MCP HTTP saves; R1b: task-sheet comparison and visible people suggestions.
 import type { Page } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -9,6 +9,7 @@ import type { FindTasksInput, TaskChangesSaved, findTasks } from "../../lib/task
 import { EMULATOR_HOST } from "../support/emulator";
 import { test as base, expect } from "./fixtures";
 import { isoDay, seedTasks, stored, storedById, task } from "./data";
+import { recipe } from "../../scripts/compare/recipes.mjs";
 
 const test = base.extend<{ edits: Client }>({
   edits: async ({ baseURL }, use) => {
@@ -71,6 +72,45 @@ async function events() {
   return (await stored("tasks", "testCalendarEvents"))
     .map((doc) => JSON.parse(doc.event as string) as calendar_v3.Schema$Event);
 }
+
+base("R1b: comparison reaches the missing-description state", { tag: "@phone" }, async ({ page }, testInfo) => {
+  const scenario = recipe({ page: "tasks", open: "task-required", path: "/tasks", params: new URLSearchParams() });
+  await page.goto(`${scenario.path}?${scenario.params}`);
+  await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+  for (const step of scenario.steps) await step(page, {});
+  await page.screenshot({ path: testInfo.outputPath("r1b-required.png"), animations: "disabled" });
+  await expect(page.getByText("Add a short description so the team knows what this is.")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Add task type", exact: true })).toHaveCount(0);
+});
+
+base("R1b: people suggestions remain above the pinned task actions", { tag: "@phone" }, async ({ page }, testInfo) => {
+  await seedTasks([
+    task("names", { task: "Confirm the trial accounts", responsible: ["Sarah Lim"], informed: [{ name: "Rina Hartono", note: "recipient" }] }),
+    task("other", { responsible: ["Dimas Prasetyo"] }),
+  ]);
+  const sheet = await openTask(page, "names");
+  expect(await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth), "the task sheet must fit the viewport").toBe(true);
+  await sheet.getByRole("combobox", { name: /^Responsible/ }).fill("ra");
+  const suggestion = sheet.getByRole("option", { name: /Dimas Prasetyo/ });
+  await page.screenshot({ path: testInfo.outputPath("r1b-suggestions.png"), animations: "disabled" });
+  await expect(suggestion).toBeInViewport({ ratio: 1 });
+  expect(await suggestion.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+  }), "the pinned footer must not cover the suggestion").toBe(true);
+  await suggestion.click();
+  await expect(sheet.getByRole("button", { name: "Remove Dimas Prasetyo" })).toBeVisible();
+  await sheet.getByRole("combobox", { name: "Add someone to keep informed", exact: true }).fill("Nadia");
+  const newName = sheet.getByRole("option", { name: "Add “Nadia” as a new name", exact: true });
+  await expect(newName).toBeInViewport({ ratio: 1 });
+  expect(await newName.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+  }), "the pinned footer must not cover the new-name choice").toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("r1b-new-name.png"), animations: "disabled" });
+  await newName.click();
+  await expect(sheet.getByLabel("Their part for Nadia")).toBeVisible();
+});
 
 // Warm only the HTTP routes that Next compiles on first use, outside the per-scenario timeout.
 test.beforeAll(async ({ request }) => {

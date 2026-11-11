@@ -50,7 +50,7 @@ async function settle(page) {
 
 // A menu or sheet is shot at the window's size: a full-page shot resizes the window, which closes menus.
 async function shoot(page, file, size, overlay) {
-  if (overlay) return page.screenshot({ path: file });
+  if (overlay) return page.screenshot({ path: file, animations: "disabled" });
   const height = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight));
   await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: size.width, height: Math.min(Math.max(height, size.height), 1800) } });
 }
@@ -154,6 +154,10 @@ async function runOne(browser, entry, sizeName, report) {
   }
   await page.addStyleTag({ content: "nextjs-portal{display:none!important}" }); // the dev server's own badge
   await settle(page);
+  if (p.page === "tasks" && p.open.startsWith("task-")) {
+    // The live banner and background list can settle before a large task/company snapshot opens the real form.
+    await page.getByRole("textbox", { name: "Description", exact: true }).waitFor({ state: "visible", timeout: 90000 });
+  }
   for (const step of r.steps) {
     try { await step(page, { sleep, phone: sizeName === "phone" }); } catch (e) { errors.push("step: " + String(e.message).slice(0, 700)); }
   }

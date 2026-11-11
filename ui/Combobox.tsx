@@ -3,7 +3,7 @@
 // A text field with a list of suggestions under it, for the people and sector pickers (guide 4.13). The arrow keys move the
 // highlight, Enter picks it, Esc closes the list (and nothing else), and Backspace in an empty field can remove the last
 // person. The list opens under the nearest positioned ancestor, so a picker's own box sets its width.
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import styles from "./Combobox.module.css";
 
 export interface ComboOption {
@@ -45,6 +45,11 @@ export default function Combobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(start);
   const shown = open && options.length > 0;
+  const list = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    // Focusing a field near a sheet's footer only reveals the input. Keep the choices above the pinned actions too.
+    if (shown) list.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [shown, text, options.length]);
   const optionId = (i: number) => `${listId}-${i}`;
   // The options can change from outside (a colleague's change, a name picked): the highlight stays on one that exists.
   const clamp = (i: number) => Math.min(i, options.length - 1);
@@ -111,7 +116,7 @@ export default function Combobox({
       {shown && (
         // The mouse-down keeps focus in the field, so a click on an option still lands. The list is read and scrolled by keys through
         // the field (aria-activedescendant), so it has no tab stop of its own: the a11y checks skip axe's scrollable-region rule for it.
-        <div className={styles.list} data-keys-via-input onMouseDown={(e) => e.preventDefault()}>
+        <div ref={list} className={styles.list} data-keys-via-input onMouseDown={(e) => e.preventDefault()}>
           {heading && <div className={styles.heading}>{heading}</div>}
           <div id={listId} role="listbox" aria-label={heading ?? "Suggestions"}>
             {options.map((o, i) => (
