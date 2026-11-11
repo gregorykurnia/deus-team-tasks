@@ -34,7 +34,7 @@ is reachable until the owner sets one Vercel variable (O1).
 | T03 | `find_tasks` and `preview_task_changes` connector tools, read only, behind `MCP_TASK_EDITS_ENABLED`. [T03](implementation/chat-task-edits.md#t03--find-and-preview-tools-read-only) [no look] | Sol xHigh | 2026-11-11 |
 | T04 | `apply_task_changes`: one transaction, refuses if a task changed since the preview, retry-safe, company follows a deadline, calendar sync after. [T04](implementation/chat-task-edits.md#t04--save-tool) [no look] | Sol Max | 2026-11-11 |
 | T05 | Chat guidance for the edit flow, and an edit section in the MCP smoke. [T05](implementation/chat-task-edits.md#t05--chat-guidance-and-mcp-smoke) [no look] | Sol Max | 2026-11-11 |
-| E1 | End to end: edits, a move and a delete over HTTP, then checked in the task sheet and the fake calendar. [E1](implementation/chat-task-edits.md#e1--end-to-end) [no look] | Sol xHigh | |
+| E1 | End to end: edits, a move and a delete over HTTP, then checked in the task sheet and the fake calendar. [E1](implementation/chat-task-edits.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-11 |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/chat-task-edits.md#r1a--full-check-run) [no look] | Sol xHigh | |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/chat-task-edits.md#r1b--fix-recorded-failures) [look] | Sol xHigh | |
 | R1 | Phase review: hunt for faults in saving, fix them, write the owner handoff. [R1](implementation/chat-task-edits.md#r1--phase-review) [no look] | Opus 5.5 High | |

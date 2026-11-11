@@ -91,3 +91,24 @@ Checks:
 - Own diff review / `git diff --check` — clean; checked independent instruction gating, unchanged save/input handlers, full-list stale refusal assertions, exact saved records, retry update times and emulator/fake-calendar isolation.
 
 No browser/screenshots: no screen changes (`[no look]`). Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. E1 was not started. No production data/settings changed; activation remains O1.
+
+## E1 — End to end (2026-11-11)
+
+Added `tests/smoke/chat-task-edits.spec.ts`: two desktop scenarios use the real MCP SDK over HTTP, with find → read-only preview → apply using the returned stamps and acknowledged warnings. Playwright's isolated emulator/dev server enables the edit tools with a fictional secret; production activation is unchanged.
+
+The first scenario seeds a main task with two subtasks, syncs the marked subtask to the fake calendar, then renames it, changes both dates, marks it Done and adds a Responsible person. Its finished-task sheet shows all four, the calendar retains exactly one event with the same ID and updated name/dates, and the unlisted main task and other subtask stay unchanged. Deleting the marked task removes it from find/the main task's sheet and leaves zero active events, with the original event recorded as cancelled.
+
+The second scenario moves a subtask to another main task, checks the new parent's sheet and its absence from the old parent's subtasks, frees it into a main task, then deletes its original main task. The unlisted sibling survives as a main task in its sheet and the task list; the deleted main task is absent.
+
+DECISION: Enable edits and a fixed fictional secret in Playwright's local server, rather than require caller environment overrides, so the prescribed standalone browser command works.
+DECISION: Assert cancellation of the original fake-calendar event and zero active events, rather than physical deletion, matching the existing fake calendar's Google-style tombstones.
+
+Checks:
+- `npx tsc --noEmit` — passed after validating MCP responses with `CallToolResultSchema` to resolve the SDK's ambiguous content type.
+- `npx eslint playwright.config.ts tests/smoke/chat-task-edits.spec.ts` — passed.
+- `npm run test:unit` — 46 files / 1,358 tests passed.
+- `npm run test:data` — 12 files / 244 tests passed on the local emulator and fake calendar.
+- `npm run build` and `env -u MCP_TASK_EDITS_ENABLED npm run mcp:smoke -- --only=protocol` — passed; protocol smoke made 127 database-preservation comparisons, including enabled edits and unset-flag tool absence.
+- `npx playwright test tests/smoke/chat-task-edits.spec.ts`, then `--last-failed` only — both distinct desktop scenarios passed. Initial edit-scenario failures were `getByRole('dialog', { name: 'Task', exact: true })` not finding the existing `Finished task` sheet, then `expect(await events()).toEqual([])` finding the fake calendar's cancellation tombstone. Corrected those test assumptions; hierarchy passed in the original run and edit/calendar passed in the final rerun (1 test, 21.2s).
+
+Diff review checked the HTTP-only save boundary, emulator/fake-calendar isolation, no-write previews, task-sheet assertions, unchanged unlisted task dates and duplicate-free event update/removal. Owned test servers stopped; restored historical tracked test artifacts cleared by Playwright. No screenshots or phone-layout checks: no screen changes (`[no look]`). Full smoke/a11y/compare remain assigned to R1a, which was not started. No production data/settings changed; activation remains O1.
