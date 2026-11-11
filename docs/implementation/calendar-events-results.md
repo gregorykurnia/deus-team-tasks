@@ -265,3 +265,50 @@ Checks:
 - RECOVERED/PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run mcp:smoke -- --only=task-plan-calendar`: the complete lifecycle passed with zero active fake events and owned servers stopped. Initial test assertions failed on the exact "Starts" label (its label includes "blank for all day") and on the dev route's localhost origin; corrected those expectations and reran only this selector. No application fix was needed.
 - PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npx playwright test tests/smoke/calendar-events.spec.ts tests/smoke/task-sheet.spec.ts --output=/tmp/e1-page-pw`: 25 tests (20 desktop, 5 phone), 4.7 minutes. No screens changed; no new look review was required.
 - PASS — `npm run build` with process permissions; compiled/generated successfully without starting a production server. Only E1 is ticked; the full suite, a11y, compare and phase review remain assigned to the following rows.
+
+## R1a — Full check run
+
+2026-11-11. Ran each slow check once, sequentially, with no application or test fixes. Only R1a is ticked;
+R1b and R1 are unstarted.
+
+### Failure list, by app area
+
+**None.** The full suite has no failed cases, the accessibility report has no violations or state/setup errors,
+and the scoped comparison has no failed captures or recorded page/recipe errors. There are no failing
+spec/case/first-error-line entries to route to R1b.
+
+### Checks
+
+- PASS — `npm run test:smoke`: 406 cases, 397 passed, 9 skipped, 0 failed, 37.4 minutes; desktop, tagged phone and Jakarta projects, no retries.
+- PASS — `npm run a11y`: 284 state/viewport runs, 0 failed, 0 states with setup errors, 0 violations, 0 rules hit; full default distinct-state scope.
+- COMPLETED — `npm run compare -- --only 'task-details|^156-' --force`: 22 captures, 0 failed, 0 skipped, 0 states with page/recipe errors; text differences remain in all 22 reports (see scope below).
+- PASS — `npx tsc --noEmit`: exit 0.
+- PASS — `npm run test:unit`: 1,153 tests in 45 files, 18.41 seconds.
+- PASS — `git diff --check`; only this evidence and R1a's Done cell changed; test ports 3100, 8180 and 4100 have no listeners.
+
+No source files changed, so changed-file ESLint and Firestore data-test checks are not applicable. Playwright's
+regenerated/deleted tracked `test-results/` artifacts were restored after saving the run log.
+
+### Comparison scope and limits
+
+Both desktop (1440 × 900) and phone (390 × 844): `059-task-details-quick`, `060-task-details-all-details`,
+`061-task-details-open`, `062-task-details-company`, `063-task-details-internal`, `064-task-details-finished`,
+`065-task-details-stress`, `066-task-details-suggestions`, `067-task-details-new-name`,
+`068-task-details-confirm`, and `156-company-record-task-then-open-company`.
+
+The comparison tool writes captures and word differences, without a pixel-match or text-equality assertion.
+All 22 scoped reports contain prototype-only and app-only words, capped by the tool at 40 per side; these
+include the background list and branding, not just the sheet. This is a completed capture run, not a claim
+that the prototype and app match. No visual verdict was made, as required by `[no look]`; C05 holds the
+calendar-control look evidence, and the phase review remains R1.
+
+Safety: all browser servers used `next dev` and the local Firestore emulator. The full suite used its fake
+calendar; a11y and compare ran with `CALENDAR_FAKE` and `GOOGLE_EVENTS_CALENDAR_ID` unset in their process
+environment, so emulator-mode calendar writes were disabled. No production server was started.
+
+Evidence: logs and exit codes are in `/tmp/deus-r1a-20261111/{smoke,a11y,compare,typecheck,unit}.{log,exit}`;
+the scoped comparison JSON is `/tmp/deus-r1a-20261111/compare-scoped.json`. Raw reports are
+`redesign/a11y/report.json` and `redesign/compare/report.json`; scoped images are in
+`redesign/compare/{proto,new,both}/` under the state IDs above (generated evidence is git-ignored).
+
+DECISION: Refresh only the 11 scoped task-sheet states with `--force`, rather than reuse cached captures, so this run measures the current checkout.
