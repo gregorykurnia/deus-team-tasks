@@ -6,6 +6,7 @@ import { MAX_TASK_PLAN_INPUT_BYTES } from "@/lib/taskPlan";
 import { TaskPlanError } from "@/lib/taskPlanServer";
 import { TaskPlanTokenError } from "@/lib/taskPlanToken";
 import { registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlanToolInputs } from "@/lib/taskPlanTools";
+import { registerTaskEditTools, taskEditToolInputs } from "@/lib/taskEditTools";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
 import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 
@@ -13,7 +14,9 @@ import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 const io = vi.hoisted(() => ({
   find: vi.fn(), preview: vi.fn(), add: vi.fn(),
   legacyRead: vi.fn(), legacyPreview: vi.fn(), legacyAdd: vi.fn(),
+  editFind: vi.fn(), editPreview: vi.fn(),
 }));
+vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview }));
 vi.mock("@/lib/taskPlanServer", () => ({
   findTaskPlanDestinations: io.find, previewTaskPlan: io.preview, addTaskPlan: io.add,
   TaskPlanError: class extends Error {},
@@ -59,12 +62,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("MCP_SECRET", SECRET);
   vi.stubEnv("MCP_TASK_PLANS_ENABLED", "1");
+  vi.stubEnv("MCP_TASK_EDITS_ENABLED", undefined);
   io.find.mockResolvedValue({ companies: [], parents: [], errors: [], hasMore: { companies: false, parents: false } });
   io.preview.mockResolvedValue({ canWrite: true, warnings: [], previewToken: "fictional-token" });
   io.add.mockResolvedValue(saved);
   io.legacyRead.mockResolvedValue({ companies: [], tasks: [] });
   io.legacyPreview.mockResolvedValue({ canWrite: true });
   io.legacyAdd.mockResolvedValue({ parentId: "legacy-parent", subtaskIds: [], alreadySaved: false });
+  io.editFind.mockResolvedValue({ tasks: [], hasMore: false });
+  io.editPreview.mockResolvedValue({ tasks: [], warnings: [], errors: [], canWrite: true });
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 
@@ -131,6 +137,106 @@ describe("G06 activation and registration", () => {
     vi.stubEnv("MCP_SECRET", "");
     expect((await call("add_task_plan", { plan, previewToken: "fake", acknowledgedWarnings: [] })).response.status).toBe(404);
     expect(io.add).not.toHaveBeenCalled();
+  });
+});
+
+describe("T03 read-only task edit tools", () => {
+  const editTools = Object.keys(taskEditToolInputs);
+  const changes = [{ taskId: "fictional-task", set: { task: "Updated task" } }];
+
+  it.each([undefined, "", "0", "true", "01", "1 "])("hides and refuses both tools for flag %s without changing existing lists", async (flag) => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", flag);
+    for (const enabled of [false, true]) {
+      vi.stubEnv("MCP_TASK_PLANS_ENABLED", enabled ? "1" : "0");
+      expect((await rpc("tools/list")).reply.result?.tools?.map((tool) => tool.name))
+        .toEqual([...OLD_TOOLS, ...(enabled ? NEW_TOOLS : [])]);
+      for (const name of editTools) expect((await call(name, {})).reply.error)
+        .toEqual({ code: -32602, message: "Tool not found." });
+    }
+    expect(io.editFind).not.toHaveBeenCalled();
+    expect(io.editPreview).not.toHaveBeenCalled();
+  });
+
+  it.each(["0", "1"])("registers both read-only schemas independently of the plan flag %s", async (planFlag) => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    vi.stubEnv("MCP_TASK_PLANS_ENABLED", planFlag);
+    const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
+    expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools]);
+    for (const tool of tools.filter((tool) => editTools.includes(tool.name))) {
+      expect(tool.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
+      expect(tool.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
+    }
+    expect((await call("find_tasks", { query: "  Updated  " })).reply.result?.structuredContent)
+      .toEqual({ tasks: [], hasMore: false });
+    expect(io.editFind).toHaveBeenCalledWith({ query: "Updated", includeDone: false });
+    const input = { query: "Task", companyId: 0, parentId: "parent", includeDone: true };
+    await call("find_tasks", input);
+    expect(io.editFind).toHaveBeenLastCalledWith(input);
+    await call("preview_task_changes", { changes });
+    expect(io.editPreview).toHaveBeenCalledWith(changes);
+  });
+
+  it.each([
+    ["find_tasks", {}], ["find_tasks", { query: " " }], ["find_tasks", { query: "x", extra: true }],
+    ["find_tasks", { companyId: -1 }], ["find_tasks", { companyId: "1" }],
+    ["find_tasks", { parentId: " " }], ["find_tasks", { query: "x", includeDone: "true" }],
+    ["preview_task_changes", { changes: [] }],
+    ["preview_task_changes", { changes: Array.from({ length: 51 }, (_, i) => ({ taskId: `t${i}`, delete: true })) }],
+    ["preview_task_changes", { changes: [...changes, ...changes] }],
+    ["preview_task_changes", { changes: [{ taskId: "bad/id", delete: true }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: {} }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { linkedClientId: 1 } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { startDate: "2026-02-30" } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { calendar: { startTime: "14:00" } } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { task: "Name" }, delete: true }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", move: { toParentId: "bad/id" } }] }],
+  ])("rejects invalid %s input before the handler", async (name, input) => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    const result = await call(name as string, input);
+    expect(result.reply.error).toMatchObject({ code: -32602, message: expect.stringContaining("Check the tool inputs.") });
+    expect(io.editFind).not.toHaveBeenCalled();
+    expect(io.editPreview).not.toHaveBeenCalled();
+  });
+
+  it("accepts every supported edit field, moves and deletes without changing supplied prose", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    const mixed = [
+      { taskId: "t", set: { task: "Name", startDate: "2026-12-01", endDate: "2026-12-02", keyPoints: "  Notes\n", status: "inProgress",
+        parked: { until: null }, responsible: ["Someone"], informed: [{ name: "Other", note: "  Keep  " }], calendar: { startTime: "14:00", endTime: "15:00" } },
+        move: { toParentId: "parent" } },
+      { taskId: "deleted", delete: true }, { taskId: "freed", move: { toParentId: null } },
+      { taskId: "returned", set: { parked: false, calendar: null } },
+    ];
+    expect((await call("preview_task_changes", { changes: mixed })).reply.error).toBeUndefined();
+    expect(io.editPreview).toHaveBeenCalledWith(mixed);
+  });
+
+  it("refuses retained callbacks after the edit flag is switched off", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    const server = new McpServer({ name: "edit-unit", version: "1" });
+    const registration = vi.spyOn(server, "registerTool");
+    registerTaskEditTools(server);
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "0");
+    registerTaskEditTools(server);
+    expect(registration).toHaveBeenCalledTimes(2);
+    const calls: readonly (readonly unknown[])[] = registration.mock.calls;
+    for (const [, , callback] of calls) {
+      expect(await (callback as (input: object) => Promise<CallToolResult>)({ changes }))
+        .toEqual({ isError: true, content: [{ type: "text", text: "Tool not found." }] });
+    }
+    expect(io.editFind).not.toHaveBeenCalled();
+    expect(io.editPreview).not.toHaveBeenCalled();
+    await server.close();
+  });
+
+  it.each(["find_tasks", "preview_task_changes"])("keeps backend errors out of %s responses", async (name) => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    io.editFind.mockRejectedValue(new Error(`private ${SECRET} at stack.ts:1`));
+    io.editPreview.mockRejectedValue(new Error(`private ${SECRET} at stack.ts:1`));
+    const failed = await call(name, name === "find_tasks" ? { query: "x" } : { changes });
+    expect(failed.reply.result?.isError).toBe(true);
+    expect(failed.body).not.toContain(SECRET);
+    expect(failed.body).not.toContain("stack.ts");
   });
 });
 

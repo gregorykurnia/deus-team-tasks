@@ -6,6 +6,7 @@ import { z } from "zod";
 import { findCompanies } from "@/lib/followupPlan";
 import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData } from "@/lib/followupServer";
 import { isTaskPlanTool, registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
+import { isTaskEditTool, registerTaskEditTools, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -97,6 +98,14 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
   const rpc = parsed.data;
   if ("method" in rpc && rpc.method === "tools/call" && rpc.params) {
     const name = rpc.params.name;
+    if (isTaskEditTool(name)) {
+      if (!taskEditsEnabled()) return rpcError(-32602, "Tool not found.", "id" in rpc ? rpc.id : null);
+      const checked = taskEditToolInputs[name].safeParse(rpc.params.arguments);
+      if (!checked.success) {
+        const issues = checked.error.issues.map((issue) => `${issue.path.join(".") || "inputs"}: ${issue.message}`).join("; ");
+        return rpcError(-32602, `Check the tool inputs. ${issues}`, "id" in rpc ? rpc.id : null);
+      }
+    }
     if (isTaskPlanTool(name)) {
       if (!taskPlansEnabled()) return rpcError(-32602, "Tool not found.", "id" in rpc ? rpc.id : null);
       const checked = taskPlanToolInputs[name].safeParse(rpc.params.arguments);
@@ -121,6 +130,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
     const origin = getPublicOrigin(request);
     registerTools(server, origin);
     registerTaskPlanTools(server, origin);
+    registerTaskEditTools(server);
   }, {
     serverInfo: { name: "Deus Team Tasks follow-up", version: "1.0.0" },
     ...(taskPlansEnabled() && { instructions: TASK_PLAN_CHAT_GUIDANCE }),

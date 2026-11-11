@@ -34,3 +34,20 @@ Checks:
 - Diff review / `git diff --check` — clean; checked move eligibility in both batch orders, combined patches, inheritance clearing, delete counts, unlisted child survival, independent dates and no input mutation; no further faults found.
 
 Data/MCP/browser/screenshot checks were not run: this task has no Firestore I/O, connector registration or screen changes (`[no look]`). Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. T03 was not started.
+
+## T03 — Find and preview tools (2026-11-11)
+
+Added server-only reads and connector registration in `lib/taskEditServer.ts` and `lib/taskEditTools.ts`, plus pre-handler flag/input checks in the MCP route. `find_tasks` combines text/company/main-task filters, returns ten matches with current fields and parent/company/subtask context, excludes done tasks unless requested and reports `hasMore`. `preview_task_changes` reuses the pure builder with fresh tasks, companies and names, Jakarta dates and the calendar flag; returns before/after, stamps, warnings and errors without writes. Both tools are absent and direct calls say "Tool not found." unless `MCP_TASK_EDITS_ENABLED` is exactly `1`; existing tool lists stay unchanged when disabled.
+
+DECISION: Require at least one search filter and combine supplied filters with AND, rather than browse everything, to keep selection explicit; search names and Key points case-insensitively and sort matches by name/ID.
+DECISION: Read names from tasks and flow/outcome roles, rather than tasks alone, to match the app's existing people picker and preserve stored spelling.
+
+Checks:
+- `npx tsc --noEmit` — passed.
+- `npx eslint app/api/mcp/[secret]/route.ts lib/taskEditServer.ts lib/taskEditTools.ts lib/taskEditServer.data.test.ts tests/unit/taskPlanTools.test.ts` — passed.
+- `npm run test:unit` — 46 files / 1,348 tests passed, including 29 new route/schema/flag/error cases.
+- `npm run test:data` — 11 files / 220 tests passed with the local emulator and fake calendar, including 10 new find/preview cases and unchanged-collection comparisons; emulator shut down.
+- `npm run build` and `MCP_TASK_EDITS_ENABLED=0 npm run mcp:smoke -- --only=protocol` — passed; protocol smoke made 115 database-preservation comparisons and stopped its owned servers. Enabled edit HTTP scenarios remain in T05 as planned.
+- Diff review / `git diff --check` — clean; checked exact flag gating, independent plan/edit activation, strict validation before handlers, no write/calendar-call path, fresh stamps, done filtering, combined filters and ten-result limits; no further faults found.
+
+No browser/screenshots: no screen changes (`[no look]`). Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. T04 was not started.
