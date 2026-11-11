@@ -7,6 +7,7 @@ import { TaskPlanError } from "@/lib/taskPlanServer";
 import { TaskPlanTokenError } from "@/lib/taskPlanToken";
 import { registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { registerTaskEditTools, taskEditToolInputs } from "@/lib/taskEditTools";
+import { TaskEditError } from "@/lib/taskEditServer";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
 import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 
@@ -14,9 +15,11 @@ import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 const io = vi.hoisted(() => ({
   find: vi.fn(), preview: vi.fn(), add: vi.fn(),
   legacyRead: vi.fn(), legacyPreview: vi.fn(), legacyAdd: vi.fn(),
-  editFind: vi.fn(), editPreview: vi.fn(),
+  editFind: vi.fn(), editPreview: vi.fn(), editApply: vi.fn(),
 }));
-vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview }));
+vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview, applyTaskChanges: io.editApply,
+  TaskEditError: class extends Error {},
+}));
 vi.mock("@/lib/taskPlanServer", () => ({
   findTaskPlanDestinations: io.find, previewTaskPlan: io.preview, addTaskPlan: io.add,
   TaskPlanError: class extends Error {},
@@ -71,6 +74,7 @@ beforeEach(() => {
   io.legacyAdd.mockResolvedValue({ parentId: "legacy-parent", subtaskIds: [], alreadySaved: false });
   io.editFind.mockResolvedValue({ tasks: [], hasMore: false });
   io.editPreview.mockResolvedValue({ tasks: [], warnings: [], errors: [], canWrite: true });
+  io.editApply.mockResolvedValue({ tasks: [], alreadySaved: false });
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 
@@ -140,11 +144,11 @@ describe("G06 activation and registration", () => {
   });
 });
 
-describe("T03 read-only task edit tools", () => {
+describe("T03–T04 task edit tools", () => {
   const editTools = Object.keys(taskEditToolInputs);
   const changes = [{ taskId: "fictional-task", set: { task: "Updated task" } }];
 
-  it.each([undefined, "", "0", "true", "01", "1 "])("hides and refuses both tools for flag %s without changing existing lists", async (flag) => {
+  it.each([undefined, "", "0", "true", "01", "1 "])("hides and refuses all edit tools for flag %s without changing existing lists", async (flag) => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", flag);
     for (const enabled of [false, true]) {
       vi.stubEnv("MCP_TASK_PLANS_ENABLED", enabled ? "1" : "0");
@@ -155,16 +159,17 @@ describe("T03 read-only task edit tools", () => {
     }
     expect(io.editFind).not.toHaveBeenCalled();
     expect(io.editPreview).not.toHaveBeenCalled();
+    expect(io.editApply).not.toHaveBeenCalled();
   });
 
-  it.each(["0", "1"])("registers both read-only schemas independently of the plan flag %s", async (planFlag) => {
+  it.each(["0", "1"])("registers edit schemas independently of the plan flag %s", async (planFlag) => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     vi.stubEnv("MCP_TASK_PLANS_ENABLED", planFlag);
     const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
     expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools]);
     for (const tool of tools.filter((tool) => editTools.includes(tool.name))) {
       expect(tool.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
-      expect(tool.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
+      expect(tool.annotations).toEqual({ readOnlyHint: tool.name !== "apply_task_changes", destructiveHint: tool.name === "apply_task_changes", idempotentHint: true, openWorldHint: false });
     }
     expect((await call("find_tasks", { query: "  Updated  " })).reply.result?.structuredContent)
       .toEqual({ tasks: [], hasMore: false });
@@ -174,6 +179,9 @@ describe("T03 read-only task edit tools", () => {
     expect(io.editFind).toHaveBeenLastCalledWith(input);
     await call("preview_task_changes", { changes });
     expect(io.editPreview).toHaveBeenCalledWith(changes);
+    const seen = { "fictional-task": "a".repeat(64) };
+    await call("apply_task_changes", { changes, seen, acknowledgedWarnings: ["warning"] });
+    expect(io.editApply).toHaveBeenCalledWith(changes, seen, ["warning"], ORIGIN);
   });
 
   it.each([
@@ -215,10 +223,10 @@ describe("T03 read-only task edit tools", () => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     const server = new McpServer({ name: "edit-unit", version: "1" });
     const registration = vi.spyOn(server, "registerTool");
-    registerTaskEditTools(server);
+    registerTaskEditTools(server, ORIGIN);
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "0");
-    registerTaskEditTools(server);
-    expect(registration).toHaveBeenCalledTimes(2);
+    registerTaskEditTools(server, ORIGIN);
+    expect(registration).toHaveBeenCalledTimes(3);
     const calls: readonly (readonly unknown[])[] = registration.mock.calls;
     for (const [, , callback] of calls) {
       expect(await (callback as (input: object) => Promise<CallToolResult>)({ changes }))
@@ -226,17 +234,39 @@ describe("T03 read-only task edit tools", () => {
     }
     expect(io.editFind).not.toHaveBeenCalled();
     expect(io.editPreview).not.toHaveBeenCalled();
+    expect(io.editApply).not.toHaveBeenCalled();
     await server.close();
   });
 
-  it.each(["find_tasks", "preview_task_changes"])("keeps backend errors out of %s responses", async (name) => {
+  it.each(["find_tasks", "preview_task_changes", "apply_task_changes"])("keeps backend errors out of %s responses", async (name) => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     io.editFind.mockRejectedValue(new Error(`private ${SECRET} at stack.ts:1`));
     io.editPreview.mockRejectedValue(new Error(`private ${SECRET} at stack.ts:1`));
-    const failed = await call(name, name === "find_tasks" ? { query: "x" } : { changes });
+    io.editApply.mockRejectedValue(new Error(`private ${SECRET} at stack.ts:1`));
+    const failed = await call(name, name === "find_tasks" ? { query: "x" } : name === "preview_task_changes" ? { changes }
+      : { changes, seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [] });
     expect(failed.reply.result?.isError).toBe(true);
     expect(failed.body).not.toContain(SECRET);
     expect(failed.body).not.toContain("stack.ts");
+  });
+
+  it.each([
+    {}, { seen: {} }, { seen: { "fictional-task": "bad" } }, { seen: { "bad/id": "a".repeat(64) } },
+    { seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: "warning" },
+    { seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [1] },
+    { seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [], extra: true },
+  ])("refuses invalid save metadata before calling the write handler: %j", async (metadata) => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    expect((await call("apply_task_changes", { changes, ...metadata })).reply.error?.code).toBe(-32602);
+    expect(io.editApply).not.toHaveBeenCalled();
+  });
+
+  it("returns actionable stale-preview and warning refusals from the save handler", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    io.editApply.mockRejectedValue(new TaskEditError("Tasks changed since the preview: fictional-task. Preview again; nothing was saved."));
+    const result = await call("apply_task_changes", { changes, seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [] });
+    expect(result.reply.result?.isError).toBe(true);
+    expect(result.body).toContain("Tasks changed since the preview: fictional-task");
   });
 });
 

@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { MAX_TASK_CHANGES, validateTaskChanges } from "./taskEdit";
-import { findTasks, previewTaskChanges } from "./taskEditServer";
+import { applyTaskChanges, findTasks, previewTaskChanges, TaskEditError } from "./taskEditServer";
 
 export const taskEditsEnabled = () => process.env.MCP_TASK_EDITS_ENABLED === "1";
 
@@ -38,6 +38,12 @@ export const taskEditToolInputs = {
   }).strict().refine((input) => input.query !== undefined || input.companyId !== undefined || input.parentId !== undefined,
     "Supply query, companyId or parentId; combine them to narrow the search."),
   preview_task_changes: z.object({ changes }).strict(),
+  apply_task_changes: z.object({
+    changes,
+    seen: z.record(z.string().refine((id) => !!validateTaskChanges([{ taskId: id, delete: true }]).changes, "Use a valid task ID."), z.string().regex(/^[a-f0-9]{64}$/))
+      .describe("Map every previewed task ID to its seen stamp, including subtasks freed by deletion."),
+    acknowledgedWarnings: z.array(z.string()).describe("Only warning IDs the owner has explicitly confirmed."),
+  }).strict().refine((input) => input.changes.every((change) => Object.hasOwn(input.seen, change.taskId)), "Include the seen stamp for every listed task."),
 };
 
 export function isTaskEditTool(name: unknown): name is keyof typeof taskEditToolInputs {
@@ -49,12 +55,12 @@ async function runTool(work: () => Promise<object>, failure: string): Promise<Ca
   try {
     const value = await work();
     return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: { ...value } };
-  } catch {
-    return { isError: true, content: [{ type: "text", text: failure }] };
+  } catch (error) {
+    return { isError: true, content: [{ type: "text", text: error instanceof TaskEditError ? error.message : failure }] };
   }
 }
 
-export function registerTaskEditTools(server: McpServer) {
+export function registerTaskEditTools(server: McpServer, origin: string) {
   if (!taskEditsEnabled()) return;
   const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   server.registerTool("find_tasks", {
@@ -65,4 +71,10 @@ export function registerTaskEditTools(server: McpServer) {
     description: "Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Show the exact changes and warnings to the owner; a preview never saves or confirms consent.",
     inputSchema: taskEditToolInputs.preview_task_changes, annotations,
   }, ({ changes }) => runTool(() => previewTaskChanges(changes), "Could not preview task changes. Try again shortly."));
+  server.registerTool("apply_task_changes", {
+    description: "Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure restores the task changes. Calendar sync runs after saving and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries calendar work. Never save an unlisted task or infer consent from a preview.",
+    inputSchema: taskEditToolInputs.apply_task_changes,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, ({ changes, seen, acknowledgedWarnings }) => runTool(() => applyTaskChanges(changes, seen, acknowledgedWarnings, origin),
+    "Could not confirm whether the task changes were saved. Find and preview the tasks before trying again."));
 }

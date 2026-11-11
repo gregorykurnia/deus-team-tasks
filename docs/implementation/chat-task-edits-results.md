@@ -51,3 +51,23 @@ Checks:
 - Diff review / `git diff --check` — clean; checked exact flag gating, independent plan/edit activation, strict validation before handlers, no write/calendar-call path, fresh stamps, done filtering, combined filters and ten-result limits; no further faults found.
 
 No browser/screenshots: no screen changes (`[no look]`). Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. T04 was not started.
+
+## T04 — Save tool (2026-11-11)
+
+Added `apply_task_changes` behind the existing exact activation flag, with strict route-level schemas, warning acknowledgements, per-task saved/deleted results, task links and calendar results. One tasks-project transaction re-reads all enumerated context and explicitly requested/destination/stamped documents, rebuilds the pure preview, checks stamps for listed and freed tasks, then writes all patches/deletes together. A real transaction retry rechecks the preview. Matching saved lists skip task/company writes, preserve generated timestamps, tolerate already-deleted tasks and retain freed subtask IDs through their preview stamps; no receipts or stored edit metadata were added.
+
+Exported the existing company-date rule through `lib/companyDates.ts` and `lib/companyWrites.ts`. After the task commit, deadline changes on open company tasks update company target/last action together in the separate company project's transaction. A failed company write restores the entire task list, including deletes and freed subtasks; rollback checks the committed after states before restoring so it cannot overwrite a later edit. Calendar sync then handles marked/previously marked listed tasks and freed/reparented marked subtasks; failures stay per task and retries repair them without recreating deleted tasks or duplicating events.
+
+DECISION: Keep the company-date rule in a pure shared module and re-export it from companyWrites, rather than import browser write guards into server code, so both paths retain the same B12 rule.
+DECISION: Require seen stamps for every previewed task, including freed subtasks, rather than only explicitly listed IDs, to protect the delete's side effects and identify those subtasks for calendar retries.
+DECISION!: When several open tasks change one company's deadline, the last listed deadline wins, rather than inventing a minimum/maximum rule, matching consecutive app saves.
+
+Checks:
+- `npx tsc --noEmit` — passed.
+- `npx eslint lib/companyDates.ts lib/companyWrites.ts lib/taskEditServer.ts lib/taskEditTools.ts lib/taskEditApply.data.test.ts tests/unit/taskPlanTools.test.ts app/api/mcp/[secret]/route.ts` — passed.
+- `npm run test:unit` — 46 files / 1,357 tests passed, including save-tool registration, independent flags, retained-callback gating, strict stamp/acknowledgement schemas, origin forwarding and safe/actionable errors.
+- `npm run test:data` — 12 files / 244 tests passed; 24 new T04 cases cover exact mixed after states, unchanged document update times on retry, stale listed/freed tasks, fresh transactional reads, a concurrent-edit retry, simultaneous identical saves, new children, changed move eligibility, warning refusal, company isolation/order/real denied-write rollback, and fake-calendar updates/removals/failures/retries. Owned emulator stopped.
+- `npm run build` and `MCP_TASK_EDITS_ENABLED=0 npm run mcp:smoke -- --only=protocol` — passed; 115 database-preservation comparisons, with owned test servers stopped. Enabled edit HTTP scenarios remain assigned to T05/E1.
+- Own diff review / `git diff --check` — clean; reviewed all-or-nothing task writes, stale checks before mutation, warning gating, no browser imports, retry matching/timestamps, independent company-task dates, guarded cross-project compensation and calendar work after saving.
+
+No browser/screenshots: no screen changes (`[no look]`). All data checks used the local emulator and fake calendar; no production data/settings changed. Full smoke/a11y/compare remain scheduled for R1a; a full check is worth running for shared-library changes. T05 was not started.

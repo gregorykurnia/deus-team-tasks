@@ -130,7 +130,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
     const origin = getPublicOrigin(request);
     registerTools(server, origin);
     registerTaskPlanTools(server, origin);
-    registerTaskEditTools(server);
+    registerTaskEditTools(server, origin);
   }, {
     serverInfo: { name: "Deus Team Tasks follow-up", version: "1.0.0" },
     ...(taskPlansEnabled() && { instructions: TASK_PLAN_CHAT_GUIDANCE }),

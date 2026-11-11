@@ -10,6 +10,7 @@ import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, type CompanyGroup } from "./companies";
+import { companyPatchFrom } from "./companyDates";
 import { NOTES } from "./noteWrites";
 import { isParked } from "./parking";
 import { addTask, PartlyChanged, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
@@ -17,6 +18,8 @@ import type { CompaniesById } from "./kinds";
 import type { PipelineEntry } from "./clientTypes";
 import type { ProspectJournalEntry } from "./prospectJournalTypes";
 import type { NewTask, Task } from "./types";
+
+export { companyPatchFrom } from "./companyDates";
 
 export const PIPELINE = "pipeline";
 
@@ -138,14 +141,6 @@ async function rollBack(err: unknown, undoFirst: () => Promise<void>): Promise<n
     console.error("Couldn't undo the first half of a failed change", undoErr);
   }
   throw err;
-}
-
-// What a company takes from one of its open tasks whose dates changed (B12): the
-// task's last action, and its deadline as the target. Null when nothing moves.
-function companyPatchFrom(company: PipelineEntry, task: Pick<Task, "lastActionDate" | "endDate">): CompanyPatch | null {
-  const date = task.lastActionDate ?? company.date;
-  const target = task.endDate || company.target;
-  return date !== company.date || target !== company.target ? { date, target } : null;
 }
 
 // Saves a company task. When its last action or deadline changes, the company follows (B12). The company's other tasks
