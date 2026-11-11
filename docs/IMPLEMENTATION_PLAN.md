@@ -37,7 +37,7 @@ is reachable until the owner sets one Vercel variable (O1).
 | E1 | End to end: edits, a move and a delete over HTTP, then checked in the task sheet and the fake calendar. [E1](implementation/chat-task-edits.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-11 |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/chat-task-edits.md#r1a--full-check-run) [no look] | Sol xHigh | 2026-11-11 |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/chat-task-edits.md#r1b--fix-recorded-failures) [look] | Sol xHigh | 2026-11-11 |
-| R1b.F1 | Keep company-linked task drafts safe while company data loads or fails; delayed-company regression preserves the link and unrelated dates. [R1b.F1](implementation/chat-task-edits.md#r1bf1--keep-a-company-task-linked-while-its-company-loads) [look] | Astra xHigh | |
+| R1b.F1 | Keep company-linked task drafts safe while company data loads or fails; delayed-company regression preserves the link and unrelated dates. [R1b.F1](implementation/chat-task-edits.md#r1bf1--keep-a-company-task-linked-while-its-company-loads) [look] | Astra xHigh | 2026-11-11 |
 | R1b.F2 | Fix the expanding stress phone viewport and detect offscreen sheets; recapture only state 065 after F1. [R1b.F2](implementation/chat-task-edits.md#r1bf2--keep-the-stress-task-sheet-inside-the-phone-capture) [look] | Astra xHigh | |
 | R1 | Phase review: hunt for faults in saving, fix them, write the owner handoff. [R1](implementation/chat-task-edits.md#r1--phase-review) [no look] | Opus 5.5 High | |
 

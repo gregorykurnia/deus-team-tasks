@@ -183,4 +183,39 @@ DECISION: Split the two remaining stress areas into fresh tasks before R1 rather
 
 All eight gallery key frames and the critical footer/edge crops were opened at original resolution. Six repaired-state pictures show whole validation/suggestion text above the pinned actions; the two stress pictures retain the faults assigned above. All R1a rows have a fix or an explicit disposition. R1b is ticked; R1b.F1/F2 and R1 stay unticked. Owned ports 3100/8180/4100 were confirmed closed.
 
+## R1b.F1 — Keep company task drafts safe while companies load (2026-11-11)
+
+`TaskSheetHost.tsx` now waits for an error-free server company snapshot before initializing a linked task's editor. An empty device cache or failed listener cannot initialize it as Internal. The existing editor stays mounted after opening, preserving typing through offline snapshots and reconnects. Waiting, offline and failed-load states reuse the design's skeleton and empty-state components; a failed listener offers Reload before any editable draft exists. A server-confirmed absent company still uses the existing Internal rule in `draftFromTask`; no draft fields, save logic or stored schema changed.
+
+The small emulator fixture has two tasks with different dates and one company with its own dates. Blocking only the company stream reproduced the incorrect Internal editor on desktop and phone before the fix (both regressions failed at `Loading the company`). After restoring the stream, the same open sheet shows Client work and Halcyon Logistics. An offline save is refused without losing typing; after reconnect, saving changes only the description, leaving the link and every other stored field of that task, the other task and the company unchanged. Separate cases cover a real denied company read/reload and a server-confirmed missing company without clearing its stored link.
+
+Checks:
+
+- `npx tsc --noEmit` and `npx eslint features/task-sheet/TaskSheetHost.tsx tests/smoke/task-sheet-company-loading.spec.ts` — final versions passed.
+- `npm run test:unit` — 46 files / 1,358 tests passed.
+- `npm run test:data` — 12 files / 244 tests passed, emulator only.
+- `npx playwright test tests/smoke/task-sheet-company-loading.spec.ts tests/smoke/task-sheet.spec.ts --output=redesign/compare/r1bf1-tests` — 21 passed; only the delayed-company case reran after adding offline captures (2 passed) and waiting for the reconnect toast to expire (2 passed).
+- `npm run build` — passed compilation, TypeScript and static-page generation; no test used the production build.
+- Own diff review, `git diff --check`, and original-size desktop/phone look check with native edge crops — passed; initialization is gated, no new writes exist, and the confirmed-deletion rule remains intact.
+
+Gallery: `redesign/compare/r1bf1-gallery/` contains before, waiting, offline, loaded and failed frames at 1440×900 and 390×844, with `*-edge.png` crops at native scale. Sources are `r1bf1-before/`, `r1bf1-tests/`, `r1bf1-offline-tests/` and `r1bf1-settled-tests/`; logs are `/tmp/deus-r1bf1-*.log`.
+
+LOOKED: before-desktop.png · The right sheet sits over the blurred list, wrongly says Internal and lacks the company card; its footer and text fit. Fixed by waiting for company confirmation.
+LOOKED: before-phone.png · The bottom sheet fills the width; Internal is wrongly selected and the development error badge overlaps Save. The company fault is fixed; final captures exclude the development-only badge.
+LOOKED: waiting-desktop.png · Skeleton blocks sit inside the right sheet above empty space, over the blurred list; loading text and close control are whole, with no edge clipping or overlap.
+LOOKED: waiting-phone.png · Skeleton blocks sit below the sheet header; the sheet meets the bottom edge, all loading text is readable, and no form or action is obscured.
+LOOKED: offline-desktop.png · The Wi-Fi icon and two-line explanation sit near the top of the right sheet; nothing overlaps or clips their text.
+LOOKED: offline-phone.png · The icon sits above the centered explanation on the bottom sheet; the message wraps inside the edges and the close control remains clear.
+LOOKED: loaded-desktop.png · The company card sits below About and above the remaining fields; the pinned footer is in front of the scrolling body, all visible controls are whole, and lower fields continue below the fold.
+LOOKED: loaded-phone.png · The company card and description are on the first screen above the pinned actions; the subtask placeholder ellipsizes and Priority continues below the scroll boundary, while company text and action labels remain whole.
+LOOKED: failed-desktop.png · The building icon, failure explanation and Reload stack inside the right sheet over the blurred list; no text, control or sheet edge is clipped or overlapped.
+LOOKED: failed-phone.png · The same stack fits inside the bottom sheet, with Reload below the readable explanation and close above it; edges and text are unobstructed.
+
+Picture faults addressed: the before frames' wrong kind/missing company are fixed; the development-only error badge is excluded from screenshots; the transient reconnect toast initially covered lower phone form text, so the final loaded frames wait for it to disappear. The existing scrolling form and ellipsized input hint remain intentional; no new clipping was found in waiting/offline/error states.
+
+DECISION: Require a confirmed server company snapshot before opening a linked draft, rather than treating an empty cache/error as deletion; preserve the mounted editor once it opens so reconnects cannot discard typing.
+DECISION: Offer Reload for a failed initial listener, rather than resetting live drafts or changing the shared subscription hook; Firestore closes that failed listener, and no editable draft exists yet.
+
+Run notes: the first network fixture held the handshake and never emitted the needed empty cache; it was corrected before the failing-before proof. One browser run and an intermediate type-check shell ended with signal 143; the browser's owned servers/controller were stopped and checks reran in isolated process sessions. A restart first reported `http://127.0.0.1:8180 is already used`; that owned leftover was stopped before the successful run. The e2e guard refused three specs, so the run was narrowed to the new regression plus its page spec (no chat-tool code changed). A stale owned emulator hub caused a warning during the successful data run and was stopped. No production data or settings changed. Only R1b.F1 is ticked; the large stress recapture and viewport repair remain for R1b.F2, which was not started.
+
 Only the picker, comparison tools, chat spec and this plan/brief/evidence changed; no Firestore read/write code or production data/settings changed, so no additional test:data/MCP smoke run was needed. A full check is worth running for the shared picker change; the full R1a suites were not repeated.

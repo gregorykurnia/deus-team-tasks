@@ -9,6 +9,7 @@ import { useCompanies, useTaskGroups, useTasks } from "@/desk/DeskData";
 import { without } from "@/desk/areas";
 import { useConnection } from "@/lib/connection";
 import type { Task } from "@/lib/types";
+import Button from "@/ui/Button";
 import Sheet from "@/ui/Sheet";
 import EmptyState from "@/ui/EmptyState";
 import { LoadingLine, Skeleton } from "@/ui/Skeleton";
@@ -25,7 +26,6 @@ export default function TaskSheetHost() {
   const router = useRouter();
   const tasks = useTasks();
   const groups = useTaskGroups();
-  const companies = useCompanies();
   const { status } = useConnection();
   const toast = useToast();
 
@@ -81,7 +81,6 @@ export default function TaskSheetHost() {
     return <TaskSheet key="new" initialGroup={group} onClose={close} />;
   }
 
-  // A company task opened before the companies arrive would read as internal work: wait for both.
   if (waitingOffline) {
     return (
       <Sheet open onClose={close} title="Task">
@@ -91,7 +90,7 @@ export default function TaskSheetHost() {
       </Sheet>
     );
   }
-  if (!shown || companies.loading) {
+  if (!shown) {
     return (
       <Sheet open onClose={close} title="Task">
         <div className={styles.loading}>
@@ -103,5 +102,40 @@ export default function TaskSheetHost() {
       </Sheet>
     );
   }
-  return <TaskSheet key={shown.id} task={shown} gone={!found} onClose={close} />;
+  return <ExistingTaskSheet key={shown.id} task={shown} gone={!found} onClose={close} />;
+}
+
+function ExistingTaskSheet({ task, gone, onClose }: { task: Task; gone: boolean; onClose: () => void }) {
+  const companies = useCompanies();
+  const { status } = useConnection();
+  // An empty device snapshot or a failed listener cannot confirm that the company was deleted. Only initialize
+  // the draft after the server answers; draftFromTask can then apply the existing deleted-company/Internal rule.
+  const confirmed = !companies.loading && !companies.fromCache && !companies.error;
+  const canOpen = task.linkedClientId == null || confirmed;
+  const [opened, setOpened] = useState(false);
+  if (!opened && canOpen) setOpened(true);
+  // Once opened, keep the same editor through cache snapshots/reconnects: unmounting it would lose typed changes.
+  if (opened || canOpen) return <TaskSheet task={task} gone={gone} onClose={onClose} />;
+
+  return (
+    <Sheet open onClose={onClose} title="Task">
+      {companies.error ? (
+        <EmptyState size="small" icon="building" title="Company couldn't be loaded"
+          actions={<Button onClick={() => window.location.reload()}>Reload</Button>}>
+          Your task is unchanged. Reload to try again.
+        </EmptyState>
+      ) : status === "offline" ? (
+        <EmptyState size="small" icon="wifi" title="No connection">
+          This task&rsquo;s company hasn&rsquo;t been checked yet. The task will open once you are back online.
+        </EmptyState>
+      ) : (
+        <div className={styles.loading}>
+          <LoadingLine>Loading the company</LoadingLine>
+          <Skeleton height={72} />
+          <Skeleton height={40} />
+          <Skeleton height={46} />
+        </div>
+      )}
+    </Sheet>
+  );
 }
