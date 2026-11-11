@@ -35,7 +35,8 @@ Nothing shows or writes until the owner sets one Vercel variable (O2).
 | E1 | End to end: chat plan → open in app → edit → delete, checked against the fake calendar. [E1](implementation/calendar-events.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-11 |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/calendar-events.md#r1a--full-check-run) [no look] | Sol xHigh | 2026-11-11 |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/calendar-events.md#r1b--fix-recorded-failures) [look] | Sol xHigh | 2026-11-11 |
-| R1 | Phase review: hunt for faults in saving and syncing, fix them, write the owner handoff. [R1](implementation/calendar-events.md#r1--phase-review) [no look] | Opus 5.5 High | |
+| R1 | Phase review: hunt for faults in saving and syncing, fix them, write the owner handoff. [R1](implementation/calendar-events.md#r1--phase-review) [no look] | Opus 5.5 High | 2026-11-11 |
+| R1.F1 | Renaming a main task or a company re-syncs its marked subtasks' or tasks' events (today they keep the old name in the description until Try again). Done when: unit tests (mocked fetch) show a main-task rename and a company rename request sync for marked subtasks/tasks only, and a data test on the fake shows the subtask's event description and `calendarSync.synced` updated after the parent rename. [R1 results](implementation/calendar-events-results.md#r1--phase-review) [no look] | Sol Max | |
 
 ## Owner steps after the run
 

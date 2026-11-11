@@ -336,3 +336,56 @@ LOOKED: desktop/failure.png · Drawer rests above the blurred Tasks page; fields
 LOOKED: desktop/failure-detail.png · Calendar fields sit above the amber warning and people/notes fields; complete actions rest below the divider with side gutters, crop starts at the switch, no text is clipped or covered.
 LOOKED: phone/failure.png · Sheet sits in front of the blurred page; stacked times and wrapped warning clear the fixed two-row footer, Responsible continues below the scroll edge, retry and all action text are whole.
 LOOKED: phone/failure-detail.png · Warning rests above the partial Responsible field; fixed actions cover the continuing scroll area, full-width Save has side margins, the intentional crop starts at the switch and all visible labels are readable.
+
+## R1 — Phase review
+
+2026-11-11, Opus 5.5 High. Read `git diff a3abb09..HEAD` (code and tests first), then this brief and the results above.
+
+### Hunt list
+
+| What was hunted | Verdict |
+|---|---|
+| Duplicate events | None possible: the event ID comes from the task ID; insert after 404/410, update after 409. Repeat and retry calls stay one event (C02, M02 data tests). |
+| Orphaned event after a switch-off whose sync failed or never reached the server | **Fixed here.** The task kept `calendarSync` but no mark, and the sheet showed nothing, so the event stayed with no way to see or retry it. `calendarStatus` now calls such a task stale, and the sheet shows the amber line with Try again (which removes the event and clears `calendarSync`). Test: `taskSheetCalendar.test.tsx` "isn't up to date when a switched-off task's event may still be there". |
+| Orphaned event after a delete whose request the browser drops (tab closed at once) | **Fixed here.** The sync request now uses `keepalive` (bodies under 60 KB). Test: `calendarWrites.test.ts` "asks the browser to finish the request…". |
+| Orphaned event after a delete whose Google call fails | **Stands.** The task is gone, so nothing in the app can show it or retry it; the brief settles "no background retry queue". Follow-up below. |
+| Stale description after renaming a main task (marked subtasks) or a company (marked company tasks) | **Fix row R1.F1.** The key covers both names, so the subtask's sheet turns amber, but no write asks for a sync: the event keeps the old name until Try again. |
+| A server `calendarSync` write shown as a colleague's change | **Fixed here.** `useLiveQuery` tagged it "Just changed" for 30 s after every own save of a marked task. `requestCalendarSync` now calls `expectOwnWrite("tasks", id)`. Test: `calendarWrites.test.ts` "counts the server's calendarSync write as this device's own change". |
+| A task write blocked or lost by a sync | None: every request is fire-and-forget after the commit, wrapped against throws (C03 tests for pending, HTTP error, rejected and throwing fetch). |
+| A sync write recreating a removed mark or touching `calendar` | None: only `calendarSync.*` field paths via `updateDoc` (which can't create a deleted task); a mark removed mid-sync is caught by the re-read pass, which deletes the event and clears `calendarSync`. |
+| Sheet save wiping `calendarSync` | None: the draft excludes it; Undo and rollbacks restore only the patched keys. |
+| Fake calendar reachable in production | No: `USE_EMULATOR` is false whenever `NODE_ENV` is production, and `CALENDAR_FAKE=1` outside the emulator turns writes off (`calendarSync.test.ts`). |
+| Owner's address committed | No: only `test-calendar` and `fake@example.test` in tests and smoke env. |
+| Legacy follow-up tools changed | No: `lib/followup*` untouched; schema test checks legacy tools unchanged. |
+| Guidance letting Claude guess times or dates | No: step 4 says "Never guess times" next to the existing "Never guess dates", asks all day or exact HH:MM times in the same per-step question. |
+| Two server instances syncing one task at once | Stands: per-process queue plus the re-read pass converge in practice; a fully interleaved race could leave one stale event, which the sheet then shows as not up to date. |
+| Amber line flashing during a save | Stands (minor): the live snapshot arrives before the request starts, for the length of the save; the sheet closes on save. |
+
+### Checks after the fixes
+
+- PASS — `npx tsc --noEmit`; `npx eslint` on the five changed files.
+- PASS — `npm run test:unit`: 45 files, 1,156 tests (3 new, each seen failing first).
+- PASS — `npm run test:data`: 10 files, 207 tests.
+- PASS — `npx playwright test tests/smoke/calendar-events.spec.ts`: 9 passed (2.4 min). Its run rewrites `test-results/`, so the committed C04/C05 captures were restored from git.
+
+### Owner handoff
+
+**Proven on the emulator and the fake calendar:** a task or subtask goes on the calendar all day or with times from its
+sheet; edits, an edit's Undo, rollbacks, switch-off and deletes move or remove the event; a main task's delete keeps its
+freed subtask's event; a failure keeps the task and shows Try again; chat steps are task only or task plus event, shown in
+the preview; a chat save adds the events, reports failures per step, and a repeated save retries only those; nothing
+shows or writes while `GOOGLE_EVENTS_CALENDAR_ID` is unset (R1a: full suite, a11y and compare green).
+
+**Proven only on the fake, so O3 checks them for real:** that Google accepts the derived event IDs; that updating a
+deleted (cancelled) event brings it back, and re-inserting its ID answers 409; that timed events land at the right
+Jakarta time; that the service account can write to your calendar once shared; that the "Open in the team calendar"
+link opens the event.
+
+**Your steps, in the plan's order:**
+1. O1 — in Google Calendar, share your calendar with the service account's email (Vercel's `GOOGLE_SERVICE_ACCOUNT_EMAIL`), with **Make changes to events**.
+2. O2 — in Vercel Production, set `GOOGLE_EVENTS_CALENDAR_ID` to your Gmail address and redeploy (remove it and redeploy to roll back; events already made stay).
+3. O3 — live check: put one task on the calendar with a time from the app, save one chat plan with one calendar step and one task-only step, then move one and delete one, and check your calendar follows.
+
+**Follow-ups (not built):** invites; per-person calendars; a calendar mark on task rows; hiding app-made events from
+the Plan and Today event rows (they show as a task and an event); two-way sync; calendar options in the legacy
+follow-up tools and the deal skill; a cleanup for an event left behind when a deleted task's removal fails at Google.

@@ -22,6 +22,12 @@ describe("calendarStatus", () => {
     expect(calendarStatus(task({ calendar: undefined }), null, null, false)).toBeUndefined();
     expect(calendarStatus(task({ calendar: undefined }), null, null, true)).toBeUndefined();
   });
+  it("isn't up to date when a switched-off task's event may still be there (R1)", () => {
+    const off = { ...synced(task()), calendar: undefined };
+    expect(calendarStatus(off, null, null, false)).toBe("stale");
+    expect(calendarStatus({ ...off, calendarSync: { error: "Failed" } }, null, null, false)).toBe("stale");
+    expect(calendarStatus(off, null, null, true)).toBeUndefined();
+  });
   it("is on when the calendar holds this version of the task", () => {
     expect(calendarStatus(synced(task()), null, null, false)).toBe("on");
   });

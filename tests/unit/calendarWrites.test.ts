@@ -8,7 +8,8 @@ const io = vi.hoisted(() => ({
 vi.mock("@/lib/firebase", () => ({ db: "tasks-db" }));
 vi.mock("@/lib/firebaseClients", () => ({ clientsDb: "clients-db" }));
 vi.mock("@/lib/connection", () => ({ assertOnline: io.online }));
-vi.mock("@/lib/liveChanges", () => ({ expectOwnWrite: vi.fn() }));
+const own = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/liveChanges", () => ({ expectOwnWrite: own }));
 vi.mock("firebase/firestore", () => ({
   doc: (db: string, collection: string, id: string) => ({ db, collection, id }),
   collection: (db: string, name: string) => ({ db, name }),
@@ -63,6 +64,17 @@ describe("nonblocking calendar requests", () => {
     const ids = Array.from({ length: 120 }, (_, i) => `t${i}`);
     requestCalendarSync([...ids, ...ids]);
     expect(requests()).toEqual([ids.slice(0, 50), ids.slice(50, 100), ids.slice(100)]);
+  });
+
+  it("counts the server's calendarSync write as this device's own change, not a colleague's (R1)", () => {
+    requestCalendarSync(["a", "b", "a"]);
+    expect(own.mock.calls).toEqual([["tasks", "a"], ["tasks", "b"]]);
+  });
+
+  it("asks the browser to finish the request if the page closes right after a delete (R1)", () => {
+    requestCalendarSync(["a"]);
+    requestCalendarSync([`${"x".repeat(1500)}`, ...Array.from({ length: 49 }, (_, i) => `${i}${"y".repeat(1400)}`)]);
+    expect(io.fetch.mock.calls.map(([, init]) => init.keepalive)).toEqual([true, false]); // over the 64 KB keepalive limit
   });
 
   it("keeps sending the other chunks after a synchronous throw or rejected fetch", async () => {

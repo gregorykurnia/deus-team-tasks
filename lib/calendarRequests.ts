@@ -1,3 +1,4 @@
+import { expectOwnWrite } from "./liveChanges";
 import type { NewTask } from "./types";
 
 // Tasks with a sync request in flight, so task details can say "Adding to the team calendar…" (C04). A request that
@@ -25,15 +26,21 @@ export function subscribeCalendarPending(listener: () => void): () => void {
 // Calendar work follows a saved task; it must never hold up or fail that save.
 export function requestCalendarSync(ids: readonly string[]): void {
   const taskIds = [...new Set(ids)];
+  // The server writes calendarSync back for this device's change: it mustn't read as a colleague's "Just changed".
+  for (const id of taskIds) expectOwnWrite("tasks", id);
   for (let i = 0; i < taskIds.length; i += 50) {
     const chunk = taskIds.slice(i, i + 50);
     mark(chunk, 1);
     const settle = () => void setTimeout(() => mark(chunk, -1), SETTLE_MS);
+    const body = JSON.stringify({ taskIds: chunk });
     try {
+      // keepalive lets a delete's request finish if the page closes at once (a deleted task leaves nothing to retry
+      // from); browsers refuse keepalive bodies over 64 KB, which only very long IDs reach.
       void fetch("/api/calendar/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskIds: chunk }),
+        body,
+        keepalive: body.length < 60_000,
       }).catch(() => {}).finally(settle);
     } catch {
       // A missing/offline fetch must not prevent the remaining requests or the task write.

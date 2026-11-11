@@ -76,9 +76,10 @@ export function calendarKey(task: Task, parent: Parent, company: Company): strin
 export type CalendarStatus = "on" | "adding" | "stale";
 
 // What task details says about a saved, marked task (C04): on the calendar, a sync in flight, or not up to date when the
-// calendar holds an older version of the task or the last sync failed. Unmarked tasks have no status.
+// calendar holds an older version of the task or the last sync failed. An unmarked task has no status, unless its
+// calendarSync is still there: the server clears it only once the event is gone, so a failed removal shows as stale.
 export function calendarStatus(task: Task, parent: Parent, company: Company, pending: boolean): CalendarStatus | undefined {
-  if (!task.calendar) return undefined;
+  if (!task.calendar) return task.calendarSync && !pending ? "stale" : undefined;
   if (pending) return "adding";
   let key: string | undefined;
   try { key = calendarKey(task, parent, company); } catch { return "stale"; }

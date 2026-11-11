@@ -101,7 +101,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   const parkButton = useRef<HTMLButtonElement>(null);
   // The saved task's place on the calendar, judged from what the server would put there (lib/calendarSync).
   const syncing = useCalendarSyncPending(task?.id);
-  const onCalendar = task?.calendar && calendarWritesShown(task, companies.loading)
+  const onCalendar = (task?.calendar || task?.calendarSync) && calendarWritesShown(task, companies.loading)
     ? calendarStatus(
         task,
         task.parentId && task.parentId !== task.id ? byTaskId.get(task.parentId) ?? null : null,
@@ -625,7 +625,8 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
                       </Field>
                     </div>
                   )}
-                  {draft.calendar && onCalendar && task && (
+                  {/* Hidden while the switch differs from the saved task; an unmarked task shows only a failed removal. */}
+                  {onCalendar && task && !!draft.calendar === !!task.calendar && (
                     <CalendarStatusLine status={onCalendar} link={task.calendarSync?.link} onRetry={() => requestCalendarSync([task.id])} />
                   )}
                 </div>
