@@ -1,9 +1,12 @@
-// Tasks on the team calendar (C04): the switch in task details, the start and end times, and where a saved task stands
+// Tasks on the team calendar (C04/C05): the controls in task details and the event following browser writes.
+// C04 covers the switch, the start and end times, and where a saved task stands
 // on the calendar. The dev server runs the fake calendar (playwright.config.ts), so nothing reaches a real one. Captures
 // for the look check go to test-results/calendar-events/c04/<project>/.
 import type { Page, TestInfo } from "@playwright/test";
+import type { calendar_v3 } from "googleapis";
 import { test, expect } from "./fixtures";
-import { isoDay, seedTasks, storedById, task } from "./data";
+import { isoDay, seedTasks, stored, storedById, task } from "./data";
+import { seed } from "../support/emulator";
 
 const dir = (info: TestInfo) => `test-results/calendar-events/c04/${info.project.name}`;
 // The dev server's "N" badge isn't part of the app (builds don't have it), so captures hide it.
@@ -134,4 +137,182 @@ test("with calendar writes off, the switch isn't there and task details look as 
   await s.getByLabel("Deadline").scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
   await shot(page, info, process.env.C04_BEFORE ? "off-before" : "off-after");
+});
+
+// C05 exercises real browser writes and the server's fake calendar, not intercepted sync responses.
+test.describe("app calendar flow", () => {
+  const errors = new WeakMap<Page, string[]>();
+  test.beforeEach(async ({ page }) => {
+    const messages: string[] = [];
+    errors.set(page, messages);
+    page.on("pageerror", (error) => messages.push(error.message));
+    page.on("console", (message) => { if (message.type() === "error") messages.push(message.text()); });
+  });
+  test.afterEach(async ({ page }) => {
+    expect(errors.get(page), "browser console and uncaught errors").toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no sideways scroll").toBe(true);
+  });
+
+  async function eventFor(id: string) {
+    const events = (await stored("tasks", "testCalendarEvents")).map((doc) => JSON.parse(doc.event as string) as calendar_v3.Schema$Event);
+    const matches = events.filter((event) => event.extendedProperties?.private?.deusTaskId === id);
+    expect(matches.length, "one event ID even after off/on and retries").toBeLessThanOrEqual(1);
+    return matches[0];
+  }
+
+  async function openTask(page: Page, id: string) {
+    await page.goto(`/tasks?task=${id}`);
+    await waitUntilLive(page);
+    return sheet(page, "Task");
+  }
+
+  async function save(page: Page) {
+    const s = sheet(page, "Task");
+    await s.getByRole("button", { name: "Save changes", exact: true }).click();
+    await expect(s).toHaveCount(0);
+  }
+
+  // A viewport capture plus an original-size crop of the calendar and footer. Scrolled content can continue
+  // behind the sheet's fixed head/footer, but every calendar word and action must be whole and unobscured.
+  async function capture(page: Page, info: TestInfo, name: string, isMobile: boolean) {
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    await page.evaluate(() => document.fonts.ready);
+    const s = sheet(page, "Task");
+    const block = s.getByRole("button", { name: "Put on the team calendar" }).locator("xpath=../..");
+    await block.scrollIntoViewIfNeeded();
+    const faults = await s.evaluate((dialog) => {
+      const issues: string[] = [];
+      const targets = dialog.querySelectorAll<HTMLElement>("button, a, input, textarea, label, [role=status] span");
+      for (const el of targets) {
+        // The description has a deliberately screen-reader-only label; its one-pixel box isn't visible text.
+        if (el.closest(".sr-only")) continue;
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height || b.top < 0 || b.bottom > innerHeight) continue;
+        // Only test things visible in the sheet's scrollport (not fields intentionally scrolled behind its head).
+        const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+        if (!hit || !el.contains(hit)) {
+          if (el.closest("footer") || el.closest('[class*="calendar"]')) issues.push(`covered: ${el.textContent || el.getAttribute("aria-label")}`);
+          continue;
+        }
+        if (b.left < 0 || b.right > innerWidth) issues.push(`outside viewport: ${el.textContent}`);
+        if (el.scrollWidth > el.clientWidth + 1) issues.push(`clipped: ${el.textContent || el.getAttribute("aria-label")}`);
+      }
+      if ([...document.images].some((el) => el.getClientRects().length && !el.naturalWidth)) issues.push("unloaded image");
+      return issues;
+    });
+    expect(faults, "visible fields, labels and calendar actions").toEqual([]);
+    const b = (await block.boundingBox())!;
+    const footer = (await s.getByRole("button", { name: "Save changes" }).boundingBox())!;
+    expect(b.y).toBeGreaterThan(0);
+    expect(b.y + b.height).toBeLessThanOrEqual(footer.y);
+    if (isMobile) expect((await s.boundingBox())!.width).toBeLessThanOrEqual(390);
+    const path = `test-results/calendar-events/c05/${info.project.name}/${name}`;
+    await page.screenshot({ path: `${path}.png`, animations: "disabled" });
+    await page.screenshot({ path: `${path}-detail.png`, animations: "disabled", clip: {
+      x: Math.max(0, b.x - 8), y: b.y - 8, width: b.width + 16,
+      height: Math.min(page.viewportSize()!.height, footer.y + footer.height + 16) - b.y + 8,
+    } });
+  }
+
+  test("subtask all day → times → date and Undo → off/on → delete", { tag: "@phone" }, async ({ page, isMobile }, info) => {
+    test.setTimeout(120_000);
+    await seedTasks([task("main", { task: "Plan the board review" })]);
+    const s = await openTask(page, "main");
+    const subtasks = s.getByRole("group", { name: "Subtasks" });
+    await subtasks.getByRole("textbox", { name: "Add a subtask" }).fill("Review the quarterly forecast");
+    await subtasks.getByRole("textbox", { name: "Add a subtask" }).press("Enter");
+    await subtasks.getByRole("link", { name: "Review the quarterly forecast", exact: true }).click();
+    await expect(s.getByText("Subtask of")).toBeVisible();
+    const id = new URL(page.url()).searchParams.get("task")!;
+    await s.getByRole("button", { name: "Put on the team calendar" }).click();
+    await s.getByLabel("Start", { exact: true }).fill(isoDay(1));
+    await s.getByLabel("Deadline").fill(isoDay(1));
+    await save(page);
+    await expect.poll(() => eventFor(id)).toMatchObject({ summary: "Review the quarterly forecast", start: { date: isoDay(1) }, end: { date: isoDay(2) }, status: "confirmed" });
+    const eventId = (await eventFor(id))!.id;
+    expect((await eventFor(id))!.description).toContain("Main task: Plan the board review");
+    expect((await eventFor(id))!.description).toContain(`/tasks?task=${id}`);
+    expect((await eventFor(id))!.attendees).toBeUndefined();
+    await openTask(page, id);
+    await expect(s.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await capture(page, info, "all-day", isMobile);
+
+    await s.getByLabel("Starts").fill("09:30");
+    await s.getByLabel("Ends").fill("11:00");
+    await s.getByLabel("Description").fill("Review the updated quarterly forecast");
+    await save(page);
+    const timed = { id: eventId, summary: "Review the updated quarterly forecast", start: { dateTime: `${isoDay(1)}T09:30:00`, timeZone: "Asia/Jakarta" }, end: { dateTime: `${isoDay(1)}T11:00:00`, timeZone: "Asia/Jakarta" }, status: "confirmed" };
+    await expect.poll(() => eventFor(id)).toMatchObject(timed);
+    await openTask(page, id);
+    await expect(s.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await capture(page, info, "timed", isMobile);
+
+    await s.getByRole("button", { name: "Close", exact: true }).click();
+    const row = page.getByRole("article").filter({ has: page.getByRole("link", { name: "Review the updated quarterly forecast", exact: true }) });
+    await row.getByRole("button", { name: /^Deadline:.*Change$/ }).click();
+    const dateEditor = page.getByRole("dialog", { name: "Deadline", exact: true });
+    await dateEditor.locator('input[type="date"]').fill(isoDay(3));
+    await dateEditor.getByRole("button", { name: "Save", exact: true }).click();
+    await expect.poll(() => eventFor(id)).toMatchObject({ ...timed, end: { dateTime: `${isoDay(3)}T11:00:00`, timeZone: "Asia/Jakarta" } });
+    await expect.poll(async () => (await storedById("tasks", "tasks", id))?.endDate).toBe(isoDay(3));
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect.poll(() => eventFor(id)).toMatchObject(timed);
+    await expect.poll(async () => (await storedById("tasks", "tasks", id))?.endDate).toBe(isoDay(1));
+
+    await openTask(page, id);
+    await s.getByRole("button", { name: "Put on the team calendar" }).click();
+    await save(page);
+    await expect.poll(() => eventFor(id)).toMatchObject({ id: eventId, status: "cancelled" });
+    await expect.poll(() => storedById("tasks", "tasks", id)).not.toHaveProperty("calendar");
+    await openTask(page, id);
+    await expect(s.getByText("On the team calendar", { exact: true })).toHaveCount(0);
+    await s.getByRole("button", { name: "Put on the team calendar" }).click();
+    await save(page);
+    await expect.poll(() => eventFor(id)).toMatchObject({ id: eventId, status: "confirmed", start: { date: isoDay(1) }, end: { date: isoDay(2) } });
+    await openTask(page, id);
+    await s.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("alertdialog", { name: "Delete this task?" }).getByRole("button", { name: "Delete task", exact: true }).click();
+    await expect(s).toHaveCount(0);
+    await expect.poll(() => storedById("tasks", "tasks", id)).toBeUndefined();
+    await expect.poll(() => eventFor(id)).toMatchObject({ id: eventId, status: "cancelled" });
+    expect(await storedById("tasks", "tasks", "main")).toMatchObject({ task: "Plan the board review" });
+  });
+
+  test("a calendar failure keeps the task; Try again recovers; deleting its main task keeps its event", { tag: "@phone" }, async ({ page, isMobile }, info) => {
+    await seedTasks([task("main", { task: "Plan the board review" }), task("child", { task: "Review the quarterly forecast", parentId: "main", startDate: isoDay(1), endDate: isoDay(1) })]);
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 503 }]);
+    const s = await openTask(page, "child");
+    await s.getByRole("button", { name: "Put on the team calendar" }).click();
+    await save(page);
+    await expect.poll(async () => (await storedById("tasks", "tasks", "child"))?.calendarSync).toHaveProperty("error");
+    expect(await storedById("tasks", "tasks", "child")).toMatchObject({ task: "Review the quarterly forecast", parentId: "main", calendar: {} });
+    expect(await eventFor("child")).toBeUndefined();
+    await openTask(page, "child");
+    await expect(s.getByText("The team calendar isn’t up to date.")).toBeVisible();
+    await capture(page, info, "failure", isMobile);
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 0 }]);
+    await s.getByRole("button", { name: "Try again", exact: true }).click();
+    await expect(s.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await expect.poll(() => eventFor("child")).toMatchObject({ summary: "Review the quarterly forecast", status: "confirmed" });
+    const eventId = (await eventFor("child"))!.id;
+    expect((await eventFor("child"))!.description).toContain("Main task: Plan the board review");
+    expect((await storedById("tasks", "tasks", "child"))?.calendarSync).not.toHaveProperty("error");
+
+    // Navigate from the subtask's own parent link, then use the app's confirmation (no direct database deletes).
+    await s.getByRole("link", { name: "Plan the board review", exact: true }).click();
+    await expect(s.getByLabel("Description")).toHaveValue("Plan the board review");
+    await s.getByRole("button", { name: "Delete", exact: true }).click();
+    const confirm = page.getByRole("alertdialog", { name: "Delete this task?" });
+    await expect(confirm).toContainText("Its subtask stays, as a task of its own.");
+    await confirm.getByRole("button", { name: "Delete task", exact: true }).click();
+    await expect(s).toHaveCount(0);
+    await expect.poll(() => storedById("tasks", "tasks", "main")).toBeUndefined();
+    await expect.poll(() => storedById("tasks", "tasks", "child")).not.toHaveProperty("parentId");
+    await expect.poll(async () => (await eventFor("child"))?.description).not.toContain("Main task:");
+    expect(await eventFor("child")).toMatchObject({ id: eventId, summary: "Review the quarterly forecast", status: "confirmed", start: { date: isoDay(1) }, end: { date: isoDay(2) } });
+    await openTask(page, "child");
+    await expect(s.getByText("Subtask of")).toHaveCount(0);
+    await expect(s.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await capture(page, info, "freed-task", isMobile);
+  });
 });

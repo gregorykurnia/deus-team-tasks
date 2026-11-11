@@ -127,3 +127,54 @@ fixed (48px line in every state, 40px link) and recaptured. A fresh-eyes check t
 (fields cut under the title and at the footer mid-scroll) and the dev server's "N" badge as faults: captures now hide
 the badge (builds don't have it), `new-end` proves nothing is hidden behind the footer, and the block captures replace
 the old crops.
+
+## C05 — App flow on desktop and phone
+
+2026-11-11. Added browser coverage in `tests/smoke/calendar-events.spec.ts`; no application code changed.
+The flow starts at a main task's Subtasks section, creates and opens a subtask, puts it on the calendar all day,
+adds Jakarta times and changes its name, changes its deadline through the row editor and uses that edit's Undo,
+switches the calendar off/on, then deletes the marked task. Each transition checks the fake event, including its
+stable ID, exclusive all-day end, cancellation, parent description and absence of attendees. A separate flow forces
+a fake 503, proves the saved task survives, retries through the sheet, then deletes the main task and proves the
+freed subtask retains the same event without the main task's name. Both cases run on desktop and phone (`@phone`).
+
+Decisions:
+- Use the row's deadline editor for edit Undo rather than adding Undo to sheet saves: this is the app's existing Undo flow.
+- Inspect the emulator's serialized fake event rather than mocking the sync response: this proves browser → task write → sync route → event.
+- Keep full viewport captures and original-size calendar/footer crops rather than resizing: the crops expose text ends and footer boundaries.
+
+Faults and corrections:
+- First lifecycle run timed out at `getByLabel('Start', { exact: true })`: an unmarked task's label includes "optional". Enable the calendar switch before filling the required dates.
+- Next run failed strict matching because both the date dialog and input are labelled "Deadline". Scope the input and Save button to that dialog.
+- Two tool sessions ended with exit 143 before completing their specs. Stop only their test-port owner PIDs; complete the affected checks in a detached process with persisted exit codes.
+- The phone audit initially reported `clipped: Description`: that is the deliberately one-pixel `.sr-only` label, not visible text. Exclude screen-reader-only labels from the visual audit and require actual centre-point hits for visible controls.
+- A phone retry caught a navigation race in the test: Delete was pressed on the child before the parent sheet rendered. Wait for the parent description before pressing Delete; repeat only that phone case five times.
+- Picture hunt: calendar labels, native time values, status words, retry/link targets and footer buttons have no clipped text or overlap. The fixed sheet header/footer intentionally bound a scrolling form; some surrounding fields continue outside that scrollport. No product layout repair was indicated.
+
+Captures: `test-results/calendar-events/c05/{desktop,phone}/`, 1440×900 and 390×844. Each `-detail.png` is an
+unscaled crop from the same state, spanning the calendar block to the footer; it was also opened at original size.
+
+LOOKED: desktop/all-day.png · White drawer over blurred Tasks; blank time fields sit above the green status and fixed footer, no calendar text cut off or covered; earlier form fields are scrolled above the head.
+LOOKED: desktop/all-day-detail.png · Switch, two blank fields and green status rest above the footer's four buttons; crop edges spare every calendar word and button.
+LOOKED: desktop/timed.png · 09:30 AM and 11:00 AM sit side by side in whole inputs above green status; the footer stays in front of the scrolling form, all calendar and action text readable.
+LOOKED: desktop/timed-detail.png · Time values, clock/clear icons, green status and open link fit their boxes; four footer buttons sit below with no cover or clipping.
+LOOKED: desktop/failure.png · Amber status sits below blank time fields and above the footer; Try again is wholly inside it, drawer edges clear, background deliberately blurred.
+LOOKED: desktop/failure-detail.png · Alert icon and complete warning precede the retry button; the footer rests directly below the status, with no overlapping text or buttons.
+LOOKED: desktop/freed-task.png · Calendar fields and green status sit above Responsible/Informed; the footer covers the scrollport boundary at Key points, while calendar words and actions remain whole.
+LOOKED: desktop/freed-task-detail.png · Green status and open link clear the people fields; Key points continues beyond the scroll edge above the fixed footer, calendar and button text intact.
+LOOKED: phone/all-day.png · Bottom sheet spans the phone; dates sit above the switch, blank time fields stack above green status; footer has three actions above full-width Save changes, Informed continues past the scroll edge.
+LOOKED: phone/all-day-detail.png · Stacked blank times and green status fit between side edges; people fields continue toward the footer, whose Save row stays separate and fully readable.
+LOOKED: phone/timed.png · 09:30 AM and 11:00 AM stack in complete fields, status/link below; fixed two-row footer is clear, only the lower Informed field meets the scrolling boundary.
+LOOKED: phone/timed-detail.png · Native time icons and values fit inside the two stacked boxes; status and footer labels are whole, with the footer in front of the form's scrolling edge.
+LOOKED: phone/failure.png · Amber warning wraps into two whole lines beside Try again, above the people fields; stacked times and two-row footer stay inside the phone, Informed continues at the scroll edge.
+LOOKED: phone/failure-detail.png · Warning icon, wrapped words and retry button occupy the same amber strip without overlap; footer buttons and full-width Save changes remain whole below the scrolling form.
+LOOKED: phone/freed-task.png · White bottom sheet over blurred Tasks; stacked blank times sit above green status/open link, then people fields; only Informed continues past the footer's scrolling boundary, calendar and action text complete.
+LOOKED: phone/freed-task-detail.png · Switch, stacked times and green status fit the crop's edges; the footer sits in front of the form's scroll edge with three complete actions above Save changes.
+
+Checks:
+- PASS — `npx tsc --noEmit`; `npx eslint tests/smoke/calendar-events.spec.ts` after the final test fix (`types=0 lint=0`).
+- PASS — `npm run test:unit -- --reporter=dot`: 45 files, 1,115 tests.
+- PASS — `npm run build` (compiled, type-checked and generated routes; exit 0).
+- PASS — `npx playwright test tests/smoke/task-sheet.spec.ts --output=/tmp/c05-sheet-pw`: 16/16, including phone.
+- PASS — all 9 distinct calendar browser cases across scoped runs: initial desktop C04 cases plus failure/recovery; phone C04 cases (`--project=phone --grep-invert 'subtask all day'`); final `--grep 'app calendar flow'` passed 3/4 before the parent-navigation race fix, followed by `--project=phone --grep 'a calendar failure' --repeat-each=5 --output=/tmp/c05-retry-pw` passing 5/5. Both lifecycle cases and both failure/recovery/freeing cases now pass. Tests use only the emulator and fake calendar; no application data implementation changed, so `test:data` was not needed.
+- PASS — 8 viewport PNGs at the exact required sizes and 8 unscaled detail crops, all opened at original size; visible-text/covered-control audit, no console errors or sideways scroll; ports 3100 and 8180 free after the checks.
