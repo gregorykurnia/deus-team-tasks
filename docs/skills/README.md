@@ -87,5 +87,5 @@ or remove the old `deus-deal-followup`, then **+ → + Create skill → Upload a
 [Official skill upload instructions](https://support.claude.com/en/articles/12512180-use-skills-in-claude).
 
 The skill skips Step 5 if neither complete tool trio is available. Updating the skill is optional for the generic
-flow. Owner chat acceptance remains [O2 in the plan](../IMPLEMENTATION_PLAN.md#owner-steps-after-the-run).
+flow. Owner chat acceptance remains [O2 in the plan](../implementation/chat-task-connector-plan-2026-11-10.md#owner-steps-after-the-run).
 For automated connector checks, `npm run mcp:smoke` uses only the local emulator and fictional fixtures, never live data.

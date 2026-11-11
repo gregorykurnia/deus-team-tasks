@@ -1,6 +1,6 @@
 # Build brief: dated tasks from any enabled chat
 
-This brief supplies the details for `docs/IMPLEMENTATION_PLAN.md`; that plan alone holds progress ticks.
+This brief supplied the details for [its plan](chat-task-connector-plan-2026-11-10.md) (finished 2026-11-10); that plan holds its progress ticks.
 Defaults below are the planner's choices for unattended execution, not additional owner requests.
 
 ## Requirements and defaults

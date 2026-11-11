@@ -242,4 +242,4 @@ permission to fall back. See [Step 5](../skills/deus-deal-followup/SKILL.md#step
 [optional skill upload](../skills/README.md#optional-update-the-deal-follow-up-skill).
 
 Actual Claude invocation/confirmation behavior and real-phone acceptance remain owner O2 in the
-[implementation plan](../IMPLEMENTATION_PLAN.md#owner-steps-after-the-run); these examples do not prove them.
+[implementation plan](chat-task-connector-plan-2026-11-10.md#owner-steps-after-the-run); these examples do not prove them.

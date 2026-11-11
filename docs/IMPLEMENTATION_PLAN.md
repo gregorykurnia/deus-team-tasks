@@ -1,81 +1,60 @@
-# Any chat → dated subtasks in Prospects, Clients or Internal
+# Tasks that also go on the calendar
 
-Prepared 2026-11-10 for `autorun all`. This is the active plan; the completed deal-follow-up build and its
-outstanding owner steps are preserved in [the previous plan](implementation/deal-followup-2026-11-09.md).
-All task picks are GPT because Claude is out of quota. Implementation progress is recorded in the task table.
+Prepared 2026-11-11 for `autorun all`. The details for every row are in [the build brief](implementation/calendar-events.md).
+The previous plan (chat task connector) is [archived](implementation/chat-task-connector-plan-2026-11-10.md); its
+owner steps O2 and O3 are still open there.
 
 ## Outcome
 
-With Deus Team Tasks enabled in an ordinary Claude chat, ask to save dated actions. Claude asks where they
-belong, which company/main task when needed, and confirms or skips each subtask individually. It previews
-the selected actions, saves them, and returns a link. The deal-follow-up skill is not required for this path.
-From the app's main navigation: **Tasks → All tasks → Prospects / Clients / Internal → main task → subtasks**.
-The returned link opens that main task directly. Existing Plan views show its dated subtasks as they do today.
+In a task's sheet, the owner can switch on **Put on the team calendar** for any task or subtask, all day or with
+a meeting time. The event then follows the task: moving the task moves the event, and deleting the task removes
+it. In an ordinary Claude chat, each step the connector saves is either a task only or a task plus a calendar
+event, shown in the preview before saving. Events go on the owner's Gmail calendar for now, with no invites.
+Nothing shows or writes until the owner sets one Vercel variable (O2).
 
 ## Run rules
 
-- Read only the assigned section in [the build brief](implementation/chat-task-connector.md), plus its named
-  source files. The brief's numbered requirements and defaults are settled for this run; no brainstorming pause.
-- Work sequentially in this folder on `main`, commit/push each task and tick only its row in that commit.
-  This is the project's explicit branch rule. Never start a parallel builder or edit a running task's files.
-- Every push deploys. New tools remain unavailable unless the new server-only `MCP_TASK_PLANS_ENABLED=1` flag
-  is set. Keep it unset in production throughout the run; the old three tools retain their current contract.
-  Owner activation comes after the run, never as a blocker inside a build task.
-- Run the brief's **Checks** for changed code, with emulator-only data/browser runs. Browser checks use the
-  existing development server because `lib/emulator.ts` disables the emulator in production builds.
-- Save findings in `docs/implementation/chat-task-results.md`, using task IDs and short evidence paths.
-  Tick progress only in this table; map requirements to evidence in the final review. Do not edit runner logs.
-- No new app screen or redesign is planned. Screenshot repairs must follow `redesign/design/design-guide.md`.
-  A real design gap goes to the existing open-items and handoff files, with a named disposition.
+- Read only your task's section in the brief, plus **Smallest design**, **Requirements** and **Checks** there.
+  The defaults are settled: no brainstorming and no questions to the owner.
+- One task per session, on `main` (this project's branch rule). Commit and push each task with its row ticked in
+  the same commit. Every push deploys, which is safe because the feature stays off until O2.
+- Tests use only the Firestore emulator and the fake calendar. Never call Google or production.
+- Evidence goes in `docs/implementation/calendar-events-results.md`, under each task's ID.
 
-## Before the run
+## Phase 1: calendar events from the app and from chat
 
-- [x] O0 GPT-only runner installed and tested, 2026-11-10: shared config commit `e120a15`; 13 offline regression checks and shell syntax checks pass. Retries, visual checks, resumes and keepalive stay on GPT; the Claude quota guard leaves this run alone. See [verification and commands](implementation/gpt-only-autorun-prerequisite.md).
-
-Run `AUTORUN_GPT_ONLY=1 autorun check docs/IMPLEMENTATION_PLAN.md`; it must report GPT-only execution and no
-open prerequisites. Start with `AUTORUN_GPT_ONLY=1 autorun all docs/IMPLEMENTATION_PLAN.md`. The mode is saved
-for this project's resumes/restarts; `autorun status` shows progress and `autorun stop` stops after its current task.
-
-## Phase 1: general task connector, checked before activation
-
-Each row has one pick. The linked section contains files, required reading, edge cases and a measurable Done when.
-
-| ID | Task and acceptance reference | Pick | Done |
+| ID | Task | Pick | Done |
 |---|---|---|---|
-| G01 | Define general task inputs and fictional fixtures; reject invalid dates and destinations. [G01](implementation/chat-task-connector.md#g01--inputs-and-fixtures) [no look] | Sol xHigh | 2026-11-10; 111 tests passed |
-| G02 | Find matching companies and eligible existing main tasks for each category. [G02](implementation/chat-task-connector.md#g02--destination-discovery) [no look] | Sol xHigh | 2026-11-10; 60 discovery cases checked |
-| G03 | Build exact read-only previews for new and existing main tasks. [G03](implementation/chat-task-connector.md#g03--pure-previews) [no look] | Sol xHigh | 2026-11-10; 64 preview cases checked |
-| G04 | Bind a save to its preview and acknowledged warnings. [G04](implementation/chat-task-connector.md#g04--preview-integrity) [no look] | Sol Max | 2026-11-10; 95 integrity cases checked |
-| G05 | Save atomically, preserve existing data and make retries safe. [G05](implementation/chat-task-connector.md#g05--atomic-saving-and-retries) [no look] | Sol Max | 2026-11-10; 62 transaction cases passed |
-| G06 | Expose the three general tools behind the activation flag with chat instructions. [G06](implementation/chat-task-connector.md#g06--mcp-tools-and-chat-guidance) [no look] | Sol Max | 2026-11-10; 52 tool cases; 63 transaction cases |
-| G07 | Test the actual MCP protocol for all categories, failures and legacy compatibility. [G07](implementation/chat-task-connector.md#g07--protocol-checks) [no look] | Sol xHigh | 2026-11-10; real MCP passed; 112 preservation checks |
-| G08 | Open connector-created tasks on desktop and phone and capture their saved state. [G08](implementation/chat-task-connector.md#g08--app-flow-and-captures) [look] | Sol xHigh | 2026-11-10; 12 UI cases; 26 captures |
-| G09 | Inspect full-size captures and repair confirmed visual faults. [G09](implementation/chat-task-connector.md#g09--visual-finish) [look] | Astra xHigh | 2026-11-10; Plan clipping fixed; full-size review and phone findings checked |
-| G10 | Update the existing skill, generic-chat instructions and owner walkthrough. [G10](implementation/chat-task-connector.md#g10--instructions-and-packaging) [no look] | Sol Max | 2026-11-10; skill/ZIP, 8 examples and artifact checks passed |
-| R1a | Review the write path and confirmation workflow; fix confirmed faults before broad checks. [R1a](implementation/chat-task-connector.md#r1a--risk-review) [no look] | Sol Max | 2026-11-10; retry snapshot fault fixed; 161 data cases passed |
-| R1b | Run the full end-to-end suite once and save the complete failure list. [R1b](implementation/chat-task-connector.md#r1b--full-end-to-end-run) [no look] | Sol xHigh | 2026-11-10; 379 passed, 9 skipped, 1 failure saved for R1c |
-| R1c | Fix the recorded end-to-end failures and rerun only affected tests. [R1c](implementation/chat-task-connector.md#r1c--end-to-end-repairs) [no look] | Sol Max | 2026-11-10; export failure closed; 1 affected e2e and 978 unit cases passed |
-| R1d | Run accessibility and scoped prototype comparison once; record findings. [R1d](implementation/chat-task-connector.md#r1d--accessibility-and-comparison) [look] | Sol xHigh | 2026-11-10; 16 comparisons; partial audit and findings assigned to R1e |
-| R1e | Fix confirmed accessibility/visual findings and recheck their states. [R1e](implementation/chat-task-connector.md#r1e--audit-repairs) [look] | Astra xHigh | 2026-11-10; labels/landmarks fixed; 58 audit entries clear; coverage assigned R1eb |
-| R1eb | Finish the 77 audit entries missed after emulator exhaustion, on fresh scoped stacks. [R1eb](implementation/chat-task-connector.md#r1eb--remaining-audit-coverage) [no look] | Astra xHigh | 2026-11-10; 77 assessed; 30 heading findings assigned R1ec |
-| R1ec | Repair empty/offline heading order and recheck its 30 affected entries. [R1ec](implementation/chat-task-connector.md#r1ec--empty-state-headings) [look] | Astra xHigh | 2026-11-10; 30 audit entries clear; heading regressions and desktop/phone look checked |
-| R1 | Phase 1 review: prove requirements, close findings and prepare activation handoff. [R1](implementation/chat-task-connector.md#r1--final-phase-review) [no look] | Sol Max | 2026-11-10; C1–C10 evidenced; findings closed; owner activation handoff ready |
+| C01 | Calendar mark and sync-state fields on a task and the exact event each task becomes (pure). [C01](implementation/calendar-events.md#c01--calendar-fields-and-event-mapping) [no look] | Sol xHigh | |
+| C02 | Server sync that makes the calendar match a task, fake calendar for tests, sync route. [C02](implementation/calendar-events.md#c02--server-sync-fake-calendar-and-route) [no look] | Sol Max | |
+| C03 | Every app write to a marked task triggers a sync: create, edit, edit Undo, rollback, delete. [C03](implementation/calendar-events.md#c03--the-event-follows-the-task) [no look] | Sol Max | |
+| C04 | Task sheet: "Put on the team calendar" switch, start/end times, calendar status and Try again. [C04](implementation/calendar-events.md#c04--task-sheet-switch-times-and-calendar-status) [look] | Opus 5.5 High | |
+| C05 | Browser flow on desktop and phone, full-size captures, fix what they show. [C05](implementation/calendar-events.md#c05--app-flow-on-desktop-and-phone) [look] | Sol xHigh | |
+| M01 | Chat connector: each step is a task only or task plus calendar event; preview shows it; guidance asks per step. [M01](implementation/calendar-events.md#m01--mcp-calendar-choice-per-step-and-preview) [no look] | Sol Max | |
+| M02 | Chat connector save puts marked steps on the calendar, reports each step, and a repeated save retries failures. [M02](implementation/calendar-events.md#m02--mcp-save-puts-steps-on-the-calendar) [no look] | Sol Max | |
+| E1 | End to end: chat plan → open in app → edit → delete, checked against the fake calendar. [E1](implementation/calendar-events.md#e1--end-to-end) [no look] | Sol xHigh | |
+| R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/calendar-events.md#r1a--full-check-run) [no look] | Sol xHigh | |
+| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/calendar-events.md#r1b--fix-recorded-failures) [look] | Sol xHigh | |
+| R1 | Phase review: hunt for faults in saving and syncing, fix them, write the owner handoff. [R1](implementation/calendar-events.md#r1--phase-review) [no look] | Opus 5.5 High | |
 
 ## Owner steps after the run
 
-- [x] O1 *owner*: completed on the owner's behalf, 2026-11-10. Read the final evidence/limitations, enabled `MCP_TASK_PLANS_ENABLED=1` in Vercel Production, and redeployed reviewed commit `00ed29c`. All six live tools were discovered; the existing secret and URL still work. [Activation record](implementation/chat-task-results.md#production-activation--2026-11-10). Rollback: unset this flag and redeploy; this hides only the new tools and does not remove saved tasks.
-- [ ] O2 *owner, when Claude is available*: confirm the custom connector is installed, reconnect/refresh it if the new tools are missing, and enable it in an ordinary chat. Test a real intended action in each category using the walkthrough, with the deal-follow-up skill off. These are owner acceptance actions, not automated production fixtures.
-- [ ] O3 *owner, optional for the generic flow*: upload the rebuilt `docs/skills/deus-deal-followup.zip` to update that skill; its old-tool fallback continues to work before activation. Previous-plan O2–O4 remain historical owner steps, not evidence they were performed.
+- [ ] O1 *owner*: in Google Calendar on your Gmail account, go to Settings → your calendar → **Share with specific
+  people**, and add the service account's email (Vercel's `GOOGLE_SERVICE_ACCOUNT_EMAIL`) with **Make changes to
+  events**.
+- [ ] O2 *owner*: in Vercel Production, set `GOOGLE_EVENTS_CALENDAR_ID` to your Gmail address (your main calendar's
+  ID) and redeploy. To roll back, remove it and redeploy. Events already made stay on your calendar.
+- [ ] O3 *owner*: live check. Put one task on the calendar with a time from the app, then save one chat plan with
+  one calendar step and one task-only step. Move one of them, delete it, and check that your calendar follows.
 
 ## Model rationale
 
-Sol xHigh handles pure logic and deterministic checks. Sol Max handles writes, protocol exposure, instructions
-and code reviews. Astra xHigh owns the visual finish. Fresh sessions and adversarial cases replace unavailable
-Claude reviews for this run; do not use Astra Max or quietly fall back to Claude.
+Picks follow "Claude or Codex: one pick per task" in `~/.claude/playbooks/plans-and-models.md`. Sol Max takes the
+rows that write saved data (sync, every-write hook, MCP save) and the chat guidance. Sol xHigh takes the pure
+logic and the pass/fail check rows. Opus 5.5 High takes C04, the one new control with no studio mock, and the
+phase review, because most rows are Codex-built and the review should come from the other family. A failed task's
+retry is autorun's own pick.
 
-## Planning validation — 2026-11-10
-
-A fresh Astra xHigh critique was applied: legacy task type, source-link storage, retry precedence and parked-task
-return dates now have explicit acceptance cases. `autorun check` recognizes 16 GPT rows and selects G01 on
-Sol xHigh; it correctly reports O0 still open. Local links/anchors and archive preservation were checked.
-O0 was subsequently completed on 2026-11-10; app implementation progress is recorded in the task rows above.
+Start with `AUTORUN_GPT_ONLY=0 autorun all docs/IMPLEMENTATION_PLAN.md`. The `0` clears the GPT-only mode this
+project saved for its last run. GPT-only mode refuses Claude rows, so if Claude's limit is low, first change C04
+to Astra xHigh and R1 to Sol Max, then start with `AUTORUN_GPT_ONLY=1`.
