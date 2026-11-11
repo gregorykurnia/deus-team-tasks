@@ -1,4 +1,4 @@
-// The basic controls (guide 4.13): single line, text box, select, number, date with clear and quick picks, switch,
+// The basic controls (guide 4.13): single line, text box, select, number, date and time with clear, quick picks, switch,
 // search, and the field that edits in place. They sit in a Field, which gives them their id and aria wiring.
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, Ref } from "react";
 import { addDays, todayIso } from "@/lib/dates";
@@ -37,6 +37,20 @@ export function DateInput({ value, onChange, className, ...props }: DateInputPro
       <input {...props} type="date" value={value} onChange={(e) => onChange(e.target.value)} className={join(styles.input, styles.dateInput, className)} />
       {value && (
         <button type="button" className={styles.clear} aria-label="Clear date" onClick={() => onChange("")}>
+          <Icon name="x" size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// A time of day (14:30, or "" for none), styled like a date, with the same round × that clears it.
+export function TimeInput({ value, onChange, className, ...props }: DateInputProps) {
+  return (
+    <div className={styles.date}>
+      <input {...props} type="time" value={value} onChange={(e) => onChange(e.target.value)} className={join(styles.input, styles.dateInput, className)} />
+      {value && (
+        <button type="button" className={styles.clear} aria-label="Clear time" onClick={() => onChange("")}>
           <Icon name="x" size={13} />
         </button>
       )}

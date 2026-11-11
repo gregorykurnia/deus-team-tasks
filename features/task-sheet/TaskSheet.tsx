@@ -21,13 +21,16 @@ import { sortGroups } from "@/lib/taskGroups";
 import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/lib/taskStatus";
 import { canHoldSubtasks, newSubtask, parentOf, subtasksOf } from "@/lib/subtasks";
 import { addTask, deleteTask, putBackDone, putBackParked, setTasksDone, setTasksParked } from "@/lib/taskWrites";
+import { requestCalendarSync } from "@/lib/calendarRequests";
+import { calendarStatus } from "@/lib/taskCalendar";
+import { useCalendarSyncPending, useCalendarWritesEnabled } from "@/lib/useTaskCalendar";
 import { TASK_PRIORITIES, TOUCH_POINTS, type FlowRole, type Task, type TaskPriority } from "@/lib/types";
 import Button from "@/ui/Button";
 import { ChipGroup } from "@/ui/ChipGroup";
 import { Confirm } from "@/ui/Dialog";
 import Field from "@/ui/Field";
 import Icon, { type IconName } from "@/ui/Icon";
-import { DateInput, SelectInput, TextArea } from "@/ui/Inputs";
+import { DateInput, SelectInput, Switch, TextArea, TimeInput } from "@/ui/Inputs";
 import { kindStyle } from "@/ui/kindStyle";
 import Notice from "@/ui/Notice";
 import PeoplePicker, { InformedList } from "@/ui/PeoplePicker";
@@ -38,6 +41,7 @@ import { TaskRecordRow } from "@/ui/TaskRow";
 import { useToast } from "@/ui/Toaster";
 import { draftFromTask, emptyDraft, hasDescription, newTaskFromDraft, patchFromDraft, type About, type TaskDraft } from "./draft";
 import AddTaskTypeDialog from "./AddTaskTypeDialog";
+import { CALENDAR_FIELDS, calendarErrors, calendarWritesShown, CalendarStatusLine } from "./TaskCalendar";
 import styles from "./TaskSheet.module.css";
 
 // The Task type dropdown's last choice opens Add task type; no saved name can match it (names are trimmed text).
@@ -95,11 +99,28 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
   const parked = !!task && isParked(task, today);
   const [parking, setParking] = useState(false);
   const parkButton = useRef<HTMLButtonElement>(null);
+  // The saved task's place on the calendar, judged from what the server would put there (lib/calendarSync).
+  const syncing = useCalendarSyncPending(task?.id);
+  const onCalendar = task?.calendar && calendarWritesShown(task, companies.loading)
+    ? calendarStatus(
+        task,
+        task.parentId && task.parentId !== task.id ? byTaskId.get(task.parentId) ?? null : null,
+        task.linkedClientId != null ? byId.get(task.linkedClientId) ?? null : null,
+        syncing,
+      )
+    : undefined;
   // "A company" with none chosen would save as internal work while the head says Prospect: it needs one first.
   const companyMissing = draft.about === "company" && !company;
   const error = missing && !hasDescription(draft) ? DESCRIPTION_MISSING : undefined;
   const companyError = missing && companyMissing ? COMPANY_MISSING : undefined;
-  const incomplete = !hasDescription(draft) || companyMissing;
+  // On the team calendar (C04): shown only when this deployment writes events; a marked task needs its dates and times.
+  const calendarWrites = useCalendarWritesEnabled();
+  const calendarChecks = calendarWrites && draft.calendar ? calendarErrors(draft) : {};
+  const calendarFirst = CALENDAR_FIELDS.find((f) => calendarChecks[f]);
+  const calendarError = (field: (typeof CALENDAR_FIELDS)[number]) => (missing ? calendarChecks[field] : undefined);
+  const calendarFocus = (field: (typeof CALENDAR_FIELDS)[number]) => (!error && !companyError && calendarFirst === field ? tries : undefined);
+  const calendarTimes = useRef(opened.calendar);
+  const incomplete = !hasDescription(draft) || companyMissing || !!calendarFirst;
 
   // "Add details" opens the rest and moves on to the first new field.
   const body = useRef<HTMLDivElement>(null);
@@ -564,16 +585,51 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
               </Field>
 
               <div className={styles.row3}>
-                <Field label="Start" optional>
+                <Field label="Start" optional={!(calendarWrites && draft.calendar)} error={calendarError("startDate")} focusKey={calendarFocus("startDate")}>
                   {(control) => <DateInput {...control} value={draft.startDate} onChange={(startDate) => set({ startDate })} />}
                 </Field>
-                <Field label="Deadline" optional>
+                <Field label="Deadline" optional={!(calendarWrites && draft.calendar)} error={calendarError("endDate")} focusKey={calendarFocus("endDate")}>
                   {(control) => <DateInput {...control} value={draft.endDate} onChange={(endDate) => set({ endDate })} />}
                 </Field>
                 <Field label="Last action" optional>
                   {(control) => <DateInput {...control} value={draft.lastActionDate} onChange={(lastActionDate) => set({ lastActionDate })} />}
                 </Field>
               </div>
+              {calendarWrites && (
+                <div className={styles.calendar}>
+                  <div className={styles.calendarSwitch}>
+                    <Switch
+                      on={!!draft.calendar}
+                      label="Put on the team calendar"
+                      onChange={(on) => {
+                        if (!on) calendarTimes.current = draft.calendar;
+                        set({ calendar: on ? { ...calendarTimes.current } : undefined });
+                      }}
+                    />
+                    <span aria-hidden="true">
+                      <b>Put on the team calendar</b>
+                      <small>All day, or from a start time to an end time.</small>
+                    </span>
+                  </div>
+                  {draft.calendar && (
+                    <div className={styles.row2}>
+                      <Field label="Starts" optional="blank for all day" error={calendarError("startTime")} focusKey={calendarFocus("startTime")}>
+                        {(control) => (
+                          <TimeInput {...control} value={draft.calendar?.startTime ?? ""} onChange={(startTime) => set({ calendar: { ...draft.calendar, startTime } })} />
+                        )}
+                      </Field>
+                      <Field label="Ends" optional="blank for all day" error={calendarError("endTime")} focusKey={calendarFocus("endTime")}>
+                        {(control) => (
+                          <TimeInput {...control} value={draft.calendar?.endTime ?? ""} onChange={(endTime) => set({ calendar: { ...draft.calendar, endTime } })} />
+                        )}
+                      </Field>
+                    </div>
+                  )}
+                  {draft.calendar && onCalendar && task && (
+                    <CalendarStatusLine status={onCalendar} link={task.calendarSync?.link} onRetry={() => requestCalendarSync([task.id])} />
+                  )}
+                </div>
+              )}
               {company && !finished && (
                 <p className={styles.keptInStep}>
                   <Icon name="sync" size={16} />
@@ -634,3 +690,4 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     </>
   );
 }
+

@@ -211,3 +211,91 @@
     grid-column: 1 / -1;
   }
 }
+
+/* On the team calendar (C04): the switch right under the dates, the two times, then where the saved task stands. */
+.form > .calendar {
+  margin-top: 14px;
+}
+
+.calendar {
+  display: grid;
+  gap: 14px;
+}
+
+.calendarSwitch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.calendarSwitch b {
+  display: block;
+  color: var(--ink);
+  font-weight: var(--w-bold);
+}
+
+.calendarSwitch small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+}
+
+.calendarStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px; /* the same height in every state, with Try again or the open link inside */
+  margin-bottom: 0;
+  padding: 4px 4px 4px 13px;
+  border-radius: var(--r-field);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  font-weight: var(--w-medium);
+}
+
+.calendarStatus > span:not([aria-hidden]) {
+  flex: 1;
+  min-width: 0;
+}
+
+.calendarStatus > svg {
+  flex: none;
+}
+
+.calendarOn {
+  background: var(--green-soft);
+  color: var(--green-ink);
+}
+
+.calendarOn > svg {
+  color: var(--green);
+}
+
+.calendarStale {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+
+.calendarStale > svg {
+  color: var(--amber);
+}
+
+.calendarOpen {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px; /* a full tap target (guide 5.13) */
+  border-radius: var(--r-field);
+  color: var(--green-ink);
+}
+
+.calendarStale button {
+  margin-right: 2px;
+}
+
+.calendarOpen:hover {
+  background: rgba(255, 255, 255, 0.6);
+}

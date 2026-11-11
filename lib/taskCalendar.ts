@@ -72,3 +72,15 @@ export function taskEventBody(task: Task, parent: Parent, company: Company, orig
 export function calendarKey(task: Task, parent: Parent, company: Company): string | undefined {
   return task.calendar ? JSON.stringify(taskEventBody(task, parent, company, "")) : undefined;
 }
+
+export type CalendarStatus = "on" | "adding" | "stale";
+
+// What task details says about a saved, marked task (C04): on the calendar, a sync in flight, or not up to date when the
+// calendar holds an older version of the task or the last sync failed. Unmarked tasks have no status.
+export function calendarStatus(task: Task, parent: Parent, company: Company, pending: boolean): CalendarStatus | undefined {
+  if (!task.calendar) return undefined;
+  if (pending) return "adding";
+  let key: string | undefined;
+  try { key = calendarKey(task, parent, company); } catch { return "stale"; }
+  return task.calendarSync?.error || !task.calendarSync?.synced || key !== task.calendarSync.synced ? "stale" : "on";
+}

@@ -88,3 +88,37 @@ Checks:
 No screen or user flow changed, so browser checks/screenshots were not run for this [no look] task; C05 owns the
 browser flow. Tests never called real Google or live Firestore. Shared write code changed, so a full check is worth
 running in R1a, where the full suite, a11y and compare remain assigned. Only C03 is newly ticked; C04 was not started.
+
+## C04 — Task sheet: switch, times and calendar status
+
+2026-11-11. Baseline before C04: `196b40b`.
+
+Task details (full) now shows, right under the dates and only when `GET /api/calendar/sync` says enabled, the switch
+"Put on the team calendar", then "Starts"/"Ends" time fields (new `TimeInput`, blank for all day) and, for a saved
+marked task, a status line: green "On the team calendar" with the open-in-new-tab link, grey "Adding to the team
+calendar…" while a sync request is in flight on this device (plus 2s for the server's write to arrive), or amber
+"The team calendar isn't up to date." with Try again (key differs from `calendarSync.synced`, or `error` set).
+Saving is refused with field errors while a marked task's dates or times can't make an event. D9's change is open
+item N30 in `redesign/ui-implementation-plan.md` and need N30 in `redesign/handoff/needs.md`.
+
+Files: `features/task-sheet/TaskSheet.tsx`, `TaskCalendar.tsx` (new), `TaskSheet.module.css`, `ui/Inputs.tsx`,
+`lib/taskCalendar.ts` (`calendarStatus`), `lib/calendarRequests.ts` (in-flight store), `lib/useTaskCalendar.ts` (new),
+`tests/unit/taskSheetCalendar.test.tsx` (new), `tests/smoke/calendar-events.spec.ts` (new).
+
+Decisions:
+- Date errors use the sheet's words ("Add a deadline to put this on the team calendar.") rather than C01's "end date", which the words table rules out; time errors keep C01's own messages.
+- "Adding…" comes from this device's in-flight requests, not a guess from a key mismatch; a mismatch with nothing in flight is "isn't up to date", so offline edits and failures both show Try again.
+- The open link is an icon button with the name "Open in the team calendar", as on Plan's event rows, rather than a text button that would repeat "team calendar" twice in one line.
+- A company task's status waits for the companies to load, so a key built without the company never flashes amber.
+
+Checks:
+- PASS — `npx tsc --noEmit`; `npx eslint` on the 8 changed TS/TSX files.
+- PASS — `npm run test:unit -- --reporter=dot`: 45 files, 1,115 tests (new: status states incl. subtask/company context, status line words/link, sheet error words, `TimeInput`, in-flight store).
+- PASS — `npx playwright test tests/smoke/calendar-events.spec.ts tests/smoke/task-sheet.spec.ts --output=/tmp/c04-pw`: task-sheet 15/15 desktop and its phone test; calendar-events 5/5 (desktop + phone) after a route warm-up and a phone assertion fix (the switch sits under the whole date row, which is two plus one on phones).
+- No Firestore read/write code changed, so `test:data` wasn't needed. Note: Playwright clears `test-results/` on start; run with `--output` elsewhere so the committed captures there survive.
+
+Captures (`test-results/calendar-events/c04/`, 1440×900 `desktop/`, 390×844 `phone/`, 100 % crops in `crops/`):
+`new-times`, `new-times-error`, `status-stale`, `status-adding`, `status-on` for both shapes; `desktop/off-before.png`
+(old sheet code) and `off-after.png` (writes off) differ by 0 pixels (`compare -metric AE`). Look check found the three
+status lines at different heights and a 32px-tall open link; both fixed (48px line in every state, 40px link) and
+recaptured. The bottom-left "N" in phone shots is the Next.js dev badge, absent from builds.
