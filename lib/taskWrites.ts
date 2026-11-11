@@ -2,8 +2,9 @@
 // deleteField(), the document id is never stored as a field, finishing a task
 // records when (completedAt) and ends any parking, and nothing is written with
 // no connection.
-import { addDoc, collection, deleteDoc, deleteField, doc, updateDoc, writeBatch, type WriteBatch } from "firebase/firestore";
+import { addDoc, collection, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
 import { commitEach, PartlyCommitted } from "./batches";
+import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import type { NewTask, Task } from "./types";
@@ -40,6 +41,7 @@ export function toTaskUpdate(patch: TaskPatch): Record<string, unknown> {
 export async function addTask(task: NewTask): Promise<string> {
   assertOnline("No connection. The task wasn't added.");
   const ref = await addDoc(collection(db, TASKS), toNewTaskDoc(withCompletedAt(task)));
+  if (task.calendar) requestCalendarSync([ref.id]);
   return ref.id;
 }
 
@@ -47,17 +49,14 @@ export async function addTask(task: NewTask): Promise<string> {
 export async function updateTask(id: string, patch: TaskPatch, current?: Task): Promise<void> {
   assertOnline("No connection. The task wasn't saved.");
   await updateDoc(doc(db, TASKS, id), toTaskUpdate(withCompletedAt(patch, current)));
+  if (taskCalendarChanged(current, patch)) requestCalendarSync([id]);
 }
 
-// A deleted task's subtasks (lib/subtasks) stay, as tasks of their own: pass their ids and they lose their parent in
-// the same write.
-export async function deleteTask(id: string, subtaskIds: string[] = []): Promise<void> {
+// A deleted task's subtasks (lib/subtasks) stay, as tasks of their own. Pass the records so their calendar events can
+// follow the deletion too, without another read.
+export async function deleteTask(task: Task, subtasks: Task[] = []): Promise<void> {
   assertOnline("No connection. The task wasn't deleted.");
-  if (subtaskIds.length === 0) return deleteDoc(doc(db, TASKS, id));
-  const batch = writeBatch(db);
-  batch.delete(doc(db, TASKS, id));
-  subtaskIds.forEach((s) => batch.update(doc(db, TASKS, s), { parentId: deleteField() }));
-  await batch.commit();
+  await deleteTasks([task], undefined, subtasks);
 }
 
 // A change to many tasks that stopped part way, when a batch after the first failed (lib/batches): `changed` were
@@ -83,24 +82,35 @@ async function writeEach<T extends { id: string }>(
   tasks: T[],
   write: (batch: WriteBatch, t: T) => void,
   present?: StillThere,
-  undoFor?: (written: T[]) => Undo
+  undoFor?: (written: T[]) => Undo,
+  afterWrite?: (written: T[]) => void
 ): Promise<T[]> {
   try {
-    return await commitEach(db, tasks, write, present && ((t) => present(t.id)));
+    const written = await commitEach(db, tasks, write, present && ((t) => present(t.id)));
+    afterWrite?.(written);
+    return written;
   } catch (err) {
     if (!(err instanceof PartlyCommitted)) throw err;
     const { done, left } = err as PartlyCommitted<T>;
+    afterWrite?.(done);
     throw new PartlyChanged(done.length, left.length, undoFor ? undoFor(done) : null, err.cause);
   }
 }
 
 // Subtasks of the deleted tasks that aren't deleted with them (`freed`) stay, as tasks of their own (lib/subtasks).
-export async function deleteTasks(ids: string[], present?: StillThere, freed: string[] = []): Promise<void> {
+export async function deleteTasks(tasks: Task[], present?: StillThere, freed: Task[] = []): Promise<void> {
   assertOnline("No connection. The tasks weren't deleted.");
   await writeEach(
-    [...ids.map((id) => ({ id, free: false })), ...freed.map((id) => ({ id, free: true }))],
+    [...tasks.map((t) => ({ ...t, free: false })), ...freed.map((t) => ({ ...t, free: true }))],
     (batch, t) => (t.free ? batch.update(doc(db, TASKS, t.id), { parentId: deleteField() }) : batch.delete(doc(db, TASKS, t.id))),
-    present
+    present,
+    undefined,
+    (written) => {
+      const deleted = new Set(written.filter((t) => !t.free).map((t) => t.id));
+      // A parent missing after a partial delete also frees its subtasks, even if their unlink batch failed.
+      const orphaned = freed.filter((t) => t.parentId && deleted.has(t.parentId));
+      requestCalendarSync([...written, ...orphaned].filter((t) => t.calendar).map((t) => t.id));
+    }
   );
 }
 

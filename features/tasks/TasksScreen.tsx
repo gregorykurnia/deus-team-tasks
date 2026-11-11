@@ -412,7 +412,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     const picked = chosenTasks();
     // Subtasks of what's deleted stay, as tasks of their own: they lose their parent after the deletes.
     const ids = new Set(picked.map((t) => t.id));
-    const freed = tasks.rows.filter((t) => t.parentId && ids.has(t.parentId) && !ids.has(t.id)).map((t) => t.id);
+    const freed = tasks.rows.filter((t) => t.parentId && ids.has(t.parentId) && !ids.has(t.id));
     void bulk("delete", async () => {
       const deleted = () => {
         setConfirmingDelete(false);
@@ -420,7 +420,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
         toast(`${plural(picked.length, "task")} deleted`);
       };
       try {
-        await deleteTasks([...ids], stillThere, freed);
+        await deleteTasks(picked, stillThere, freed);
         deleted();
       } catch (err) {
         // A subtask whose parent is gone reads as a task of its own anyway (lib/subtasks), so only the deletes count.

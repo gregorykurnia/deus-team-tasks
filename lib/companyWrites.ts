@@ -2,7 +2,8 @@
 // change (so a company's own fields are never lost), a field set to undefined
 // is cleared, and new ids are never reused.
 import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
-import { commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
+import { commitEach, commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
+import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
@@ -98,17 +99,26 @@ function openTasksOf(companyId: number, tasks: Task[]) {
   return tasks.filter((t) => t.linkedClientId === companyId && !t.completed);
 }
 
-// Puts back the fields each task had before `patch` was written to it.
-function restoreTasks(changes: { t: Task; p: Partial<NewTask> }[]): Promise<void> {
-  return commitInChunks(
-    db,
-    changes.map(({ t, p }) => (b) =>
-      b.update(
-        doc(db, TASKS, t.id),
-        toTaskUpdate(Object.fromEntries(Object.keys(p).map((k) => [k, t[k as keyof Task]])) as Partial<NewTask>)
-      )
-    )
-  );
+type TaskChange = { t: Task; p: Partial<NewTask> };
+
+async function writeTaskChanges(changes: TaskChange[]): Promise<void> {
+  const sync = (written: TaskChange[]) => requestCalendarSync(written
+    .filter(({ t, p }) => taskCalendarChanged(t, p)).map(({ t }) => t.id));
+  try {
+    await commitEach(db, changes, (b, { t, p }) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)));
+  } catch (err) {
+    if (err instanceof PartlyCommitted) sync(err.done);
+    throw err;
+  }
+  sync(changes);
+}
+
+// Puts back only the fields each task had before its patch, then syncs the restored event content.
+function restoreTasks(changes: TaskChange[]): Promise<void> {
+  return writeTaskChanges(changes.map(({ t, p }) => ({
+    t: { ...t, ...p },
+    p: Object.fromEntries(Object.keys(p).map((k) => [k, t[k as keyof Task]])) as Partial<NewTask>,
+  })));
 }
 
 // The second of two writes (one per Firebase project) failed: undo the first
@@ -141,10 +151,7 @@ export async function saveTaskKeptInStep(task: Task, patch: Partial<NewTask>, co
   const changes: { t: Task; p: Partial<NewTask> }[] = [{ t: task, p: ownPatch }];
   const datesChanged = "lastActionDate" in patch || "endDate" in patch;
   const companyPatch = company && !next.completed && datesChanged ? companyPatchFrom(company, next) : null;
-  await commitInChunks(
-    db,
-    changes.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-  );
+  await writeTaskChanges(changes);
   if (company && companyPatch) {
     try {
       await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
@@ -182,7 +189,11 @@ export async function addTaskKeptInStep(task: NewTask, companies: CompaniesById)
   try {
     await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
   } catch (err) {
-    return rollBack(err, () => deleteDoc(doc(db, TASKS, id)));
+    return rollBack(err, async () => {
+      // Cleanup must still be attempted if the connection dropped after creation.
+      await deleteDoc(doc(db, TASKS, id));
+      if (task.calendar) requestCalendarSync([id]);
+    });
   }
   return { id, companyChanged: true };
 }
@@ -308,10 +319,7 @@ export async function deleteCompany(
   // in place to try again, never tasks pointing at a company that's gone.
   const unlink = ownTasks.map((t) => ({ t, p: { linkedClientId: undefined } as Partial<NewTask> }));
   try {
-    await commitInChunks(
-      db,
-      unlink.map(({ t, p }) => (b) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)))
-    );
+    await writeTaskChanges(unlink);
   } catch (err) {
     // Stopped part way: some tasks are internal work already, and the company is still there. Deleting again finishes it.
     if (err instanceof PartlyCommitted) throw new PartlyChanged(err.done.length, err.left.length, null, err.cause);

@@ -56,3 +56,35 @@ Checks:
 No UI or browser flow changed, so no browser checks or screenshots were needed. No real Google or live
 Firestore calls were made by tests. Shared server code changed, so a full check is worth running in R1a;
 the full suite, a11y and compare remain assigned there. Only C02 is ticked; C03 was not started.
+
+## C03 — The event follows the task
+
+2026-11-11. Baseline before C03: `94225e7`.
+
+Added nonblocking, deduplicated sync requests in groups of at most 50 IDs after marked task creation, event-content
+edits, edit Undo, rollback and deletion. Freed marked subtasks keep their events with the parent context removed.
+Partial writes sync the saved portion, including subtasks orphaned before a failed unlink batch. Company deletion
+and rollback also sync tasks whose company context changes. Unmarked writes, status, parking and group moves
+make no requests; request errors never fail or delay a task write. No calendar mark or sync-state ownership changed.
+
+Files: `lib/calendarRequests.ts`, `lib/taskWrites.ts`, `lib/companyWrites.ts`, `features/task-sheet/TaskSheet.tsx`,
+`features/tasks/TasksScreen.tsx`, `tests/unit/calendarWrites.test.ts`, `tests/unit/taskWrites.test.ts`,
+`lib/calendarWrites.data.test.ts`, `docs/IMPLEMENTATION_PLAN.md` and this evidence file.
+
+Decisions:
+- Pass task snapshots to delete helpers rather than read marks from Firestore again; callers already have them, preserving ordinary writes without extra reads.
+- Sync committed portions and orphaned subtasks after partial failures rather than wait for the whole bulk operation; saved changes must not leave stale events.
+- Preserve direct creation-rollback cleanup rather than reuse the guarded public delete helper; cleanup must still be attempted if the connection dropped after creation.
+- Give only the four-round-trip integration test a 20-second timeout rather than raise the suite default; its isolated cold-emulator run exceeded 5 seconds.
+
+Checks:
+- PASS — `npx tsc --noEmit`, including a rerun after the rollback correction; the final build also type-checked the timeout adjustment.
+- PASS — `npx eslint` on all eight changed TypeScript/TSX files; repeated after the rollback correction.
+- PASS after scoped retry — `npm run test:unit -- --reporter=dot`: 1,092/1,093 passed; unchanged `lib/taskPlan.test.ts` “returns a plain error for non-JSON input” hit `Test timed out in 5000ms`, then passed its isolated normal-timeout retry (1 passed, 234 skipped); final `npx vitest run --project unit tests/unit/calendarWrites.test.ts --reporter=dot`: 30/30 passed, including offline rollback cleanup and 120 deletes in exactly three requests.
+- PASS after scoped retry — `npm run test:data`: 10 files, 197 tests, emulator/fake only; rollback rerun of `lib/calendarWrites.data.test.ts`: 3 passed, create/edit/Undo/delete hit `Test timed out in 5000ms`; after its timeout adjustment that test passed five consecutive isolated runs via `firebase emulators:exec --only firestore --project demo-deus` and `vitest run --project data lib/calendarWrites.data.test.ts -t 'creates, edits, undoes and deletes'`.
+- PASS — `npm run build` outside the sandbox; all pages/routes compiled and generated successfully.
+- PASS — own diff review for lost task writes, Undo/rollback mark restoration, request failures, partial deletes and server-owned sync fields; preserved unconditional rollback cleanup and added its regression test; no open findings; `git diff --check` clean.
+
+No screen or user flow changed, so browser checks/screenshots were not run for this [no look] task; C05 owns the
+browser flow. Tests never called real Google or live Firestore. Shared write code changed, so a full check is worth
+running in R1a, where the full suite, a11y and compare remain assigned. Only C03 is newly ticked; C04 was not started.

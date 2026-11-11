@@ -257,7 +257,7 @@ export default function TaskSheet({ task, gone: deleted = false, initialGroup, o
     if (!task || busy) return;
     setBusy("delete");
     try {
-      await deleteTask(task.id, subtasks.map((t) => t.id));
+      await deleteTask(task, subtasks);
       setConfirming(false);
       onClose();
       toast("Task deleted");

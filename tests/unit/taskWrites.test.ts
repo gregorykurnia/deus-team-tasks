@@ -228,8 +228,8 @@ describe("when tasks and flows were finished or edited (1.6)", () => {
 
   it("keeps a deleted task's subtasks as tasks of their own, alone or with others (N24)", async () => {
     await seedTasks([asTask("p"), asTask("s1", { parentId: "p" }), asTask("s2", { parentId: "p" }), asTask("q"), asTask("t", { parentId: "q" }), asTask("u", { parentId: "q" })]);
-    await deleteTask("p", ["s1", "s2"]);
-    await deleteTasks(["q", "u"], undefined, ["t"]);
+    await deleteTask(asTask("p"), [asTask("s1", { parentId: "p" }), asTask("s2", { parentId: "p" })]);
+    await deleteTasks([asTask("q"), asTask("u", { parentId: "q" })], undefined, [asTask("t", { parentId: "q" })]);
     const left = await readAll("tasks", "tasks");
     expect(left.map((t) => t.id).sort()).toEqual(["s1", "s2", "t"]);
     expect(left.every((t) => !("parentId" in t))).toBe(true);
