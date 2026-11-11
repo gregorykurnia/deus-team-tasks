@@ -227,3 +227,41 @@ Checks:
 - PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run mcp:smoke -- --only=protocol`: mixed calendar save/failure/retry cases and legacy follow-up cases; 115 database-preservation comparisons. The harness stopped its own servers.
 - PASS — `npm run build` with process permissions; no production app server or production-data tests ran.
 - PASS — saved-data diff review and `git diff --check`: no blocking findings; post-commit failures stay per step, task details and signing remain intact, and retries skip current events. Connector-only [no look]: no screen/browser checks. A full shared-code check is worth running and remains assigned to R1a; only M02 is ticked, and E1 was not started.
+
+## E1 — End to end
+
+2026-11-11. Baseline: `53de640`. Added `checkTaskPlanCalendarUI` to `scripts/mcp/task-plan-ui.mjs`, selected by
+`npm run mcp:smoke -- --only=task-plan-calendar` in `scripts/mcp/smoke.mjs` (also included in `all`/`browser`).
+The existing smoke server already sets `CALENDAR_FAKE=1` and the invented `GOOGLE_EVENTS_CALENDAR_ID=test-calendar`.
+Application code, screens and saved-data shapes are unchanged; this is a desktop cross-boundary check [no look].
+
+The case previews a mixed internal plan without writing, saves one timed calendar step and one task-only step,
+then opens the returned main-task link and follows its subtask link. It checks the exact initial event and per-step
+MCP results, edits the marked step's date/time in its sheet, and reloads the saved values/status. It switches the
+plain step on as a multi-day all-day event, then deletes both steps and their main task using the app's confirmations.
+After every transition the entire fake event set is checked, including stable IDs, exact dates/times, descriptions,
+links, no invites and no duplicates. It ends with zero tasks and zero active events, plus two cancelled event records.
+Browser console/page errors and requests outside the local app/emulator are failures; calendar reads are fulfilled locally.
+
+DECISION: Count an empty calendar as zero active events, retaining cancelled IDs instead of clearing fake records, because the fake mirrors Google's reserved deleted IDs.
+DECISION: Assert the app sync route's canonical localhost links separately from MCP's 127.0.0.1 links, rather than changing application origins for a local test.
+
+Requirement evidence (test names refer to the passing suites below; C05 also records the existing phone captures):
+
+| Requirement | Test or results line |
+|---|---|
+| K1 | E1 `checkTaskPlanCalendarUI`: timed MCP step edited in its sheet, plain subtask switched to all day with an exclusive end date. `calendar-events.spec.ts` covers both task and subtask controls. |
+| K2 | E1 checks the same event ID after date/time edits and each deletion. `calendarWrites.data.test.ts`: "creates, edits, undoes and deletes a marked task without a manual sync call", "keeps the marked subtask's event when its unmarked parent is deleted, removing parent context", and the two rollback cases. |
+| K3 | `calendar-events.spec.ts`: "a calendar failure keeps the task; Try again recovers; deleting its main task keeps its event". `calendarWrites.test.ts`: "a %s request never fails or holds up a saved task" covers rejected/offline fetches; `task-sheet.spec.ts`: "A3: with no connection, adding is refused and the sheet keeps what was typed". |
+| K4 | E1 asserts the exact per-step timed/task-only preview and verifies preview leaves both tasks and events empty. `taskPlanServer.data.test.ts`: "returns calendar choices and a bound token without writing, including on a saved-plan preview" also covers all day. |
+| K5 | E1 asserts per-step `added`/task-only results and the exact event after MCP save. `taskPlanServer.data.test.ts`: "keeps a mixed plan saved on one failure and the identical retry touches only the failed calendar step" proves failure, task retention and duplicate-free selective retry. |
+| K6 | `calendarSync.test.ts` "selects safely" matrix includes an unset target and production/fake combinations; `taskPlanServer.data.test.ts`: "refuses calendar plans before any database call when writes are off (already saved: %s)". `calendar-events.spec.ts`: "with calendar writes off, the switch isn't there and task details look as before"; `calendar.test.ts` covers the unchanged read route. |
+| K7 | E1 asserts the fixed local origin/emulator before fixtures, intercepts calendar reads, and rejects external browser requests. The harness runs only Next dev with both fake flags and owns/stops its servers; the unit safety matrix proves the fake is unavailable in production and emulator mode without the fake cannot write. Data tests use only the local emulator/fake. |
+
+Checks:
+- PASS — `npx tsc --noEmit`, `npx eslint scripts/mcp/smoke.mjs scripts/mcp/task-plan-ui.mjs`, and `git diff --check`; test-only diff review found no application/data changes.
+- PASS — `npm run test:unit`: 1,153 tests in 45 files.
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 207 tests in 10 files.
+- RECOVERED/PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run mcp:smoke -- --only=task-plan-calendar`: the complete lifecycle passed with zero active fake events and owned servers stopped. Initial test assertions failed on the exact "Starts" label (its label includes "blank for all day") and on the dev route's localhost origin; corrected those expectations and reran only this selector. No application fix was needed.
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npx playwright test tests/smoke/calendar-events.spec.ts tests/smoke/task-sheet.spec.ts --output=/tmp/e1-page-pw`: 25 tests (20 desktop, 5 phone), 4.7 minutes. No screens changed; no new look review was required.
+- PASS — `npm run build` with process permissions; compiled/generated successfully without starting a production server. Only E1 is ticked; the full suite, a11y, compare and phase review remain assigned to the following rows.

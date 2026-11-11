@@ -15,13 +15,14 @@ import { checkLegacyProtocol } from "./legacy-smoke.mjs";
 import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
 
 const selection = process.argv[2] ?? "--only=all";
-assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser|task-plan-visual|task-plan-reachability)$/.test(selection),
-  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser|--only=task-plan-browser|--only=task-plan-visual|--only=task-plan-reachability]");
+assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser|task-plan-visual|task-plan-reachability|task-plan-calendar)$/.test(selection),
+  "Usage: npm run mcp:smoke -- [--only=all|--only=protocol|--only=browser|--only=task-plan-browser|--only=task-plan-visual|--only=task-plan-reachability|--only=task-plan-calendar]");
 const protocol = ["--only=all", "--only=protocol"].includes(selection);
 const browser = ["--only=all", "--only=browser"].includes(selection);
 const planOnly = selection === "--only=task-plan-visual";
 const reachabilityOnly = selection === "--only=task-plan-reachability";
 const taskPlanBrowser = browser || selection === "--only=task-plan-browser" || planOnly || reachabilityOnly;
+const taskPlanCalendar = browser || selection === "--only=task-plan-calendar";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const HOST = "127.0.0.1";
@@ -217,8 +218,10 @@ try {
     clients.delete(client);
     await stop(enabled);
   }
-  if (protocol || taskPlanBrowser) {
-    console.log("Checking all general-task categories with task-plan activation explicitly on.");
+  if (protocol || taskPlanBrowser || taskPlanCalendar) {
+    console.log(taskPlanCalendar && !protocol && !taskPlanBrowser
+      ? "Checking the MCP-to-app calendar lifecycle with the emulator and fake calendar."
+      : "Checking all general-task categories with task-plan activation explicitly on.");
     const general = startNext("next-general", SECRET, "1");
     await ready(general, `${ORIGIN}/api/mcp/wrong-secret`, 404);
     const generalClient = await connect();
@@ -228,6 +231,11 @@ try {
       const { checkTaskPlanUI } = await import("./task-plan-ui.mjs");
       await checkTaskPlanUI({ client: generalClient, jiti, readAll, seed, clearAll,
         root: ROOT, origin: ORIGIN, emulatorHost: EMULATOR_HOST, planOnly, reachabilityOnly });
+    }
+    if (taskPlanCalendar) {
+      const { checkTaskPlanCalendarUI } = await import("./task-plan-ui.mjs");
+      await checkTaskPlanCalendarUI({ client: generalClient, readAll, clearAll,
+        origin: ORIGIN, emulatorHost: EMULATOR_HOST });
     }
   }
   console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);

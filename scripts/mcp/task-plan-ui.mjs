@@ -152,6 +152,162 @@ async function checkReachability(page, scenarios, companies, shoot, origin) {
   }
 }
 
+// E1: cross the MCP/browser boundary using actual app writes and the server's fake calendar.
+export async function checkTaskPlanCalendarUI({ client, readAll, clearAll, origin, emulatorHost }) {
+  assert.equal(new URL(origin).hostname, "127.0.0.1");
+  assert.equal(emulatorHost, "127.0.0.1:8180");
+  assert.equal(process.env.FIRESTORE_EMULATOR_HOST, emulatorHost);
+  // Next dev canonicalizes the app sync route's Request.url to localhost; MCP preserves the public Host.
+  const appOrigin = new URL(origin);
+  appOrigin.hostname = "localhost";
+  await clearAll();
+  const call = async (name, args) => payload(await client.callTool({ name, arguments: args }));
+  const tasks = () => readAll("tasks", "tasks");
+  const events = async () => sortRecords((await readAll("tasks", "testCalendarEvents"))
+    .map((doc) => JSON.parse(doc.event)));
+  const plan = {
+    kind: "internal", newParent: { title: "Arrange the fictional calendar handover" },
+    steps: [
+      { name: "Meet for the fictional handover", startDate: "2027-02-01", endDate: "2027-02-01",
+        calendar: { startTime: "09:30", endTime: "10:30" }, keyPoints: "Bring the fictional handover notes." },
+      { name: "Prepare the fictional handover notes", startDate: "2027-02-02", endDate: "2027-02-03" },
+    ],
+  };
+  const shown = await call("preview_task_plan", { plan });
+  assert.equal(shown.canWrite, true);
+  assert.deepEqual(shown.calendarPreview, [
+    `Step 1 "${plan.steps[0].name}": Team calendar: 09:30–10:30`,
+    `Step 2 "${plan.steps[1].name}": Task only`,
+  ]);
+  assert.deepEqual(await tasks(), [], "Preview must not save tasks");
+  assert.deepEqual(await events(), [], "Preview must not create events");
+  const added = await call("add_task_plan", { plan, previewToken: shown.previewToken,
+    acknowledgedWarnings: shown.warnings.map((warning) => warning.id) });
+  assert.equal(added.url, `${origin}/tasks?task=${added.parentId}`);
+  assert.equal(added.subtaskIds.length, 2);
+  const [timedId, plainId] = added.subtaskIds;
+  const firstEvents = await events();
+  assert.equal(firstEvents.length, 1, "Only the calendar step creates an event");
+  const timedEvent = firstEvents[0];
+  assert.match(timedEvent.id, /^dt[a-f0-9]{64}$/);
+  assert.deepEqual(timedEvent, {
+    id: timedEvent.id, htmlLink: `https://calendar.example.test/event/${timedEvent.id}`,
+    summary: plan.steps[0].name,
+    description: `Main task: ${plan.newParent.title}\n\nKey points:\n${plan.steps[0].keyPoints}\n\n${origin}/tasks?task=${timedId}`,
+    status: "confirmed", reminders: { useDefault: true },
+    start: { dateTime: "2027-02-01T09:30:00", timeZone: "Asia/Jakarta" },
+    end: { dateTime: "2027-02-01T10:30:00", timeZone: "Asia/Jakarta" },
+    extendedProperties: { private: { deusTaskId: timedId } },
+  });
+  assert.deepEqual(added.subtasks, [
+    { taskId: timedId, calendar: { status: "added", link: timedEvent.htmlLink } }, { taskId: plainId },
+  ]);
+  const savedTasks = sortRecords(await tasks());
+  assert.equal(savedTasks.length, 3);
+  assert.deepEqual(savedTasks.find((task) => task.id === timedId).calendar, plan.steps[0].calendar);
+  for (const id of [plainId, added.parentId]) assert.equal(savedTasks.find((task) => task.id === id).calendar, undefined);
+
+  const browser = await chromium.launch();
+  try {
+    const browserContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+    const page = await browserContext.newPage();
+    page.setDefaultTimeout(30_000);
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    await browserContext.route("**/*", (route) => {
+      const url = new URL(route.request().url());
+      if (url.origin === origin && url.pathname === "/api/calendar") {
+        return route.fulfill({ json: { status: "off", events: [], error: "Google Calendar not configured" } });
+      }
+      if (url.origin === origin || url.origin === `http://${emulatorHost}`) return route.continue();
+      errors.push(`Unexpected external request: ${url.origin}${url.pathname}`);
+      return route.abort();
+    });
+    const sheet = page.getByRole("dialog", { name: "Task", exact: true });
+    const openTask = async (id, name) => {
+      await page.goto(`${origin}/tasks?task=${id}`);
+      await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+      await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(name);
+    };
+    const save = async () => {
+      await sheet.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(sheet).toHaveCount(0);
+    };
+    const expectEvents = async (expected) => {
+      await expect.poll(events, { timeout: 30_000 }).toEqual(sortRecords([...expected]));
+    };
+    await page.goto(added.url);
+    await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(plan.newParent.title);
+    const subtasks = sheet.getByRole("group", { name: "Subtasks", exact: true });
+    await expect(subtasks.getByRole("article")).toHaveCount(2);
+    await subtasks.getByRole("link", { name: plan.steps[0].name, exact: true }).click();
+    await expect(page).toHaveURL(`${origin}/tasks?task=${timedId}`);
+    await expect(sheet.getByLabel("Description", { exact: true })).toHaveValue(plan.steps[0].name);
+    await expect(sheet.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await expect(sheet.getByLabel("Starts")).toHaveValue("09:30");
+    await expect(sheet.getByLabel("Ends")).toHaveValue("10:30");
+    await expectEvents([timedEvent]);
+    assert.deepEqual(sortRecords(await tasks()), savedTasks, "Opening the MCP link must not change tasks");
+
+    await sheet.getByLabel("Start", { exact: true }).fill("2027-02-04");
+    await sheet.getByLabel("Deadline", { exact: true }).fill("2027-02-04");
+    await sheet.getByLabel("Starts").fill("14:00");
+    await sheet.getByLabel("Ends").fill("15:15");
+    await save();
+    const movedEvent = { ...timedEvent, description: timedEvent.description.replace(origin, appOrigin.origin),
+      start: { dateTime: "2027-02-04T14:00:00", timeZone: "Asia/Jakarta" },
+      end: { dateTime: "2027-02-04T15:15:00", timeZone: "Asia/Jakarta" } };
+    await expectEvents([movedEvent]);
+    await expect.poll(tasks).toContainEqual(expect.objectContaining({ id: timedId,
+      startDate: "2027-02-04", endDate: "2027-02-04", calendar: { startTime: "14:00", endTime: "15:15" } }));
+    await openTask(timedId, plan.steps[0].name);
+    await expect(sheet.getByText("On the team calendar", { exact: true })).toBeVisible();
+    await expect(sheet.getByLabel("Starts")).toHaveValue("14:00");
+    await expect(sheet.getByLabel("Ends")).toHaveValue("15:15");
+    await expectEvents([movedEvent]);
+
+    await openTask(plainId, plan.steps[1].name);
+    const toggle = sheet.getByRole("button", { name: "Put on the team calendar", exact: true });
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expectEvents([movedEvent]);
+    await toggle.click();
+    await save();
+    await expect.poll(events).toHaveLength(2);
+    const plainEvent = (await events()).find((event) => event.extendedProperties.private.deusTaskId === plainId);
+    assert.match(plainEvent.id, /^dt[a-f0-9]{64}$/);
+    const allDayEvent = { id: plainEvent.id, htmlLink: `https://calendar.example.test/event/${plainEvent.id}`,
+      summary: plan.steps[1].name, description: `Main task: ${plan.newParent.title}\n\n${appOrigin.origin}/tasks?task=${plainId}`,
+      status: "confirmed", reminders: { useDefault: true },
+      start: { date: "2027-02-02" }, end: { date: "2027-02-04" },
+      extendedProperties: { private: { deusTaskId: plainId } } };
+    await expectEvents([movedEvent, allDayEvent]);
+    await expect.poll(tasks).toContainEqual(expect.objectContaining({ id: plainId, calendar: {} }));
+    await openTask(plainId, plan.steps[1].name);
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(sheet.getByText("On the team calendar", { exact: true })).toBeVisible();
+
+    // Delete through the app, never by clearing emulator collections: cancelled IDs remain reserved like Google.
+    const expectedEvents = [movedEvent, allDayEvent];
+    for (const [id, name] of [[timedId, plan.steps[0].name], [plainId, plan.steps[1].name], [added.parentId, plan.newParent.title]]) {
+      await openTask(id, name);
+      await sheet.getByRole("button", { name: "Delete", exact: true }).click();
+      await page.getByRole("alertdialog", { name: "Delete this task?" }).getByRole("button", { name: "Delete task", exact: true }).click();
+      await expect(sheet).toHaveCount(0);
+      await expect.poll(async () => (await tasks()).some((task) => task.id === id)).toBe(false);
+      const cancelled = expectedEvents.find((event) => event.extendedProperties.private.deusTaskId === id);
+      if (cancelled) cancelled.status = "cancelled";
+      await expectEvents(expectedEvents);
+    }
+    assert.deepEqual(await tasks(), [], "Both steps and the main task must be deleted");
+    assert.deepEqual((await events()).filter((event) => event.status !== "cancelled"), [], "The fake calendar must end empty");
+    assert.deepEqual(errors, [], "Calendar lifecycle: browser console/page/network errors");
+    console.log("Task-plan calendar E1 passed: mixed MCP preview/save → returned app link → date/time edit → task-only step on → both steps and main task deleted; 0 active events (2 cancelled IDs retained).");
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function checkTaskPlanUI(context) {
   const { root, origin, emulatorHost, readAll, planOnly = false, reachabilityOnly = false } = context;
   // Check before any fixture write; inherited URLs must never redirect these helpers to live data.
