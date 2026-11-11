@@ -24,3 +24,35 @@ All new calendar/draft tests passed in the unit run: all-day/timed/multi-day map
 validation, long/Unicode UTF-8 IDs, key sensitivity and sync-state isolation. No Firestore read/write code or
 screen changed, so data tests, browser checks and screenshots were not needed. Full checks remain for R1a;
 shared code changed, so they are worth running there.
+
+## C02 — Server sync, fake calendar and route
+
+2026-11-11. Baseline before C02: `5650d66`.
+
+Added server-only `lib/calendarSync.ts`, guarded `lib/calendarFake.ts`, and `/api/calendar/sync` GET/POST.
+Sync reads task/parent/company from the server, updates/inserts/restores one deterministic event, removes it for
+unmarked or deleted tasks, and only writes server-owned sync fields. Calls for one task are serialized within
+the server process; an in-flight task/context change gets one extra pass. Failures preserve task data and the
+last synced key/link, returning a short per-ID error. The existing calendar read route is unchanged.
+
+The fake keeps Google resources as JSON in `testCalendarEvents/<eventId>.event`, with a directly readable
+`status`. Cancelled IDs stay reserved. Seed emulator `settings/test-calendar` with `{ fail: 503 }` to force
+calendar failures; delete the control document to recover. Playwright and MCP smoke server environments now
+enable the fake with the invented target `test-calendar`; no screens or app write hooks changed.
+
+Decisions:
+- Use `calendarSync.error`, correcting C02's `calendar.error` typo to match the settled design and C01 types; writing into the mark would mix task intent with server state.
+- The fake uses a fixed local Firestore REST endpoint and emulator owner token instead of relaxing deployed Firestore rules; both emulator mode and `CALENDAR_FAKE=1` are required, and production with the fake flag reports off.
+- Limit reconciliation to one extra pass rather than an unbounded retry loop; a task that changes again keeps an explicit retry error.
+
+Checks:
+- PASS — `npx tsc --noEmit`.
+- PASS — `npx eslint lib/calendarSync.ts lib/calendarFake.ts lib/calendarSync.data.test.ts tests/unit/calendarSync.test.ts app/api/calendar/sync/route.ts playwright.config.ts scripts/mcp/smoke.mjs`.
+- PASS — `npm run test:unit -- --reporter=dot`: 43 files, 1,064 tests; includes client safety matrix, mocked Google options/scope, and unchanged read-route regressions (29.71s).
+- PASS — `npm run test:data`: 9 files, 193 tests, local emulator/fake only (70.97s); covers creation, moves, repeated/concurrent calls, unmark/re-mark/cancelled IDs, deletion, 404/410→409 recovery, preserved fields on failure/retry, invalid times, in-flight changes, freed subtasks, off mode and route validation/50-ID boundary.
+- PASS — `npm run build` outside the sandbox; `/api/calendar/sync` builds as a dynamic route.
+- PASS — own diff review for saved-data integrity, error isolation, retry races and production/fake separation; no findings; `git diff --check` clean.
+
+No UI or browser flow changed, so no browser checks or screenshots were needed. No real Google or live
+Firestore calls were made by tests. Shared server code changed, so a full check is worth running in R1a;
+the full suite, a11y and compare remain assigned there. Only C02 is ticked; C03 was not started.

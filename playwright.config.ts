@@ -45,7 +45,7 @@ export default defineConfig({
     {
       command: `npx next dev --port ${PORT}`,
       url: `http://localhost:${PORT}`,
-      env: { NEXT_PUBLIC_USE_EMULATOR: "1" },
+      env: { NEXT_PUBLIC_USE_EMULATOR: "1", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar" },
       reuseExistingServer: false,
       timeout: 180_000,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },

@@ -56,7 +56,7 @@ function start(name, args, env = {}) {
   const fd = openSync(path.join(logs, `${name}.log`), "w");
   const child = spawn(process.execPath, args, {
     cwd: ROOT, detached: true, stdio: ["ignore", fd, fd],
-    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", MCP_TASK_PLANS_ENABLED: "0", ...env },
+    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", MCP_TASK_PLANS_ENABLED: "0", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar", ...env },
   });
   closeSync(fd);
   const entry = { name, child, failure: null };

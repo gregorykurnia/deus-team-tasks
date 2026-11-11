@@ -115,7 +115,7 @@ and returns a per-ID result. It never accepts event content and never throws a s
 Done when (data tests on the emulator with the fake, `lib/calendarSync.data.test.ts`):
 - Create, move, switch off, task deleted, repeat call (one event, not two) and switch back on after a switch-off (the cancelled event comes back confirmed) all leave the fake calendar matching the task.
 - After a switch-off the task has neither `calendar` nor `calendarSync`, and a second sync call doesn't bring the event back.
-- A Google failure keeps the task's own fields untouched, sets `calendar.error`, and leaves `synced` unchanged.
+- A Google failure keeps the task's own fields untouched, sets `calendarSync.error`, and leaves `synced` unchanged.
 - With the variable unset, `GET` says off and `POST` writes nothing; the read route's behavior and scope are unchanged.
 - The fake can't be reached unless `USE_EMULATOR` and `CALENDAR_FAKE=1` are both set, and emulator mode without the fake reports writes off (unit tests on the getter).
 
