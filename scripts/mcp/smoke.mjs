@@ -56,7 +56,7 @@ function start(name, args, env = {}) {
   const fd = openSync(path.join(logs, `${name}.log`), "w");
   const child = spawn(process.execPath, args, {
     cwd: ROOT, detached: true, stdio: ["ignore", fd, fd],
-    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", MCP_TASK_PLANS_ENABLED: "0", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar", ...env },
+    env: { ...process.env, NODE_ENV: "development", NEXT_PUBLIC_USE_EMULATOR: "1", NEXT_TELEMETRY_DISABLED: "1", MCP_TASK_PLANS_ENABLED: "0", ...env },
   });
   closeSync(fd);
   const entry = { name, child, failure: null };
@@ -108,7 +108,9 @@ for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
 }
 
 function startNext(name, secret, flag = "0") {
-  return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], { MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag });
+  return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], {
+    MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag, CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
+  });
 }
 
 const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };

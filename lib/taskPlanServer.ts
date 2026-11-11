@@ -4,7 +4,7 @@ import {
   type DocumentData, type Transaction,
 } from "firebase/firestore";
 import type { PipelineEntry } from "./clientTypes";
-import { calendarWritesEnabled } from "./calendarSync";
+import { calendarWritesEnabled, readTaskCalendarState, syncTaskCalendar } from "./calendarSync";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { wibToday } from "./followupServer";
@@ -38,6 +38,10 @@ export interface TaskPlanWriteResult {
   alreadySaved: boolean;
   destination: TaskPlanDestinationState;
   url: string; // The MCP layer resolves this same-origin path against its request origin.
+  subtasks?: {
+    taskId: string;
+    calendar?: { status: "added"; link?: string } | { status: "failed"; error: string };
+  }[]; // Input step order; omitted entirely for plans without calendar requests.
 }
 
 export interface TaskPlanServerPreview extends TaskPlanPreview {
@@ -135,7 +139,9 @@ export async function previewTaskPlan(input: unknown, options: TaskPlanTokenOpti
   const preview: TaskPlanServerPreview = saved ? {
     plan, errors: [], warnings: [], canWrite: true, destination: saved.destination,
     parentId: saved.parentId, parent: null, subtasks: [], alreadySaved: saved,
-    preservationNotes: ["This exact plan is already saved. Return the original task link; no existing record will be changed."],
+    preservationNotes: [calendarPreview
+      ? "This exact plan is already saved. Existing task details will be preserved; saving again retries calendar steps that aren't up to date."
+      : "This exact plan is already saved. Return the original task link; no existing record will be changed."],
     ...(calendarPreview && { calendarPreview }),
   } : buildTaskPlan(plan, {
     tasks: await readTasks(), today: wibToday(), parentId: ids.parentId, calendarEnabled,
@@ -152,8 +158,39 @@ function taskDocument(task: NewTask, ids: OperationIds, index: number): Document
   };
 }
 
+async function calendarStep(taskId: string, alreadySaved: boolean, origin: string): Promise<NonNullable<TaskPlanWriteResult["subtasks"]>[number]> {
+  const failed = { taskId, calendar: { status: "failed" as const, error: "The calendar couldn't be updated. Try again." } };
+  try {
+    if (alreadySaved) {
+      const { task, key } = await readTaskCalendarState(taskId);
+      // An app edit owns the current mark and event content. Never replay the original plan over it.
+      if (!task?.calendar) return { taskId };
+      if (key === task.calendarSync?.synced && !task.calendarSync?.error) {
+        return { taskId, calendar: { status: "added", ...(task.calendarSync?.link && { link: task.calendarSync.link }) } };
+      }
+    }
+    const synced = await syncTaskCalendar(taskId, origin);
+    if (synced.status === "synced") return { taskId, calendar: { status: "added", ...(synced.link && { link: synced.link }) } };
+    if (synced.status === "removed") return { taskId };
+    return synced.error ? { taskId, calendar: { status: "failed", error: synced.error } } : failed;
+  } catch {
+    // Calendar/read failures happen after commit and must never turn a saved task plan into a tool error.
+    return failed;
+  }
+}
+
+async function calendarResults(plan: TaskPlanInput, saved: TaskPlanWriteResult, origin: string): Promise<TaskPlanWriteResult> {
+  if (!plan.steps.some((step) => step.calendar)) return saved;
+  const subtasks: NonNullable<TaskPlanWriteResult["subtasks"]> = [];
+  for (let offset = 0; offset < saved.subtaskIds.length; offset += 10) {
+    subtasks.push(...await Promise.all(saved.subtaskIds.slice(offset, offset + 10).map((taskId, index) =>
+      plan.steps[offset + index].calendar ? calendarStep(taskId, saved.alreadySaved, origin) : { taskId })));
+  }
+  return { ...saved, subtasks };
+}
+
 export async function addTaskPlan(
-  input: unknown, previewToken: unknown, acknowledgedWarnings: unknown, options: TaskPlanTokenOptions = {},
+  input: unknown, previewToken: unknown, acknowledgedWarnings: unknown, options: TaskPlanTokenOptions & { origin?: string } = {},
 ): Promise<TaskPlanWriteResult> {
   // Authenticity, expiry and exact normalized input come before the already-saved fast path.
   const verified = verifyTaskPlanToken(input, previewToken, options);
@@ -161,9 +198,9 @@ export async function addTaskPlan(
   if (!calendarWritesEnabled() && plan.steps.some((step) => step.calendar)) throw new TaskPlanError(TASK_PLAN_CALENDAR_OFF);
   const ids = operationIds(plan);
   const saved = await completedOperation(plan, ids);
-  if (saved) return saved;
+  if (saved) return calendarResults(plan, saved, options.origin ?? "");
 
-  return runTransaction(db, async (transaction) => {
+  const written = await runTransaction(db, async (transaction) => {
     const operation = await readOperation(transaction, plan, ids);
     if (operation.saved) return operation.saved; // A simultaneous request may have finished after the fast path.
 
@@ -191,4 +228,5 @@ export async function addTaskPlan(
       taskDocument(task, ids, i)));
     return writeResult(ids, preview.destination!, false);
   });
+  return calendarResults(plan, written, options.origin ?? "");
 }

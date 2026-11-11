@@ -11,7 +11,7 @@ export interface CalendarClient {
 // Fixed local endpoint, with the emulator's owner token. No test-only production rules are needed.
 const BASE = "http://127.0.0.1:8180/v1/projects/deus-team-tasks/databases/(default)/documents";
 const headers = { Authorization: "Bearer owner", "Content-Type": "application/json" };
-type Stored = { fields?: { event?: { stringValue: string }; fail?: { integerValue: string } } };
+type Stored = { fields?: { event?: { stringValue: string }; fail?: { integerValue: string }; failEventId?: { stringValue: string } } };
 
 function assertFake() {
   if (!USE_EMULATOR || process.env.CALENDAR_FAKE !== "1") throw new Error("The fake calendar requires the local emulator and CALENDAR_FAKE=1.");
@@ -32,7 +32,8 @@ async function read(path: string): Promise<Stored | null> {
 async function beforeRequest(id: string) {
   const control = await read("settings/test-calendar");
   const code = Number(control?.fields?.fail?.integerValue);
-  if (code) failure(code);
+  const failEventId = control?.fields?.failEventId?.stringValue;
+  if (code && (!failEventId || failEventId === id)) failure(code);
   const stored = await read(`testCalendarEvents/${id}`);
   return stored?.fields?.event ? JSON.parse(stored.fields.event.stringValue) as calendar_v3.Schema$Event : null;
 }

@@ -163,7 +163,7 @@ describe("G06 schema and adapter boundaries", () => {
     await call("preview_task_plan", { plan: selected });
     expect(io.preview).toHaveBeenCalledWith(selected);
     await call("add_task_plan", { plan: selected, previewToken: "fake", acknowledgedWarnings: [] });
-    expect(io.add).toHaveBeenCalledWith(selected, "fake", []);
+    expect(io.add).toHaveBeenCalledWith(selected, "fake", [], { origin: ORIGIN });
   });
 
   it.each([{ startTime: "14:00" }, { startTime: "25:00", endTime: "26:00" }, { attendees: [] }])(
@@ -186,8 +186,22 @@ describe("G06 schema and adapter boundaries", () => {
     await call("preview_task_plan", { plan: selected });
     expect(io.preview).toHaveBeenCalledWith(selected);
     const written = await call("add_task_plan", { plan: selected, previewToken: "fake-preview-token", acknowledgedWarnings: ["past-date-1"] });
-    expect(io.add).toHaveBeenCalledWith(selected, "fake-preview-token", ["past-date-1"]);
+    expect(io.add).toHaveBeenCalledWith(selected, "fake-preview-token", ["past-date-1"], { origin: ORIGIN });
     expect(written.reply.result?.structuredContent).toEqual({ ...saved, url: `${ORIGIN}${saved.url}` });
+  });
+
+  it("returns every calendar success/failure without turning the saved plan into a tool error", async () => {
+    const subtasks = [
+      { taskId: "timed-step", calendar: { status: "added", link: "https://calendar.example.test/timed-step" } },
+      { taskId: "all-day-step", calendar: { status: "failed", error: "The calendar couldn't be updated. Try again." } },
+      { taskId: "task-only-step" },
+    ];
+    io.add.mockResolvedValue({ ...saved, subtasks });
+    const written = await call("add_task_plan", { plan, previewToken: "fake", acknowledgedWarnings: [] });
+    expect(written.reply.result?.isError).not.toBe(true);
+    expect(written.reply.result?.structuredContent).toEqual({ ...saved, subtasks, url: `${ORIGIN}${saved.url}` });
+    const tools = (await rpc("tools/list")).reply.result!.tools!;
+    expect(tools.find((tool) => tool.name === "add_task_plan")?.description).toMatch(/Report every calendar failure.*repeating the same save retries failures/);
   });
 
   it.each([

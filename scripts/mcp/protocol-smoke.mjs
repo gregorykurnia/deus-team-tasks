@@ -151,6 +151,63 @@ export async function checkGeneralProtocol(context) {
   }
   console.log("General MCP: six create/append destinations, selected steps, exact records, concurrent/lost-response/refreshed retries passed.");
 
+  const calendarPlan = { kind: "internal", newParent: { title: "Fictional calendar protocol plan" }, steps: [
+    { name: "Fictional timed meeting", startDate: "2027-02-01", endDate: "2027-02-01", calendar: { startTime: "14:00", endTime: "15:00" } },
+    { name: "Fictional all-day visit", startDate: "2027-02-02", endDate: "2027-02-03", calendar: {} },
+    { name: "Fictional task only", startDate: "2027-02-04", endDate: "2027-02-04" },
+  ] };
+  const calendarPreview = await preview(calendarPlan);
+  const { calendarEventId } = await jiti.import("../../lib/taskCalendar.ts");
+  const failedTaskId = `${calendarPreview.parentId}-2`;
+  await seed("tasks", "settings", [{ id: "test-calendar", fail: 503, failEventId: await calendarEventId(failedTaskId) }]);
+  const calendarSaved = await save(calendarPlan, calendarPreview);
+  assert.equal(calendarSaved.alreadySaved, false);
+  assert.deepEqual(calendarSaved.subtasks, [
+    { taskId: calendarSaved.subtaskIds[0], calendar: { status: "added", link: `https://calendar.example.test/event/${await calendarEventId(calendarSaved.subtaskIds[0])}` } },
+    { taskId: failedTaskId, calendar: { status: "failed", error: "The calendar couldn't be updated. Try again." } },
+    { taskId: calendarSaved.subtaskIds[2] },
+  ]);
+  const beforeCalendarRetry = await readAll("tasks", "tasks");
+  assert.equal(beforeCalendarRetry.filter((task) => [calendarSaved.parentId, ...calendarSaved.subtaskIds].includes(task.id)).length, 4);
+  const fakeEvents = async () => (await readAll("tasks", "testCalendarEvents")).map((entry) => JSON.parse(entry.event));
+  const timedEvent = (await fakeEvents())[0];
+  assert.equal((await fakeEvents()).length, 1);
+  assert.deepEqual(timedEvent.start, { dateTime: "2027-02-01T14:00:00", timeZone: "Asia/Jakarta" });
+  assert.deepEqual(timedEvent.end, { dateTime: "2027-02-01T15:00:00", timeZone: "Asia/Jakarta" });
+  assert.match(timedEvent.description, new RegExp(`${origin}/tasks\\?task=${calendarSaved.subtaskIds[0]}`));
+  for (const [i, id] of calendarSaved.subtaskIds.entries()) {
+    const task = beforeCalendarRetry.find((task) => task.id === id);
+    assert.deepEqual(task.calendar, calendarPlan.steps[i].calendar);
+  }
+  // Failing the previously successful event proves that the exact retry leaves it alone.
+  await seed("tasks", "settings", [{ id: "test-calendar", fail: 503, failEventId: timedEvent.id }]);
+  const calendarRetried = await save(calendarPlan, calendarPreview);
+  assert.deepEqual(calendarRetried, { ...calendarSaved, alreadySaved: true, subtasks: [
+    calendarSaved.subtasks[0],
+    { taskId: failedTaskId, calendar: { status: "added", link: `https://calendar.example.test/event/${await calendarEventId(failedTaskId)}` } },
+    calendarSaved.subtasks[2],
+  ] });
+  const calendarEvents = await fakeEvents();
+  assert.equal(calendarEvents.length, 2);
+  assert.deepEqual(calendarEvents.find((event) => event.id === timedEvent.id), timedEvent);
+  const allDayEvent = calendarEvents.find((event) => event.id !== timedEvent.id);
+  assert.deepEqual(allDayEvent.start, { date: "2027-02-02" });
+  assert.deepEqual(allDayEvent.end, { date: "2027-02-04" });
+  const withoutSync = (task) => {
+    const fields = { ...task };
+    delete fields.calendarSync;
+    return fields;
+  };
+  assert.deepEqual((await readAll("tasks", "tasks")).map(withoutSync), beforeCalendarRetry.map(withoutSync));
+  await seed("tasks", "settings", [{ id: "test-calendar", fail: 503 }]);
+  const refreshedCalendarPreview = await preview(calendarPlan);
+  await unchanged("calendar retry skips current events", async () => {
+    assert.deepEqual(await save(calendarPlan, refreshedCalendarPreview), calendarRetried);
+  });
+  assert.deepEqual(await fakeEvents(), calendarEvents);
+  await seed("tasks", "settings", [{ id: "test-calendar", fail: 0 }]);
+  console.log("General MCP: mixed calendar plan, partial failure, per-step results, exact retry, preserved task data and duplicate-free calendar events passed.");
+
   const fresh = { kind: "internal", newParent: { title: "Fictional protocol refusal target" },
     steps: [{ name: "Fictional selected refusal action", startDate: "2027-03-01", endDate: "2027-03-02", owners: "Fictional person", keyPoints: "Keep this prose.\n  And its indentation." }] };
   // An all-skipped chat must make no calls; reject an accidental empty wire plan too.

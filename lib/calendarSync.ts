@@ -45,7 +45,8 @@ function code(error: unknown): number | string | undefined {
   return e.response?.status ?? e.code;
 }
 
-async function readState(taskId: string) {
+// The save retry uses the same current task/parent/company key as the sync itself.
+export async function readTaskCalendarState(taskId: string) {
   const snapshot = await getDocFromServer(doc(db, "tasks", taskId));
   const task = snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } as Task : null;
   if (!task?.calendar) return { task, parent: null, company: null, key: undefined };
@@ -79,7 +80,7 @@ async function sync(taskId: string, origin: string): Promise<CalendarSyncResult>
     if (!client) return { taskId, status: "off" };
     const eventId = await calendarEventId(taskId);
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { task, parent, company, key } = await readState(taskId);
+      const { task, parent, company, key } = await readTaskCalendarState(taskId);
       let result: CalendarSyncResult;
       if (task?.calendar) {
         const body = taskEventBody(task, parent, company, origin);
@@ -106,7 +107,7 @@ async function sync(taskId: string, origin: string): Promise<CalendarSyncResult>
         result = { taskId, status: "removed" };
       }
       // A second pass handles edits, removing the mark, deletion, and changed parent/company context in flight.
-      if ((await readState(taskId)).key === key) return result;
+      if ((await readTaskCalendarState(taskId)).key === key) return result;
     }
     return failed(taskId, "The task changed again while syncing. Try again.");
   } catch {

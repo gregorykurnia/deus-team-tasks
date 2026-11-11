@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as firestore from "firebase/firestore";
+import * as calendarSync from "./calendarSync";
 import {
   TASK_PLAN_CLIENT, TASK_PLAN_CLIENT_NEW, TASK_PLAN_CLIENT_PARENT, TASK_PLAN_DEAL_SKILL,
   TASK_PLAN_INTERNAL_NEW, TASK_PLAN_INTERNAL_PARENT, TASK_PLAN_PROSPECT,
@@ -17,15 +18,17 @@ import {
   type TaskPlanServerPreview,
 } from "./taskPlanServer";
 import { TASK_PLAN_TOKEN_TTL_MS } from "./taskPlanToken";
+import { calendarEventId, calendarKey, taskEventBody } from "./taskCalendar";
 import type { Task } from "./types";
 
 vi.mock("./connection", () => { throw new Error("Server code must not import browser connection guards."); });
+vi.mock("googleapis", () => { throw new Error("Data tests must never load Google clients."); });
 vi.mock("firebase/firestore", async (original) => {
   const actual = await original<typeof import("firebase/firestore")>();
   return { ...actual, runTransaction: vi.fn(actual.runTransaction), getDocsFromServer: vi.fn(actual.getDocsFromServer) };
 });
 const real = await vi.importActual<typeof import("firebase/firestore")>("firebase/firestore");
-const options = { secret: "task-plan-emulator-only", now: Date.UTC(2026, 10, 10, 12) };
+const options = { secret: "task-plan-emulator-only", now: Date.UTC(2026, 10, 10, 12), origin: "https://tasks.example.test" };
 const originalRules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
 const parents = [TASK_PLAN_PROSPECT_PARENT, TASK_PLAN_CLIENT_PARENT, TASK_PLAN_INTERNAL_PARENT];
 const oldChild: Task = {
@@ -49,7 +52,7 @@ beforeEach(async () => {
   await seed("clients", "pipeline", [TASK_PLAN_PROSPECT, TASK_PLAN_CLIENT], { keepIdField: true });
   await seed("tasks", "tasks", [...parents, oldChild, unrelated]);
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 afterAll(async () => { await Promise.all([firestore.terminate(db), firestore.terminate(clientsDb)]); });
 
 async function taskRules(content: string) {
@@ -110,6 +113,154 @@ describe("M01 calendar preview activation", () => {
     await expect(save(plan, shown)).rejects.toThrow(TASK_PLAN_CALENDAR_OFF);
     expect(firestore.runTransaction).not.toHaveBeenCalled();
     expect(firestore.getDocsFromServer).not.toHaveBeenCalled();
+  });
+});
+
+describe("M02 calendar save and retry", () => {
+  const plan: TaskPlanInput = { ...TASK_PLAN_INTERNAL_NEW, steps: [
+    { name: "Meeting", startDate: "2026-12-05", endDate: "2026-12-05", calendar: { startTime: "14:00", endTime: "15:00" } },
+    { name: "All-day visit", startDate: "2026-12-06", endDate: "2026-12-07", calendar: {} },
+    { name: "Task only", startDate: "2026-12-08", endDate: "2026-12-08" },
+  ] };
+  const taskFields = (tasks: Record<string, unknown>[]) => tasks.map((task) => {
+    const fields = { ...task };
+    delete fields.calendarSync;
+    return fields;
+  });
+  const events = async () => (await readAll("tasks", "testCalendarEvents")).map((entry) => JSON.parse(entry.event as string));
+  beforeEach(() => { vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "test-calendar"); vi.stubEnv("CALENDAR_FAKE", "1"); });
+
+  it("commits all tasks with their marks before adding exact timed/all-day events and per-step links", async () => {
+    const shown = await preview(plan);
+    const priorTasks = await readAll("tasks", "tasks");
+    const added = await save(plan, shown);
+    const stored = await readAll("tasks", "tasks");
+    const parent = stored.find((task) => task.id === added.parentId) as unknown as Task;
+    const calendarEvents = await events();
+    expect(added.subtasks).toEqual(added.subtaskIds.map((taskId, i) => ({ taskId, ...(i < 2 && {
+      calendar: { status: "added", link: expect.stringMatching(/^https:\/\/calendar\.example\.test\//) },
+    }) })));
+    expect(calendarEvents).toHaveLength(2);
+    expect(stored).toHaveLength(priorTasks.length + 4);
+    for (const old of priorTasks) expect(stored.find((task) => task.id === old.id)).toEqual(old);
+    for (const [i, id] of added.subtaskIds.entries()) {
+      const task = stored.find((task) => task.id === id) as unknown as Task;
+      const sync = task.calendarSync;
+      const details = { ...stored.find((task) => task.id === id)! };
+      delete details.calendarSync;
+      delete details.taskPlanOperation;
+      const { id: taskId, ...fields } = details;
+      expect(taskId).toBe(id);
+      expect(fields).toEqual(shown.subtasks[i]);
+      if (i === 2) { expect(task).not.toHaveProperty("calendar"); expect(sync).toBeUndefined(); continue; }
+      const eventId = await calendarEventId(id);
+      expect(calendarEvents.find((event) => event.id === eventId)).toEqual({
+        ...taskEventBody(task, parent, null, options.origin), id: eventId, htmlLink: sync!.link,
+      });
+      expect(sync!.synced).toBe(calendarKey(task, parent, null));
+      expect(sync).not.toHaveProperty("error");
+    }
+    expect(await preview(plan)).toMatchObject({ alreadySaved: { parentId: added.parentId }, calendarPreview: shown.calendarPreview });
+  });
+
+  it("keeps a mixed plan saved on one failure and the identical retry touches only the failed calendar step", async () => {
+    const shown = await preview(plan);
+    const failedTaskId = `${shown.parentId}-2`;
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 503, failEventId: await calendarEventId(failedTaskId) }]);
+    const added = await save(plan, shown);
+    expect(added.alreadySaved).toBe(false);
+    expect(added.subtasks).toEqual([
+      { taskId: added.subtaskIds[0], calendar: { status: "added", link: expect.any(String) } },
+      { taskId: failedTaskId, calendar: { status: "failed", error: "The calendar couldn't be updated. Try again." } },
+      { taskId: added.subtaskIds[2] },
+    ]);
+    const beforeRetry = await readAll("tasks", "tasks");
+    expect(added.subtaskIds.every((id) => beforeRetry.some((task) => task.id === id))).toBe(true);
+    const beforeEvents = await events();
+    expect(beforeEvents).toHaveLength(1);
+    // Fail the successful step now: retry must skip it, and only repair the previously failed event.
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 503, failEventId: await calendarEventId(added.subtaskIds[0]) }]);
+    const retried = await save(plan, shown);
+    expect(retried).toMatchObject({ ...added, alreadySaved: true, subtasks: [
+      { taskId: added.subtaskIds[0], calendar: added.subtasks![0].calendar },
+      { taskId: failedTaskId, calendar: { status: "added", link: expect.any(String) } },
+      { taskId: added.subtaskIds[2] },
+    ] });
+    const afterRetry = await readAll("tasks", "tasks");
+    expect(taskFields(afterRetry)).toEqual(taskFields(beforeRetry));
+    for (const task of beforeRetry.filter((task) => task.id !== failedTaskId)) {
+      expect(afterRetry.find((current) => current.id === task.id)).toEqual(task);
+    }
+    expect(await events()).toHaveLength(2);
+    expect(await events()).toContainEqual(beforeEvents[0]);
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 503 }]);
+    const refreshed = await preview(plan); // Preview itself must not retry or write.
+    expect(await save(plan, refreshed)).toEqual(retried);
+    expect(await readAll("tasks", "tasks")).toEqual(afterRetry);
+  });
+
+  it.each(["step", "parent", "company"])("retries a changed saved %s using current data without replaying task fields", async (change) => {
+    const selected: TaskPlanInput = { ...TASK_PLAN_PROSPECT_NEW, steps: plan.steps };
+    const shown = await preview(selected);
+    const added = await save(selected, shown);
+    if (change === "step") await firestore.updateDoc(firestore.doc(db, "tasks", added.subtaskIds[0]), {
+      task: "Owner's changed meeting", startDate: "2027-01-05", endDate: "2027-01-05", calendar: { startTime: "10:00", endTime: "11:00" }, completed: true,
+    });
+    if (change === "parent") await firestore.updateDoc(firestore.doc(db, "tasks", added.parentId), { task: "Owner's renamed main task" });
+    if (change === "company") await firestore.updateDoc(firestore.doc(clientsDb, "pipeline", String(selected.companyId)), { company: "Renamed company" });
+    const beforeRetry = await readAll("tasks", "tasks");
+    const result = await save(selected, shown);
+    expect(result.alreadySaved).toBe(true);
+    const stored = await readAll("tasks", "tasks");
+    expect(taskFields(stored)).toEqual(taskFields(beforeRetry));
+    const parent = stored.find((task) => task.id === added.parentId) as unknown as Task;
+    const company = (await readFields("clients", `pipeline/${selected.companyId}`))! as unknown as typeof TASK_PLAN_PROSPECT;
+    const calendarEvents = await events();
+    expect(calendarEvents).toHaveLength(2);
+    for (const id of added.subtaskIds.slice(0, 2)) {
+      const task = stored.find((task) => task.id === id) as unknown as Task;
+      expect(calendarEvents.find((event) => event.id === task.calendarSync?.link?.split("/").pop())).toMatchObject(taskEventBody(task, parent, company, options.origin));
+    }
+  });
+
+  it("does not restore a calendar mark removed in the app, and retries errors even when the last synced key matches", async () => {
+    const shown = await preview(plan);
+    const added = await save(plan, shown);
+    const [removedId, failedId] = added.subtaskIds;
+    await firestore.updateDoc(firestore.doc(db, "tasks", removedId), { calendar: firestore.deleteField() });
+    await calendarSync.syncTaskCalendar(removedId, options.origin);
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 503, failEventId: await calendarEventId(failedId) }]);
+    expect((await calendarSync.syncTaskCalendar(failedId, options.origin)).status).toBe("failed");
+    const before = await readAll("tasks", "tasks");
+    const failed = before.find((task) => task.id === failedId) as unknown as Task;
+    const parent = before.find((task) => task.id === added.parentId) as unknown as Task;
+    expect(failed.calendarSync?.synced).toBe(calendarKey(failed, parent, null));
+    expect(failed.calendarSync?.error).toEqual(expect.any(String));
+    await seed("tasks", "settings", [{ id: "test-calendar", fail: 0 }]);
+    const retried = await save(plan, shown);
+    expect(retried.subtasks).toEqual([
+      { taskId: removedId }, { taskId: failedId, calendar: { status: "added", link: expect.any(String) } }, { taskId: added.subtaskIds[2] },
+    ]);
+    expect(await readFields("tasks", `tasks/${removedId}`)).not.toHaveProperty("calendar");
+    expect((await readFields("tasks", `tasks/${failedId}`))!.calendarSync).not.toHaveProperty("error");
+    expect(taskFields(await readAll("tasks", "tasks"))).toEqual(taskFields(before));
+    expect((await events()).filter((event) => event.status === "confirmed")).toHaveLength(1);
+  });
+
+  it("syncs large plans in parallel with at most ten steps in flight", async () => {
+    const selected: TaskPlanInput = { ...plan, steps: Array.from({ length: 21 }, (_, i) => ({ ...plan.steps[1], name: `Calendar step ${i + 1}` })) };
+    const shown = await preview(selected);
+    const originalSync = calendarSync.syncTaskCalendar;
+    let active = 0, peak = 0;
+    vi.spyOn(calendarSync, "syncTaskCalendar").mockImplementation(async (...args) => {
+      active++; peak = Math.max(peak, active);
+      try { return await originalSync(...args); } finally { active--; }
+    });
+    const result = await save(selected, shown);
+    expect(peak).toBe(10);
+    expect(result.subtasks).toHaveLength(21);
+    expect(result.subtasks!.every((task) => task.calendar?.status === "added")).toBe(true);
+    expect(await events()).toHaveLength(21);
   });
 });
 const withoutProvenance = (data: Record<string, unknown> | null) => {

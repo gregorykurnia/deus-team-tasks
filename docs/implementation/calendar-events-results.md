@@ -198,3 +198,32 @@ Checks:
 - PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 200 tests in 10 files; three new emulator cases prove preview is read-only, saved marks read back, saved-plan previews retain choices, and off requests perform no database calls. No Google calls or production data.
 - PASS — `npm run build` outside the sandbox; the first sandbox build stalled before compilation and was stopped by its exact PID/children (exit 143), then the unchanged build passed with process permissions.
 - PASS — diff review and `git diff --check`: calendar marks stay separate from notes and server sync state; task-only behavior, destination preservation and legacy routes remain intact. Connector-only [no look]: no browser or screenshot checks; full shared-code checks remain scheduled for R1a.
+
+## M02 — MCP save puts steps on the calendar
+
+2026-11-11. Baseline: `29c1b9e`. Calendar marks already enter the existing task transaction (M01). After commit,
+the save now syncs marked steps directly in batches of at most ten, returning ordered per-step `added` results
+with links or `failed` results with short errors. Calendar failures keep every saved task. Task-only steps omit
+`calendar`, and plans without calendar requests keep their original response shape. The MCP passes its public
+origin for event links and tells chat to report each result and retry the unchanged save after failures.
+
+Repeated saves reuse the current task/parent/company key reader from calendar sync. They retry only marked
+steps with a changed key or error, preserve later edits, and never restore a calendar mark removed in the app.
+Preview remains read-only. The emulator fake can fail one event ID to prove partial success and selective retry;
+the smoke dev server explicitly receives both fake-calendar environment variables.
+
+Files: `lib/taskPlanServer.ts`, `lib/taskPlanTools.ts`, `lib/calendarSync.ts`, `lib/calendarFake.ts`,
+`lib/taskPlanServer.data.test.ts`, `tests/unit/taskPlanTools.test.ts`, `scripts/mcp/protocol-smoke.mjs`,
+`scripts/mcp/smoke.mjs`, `docs/IMPLEMENTATION_PLAN.md`, and this evidence file.
+
+DECISION: Add optional ordered subtask results only to calendar plans, rather than expand every save response, to preserve task-only clients.
+DECISION: Check current saved marks, event keys and errors, rather than replay the original preview, to preserve later edits and retry failures with unchanged keys.
+DECISION: Target fake failures by event ID, rather than fail the whole calendar, to prove mixed success and retries that skip successful steps.
+
+Checks:
+- PASS — `npx tsc --noEmit` and ESLint on all eight changed source/test/script files; corrected a test-only provenance type error and unused test bindings before these final clean runs.
+- RECOVERED — `npm run test:unit`: 1,152 passed, one existing non-JSON-input test timed out at 5000ms (also recorded in M01). Reran only that case with `npx vitest run --project unit lib/taskPlan.test.ts -t 'returns a plain error for non-JSON input'`: 1 passed, 256 skipped.
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 207 tests in 10 files, including seven new M02 cases for exact timed/all-day events, partial failure/retry, changed step/parent/company content, removed marks, same-key errors and ten-step concurrency. Local Firestore emulator and fake calendar only; Google clients are forbidden in the task-plan data tests.
+- PASS — `JAVA_TOOL_OPTIONS=-Xmx2g npm run mcp:smoke -- --only=protocol`: mixed calendar save/failure/retry cases and legacy follow-up cases; 115 database-preservation comparisons. The harness stopped its own servers.
+- PASS — `npm run build` with process permissions; no production app server or production-data tests ran.
+- PASS — saved-data diff review and `git diff --check`: no blocking findings; post-commit failures stay per step, task details and signing remain intact, and retries skip current events. Connector-only [no look]: no screen/browser checks. A full shared-code check is worth running and remains assigned to R1a; only M02 is ticked, and E1 was not started.
