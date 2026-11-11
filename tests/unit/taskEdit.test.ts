@@ -83,7 +83,7 @@ describe("field previews", () => {
   });
 
   it("can clear all Key points", () => {
-    expect(build({ keyPoints: "" }).tasks[0].after.keyPoints).toBe("");
+    expect(build({ keyPoints: "" }).tasks[0].after!.keyPoints).toBe("");
   });
 
   it("uses stored people spelling, including names found on tasks and supplied extra names", () => {
@@ -94,7 +94,7 @@ describe("field previews", () => {
 
   it("warns once per new spelling with a stable new-person ID", () => {
     const result = build({ responsible: [" New   Person "], informed: [{ name: "New Person" }] });
-    expect(result.tasks[0].after.responsible).toEqual(["New Person"]);
+    expect(result.tasks[0].after!.responsible).toEqual(["New Person"]);
     expect(result.warnings).toEqual([expect.objectContaining({ id: "new-person:New Person", code: "new-person" })]);
     expect(result.tasks[0].warnings).toHaveLength(1);
   });
@@ -110,7 +110,7 @@ describe("field previews", () => {
 
   it("keeps an existing finish date and warns before editing a done task", () => {
     const result = build({ status: "done", task: "Renamed" }, task("a", { completed: true, completedAt: 123 }));
-    expect(result.tasks[0].after.completedAt).toBe(123);
+    expect(result.tasks[0].after!.completedAt).toBe(123);
     expect(result.warnings).toEqual([expect.objectContaining({ id: "done-task:a", message: expect.stringContaining("Task a") })]);
   });
 
@@ -170,11 +170,11 @@ describe("field previews", () => {
     expect(build({ calendar: { startTime: "09:00", endTime: "10:00" } }).tasks[0].patch).toEqual({ calendar: { startTime: "09:00", endTime: "10:00" } });
     const marked = task("a", { calendar: { startTime: "09:00", endTime: "10:00" }, calendarSync: { link: "event" } });
     expect(build({ calendar: {} }, marked).tasks[0].patch).toEqual({ calendar: {} });
-    expect(build({ calendar: { startTime: "", endTime: "" } }, marked).tasks[0].after.calendar).toEqual({});
+    expect(build({ calendar: { startTime: "", endTime: "" } }, marked).tasks[0].after!.calendar).toEqual({});
     const removed = build({ calendar: null }, marked).tasks[0];
     expect(removed.patch).toEqual({ calendar: undefined });
     expect(removed.after).not.toHaveProperty("calendar");
-    expect(removed.after.calendarSync).toEqual(marked.calendarSync);
+    expect(removed.after!.calendarSync).toEqual(marked.calendarSync);
   });
 
   it("refuses both adding and removing calendar marks when calendar writes are off", () => {
@@ -249,6 +249,212 @@ describe("independent dates and company deadline warnings", () => {
     expect(codes(build({ startDate: "2026-11-13" }, current, { companies }))).not.toContain("company-deadline");
     expect(codes(build({ endDate: "2026-11-25", status: "done" }, current, { companies }))).not.toContain("company-deadline");
     expect(codes(build({ endDate: "2026-11-25" }, current, { companies: [{ ...companies[0], target: "2026-11-25" }] }))).not.toContain("company-deadline");
+  });
+});
+
+describe("move and delete input validation", () => {
+  it.each([
+    { taskId: "a", move: { toParentId: "parent" } },
+    { taskId: "a", move: { toParentId: null } },
+    { taskId: "a", move: { toParentId: "parent" }, set: { task: "New name" } },
+    { taskId: "a", delete: true },
+  ])("accepts moves, freeing, combined edits and deletes (%#)", (change) => {
+    expect(validateTaskChanges([change])).toEqual({ changes: [change], errors: [] });
+  });
+
+  it.each([
+    { move: null }, { move: [] }, { move: {} }, { move: { toParentId: undefined } },
+    { move: { toParentId: "parent", company: 7 } }, { move: { toParentId: 7 } },
+    { delete: false }, { delete: null }, { delete: undefined },
+    { delete: true, set: { task: "Rename" } }, { delete: true, set: undefined },
+    { delete: true, move: { toParentId: null } }, { delete: true, move: undefined },
+    { move: { toParentId: null }, set: {} }, { move: { toParentId: null }, set: null },
+  ])("rejects malformed operations and delete combinations (%#)", (operation) => {
+    expect(validateTaskChanges([{ taskId: "a", ...operation }]).changes).toBeNull();
+  });
+
+  it.each(["", " parent", "a/child", ".", "..", "__reserved__", "x".repeat(1501), "\ud800"])("validates destination document IDs (%#)", (toParentId) => {
+    expect(validateTaskChanges([{ taskId: "a", move: { toParentId } }]).changes).toBeNull();
+  });
+
+  it("keeps one operation per task even across moves and deletes", () => {
+    expect(validateTaskChanges([{ taskId: "a", move: { toParentId: null } }, { taskId: "a", delete: true }]).errors.join(" ")).toContain("one change per task");
+  });
+});
+
+describe("move previews", () => {
+  const oldParent = task("old", { linkedClientId: 7, taskGroup: "Old group" });
+  const parent = task("parent", { linkedClientId: 8, taskGroup: "New group" });
+  const child = task("child", { parentId: oldParent.id, linkedClientId: 7, taskGroup: "Old group", calendar: {} });
+  const move = (toParentId: string | null, tasks = [oldParent, parent, child]) =>
+    buildTaskChanges([{ taskId: child.id, move: { toParentId } }], context(tasks));
+
+  it("moves a subtask with exactly its new parent's company/group and warns about the company", () => {
+    const result = move(parent.id);
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0]).toMatchObject({ before: child, seen: taskSeen(child), patch: { parentId: parent.id, linkedClientId: 8, taskGroup: "New group" } });
+    expect(result.tasks[0].after).toEqual({ ...child, parentId: parent.id, linkedClientId: 8, taskGroup: "New group" });
+    expect(result.warnings).toEqual([expect.objectContaining({ id: "company-change:child", relatedTaskId: parent.id, message: expect.stringContaining("company 7 → company 8") })]);
+  });
+
+  it("clears company and group when the new main task has neither", () => {
+    const result = move(parent.id, [child, task(parent.id)]);
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks[0].patch).toEqual({ parentId: parent.id, linkedClientId: undefined, taskGroup: undefined });
+    expect(result.tasks[0].after).not.toHaveProperty("linkedClientId");
+    expect(result.tasks[0].after).not.toHaveProperty("taskGroup");
+    expect(codes(result)).toEqual(["company-change"]);
+  });
+
+  it("can nest a main task without children, with no company warning for a group-only change", () => {
+    const current = task(child.id, { linkedClientId: 8, taskGroup: "Old group" });
+    const result = move(parent.id, [current, parent]);
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks[0].after).toEqual({ ...current, parentId: parent.id, taskGroup: "New group" });
+    expect(result.warnings).toEqual([]);
+  });
+
+  it.each([
+    { completed: true }, { parkedAt: NOW }, { parkedAt: NOW, parkedUntil: "2026-11-12" },
+    { parentId: "old" }, { parentId: "missing" },
+  ])("rejects a done, parked or nested destination, including an orphan (%#)", (fields) => {
+    const result = move(parent.id, [child, oldParent, task(parent.id, fields)]);
+    expect(result.canWrite).toBe(false);
+    expect(result.errors.join(" ")).toContain("open, unparked, top-level");
+  });
+
+  it("accepts a main task whose parking expired today", () => {
+    expect(move(parent.id, [child, task(parent.id, { parkedAt: NOW, parkedUntil: TODAY })]).canWrite).toBe(true);
+  });
+
+  it("rejects missing destinations, self-parenting, and a main task with children", () => {
+    expect(move("missing").errors.join(" ")).toContain("not found");
+    expect(move(child.id).errors.join(" ")).toContain("under itself");
+    const result = move(parent.id, [parent, child, task("grandchild", { parentId: child.id })]);
+    expect(result.canWrite).toBe(false);
+    expect(result.errors.join(" ")).toContain("has subtasks");
+  });
+
+  it("frees a subtask while keeping all other stored fields, including its calendar mark", () => {
+    const result = move(null);
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks[0].patch).toEqual({ parentId: undefined });
+    const { parentId: _parent, ...freed } = child;
+    void _parent;
+    expect(result.tasks[0].after).toEqual(freed);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("combines a move and field edits in one patch and warns for the new company's deadline", () => {
+    const result = buildTaskChanges([{ taskId: child.id, move: { toParentId: parent.id }, set: { task: "Renamed", endDate: "2026-11-25" } }], context([parent, child], {
+      companies: [{ id: 7, company: "Old company", target: "2026-11-20" }, { id: 8, company: "New company", target: "2026-11-20" }],
+    }));
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].patch).toEqual({ task: "Renamed", endDate: "2026-11-25", parentId: parent.id, linkedClientId: 8, taskGroup: "New group" });
+    expect(result.warnings.map((warning) => warning.id)).toContain("company-deadline:child:8");
+    expect(result.warnings.map((warning) => warning.id)).not.toContain("company-deadline:child:7");
+  });
+
+  it("warns about an unchanged date outside the new main task's final range", () => {
+    const changes = [{ taskId: child.id, move: { toParentId: parent.id } }, { taskId: parent.id, set: { endDate: "2026-11-15" } }];
+    for (const input of [changes, [...changes].reverse()]) {
+      const result = buildTaskChanges(input, context([parent, child]));
+      expect(result.canWrite).toBe(true);
+      expect(result.warnings.map((warning) => warning.id)).toContain("outside-parent-range:child:parent");
+      expect(result.tasks.find((preview) => preview.taskId === child.id)!.patch).not.toHaveProperty("endDate");
+    }
+  });
+
+  it.each([
+    { set: { status: "done" } }, { set: { parked: { until: null } } },
+    { move: { toParentId: "old" } }, { delete: true },
+  ])("rejects a destination that another listed operation makes ineligible, in either order (%#)", (operation) => {
+    const changes = [{ taskId: child.id, move: { toParentId: parent.id } }, { taskId: parent.id, ...operation }];
+    for (const input of [changes, [...changes].reverse()]) {
+      const result = buildTaskChanges(input, context([oldParent, parent, child]));
+      expect(result.canWrite).toBe(false);
+      expect(result.errors.join(" ")).toContain("destination must remain");
+    }
+  });
+
+  it("rejects cycles and chains assembled from otherwise eligible main tasks", () => {
+    for (const destination of ["a", "c"]) {
+      const result = buildTaskChanges([{ taskId: "a", move: { toParentId: "b" } }, { taskId: "b", move: { toParentId: destination } }], context([task("a"), task("b"), task("c")]));
+      expect(result.canWrite).toBe(false);
+    }
+  });
+});
+
+describe("delete previews", () => {
+  const parent = task("parent");
+  const child = task("child", { parentId: parent.id, linkedClientId: 7, taskGroup: "Ops", completed: true, completedAt: 12, calendar: {} });
+  const other = task("other", { parentId: parent.id, parkedAt: NOW, parkedUntil: "2026-12-01" });
+
+  it("shows deletion and extra unlink patches with their own before/after and seen stamps, without mutations", () => {
+    const tasks = [parent, child, other, task("unrelated")];
+    const original = structuredClone(tasks);
+    const result = buildTaskChanges([{ taskId: parent.id, delete: true }], context(tasks));
+    expect(result.canWrite).toBe(true);
+    expect(result.changes).toEqual([{ taskId: parent.id, delete: true }]);
+    expect(result.tasks.map((preview) => preview.taskId)).toEqual([parent.id, child.id, other.id]);
+    expect(result.tasks[0]).toMatchObject({ before: parent, after: null, patch: {}, seen: taskSeen(parent) });
+    for (const current of [child, other]) {
+      const preview = result.tasks.find((entry) => entry.taskId === current.id)!;
+      expect(preview).toMatchObject({ before: current, patch: { parentId: undefined }, seen: taskSeen(current), warnings: [] });
+      expect(preview.after).not.toHaveProperty("parentId");
+      expect({ ...preview.after, parentId: parent.id }).toEqual(current);
+    }
+    expect(result.warnings).toEqual([expect.objectContaining({ id: "delete:parent", message: expect.stringContaining('"Task parent"') })]);
+    expect(result.warnings[0].message).toContain("frees 2 subtasks");
+    expect(tasks).toEqual(original);
+  });
+
+  it("deletes listed subtasks too, without an extra unlink or counting them as freed", () => {
+    const changes = [{ taskId: parent.id, delete: true }, { taskId: child.id, delete: true }];
+    for (const input of [changes, [...changes].reverse()]) {
+      const result = buildTaskChanges(input, context([parent, child, other]));
+      expect(result.canWrite).toBe(true);
+      expect(result.tasks).toHaveLength(3);
+      expect(result.tasks.find((preview) => preview.taskId === child.id)!.after).toBeNull();
+      expect(result.warnings.map((warning) => warning.id).sort()).toEqual(["delete:child", "delete:parent"]);
+      expect(result.warnings.find((warning) => warning.id === "delete:parent")!.message).toContain("frees 1 subtask");
+    }
+  });
+
+  it("combines a listed child's field edit with freeing it when its parent is deleted", () => {
+    const result = buildTaskChanges([{ taskId: parent.id, delete: true }, { taskId: child.id, set: { task: "Kept child" } }], context([parent, child]));
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks).toHaveLength(2);
+    const preview = result.tasks.find((entry) => entry.taskId === child.id)!;
+    expect(preview.patch).toEqual({ task: "Kept child", parentId: undefined });
+    expect(preview.after).toMatchObject({ task: "Kept child", linkedClientId: 7, taskGroup: "Ops" });
+    expect(preview.after).not.toHaveProperty("parentId");
+  });
+
+  it.each([null, "destination"])("preserves an explicit child move while deleting the old parent (%#)", (toParentId) => {
+    const changes = [{ taskId: parent.id, delete: true }, { taskId: child.id, move: { toParentId } }];
+    for (const input of [changes, [...changes].reverse()]) {
+      const result = buildTaskChanges(input, context([parent, child, task("destination")]));
+      expect(result.canWrite).toBe(true);
+      expect(result.tasks).toHaveLength(2);
+      expect(result.tasks.find((preview) => preview.taskId === child.id)!.after?.parentId).toBe(toParentId ?? undefined);
+      expect(result.warnings.find((warning) => warning.id === "delete:parent")!.message).toContain(`frees ${toParentId === null ? 1 : 0} subtask`);
+    }
+  });
+
+  it("can delete a lone subtask without changing its parent or siblings", () => {
+    const result = buildTaskChanges([{ taskId: child.id, delete: true }], context([parent, child, other]));
+    expect(result.canWrite).toBe(true);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].after).toBeNull();
+    expect(result.warnings).toEqual([expect.objectContaining({ id: "delete:child", message: expect.stringContaining("frees 0 subtasks") })]);
+  });
+
+  it("does not produce date-range warnings for deleted parents or children", () => {
+    const result = buildTaskChanges([{ taskId: parent.id, set: { endDate: "2026-11-15" } }, { taskId: child.id, delete: true }], context([parent, child]));
+    expect(codes(result)).toEqual(["delete"]);
   });
 });
 

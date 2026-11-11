@@ -30,7 +30,7 @@ is reachable until the owner sets one Vercel variable (O1).
 | ID | Task | Pick | Done |
 |---|---|---|---|
 | T01 | Field changes (name, dates, Key points, status, parking, people, calendar mark): before → after, warnings, `seen` stamp (pure). [T01](implementation/chat-task-edits.md#t01--field-changes-pure) [no look] | Sol xHigh | 2026-11-11 |
-| T02 | Moves and deletes: one-level rule, subtasks take the new main task's company, a main task's delete frees its subtasks (pure). [T02](implementation/chat-task-edits.md#t02--moves-and-deletes-pure) [no look] | Sol xHigh | |
+| T02 | Moves and deletes: one-level rule, subtasks take the new main task's company, a main task's delete frees its subtasks (pure). [T02](implementation/chat-task-edits.md#t02--moves-and-deletes-pure) [no look] | Sol xHigh | 2026-11-11 |
 | T03 | `find_tasks` and `preview_task_changes` connector tools, read only, behind `MCP_TASK_EDITS_ENABLED`. [T03](implementation/chat-task-edits.md#t03--find-and-preview-tools-read-only) [no look] | Sol xHigh | |
 | T04 | `apply_task_changes`: one transaction, refuses if a task changed since the preview, retry-safe, company follows a deadline, calendar sync after. [T04](implementation/chat-task-edits.md#t04--save-tool) [no look] | Sol Max | |
 | T05 | Chat guidance for the edit flow, and an edit section in the MCP smoke. [T05](implementation/chat-task-edits.md#t05--chat-guidance-and-mcp-smoke) [no look] | Sol Max | |

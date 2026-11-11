@@ -2,7 +2,9 @@
 import { createHash } from "node:crypto";
 import type { PipelineEntry } from "./clientTypes";
 import { isIsoDay } from "./dates";
+import { isParked } from "./parking";
 import { namesInUse } from "./people";
+import { newSubtask } from "./subtasks";
 import { validateCalendarTimes } from "./taskCalendar";
 import { statusPatch, withCompletedAt, type TaskStatus } from "./taskStatus";
 import type { InformedPerson, NewTask, Task } from "./types";
@@ -23,7 +25,9 @@ export interface TaskEditFields {
 
 export interface TaskChange {
   taskId: string;
-  set: TaskEditFields;
+  set?: TaskEditFields;
+  move?: { toParentId: string | null };
+  delete?: true;
 }
 
 export interface TaskChangesValidation {
@@ -54,19 +58,45 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
     return false;
   };
   const ids = new Set<string>();
+  const documentId = (value: unknown, path: string): value is string => {
+    if (!text(value, path)) return false;
+    const bytes = new TextEncoder().encode(value);
+    if (value !== value.trim() || value.includes("/") || [".", ".."].includes(value) || /^__.*__$/.test(value)
+      || bytes.length > 1500 || new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes) !== value) {
+      errors.push(`${path} must be a single valid task document ID.`);
+      return false;
+    }
+    return true;
+  };
   for (const [index, change] of input.entries()) {
     const path = `changes[${index}]`;
     if (!isRecord(change)) { errors.push(`${path} must be an object.`); continue; }
-    knownFields(change, ["taskId", "set"], path);
-    if (text(change.taskId, `${path}.taskId`)) {
+    knownFields(change, ["taskId", "set", "move", "delete"], path);
+    if (documentId(change.taskId, `${path}.taskId`)) {
       const id = change.taskId;
-      const bytes = new TextEncoder().encode(id);
-      if (id !== id.trim() || id.includes("/") || [".", ".."].includes(id) || /^__.*__$/.test(id)
-        || bytes.length > 1500 || new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes) !== id) {
-        errors.push(`${path}.taskId must be a single valid task document ID.`);
-      }
       if (ids.has(id)) errors.push(`${path}.taskId repeats task ${id}; use one change per task.`);
       ids.add(id);
+    }
+    const validated: TaskChange = { taskId: change.taskId as string };
+    if (Object.hasOwn(change, "delete")) {
+      if (change.delete !== true) errors.push(`${path}.delete must be true.`);
+      if (Object.hasOwn(change, "set") || Object.hasOwn(change, "move")) errors.push(`${path}.delete must be used alone, without set or move.`);
+      changes.push({ ...validated, delete: true });
+      continue;
+    }
+    if (Object.hasOwn(change, "move")) {
+      if (!isRecord(change.move)) errors.push(`${path}.move must be an object with toParentId.`);
+      else {
+        knownFields(change.move, ["toParentId"], `${path}.move`);
+        if (change.move.toParentId === null || documentId(change.move.toParentId, `${path}.move.toParentId`)) {
+          validated.move = { toParentId: change.move.toParentId };
+        }
+      }
+    }
+    if (!Object.hasOwn(change, "set")) {
+      if (!Object.hasOwn(change, "move")) errors.push(`${path} must contain set, move or delete.`);
+      changes.push(validated);
+      continue;
     }
     if (!isRecord(change.set) || Object.keys(change.set).length === 0) {
       errors.push(`${path}.set must contain at least one field change.`);
@@ -133,7 +163,7 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
         set.calendar = calendar;
       } else errors.push(`${fieldPath}.calendar must be a calendar mark object or null.`);
     }
-    changes.push({ taskId: change.taskId as string, set });
+    changes.push({ ...validated, set });
   }
   return { changes: errors.length ? null : changes, errors };
 }
@@ -157,7 +187,7 @@ export function taskSeen(task: Task): string {
 
 export interface TaskEditWarning {
   id: string;
-  code: "past-date" | "outside-parent-range" | "subtasks-outside-range" | "new-person" | "done-task" | "company-deadline";
+  code: "past-date" | "outside-parent-range" | "subtasks-outside-range" | "new-person" | "done-task" | "company-deadline" | "company-change" | "delete";
   message: string;
   taskId: string;
   relatedTaskId?: string;
@@ -176,7 +206,7 @@ export interface TaskEditContext {
 export interface TaskChangePreview {
   taskId: string;
   before: Task;
-  after: Task;
+  after: Task | null; // Null means delete; freed subtasks appear here too, with their own patch and seen stamp.
   patch: Partial<NewTask>; // Undefined clears a field through toTaskUpdate at the write boundary.
   seen: string;
   warnings: TaskEditWarning[];
@@ -188,6 +218,10 @@ export interface TaskChangesPreview {
   warnings: TaskEditWarning[];
   errors: string[];
   canWrite: boolean;
+}
+
+function patchedTask(task: Task, patch: Partial<NewTask>): Task {
+  return Object.fromEntries(Object.entries({ ...task, ...patch }).filter(([, value]) => value !== undefined)) as unknown as Task;
 }
 
 export function buildTaskChanges(input: unknown, context: TaskEditContext): TaskChangesPreview {
@@ -206,7 +240,11 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     const before = byId.get(change.taskId);
     if (!before) { errors.push(`Task ${change.taskId} was not found. Find the task again.`); continue; }
     const warnings: TaskEditWarning[] = [];
-    const set = change.set;
+    if (change.delete) {
+      result.tasks.push({ taskId: before.id, before: structuredClone(before), after: null, patch: {}, seen: taskSeen(before), warnings });
+      continue;
+    }
+    const set = change.set ?? {};
     const patch: Partial<NewTask> = {};
     const person = (name: string) => {
       const stored = names.get(nameKey(name));
@@ -231,7 +269,7 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
       if (!context.calendarOn) errors.push(`Task "${before.task}": the team calendar isn't connected; calendar changes are unavailable.`);
       patch.calendar = set.calendar ?? undefined;
     }
-    const after = Object.fromEntries(Object.entries({ ...before, ...patch }).filter(([, value]) => value !== undefined)) as unknown as Task;
+    const after = patchedTask(before, patch);
     const datesSet = set.startDate !== undefined || set.endDate !== undefined;
     if (datesSet && isIsoDay(after.startDate) && isIsoDay(after.endDate) && after.startDate > after.endDate) {
       errors.push(`Task "${before.task}": startDate must not be after endDate.`);
@@ -248,28 +286,91 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     }
     if (before.completed) warnings.push({ id: `done-task:${encodeURIComponent(before.id)}`, code: "done-task", taskId: before.id,
       message: `Task "${before.task}" is done. Confirm the changes to this finished task.` });
+    result.tasks.push({ taskId: before.id, before: structuredClone(before), after, patch, seen: taskSeen(before), warnings });
+  }
+
+  const previews = new Map(result.tasks.map((preview) => [preview.taskId, preview]));
+  const mergePatch = (preview: TaskChangePreview, patch: Partial<NewTask>) => {
+    Object.assign(preview.patch, patch);
+    preview.after = patchedTask(preview.before, preview.patch);
+  };
+  const companyName = (id: number | undefined) => id == null ? "Internal"
+    : context.companies.find((company) => company.id === id)?.company ?? `company ${id}`;
+  for (const change of changes) {
+    const preview = previews.get(change.taskId);
+    if (!preview || !change.move) continue;
+    const { before, warnings } = preview;
+    const parentId = change.move.toParentId;
+    if (parentId === null) { mergePatch(preview, { parentId: undefined }); continue; }
+    const parent = byId.get(parentId);
+    if (!parent) { errors.push(`Main task ${parentId} was not found. Find the main task again.`); continue; }
+    if (parent.id === before.id) errors.push(`Task "${before.task}" cannot move under itself.`);
+    if (parent.parentId != null || parent.completed || isParked(parent, context.today)) {
+      errors.push(`Task "${parent.task}" must be an open, unparked, top-level main task (even if its parent is missing).`);
+    }
+    if (context.tasks.some((task) => task.parentId === before.id)) errors.push(`Task "${before.task}" has subtasks and cannot become a subtask; only one level is allowed.`);
+    const { linkedClientId, taskGroup } = newSubtask(parent, before.task, before.order);
+    mergePatch(preview, { parentId, linkedClientId, taskGroup });
+    if ((before.linkedClientId ?? null) !== (linkedClientId ?? null)) warnings.push({
+      id: `company-change:${encodeURIComponent(before.id)}`, code: "company-change", taskId: before.id, relatedTaskId: parentId,
+      message: `Task "${before.task}" takes main task "${parent.task}"'s company: ${companyName(before.linkedClientId)} → ${companyName(linkedClientId)}. Confirm this company change.`,
+    });
+  }
+
+  const next = new Map(byId);
+  for (const preview of result.tasks) {
+    if (preview.after) next.set(preview.taskId, preview.after);
+    else next.delete(preview.taskId);
+  }
+  // A listed edit combines with the unlink; an explicit move to another parent takes precedence.
+  for (const deleted of result.tasks.filter((preview) => preview.after === null)) {
+    let freed = 0;
+    for (const child of [...next.values()].filter((task) => task.parentId === deleted.taskId).sort((a, b) => a.id.localeCompare(b.id))) {
+      let preview = previews.get(child.id);
+      if (!preview) {
+        const before = byId.get(child.id)!;
+        preview = { taskId: child.id, before: structuredClone(before), after: child, patch: {}, seen: taskSeen(before), warnings: [] };
+        previews.set(child.id, preview);
+        result.tasks.push(preview);
+      }
+      mergePatch(preview, { parentId: undefined });
+      next.set(child.id, preview.after!);
+      freed++;
+    }
+    // An explicitly freed child was already unlinked above, but belongs in the delete's warning count.
+    freed += changes.filter((change) => change.move?.toParentId === null && byId.get(change.taskId)?.parentId === deleted.taskId).length;
+    deleted.warnings.push({ id: `delete:${encodeURIComponent(deleted.taskId)}`, code: "delete", taskId: deleted.taskId,
+      message: `Delete task "${deleted.before.task}" (${deleted.taskId}). This frees ${freed} subtask${freed === 1 ? "" : "s"} as tasks of their own. There is no Undo; confirm this task by name.`,
+    });
+  }
+  // Check the final destinations too: another listed change may delete, nest, finish or park a parent.
+  for (const change of changes) {
+    if (!change.move || change.move.toParentId === null) continue;
+    const parent = next.get(change.move.toParentId);
+    if (!parent || parent.parentId != null || parent.completed || isParked(parent, context.today)) {
+      errors.push(`Task ${change.taskId}: the destination must remain an open, unparked, top-level main task after all changes.`);
+    }
+  }
+
+  // Compare the final relationships and requested ranges, even when both a parent and child are listed.
+  const outside = (child: Task, parent: Task) => [child.startDate, child.endDate].some((date) =>
+    isIsoDay(date) && ((isIsoDay(parent.startDate) && date < parent.startDate) || (isIsoDay(parent.endDate) && date > parent.endDate)));
+  for (const preview of result.tasks) {
+    const { before, after, warnings } = preview;
+    if (!after) continue;
     const company = after.linkedClientId == null ? undefined : context.companies.find((entry) => entry.id === after.linkedClientId);
     if (company && !after.completed && after.endDate !== before.endDate && company.target !== after.endDate) warnings.push({
       id: `company-deadline:${encodeURIComponent(before.id)}:${company.id}`, code: "company-deadline", taskId: before.id,
       message: `Company "${company.company}" target will follow this task's deadline: ${company.target || "no target"} → ${after.endDate}. Its last action follows this task's last action when present; other tasks keep their dates.`,
     });
-    result.tasks.push({ taskId: before.id, before: structuredClone(before), after, patch, seen: taskSeen(before), warnings });
-  }
-
-  // Compare the final requested ranges, even when both a parent and its child are listed.
-  const next = new Map(byId);
-  for (const preview of result.tasks) next.set(preview.taskId, preview.after);
-  const outside = (child: Task, parent: Task) => [child.startDate, child.endDate].some((date) =>
-    isIsoDay(date) && ((isIsoDay(parent.startDate) && date < parent.startDate) || (isIsoDay(parent.endDate) && date > parent.endDate)));
-  for (const preview of result.tasks) {
-    const { before, after, warnings } = preview;
-    if (before.startDate === after.startDate && before.endDate === after.endDate) continue;
+    const datesChanged = before.startDate !== after.startDate || before.endDate !== after.endDate;
+    if (!datesChanged && before.parentId === after.parentId) continue;
     const parent = after.parentId ? next.get(after.parentId) : undefined;
     if (parent && parent.id !== after.id && outside(after, parent)) warnings.push({
       id: `outside-parent-range:${encodeURIComponent(after.id)}:${encodeURIComponent(parent.id)}`, code: "outside-parent-range", taskId: after.id, relatedTaskId: parent.id,
       message: `Task "${after.task}" (${after.startDate} to ${after.endDate}) falls outside main task "${parent.task}" (${parent.startDate || "no start"} to ${parent.endDate || "no end"}). Only listed tasks change.`,
     });
-    const children = [...next.values()].filter((task) => task.id !== after.id && task.parentId === after.id).sort((a, b) => a.id.localeCompare(b.id));
+    const children = datesChanged ? [...next.values()].filter((task) => task.id !== after.id && task.parentId === after.id).sort((a, b) => a.id.localeCompare(b.id)) : [];
     for (const child of children) {
       if (outside(child, after)) warnings.push({
         id: `subtasks-outside-range:${encodeURIComponent(after.id)}:${encodeURIComponent(child.id)}`, code: "subtasks-outside-range", taskId: after.id, relatedTaskId: child.id,
