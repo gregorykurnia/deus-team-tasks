@@ -178,9 +178,25 @@ test.describe("app calendar flow", () => {
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await page.evaluate(() => document.fonts.ready);
     const s = sheet(page, "Task");
+    await s.evaluate((el) => Promise.all(el.getAnimations({ subtree: true })
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => {}))));
     const block = s.getByRole("button", { name: "Put on the team calendar" }).locator("xpath=../..");
-    await block.scrollIntoViewIfNeeded();
-    const faults = await s.evaluate((dialog) => {
+    // Start at a complete labelled field instead of letting the browser pin the status to the footer or
+    // leaving the Task type/Priority controls at the top after their labels have scrolled out of sight.
+    await s.getByRole("group", { name: "Touch point" }).evaluate((group) => {
+      const field = group.parentElement!;
+      let body = field.parentElement!;
+      while (getComputedStyle(body).overflowY !== "auto") body = body.parentElement!;
+      body.scrollTop += field.getBoundingClientRect().top - body.getBoundingClientRect().top - 12;
+    });
+    const scrollport = await block.evaluate((el) => {
+      let body = el.parentElement!;
+      while (getComputedStyle(body).overflowY !== "auto") body = body.parentElement!;
+      const b = body.getBoundingClientRect();
+      return { top: b.top, bottom: b.bottom };
+    });
+    const faults = await s.evaluate((dialog, port) => {
       const issues: string[] = [];
       const targets = dialog.querySelectorAll<HTMLElement>("button, a, input, textarea, label, [role=status] span");
       for (const el of targets) {
@@ -196,20 +212,66 @@ test.describe("app calendar flow", () => {
         }
         if (b.left < 0 || b.right > innerWidth) issues.push(`outside viewport: ${el.textContent}`);
         if (el.scrollWidth > el.clientWidth + 1) issues.push(`clipped: ${el.textContent || el.getAttribute("aria-label")}`);
+        if ((el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)
+          && b.top >= port.top && b.bottom <= port.bottom) {
+          const label = el.labels?.[0];
+          if (label && !label.classList.contains("sr-only") && label.getBoundingClientRect().top < port.top)
+            issues.push(`label scrolled away from visible control: ${label.textContent}`);
+        }
       }
       if ([...document.images].some((el) => el.getClientRects().length && !el.naturalWidth)) issues.push("unloaded image");
       return issues;
-    });
+    }, scrollport);
     expect(faults, "visible fields, labels and calendar actions").toEqual([]);
+    const spacing = await s.evaluate((dialog, failure) => {
+      const phrases = ["A company", "Internal work", "To Do", "In Progress", "Last action", "Add task type",
+        "blank for all day", "one or more", "Key points", "their part"];
+      if (failure) phrases.push("The team calendar isn’t up to date.");
+      const walker = document.createTreeWalker(dialog, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+      return phrases.map((phrase) => {
+        const node = nodes.find((text) => text.data.includes(phrase) && !text.parentElement?.closest("option, .sr-only"));
+        if (!node) return { phrase, minGap: 0 };
+        const widths: number[] = [];
+        let lineBreaks = 0;
+        const start = node.data.indexOf(phrase);
+        for (let i = 0; i < phrase.length; i++) {
+          if (phrase[i] !== " ") continue;
+          const range = document.createRange();
+          range.setStart(node, start + i);
+          range.setEnd(node, start + i + 1);
+          const width = range.getBoundingClientRect().width;
+          // A wrapping space has no painted width: the next word is separated by a new line instead.
+          if (width === 0) {
+            range.setStart(node, start + i - 1);
+            range.setEnd(node, start + i);
+            const before = range.getBoundingClientRect();
+            range.setStart(node, start + i + 1);
+            range.setEnd(node, start + i + 2);
+            if (Math.abs(before.y - range.getBoundingClientRect().y) > 1) {
+              lineBreaks++;
+              continue;
+            }
+          }
+          widths.push(width);
+        }
+        return { phrase, minGap: Math.min(...widths), lineBreaks };
+      });
+    }, name === "failure");
+    expect(spacing.filter(({ minGap }) => minGap < 2), "flagged phrases contain rendered word gaps of at least 2px").toEqual([]);
+    console.info(`Word gaps ${info.project.name}/${name}: ${Math.min(...spacing.map(({ minGap }) => minGap)).toFixed(2)}px minimum; ${spacing.reduce((total, item) => total + (item.lineBreaks ?? 0), 0)} natural wraps`);
     const b = (await block.boundingBox())!;
     const footer = (await s.getByRole("button", { name: "Save changes" }).boundingBox())!;
+    const panel = (await s.boundingBox())!;
     expect(b.y).toBeGreaterThan(0);
+    expect(scrollport.bottom - (b.y + b.height), "calendar status has breathing room above the scroll edge").toBeGreaterThanOrEqual(12);
     expect(b.y + b.height).toBeLessThanOrEqual(footer.y);
     if (isMobile) expect((await s.boundingBox())!.width).toBeLessThanOrEqual(390);
     const path = `test-results/calendar-events/c05/${info.project.name}/${name}`;
     await page.screenshot({ path: `${path}.png`, animations: "disabled" });
     await page.screenshot({ path: `${path}-detail.png`, animations: "disabled", clip: {
-      x: Math.max(0, b.x - 8), y: b.y - 8, width: b.width + 16,
+      x: panel.x, y: b.y - 8, width: panel.width,
       height: Math.min(page.viewportSize()!.height, footer.y + footer.height + 16) - b.y + 8,
     } });
   }

@@ -130,51 +130,51 @@ the old crops.
 
 ## C05 — App flow on desktop and phone
 
-2026-11-11. Added browser coverage in `tests/smoke/calendar-events.spec.ts`; no application code changed.
-The flow starts at a main task's Subtasks section, creates and opens a subtask, puts it on the calendar all day,
-adds Jakarta times and changes its name, changes its deadline through the row editor and uses that edit's Undo,
-switches the calendar off/on, then deletes the marked task. Each transition checks the fake event, including its
-stable ID, exclusive all-day end, cancellation, parent description and absence of attendees. A separate flow forces
-a fake 503, proves the saved task survives, retries through the sheet, then deletes the main task and proves the
-freed subtask retains the same event without the main task's name. Both cases run on desktop and phone (`@phone`).
+2026-11-11. Initial completion: `ddf0c3d`; fresh-eyes review corrected the capture framing and added geometric/text checks. Application code and saved data did not change. The original C05 build remains valid; this follow-up changes only tests, documentation and pictures.
 
-Decisions:
-- Use the row's deadline editor for edit Undo rather than adding Undo to sheet saves: this is the app's existing Undo flow.
-- Inspect the emulator's serialized fake event rather than mocking the sync response: this proves browser → task write → sync route → event.
-- Keep full viewport captures and original-size calendar/footer crops rather than resizing: the crops expose text ends and footer boundaries.
+The spec proves subtask creation → all-day event → timed event/name edit → deadline edit and Undo → off/on → deletion, checking the fake event after every transition. A second flow forces a fake 503, retries through the sheet, then deletes the parent and proves the freed subtask keeps the same event without the parent description. Both run on desktop and phone; the row editor supplies the app's existing edit Undo. No test calls Google or production.
+
+Decisions (the checker’s 01–04 images are copies of the original desktop failure/freed-task captures):
+- DECISION: Anchor captures at the complete Touch point field and include the full sheet width instead of scrolling only the calendar block into view, so labels, status corners and action margins can be judged together.
+- DECISION: not fixed the missing-space claims in 01, 02, 03 and 04, because every flagged phrase contains ordinary spaces and measured same-line gaps are at least 2px; the phone warning has one natural line wrap. No word-spacing override is justified by these pictures.
+- DECISION: not fixed Save changes or the Close focus ring extending beyond field edges in 01, 02, 03 and 04, because the approved prototype intentionally has 24px body gutters versus 18px action gutters on desktop, and guide §4.1 specifies an external 2.5px focus ring with 2px offset. The cramped crop margin was fixed. Both approved looks are recorded in `docs/approved-looks.md`.
+- DECISION: not fixed the absent header divider in 03, because the approved prototype has a plain fixed head above an independently scrolling body (guide §4.11). The misleading frame with unlabelled Task type/Priority controls was fixed by starting at a complete labelled section; the approved scroll behavior is recorded in `docs/approved-looks.md`.
 
 Faults and corrections:
-- First lifecycle run timed out at `getByLabel('Start', { exact: true })`: an unmarked task's label includes "optional". Enable the calendar switch before filling the required dates.
-- Next run failed strict matching because both the date dialog and input are labelled "Deadline". Scope the input and Save button to that dialog.
-- Two tool sessions ended with exit 143 before completing their specs. Stop only their test-port owner PIDs; complete the affected checks in a detached process with persisted exit codes.
-- The phone audit initially reported `clipped: Description`: that is the deliberately one-pixel `.sr-only` label, not visible text. Exclude screen-reader-only labels from the visual audit and require actual centre-point hits for visible controls.
-- A phone retry caught a navigation race in the test: Delete was pressed on the child before the parent sheet rendered. Wait for the parent description before pressing Delete; repeat only that phone case five times.
-- Picture hunt: calendar labels, native time values, status words, retry/link targets and footer buttons have no clipped text or overlap. The fixed sheet header/footer intentionally bound a scrolling form; some surrounding fields continue outside that scrollport. No product layout repair was indicated.
+- The original warning extended 0.47px past the body’s scroll edge: the new minimum-12px clearance assertion failed before the framing change. Retakes now keep the whole status above that edge, with complete labels at the top and the action gutters inside the detail crop.
+- The first spacing audit measured a hidden native dropdown option instead of the visible Add task type button; it then treated a natural wrapping space as zero-width missing text. Exclude option/screen-reader-only text and allow a line break only when adjacent glyphs actually occupy different lines; retain the 2px same-line threshold.
+- One existing unit case (`lib/taskPlan.test.ts`, “returns a plain error for non-JSON input”) timed out at 5000ms during concurrent checks. It passed five isolated reruns after the browser stopped; no timeout or application code was changed.
+- Original C05 test corrections (before `ddf0c3d`): enable the switch before selecting the required Start label, scope Deadline to its editor, exclude screen-reader-only labels from visual overflow checks, and await the parent description before Delete. Their evidence remains in that commit.
 
-Captures: `test-results/calendar-events/c05/{desktop,phone}/`, 1440×900 and 390×844. Each `-detail.png` is an
-unscaled crop from the same state, spanning the calendar block to the footer; it was also opened at original size.
+Original copies opened at full resolution, before judgment:
+LOOKED: /tmp/autorun-fresh-lTBmEx/01-failure.png · White drawer over blurred Tasks; amber warning meets the footer boundary, with cramped lower corners; complete warning/retry words and buttons remain visible, action edges extend beyond fields.
+LOOKED: /tmp/autorun-fresh-lTBmEx/02-failure-detail.png · Warning rests directly on the footer line; Save nearly reaches the crop edge, while its label and warning text remain whole; small word gaps are visible.
+LOOKED: /tmp/autorun-fresh-lTBmEx/03-freed-task.png · Fixed title sits over unlabelled Task type/Priority controls whose labels scrolled above it; green status is whole, Key points continues under the footer boundary, actions remain in front.
+LOOKED: /tmp/autorun-fresh-lTBmEx/04-freed-task-detail.png · Calendar and people fields sit over the footer; Key points continues past the scroll edge and Save nearly touches the crop’s right edge, with complete action text.
 
-LOOKED: desktop/all-day.png · White drawer over blurred Tasks; blank time fields sit above the green status and fixed footer, no calendar text cut off or covered; earlier form fields are scrolled above the head.
-LOOKED: desktop/all-day-detail.png · Switch, two blank fields and green status rest above the footer's four buttons; crop edges spare every calendar word and button.
-LOOKED: desktop/timed.png · 09:30 AM and 11:00 AM sit side by side in whole inputs above green status; the footer stays in front of the scrolling form, all calendar and action text readable.
-LOOKED: desktop/timed-detail.png · Time values, clock/clear icons, green status and open link fit their boxes; four footer buttons sit below with no cover or clipping.
-LOOKED: desktop/failure.png · Amber status sits below blank time fields and above the footer; Try again is wholly inside it, drawer edges clear, background deliberately blurred.
-LOOKED: desktop/failure-detail.png · Alert icon and complete warning precede the retry button; the footer rests directly below the status, with no overlapping text or buttons.
-LOOKED: desktop/freed-task.png · Calendar fields and green status sit above Responsible/Informed; the footer covers the scrollport boundary at Key points, while calendar words and actions remain whole.
-LOOKED: desktop/freed-task-detail.png · Green status and open link clear the people fields; Key points continues beyond the scroll edge above the fixed footer, calendar and button text intact.
-LOOKED: phone/all-day.png · Bottom sheet spans the phone; dates sit above the switch, blank time fields stack above green status; footer has three actions above full-width Save changes, Informed continues past the scroll edge.
-LOOKED: phone/all-day-detail.png · Stacked blank times and green status fit between side edges; people fields continue toward the footer, whose Save row stays separate and fully readable.
-LOOKED: phone/timed.png · 09:30 AM and 11:00 AM stack in complete fields, status/link below; fixed two-row footer is clear, only the lower Informed field meets the scrolling boundary.
-LOOKED: phone/timed-detail.png · Native time icons and values fit inside the two stacked boxes; status and footer labels are whole, with the footer in front of the form's scrolling edge.
-LOOKED: phone/failure.png · Amber warning wraps into two whole lines beside Try again, above the people fields; stacked times and two-row footer stay inside the phone, Informed continues at the scroll edge.
-LOOKED: phone/failure-detail.png · Warning icon, wrapped words and retry button occupy the same amber strip without overlap; footer buttons and full-width Save changes remain whole below the scrolling form.
-LOOKED: phone/freed-task.png · White bottom sheet over blurred Tasks; stacked blank times sit above green status/open link, then people fields; only Informed continues past the footer's scrolling boundary, calendar and action text complete.
-LOOKED: phone/freed-task-detail.png · Switch, stacked times and green status fit the crop's edges; the footer sits in front of the form's scroll edge with three complete actions above Save changes.
+Retakes in `test-results/calendar-events/c05/`: 1440×900 desktop and 390×844 phone; each `-detail.png` is an unscaled crop at the full sheet width (540px/390px). All 16 retakes were opened at original size. Earlier fields intentionally scroll above the fixed head; the focused sheet sits in front of the blurred Tasks page.
+
+LOOKED: desktop/all-day.png · Touch point starts with its whole label; blank times and green status sit above whole people/Key points fields, with a gap before the footer and readable actions.
+LOOKED: desktop/all-day-detail.png · Switch, blank times, green status and full people/notes fields precede the footer; all four buttons have room inside the widened side edges.
+LOOKED: desktop/timed.png · Whole labelled section above 09:30 AM/11:00 AM side-by-side fields; green status clears the people fields, and Key points ends above the footer.
+LOOKED: desktop/timed-detail.png · Values and clock/clear icons fit both boxes; fields remain above the footer, and Save retains a visible right gutter.
+LOOKED: desktop/failure.png · Complete Touch point label above dates and times; rounded amber warning sits well above the footer, with whole words and Try again; people and notes fields are whole.
+LOOKED: desktop/failure-detail.png · Warning corners are clear of the footer, people/notes fields separate them; retry and all footer actions fit inside the full sheet-width crop.
+LOOKED: desktop/freed-task.png · Whole labelled section above green status/open link; people and notes boxes end above the footer, with no unlabelled select or priority control under the head.
+LOOKED: desktop/freed-task-detail.png · Green status and full people/notes fields sit above the footer; all action labels are whole and the wider crop retains their side margins.
+LOOKED: phone/all-day.png · Whole Touch point label above wrapped chips, dates and stacked blank times; green status clears the two-row footer; Responsible continues at the scroll boundary.
+LOOKED: phone/all-day-detail.png · Stacked fields and green status fit the full phone width; the Responsible box continues beyond the scroll edge, while three footer actions and Save remain whole in front.
+LOOKED: phone/timed.png · 09:30 AM/11:00 AM stack below whole date labels; green status/link clears the footer, with Responsible continuing below the scrolling boundary.
+LOOKED: phone/timed-detail.png · Native values/icons fit their stacked boxes; green status and complete footer labels fit the side edges, with the lower form continuing under the footer boundary.
+LOOKED: phone/failure.png · Whole Touch point/date/time labels lead to a two-line warning beside Try again; amber corners are clear of the footer and all calendar/action words are readable.
+LOOKED: phone/failure-detail.png · Warning wraps naturally inside amber beside the whole retry button; status clears the footer, whose complete actions sit in front of the lower form’s scroll boundary.
+LOOKED: phone/freed-task.png · Green status/open link sits below stacked blank times; whole section labels remain above it, and the lower Responsible field continues past the footer boundary.
+LOOKED: phone/freed-task-detail.png · Switch, times and green status fit the side edges; the lower form continues beyond the scrollport, with whole three-action and Save rows in front.
 
 Checks:
-- PASS — `npx tsc --noEmit`; `npx eslint tests/smoke/calendar-events.spec.ts` after the final test fix (`types=0 lint=0`).
-- PASS — `npm run test:unit -- --reporter=dot`: 45 files, 1,115 tests.
-- PASS — `npm run build` (compiled, type-checked and generated routes; exit 0).
-- PASS — `npx playwright test tests/smoke/task-sheet.spec.ts --output=/tmp/c05-sheet-pw`: 16/16, including phone.
-- PASS — all 9 distinct calendar browser cases across scoped runs: initial desktop C04 cases plus failure/recovery; phone C04 cases (`--project=phone --grep-invert 'subtask all day'`); final `--grep 'app calendar flow'` passed 3/4 before the parent-navigation race fix, followed by `--project=phone --grep 'a calendar failure' --repeat-each=5 --output=/tmp/c05-retry-pw` passing 5/5. Both lifecycle cases and both failure/recovery/freeing cases now pass. Tests use only the emulator and fake calendar; no application data implementation changed, so `test:data` was not needed.
-- PASS — 8 viewport PNGs at the exact required sizes and 8 unscaled detail crops, all opened at original size; visible-text/covered-control audit, no console errors or sideways scroll; ports 3100 and 8180 free after the checks.
+- EXPECTED FAIL before the fix — desktop failure case with the new ≥12px status clearance check: received `-0.46875`; the retakes pass it.
+- PASS — final `npx tsc --noEmit`; `npx eslint tests/smoke/calendar-events.spec.ts` (`types=0 lint=0`).
+- RECOVERED — `npm run test:unit -- --reporter=dot`: 1,114 passed, one 5000ms timeout. `npx vitest run --project unit lib/taskPlan.test.ts -t 'returns a plain error for non-JSON input'` passed 5/5 isolated runs; all 1,115 cases have passing evidence.
+- PASS — `npx playwright test tests/smoke/task-sheet.spec.ts --output=/tmp/c05-look-sheet-pw`: 16/16.
+- PASS — C05 `--grep 'app calendar flow' --last-failed --output=/tmp/c05-look-pw` passed desktop lifecycle/recovery and phone lifecycle; after correcting the wrap measurement, `--project=phone --grep 'a calendar failure' --last-failed --output=/tmp/c05-look-pw` passed the remaining case. All four flows pass; same-line word gaps measure ≥2px and the phone warning has one natural wrap.
+- PASS — 8 viewport PNGs at the exact required sizes plus 8 full-width unscaled crops; original-size look check, whole-label/visible-control/clearance audits, no console errors or sideways scroll; ports 3100 and 8180 free afterwards. No Firestore implementation changed, so `test:data` was not needed.
