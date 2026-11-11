@@ -112,3 +112,37 @@ Checks:
 - `npx playwright test tests/smoke/chat-task-edits.spec.ts`, then `--last-failed` only — both distinct desktop scenarios passed. Initial edit-scenario failures were `getByRole('dialog', { name: 'Task', exact: true })` not finding the existing `Finished task` sheet, then `expect(await events()).toEqual([])` finding the fake calendar's cancellation tombstone. Corrected those test assumptions; hierarchy passed in the original run and edit/calendar passed in the final rerun (1 test, 21.2s).
 
 Diff review checked the HTTP-only save boundary, emulator/fake-calendar isolation, no-write previews, task-sheet assertions, unchanged unlisted task dates and duplicate-free event update/removal. Owned test servers stopped; restored historical tracked test artifacts cleared by Playwright. No screenshots or phone-layout checks: no screen changes (`[no look]`). Full smoke/a11y/compare remain assigned to R1a, which was not started. No production data/settings changed; activation remains O1.
+
+## R1a — Full check run (2026-11-11)
+
+Failure inventory: no failed smoke tests, accessibility violations, accessibility setup errors, compare capture failures or compare setup errors. No fixes made; each requested slow check ran once. The comparator's text differences below remain for R1b to triage; they are not confirmed product faults.
+
+Checks:
+
+- `npm run test:smoke -- --reporter=list,json --output=/tmp/deus-r1a-bInwJT/smoke-artifacts` (with `PLAYWRIGHT_JSON_OUTPUT_NAME=/tmp/deus-r1a-bInwJT/smoke.json`) — 399 passed, 9 skipped, 0 failed/flaky; all 408 scheduled tests, desktop/phone/Jakarta, 29.0 minutes.
+- `npm run a11y` — 284 desktop/phone state runs, 0 failed states, 0 setup errors, 0 rule violations. Used the script's default `--distinct` scope, without stress states.
+- `npm run compare -- --only 'task-details-|156-company-record-task-then-open-company' --force` — all 11 mapped task-sheet states at desktop/phone (22 pairs), including stress and the alternate entry point; 0 capture failures, 0 setup errors. Text differences in all 22 pairs, detailed below.
+- `npx tsc --noEmit` — passed, no diagnostics.
+- `npm run test:unit` — 46 files / 1,358 tests passed.
+
+Compare observations (source: `scripts/compare/run.mjs:170`): every pair reached the comparator's 40-line cap on **each** of `onlyProto` and `onlyNew`; these are capped inventories, not complete counts of differences. The tool compares whole-page text and generates pictures; it has no pixel-difference pass/fail threshold. Each row below covers both viewports and records their first prototype-only → app-only text. These observations are assigned to R1b for scoped triage; no wording or baseline changes are approved here.
+
+| State ID | Desktop first difference | Phone first difference |
+|---|---|---|
+| 059-task-details-quick | Team desk → DEUS Team Space | Q4 → QP |
+| 060-task-details-all-details | Team desk → DEUS Team Space | Q4 → QP |
+| 061-task-details-open | Team desk → DEUS Team Space | Q4 → QP |
+| 062-task-details-company | Team desk → DEUS Team Space | Q4 → QP |
+| 063-task-details-internal | Team desk → DEUS Team Space | Q4 → QP |
+| 064-task-details-finished | Team desk → DEUS Team Space | Q4 → QP |
+| 065-task-details-stress | Team desk → DEUS Team Space | G3 → EV |
+| 066-task-details-suggestions | Team desk → DEUS Team Space | Q4 → QP |
+| 067-task-details-new-name | Team desk → DEUS Team Space | Q4 → QP |
+| 068-task-details-confirm | Team desk → DEUS Team Space | Q4 → QP |
+| 156-company-record-task-then-open-company | Team desk → DEUS Team Space | Q4 → QP |
+
+DECISION: Force fresh captures for all 11 mapped task-sheet states rather than reuse cached pictures, so the comparison reflects this run.
+
+Raw local evidence: `/tmp/deus-r1a-bInwJT/` holds command logs/exit codes, the smoke JSON/artifacts, the a11y JSON and the 22-entry scoped `compare.json`. Generated pictures and reports remain in ignored `redesign/compare/` and `redesign/a11y/`. No visual inspection was performed (`[no look]`), so this does not claim visual parity with the prototype.
+
+ESLint is not applicable to these Markdown-only changes. No Firestore-I/O code changed, so no additional data/MCP run was required. Browser checks used `next dev` with the emulator and fake calendar, never a production build or Google. Owned test ports 3100/8180/4100 were closed after the runs. Smoke-generated changes to 13 historical tracked PNGs were discarded; they are not fixes or deliverables. No production data/settings changed. Only R1a is ticked; R1b and R1 were not started.
