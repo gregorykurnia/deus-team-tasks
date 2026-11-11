@@ -209,8 +209,12 @@ export async function applyTaskChanges(
       if (row.after) transaction.update(ref, updateFields(row.patch));
       else transaction.delete(ref);
     }
+    // A renamed main task changes its marked subtasks' event descriptions, as requestCalendarContextSync does in the app.
+    const renamed = new Set(preview.tasks.filter((row) => row.after && row.after.task !== row.before.task).map((row) => row.taskId));
+    const listed = new Set(preview.tasks.map((row) => row.taskId));
+    const dependents = tasks.filter((task) => task.calendar && task.parentId && renamed.has(task.parentId) && !listed.has(task.id)).map((task) => task.id);
     return { alreadySaved, rows: preview.tasks, ids: preview.tasks.map((row) => row.taskId),
-      calendarIds: preview.tasks.filter((row) => row.before.calendar || row.after?.calendar || row.before.calendarSync).map((row) => row.taskId),
+      calendarIds: [...preview.tasks.filter((row) => row.before.calendar || row.after?.calendar || row.before.calendarSync).map((row) => row.taskId), ...dependents],
       byId: new Map(preview.tasks.filter((row) => row.after).map((row) => [row.taskId, row.after!])) };
   });
   if (!written.alreadySaved) {

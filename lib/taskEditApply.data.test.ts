@@ -261,6 +261,16 @@ describe("T04 calendar after saving", () => {
     expect((await readAll("tasks", "tasks")).some((task) => task.id === freed.id)).toBe(false);
   });
 
+  it("updates unlisted subtasks' event descriptions when chat renames their main task, as the app does (R1)", async () => {
+    await seed("tasks", "tasks", [{ ...child, calendar: {} }]);
+    await syncTaskCalendar(child.id, ORIGIN);
+    const changes: TaskChange[] = [{ taskId: parent.id, set: { task: "Renamed main task" } }];
+    const result = await save(changes, await previewTaskChanges(changes));
+    expect(result.tasks.map((row) => row.taskId)).toEqual([parent.id]);
+    expect((await event(child.id)).description).toContain("Renamed main task");
+    expect(await readFields("tasks", `tasks/${child.id}`)).toMatchObject({ task: child.task, endDate: child.endDate });
+  });
+
   it("updates a moved subtask's event description to its new main task", async () => {
     await seed("tasks", "tasks", [{ ...child, calendar: {} }]);
     await syncTaskCalendar(child.id, ORIGIN);

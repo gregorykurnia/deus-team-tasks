@@ -321,3 +321,57 @@ LOOKED: minimal-desktop.png · The drawer floats inside its outer gutter above t
 LOOKED: minimal-phone.png · The sheet rests on the screen base with a centred handle and visible Close; its title/company fit, the group value ellipsizes cleanly, and the full-width Save row stays clear below the scrolling form.
 LOOKED: 065-desktop.png · The drawer sits above the blurred stress list; the complete description and Prospect work are readable, the company name ellipsizes, and the next body label meets the scroll cutoff above a clear footer.
 LOOKED: 065-phone.png · The sheet fits all frame edges and sits on the bottom; description, kind and company card appear above unobscured actions, with an ellipsized company name and example but complete instruction text.
+
+## R1 — Phase review (2026-11-11)
+
+Read `git diff 9a94ca8..HEAD` for `lib/taskEdit*.ts`, the route, `companyDates`/`taskStatus`/`taskWrites` and the
+tests before any notes. Hunted each item in the brief.
+
+Fixed here, each with a test that failed first:
+- A chat rename of a main task left its marked subtasks' calendar events naming the old main task (the app resyncs
+  them through `requestCalendarContextSync`). Apply now syncs those subtasks too, unreported like the app.
+  Test: `lib/taskEditApply.data.test.ts` "updates unlisted subtasks' event descriptions…".
+- A deadline save could move the company's last action with no warning when its target already matched. The warning
+  now uses `companyPatchFrom`, the save's own rule, and names both dates. Test: `tests/unit/taskEdit.test.ts`
+  "warns when the deadline save moves only the company's last action".
+- `responsible`/`informed` stored a person twice when chat repeated a name in another spelling. Now once each.
+  Test: "stores each person once…".
+
+Checked and standing (no change):
+- Stamp check: every write path checks every previewed stamp, including freed subtasks; extra or missing stamps
+  refuse. The retry path (`alreadySaved`) writes nothing, so it needs no stamp.
+- Unlisted tasks: only rows of the preview are written; freed subtasks lose only `parentId`; sibling dates hold.
+- One level: a task with subtasks can't move; destinations are rechecked after all listed changes.
+- Flag: with `MCP_TASK_EDITS_ENABLED` unset the tools aren't registered, calls answer "Tool not found." and the
+  instructions omit them (smoke `checkDisabledTaskEdits`).
+- Tests: data tests, MCP smoke and the E1 spec assert the emulator host and the fake calendar; Google is mocked out.
+- Guidance: says never guess dates, times, people or which task; deletes are confirmed by name.
+- Stands, minor: if the server stops between the task commit and the company update (60 s limit), a retry returns
+  `alreadySaved` and the company stays where it was; the owner sees the task saved and can move the company in the
+  app. Stands, minor: a moved subtask keeps its old `order`, so it sorts by its original position under the new main
+  task. Stands, minor: a subtask created in the app at the very moment its main task is deleted from chat can be
+  left pointing at the deleted main task (the app's own delete has the same window).
+
+Checks after the fixes: `npm run test:unit` 1360 passed; `npm run test:data` 245 passed (12 files);
+`npm run mcp:smoke -- --only=protocol` passed (127 preservation comparisons); E1 spec
+`tests/smoke/chat-task-edits.spec.ts` 12 passed; `tsc` and `eslint` on changed files clean.
+
+### Owner handoff
+
+Proven (emulator and fake calendar only): finding tasks; previews of every field, moves, deletes and warnings with no
+writes; whole-list refusal after a change since the preview; one-transaction saves; retries that write nothing; the
+company following an open task's deadline, and restored task changes when that fails; calendar events moved, renamed,
+removed and repaired on retry; the tools hidden with the flag unset; the edits shown in the task sheet afterwards.
+
+Not proven yet: anything against the live database, the real Google calendar or a real claude.ai chat. That is O3.
+
+Owner steps, in the plan's order:
+1. O1: in Vercel Production, set `MCP_TASK_EDITS_ENABLED` to `1` and redeploy (remove it and redeploy to roll back).
+2. O2: in claude.ai, Settings → Connectors → Teams DEUS: check `find_tasks`, `preview_task_changes` and
+   `apply_task_changes` are listed; if not, disconnect and connect again.
+3. O3: on a throwaway Internal task with one subtask, in a chat: rename it, move its dates, mark the subtask Done,
+   put it on the calendar, then delete it. Check the app and your calendar after each step.
+
+Follow-ups (out of scope, not built): changing type, priority, touch point, company or task group from chat; edits to
+companies; an Undo from chat; "all tasks of X" without listing each task; changes to the legacy follow-up tools or the
+deal skill.

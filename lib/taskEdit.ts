@@ -1,6 +1,7 @@
 // Pure chat-edit validation and previews. No database, calendar calls or clock reads.
 import { createHash } from "node:crypto";
 import type { PipelineEntry } from "./clientTypes";
+import { companyPatchFrom } from "./companyDates";
 import { isIsoDay } from "./dates";
 import { isParked } from "./parking";
 import { namesInUse } from "./people";
@@ -256,8 +257,10 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     for (const field of ["task", "startDate", "endDate", "keyPoints"] as const) {
       if (set[field] !== undefined) patch[field] = set[field];
     }
-    if (set.responsible) patch.responsible = set.responsible.map(person);
-    if (set.informed) patch.informed = set.informed.map((entry) => ({ ...entry, name: person(entry.name) }));
+    // One entry per person: a repeated name in another spelling keeps its first entry.
+    const once = <T>(list: T[], name: (entry: T) => string) => list.filter((entry, i) => list.findIndex((other) => name(other) === name(entry)) === i);
+    if (set.responsible) patch.responsible = once(set.responsible.map(person), nameKey);
+    if (set.informed) patch.informed = once(set.informed.map((entry) => ({ ...entry, name: person(entry.name) })), (entry) => nameKey(entry.name));
     if (set.status !== undefined) Object.assign(patch, withCompletedAt(statusPatch(set.status, before, context.now), before, context.now));
     if (set.parked !== undefined) {
       if (set.parked !== false && (patch.completed ?? before.completed)) errors.push(`Task "${before.task}" is done and cannot be parked.`);
@@ -359,9 +362,11 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     const { before, after, warnings } = preview;
     if (!after) continue;
     const company = after.linkedClientId == null ? undefined : context.companies.find((entry) => entry.id === after.linkedClientId);
-    if (company && !after.completed && after.endDate !== before.endDate && company.target !== after.endDate) warnings.push({
+    // Same rule the save applies (companyPatchFrom), so a moved last action is never saved unwarned.
+    const companyMoves = company && !after.completed && after.endDate !== before.endDate ? companyPatchFrom(company, after) : null;
+    if (company && companyMoves) warnings.push({
       id: `company-deadline:${encodeURIComponent(before.id)}:${company.id}`, code: "company-deadline", taskId: before.id,
-      message: `Company "${company.company}" target will follow this task's deadline: ${company.target || "no target"} → ${after.endDate}. Its last action follows this task's last action when present; other tasks keep their dates.`,
+      message: `Company "${company.company}" follows this task's deadline: target ${company.target || "no target"} → ${companyMoves.target || "no target"}, last action ${company.date || "none"} → ${companyMoves.date || "none"}. Other tasks keep their dates.`,
     });
     const datesChanged = before.startDate !== after.startDate || before.endDate !== after.endDate;
     if (!datesChanged && before.parentId === after.parentId) continue;

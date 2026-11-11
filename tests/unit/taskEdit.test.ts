@@ -92,6 +92,11 @@ describe("field previews", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it("stores each person once when chat repeats a name in another spelling (R1)", () => {
+    const result = build({ responsible: ["Greg", " greg ", "GREG"], informed: [{ name: "Thania" }, { name: "thania", note: "dup" }] });
+    expect(result.tasks[0].patch).toEqual({ responsible: ["Greg"], informed: [{ name: "Thania" }] });
+  });
+
   it("warns once per new spelling with a stable new-person ID", () => {
     const result = build({ responsible: [" New   Person "], informed: [{ name: "New Person" }] });
     expect(result.tasks[0].after!.responsible).toEqual(["New Person"]);
@@ -248,7 +253,14 @@ describe("independent dates and company deadline warnings", () => {
     expect(companies).toEqual(original);
     expect(codes(build({ startDate: "2026-11-13" }, current, { companies }))).not.toContain("company-deadline");
     expect(codes(build({ endDate: "2026-11-25", status: "done" }, current, { companies }))).not.toContain("company-deadline");
-    expect(codes(build({ endDate: "2026-11-25" }, current, { companies: [{ ...companies[0], target: "2026-11-25" }] }))).not.toContain("company-deadline");
+    expect(codes(build({ endDate: "2026-11-25" }, current, { companies: [{ ...companies[0], target: "2026-11-25", date: "2026-11-05" }] }))).not.toContain("company-deadline");
+  });
+
+  it("warns when the deadline save moves only the company's last action (R1)", () => {
+    const current = task("a", { linkedClientId: 7, lastActionDate: "2026-11-05" });
+    const companies = [{ id: 7, company: "DEUS", target: "2026-11-25", date: "2026-11-01" }];
+    const result = build({ endDate: "2026-11-25" }, current, { companies });
+    expect(result.warnings).toEqual([expect.objectContaining({ id: "company-deadline:a:7", message: expect.stringContaining("last action 2026-11-01 → 2026-11-05") })]);
   });
 });
 
