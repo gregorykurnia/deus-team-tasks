@@ -28,6 +28,7 @@ describe("a new task", () => {
       responsible: [],
       informed: [{ name: "Maya" }],
       keyPoints: "",
+      calendar: undefined,
       order: 7,
     });
   });
@@ -41,6 +42,13 @@ describe("a new task", () => {
   it("needs a description", () => {
     expect(hasDescription({ ...emptyDraft(), task: "   " })).toBe(false);
     expect(hasDescription({ ...emptyDraft(), task: "Call" })).toBe(true);
+  });
+
+  it("stores the calendar mark with either both times or no times, without nested undefined fields", () => {
+    const d = { ...emptyDraft(), task: "Meeting", calendar: { startTime: "09:00", endTime: "10:00" } };
+    expect(newTaskFromDraft(d).calendar).toEqual({ startTime: "09:00", endTime: "10:00" });
+    expect(newTaskFromDraft({ ...d, calendar: {} }).calendar).toEqual({});
+    expect(newTaskFromDraft({ ...d, calendar: { startTime: "", endTime: undefined } }).calendar).toEqual({});
   });
 });
 
@@ -75,5 +83,36 @@ describe("changing a task", () => {
     const opened = draftFromTask(task({ informed: [{ name: "Maya", note: "backup" }, { name: "Kevin" }] }), companies);
     expect(patchFromDraft(opened, { ...opened, informed: [{ name: "Maya", note: " backup " }, { name: "Kevin" }] })).toEqual({});
     expect(patchFromDraft(opened, { ...opened, informed: [{ name: "Maya", note: "backup" }] })).toEqual({ informed: [{ name: "Maya", note: "backup" }] });
+  });
+
+  it("reads a calendar mark without sharing its mutable object or including server sync state", () => {
+    const t = task({ calendar: { startTime: "09:00", endTime: "10:00" }, calendarSync: { synced: "before", link: "https://calendar.example/event" } });
+    const d = draftFromTask(t, companies);
+    expect(d.calendar).toEqual(t.calendar);
+    expect(d.calendar).not.toBe(t.calendar);
+    expect(d).not.toHaveProperty("calendarSync");
+    expect(newTaskFromDraft(d)).not.toHaveProperty("calendarSync");
+  });
+
+  it("patches only changed calendar times and clears the mark when switched off", () => {
+    const opened = draftFromTask(task({ calendar: { startTime: "09:00", endTime: "10:00" } }), companies);
+    expect(patchFromDraft(opened, { ...opened, calendar: { startTime: "10:00", endTime: "11:00" } })).toEqual({
+      calendar: { startTime: "10:00", endTime: "11:00" },
+    });
+    expect(patchFromDraft(opened, { ...opened, calendar: {} })).toEqual({ calendar: {} });
+    expect(patchFromDraft(opened, { ...opened, calendar: undefined })).toEqual({ calendar: undefined });
+  });
+
+  it("adds an all-day mark to an unmarked task", () => {
+    const opened = draftFromTask(task(), companies);
+    expect(patchFromDraft(opened, { ...opened, calendar: {} })).toEqual({ calendar: {} });
+  });
+
+  it("leaves a server sync update and another editor's mark alone when saving an unrelated edit", () => {
+    const t = task({ calendar: {}, calendarSync: { synced: "before" } });
+    const opened = draftFromTask(t, companies);
+    const current = { ...t, calendar: { startTime: "09:00", endTime: "10:00" }, calendarSync: { synced: "after" } };
+    expect(patchFromDraft(opened, { ...opened, keyPoints: "Bring pricing" }, current)).toEqual({ keyPoints: "Bring pricing" });
+    expect(patchFromDraft(opened, { ...opened, calendar: { endTime: "", startTime: "" } }, current)).toEqual({});
   });
 });

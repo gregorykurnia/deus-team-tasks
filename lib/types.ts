@@ -43,6 +43,8 @@ export interface Task {
   parkedAt?: number; // ms; when it was parked: out of the open work until brought back (lib/parking)
   parkedUntil?: string; // yyyy-mm-dd; the day a parked task comes back by itself, or none to wait until brought back
   parentId?: string; // the task this is a subtask of (lib/subtasks); one level only
+  calendar?: { startTime?: string; endTime?: string }; // presence means on the calendar; no times means all day
+  calendarSync?: { synced?: string; link?: string; error?: string }; // server-owned state, separate from the mark
 }
 
 export type NewTask = Omit<Task, "id">;

@@ -21,6 +21,7 @@ export interface TaskDraft {
   responsible: string[];
   informed: InformedPerson[];
   keyPoints: string;
+  calendar?: Task["calendar"];
 }
 
 export function emptyDraft(group = ""): TaskDraft {
@@ -39,6 +40,7 @@ export function emptyDraft(group = ""): TaskDraft {
     responsible: [],
     informed: [],
     keyPoints: "",
+    calendar: undefined,
   };
 }
 
@@ -60,11 +62,12 @@ export function draftFromTask(t: Task, companies: CompaniesById): TaskDraft {
     responsible: [...t.responsible],
     informed: t.informed.map((p) => ({ ...p })),
     keyPoints: t.keyPoints ?? "",
+    calendar: t.calendar ? { ...t.calendar } : undefined,
   };
 }
 
 // The stored fields a draft stands for, apart from its status (lib/taskStatus). Undefined clears a field.
-function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "completedAt" | "startedAt"> {
+function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "completedAt" | "startedAt" | "calendarSync"> {
   const company = d.about === "company" && d.companyId != null;
   return {
     task: d.task.trim(),
@@ -79,6 +82,10 @@ function fieldsOf(d: TaskDraft): Omit<NewTask, "order" | "completed" | "complete
     responsible: d.responsible,
     informed: d.informed.map((p) => (p.note?.trim() ? { name: p.name, note: p.note.trim() } : { name: p.name })),
     keyPoints: d.keyPoints.trim(),
+    calendar: d.calendar ? {
+      ...(d.calendar.startTime ? { startTime: d.calendar.startTime } : {}),
+      ...(d.calendar.endTime ? { endTime: d.calendar.endTime } : {}),
+    } : undefined,
   };
 }
 
