@@ -117,8 +117,13 @@ Checks:
 - PASS — `npx playwright test tests/smoke/calendar-events.spec.ts tests/smoke/task-sheet.spec.ts --output=/tmp/c04-pw`: task-sheet 15/15 desktop and its phone test; calendar-events 5/5 (desktop + phone) after a route warm-up and a phone assertion fix (the switch sits under the whole date row, which is two plus one on phones).
 - No Firestore read/write code changed, so `test:data` wasn't needed. Note: Playwright clears `test-results/` on start; run with `--output` elsewhere so the committed captures there survive.
 
-Captures (`test-results/calendar-events/c04/`, 1440×900 `desktop/`, 390×844 `phone/`, 100 % crops in `crops/`):
-`new-times`, `new-times-error`, `status-stale`, `status-adding`, `status-on` for both shapes; `desktop/off-before.png`
-(old sheet code) and `off-after.png` (writes off) differ by 0 pixels (`compare -metric AE`). Look check found the three
-status lines at different heights and a 32px-tall open link; both fixed (48px line in every state, 40px link) and
-recaptured. The bottom-left "N" in phone shots is the Next.js dev badge, absent from builds.
+Captures (`test-results/calendar-events/c04/`, 1440×900 `desktop/`, 390×844 `phone/`): `new-times`,
+`new-times-error`, `new-end` (scrolled to the end: Key points sits whole above the footer), `status-stale`,
+`status-adding`, `status-on`, and `block-*` (the switch, times and status line whole, with a 12px margin) for both
+shapes; `desktop/off-before.png` (old sheet code) and `off-after.png` (writes off), both with the dev badge hidden: the sheet
+(x ≥ 880) differs by 0 pixels; 155 pixels in the blurred side bar behind it differ by at most 1/255 (0 at `-fuzz 3%`),
+which is blur rendering noise (`compare -metric AE` / `PAE`). Look check found the three status lines at different heights and a 32px-tall open link; both
+fixed (48px line in every state, 40px link) and recaptured. A fresh-eyes check then read the sheet's scroll edges
+(fields cut under the title and at the footer mid-scroll) and the dev server's "N" badge as faults: captures now hide
+the badge (builds don't have it), `new-end` proves nothing is hidden behind the footer, and the block captures replace
+the old crops.

@@ -5,8 +5,20 @@ import type { Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { isoDay, seedTasks, storedById, task } from "./data";
 
-const shot = (page: Page, info: TestInfo, name: string) =>
-  page.screenshot({ path: `test-results/calendar-events/c04/${info.project.name}/${name}.png` });
+const dir = (info: TestInfo) => `test-results/calendar-events/c04/${info.project.name}`;
+// The dev server's "N" badge isn't part of the app (builds don't have it), so captures hide it.
+async function shot(page: Page, info: TestInfo, name: string) {
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  await page.screenshot({ path: `${dir(info)}/${name}.png` });
+}
+// The switch, the times and the status line as one whole picture, free of the sheet's scroll edges.
+async function blockShot(page: Page, info: TestInfo, name: string) {
+  const block = page.getByRole("button", { name: "Put on the team calendar" }).locator("xpath=../..");
+  await block.scrollIntoViewIfNeeded();
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  const b = (await block.boundingBox())!;
+  await page.screenshot({ path: `${dir(info)}/block-${name}.png`, clip: { x: b.x - 12, y: b.y - 12, width: b.width + 24, height: b.height + 24 } });
+}
 
 async function waitUntilLive(page: Page) {
   await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
@@ -63,6 +75,13 @@ test("the switch sits under the dates and shows the two times, side by side on d
   await expect(s.getByText("Add an end time to go with the start time.")).toHaveCount(0);
   await toggle.scrollIntoViewIfNeeded();
   await shot(page, info, "new-times");
+  await blockShot(page, info, "new-times");
+  // Scrolled to the end: the last field sits whole above the footer, so nothing is hidden behind it.
+  await s.getByLabel("Key points").scrollIntoViewIfNeeded();
+  const keyPoints = await box(page, s.getByLabel("Key points"));
+  const addBox = await box(page, s.getByRole("button", { name: "Add task", exact: true }));
+  expect(keyPoints.y + keyPoints.height).toBeLessThanOrEqual(addBox.y);
+  await shot(page, info, "new-end");
   await s.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(s).toHaveCount(0);
 });
@@ -85,10 +104,12 @@ test("a saved task says whether it's on the team calendar, and Try again brings 
   await expect(line("The team calendar isn’t up to date.")).toBeVisible();
   await line("The team calendar isn’t up to date.").scrollIntoViewIfNeeded();
   await shot(page, info, "status-stale");
+  await blockShot(page, info, "stale");
 
   await s.getByRole("button", { name: "Try again" }).click();
   await expect(line("Adding to the team calendar…")).toBeVisible();
   await shot(page, info, "status-adding");
+  await blockShot(page, info, "adding");
 
   release();
   await expect(line("On the team calendar")).toBeVisible({ timeout: 15_000 });
@@ -97,6 +118,7 @@ test("a saved task says whether it's on the team calendar, and Try again brings 
   await expect(open).toHaveAttribute("href", /^https:\/\/calendar\.example\.test\/event\/dt/);
   expect((await storedById("tasks", "tasks", "board"))?.calendarSync).toMatchObject({ link: expect.stringContaining("calendar.example.test") });
   await shot(page, info, "status-on");
+  await blockShot(page, info, "on");
 });
 
 test("with calendar writes off, the switch isn't there and task details look as before", async ({ page }, info) => {
