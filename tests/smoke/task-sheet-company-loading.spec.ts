@@ -86,6 +86,7 @@ test("R1b.F1: a failed company load cannot open an Internal draft and reload rec
   try {
     await page.goto("/tasks?task=linked");
     await expect(sheet(page).getByText("Company couldn't be loaded", { exact: true })).toBeVisible();
+    await expect(sheet(page).getByText("“Review company draft” is unchanged. Reload to try again.", { exact: true })).toBeVisible();
     await expect(sheet(page).getByLabel("Description")).toHaveCount(0);
     await expect(sheet(page).getByRole("button", { name: "Save changes" })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("company-failed.png"), ...screenshot });

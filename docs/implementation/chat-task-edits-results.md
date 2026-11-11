@@ -183,6 +183,8 @@ DECISION: Split the two remaining stress areas into fresh tasks before R1 rather
 
 All eight gallery key frames and the critical footer/edge crops were opened at original resolution. Six repaired-state pictures show whole validation/suggestion text above the pinned actions; the two stress pictures retain the faults assigned above. All R1a rows have a fix or an explicit disposition. R1b is ticked; R1b.F1/F2 and R1 stay unticked. Owned ports 3100/8180/4100 were confirmed closed.
 
+Only the picker, comparison tools, chat spec and this plan/brief/evidence changed; no Firestore read/write code or production data/settings changed, so no additional test:data/MCP smoke run was needed. A full check is worth running for the shared picker change; the full R1a suites were not repeated.
+
 ## R1b.F1 — Keep company task drafts safe while companies load (2026-11-11)
 
 `TaskSheetHost.tsx` now waits for an error-free server company snapshot before initializing a linked task's editor. An empty device cache or failed listener cannot initialize it as Internal. The existing editor stays mounted after opening, preserving typing through offline snapshots and reconnects. Waiting, offline and failed-load states reuse the design's skeleton and empty-state components; a failed listener offers Reload before any editable draft exists. A server-confirmed absent company still uses the existing Internal rule in `draftFromTask`; no draft fields, save logic or stored schema changed.
@@ -218,4 +220,46 @@ DECISION: Offer Reload for a failed initial listener, rather than resetting live
 
 Run notes: the first network fixture held the handshake and never emitted the needed empty cache; it was corrected before the failing-before proof. One browser run and an intermediate type-check shell ended with signal 143; the browser's owned servers/controller were stopped and checks reran in isolated process sessions. A restart first reported `http://127.0.0.1:8180 is already used`; that owned leftover was stopped before the successful run. The e2e guard refused three specs, so the run was narrowed to the new regression plus its page spec (no chat-tool code changed). A stale owned emulator hub caused a warning during the successful data run and was stopped. No production data or settings changed. Only R1b.F1 is ticked; the large stress recapture and viewport repair remain for R1b.F2, which was not started.
 
-Only the picker, comparison tools, chat spec and this plan/brief/evidence changed; no Firestore read/write code or production data/settings changed, so no additional test:data/MCP smoke run was needed. A full check is worth running for the shared picker change; the full R1a suites were not repeated.
+### R1b.F1 — Fresh-eyes follow-up (2026-11-11)
+
+Opened all four checker copies in `/tmp/autorun-fresh-s9pg3v/` at original resolution, plus native crops of the suspected ghost content and toast border. SHA-256 comparison confirmed that 01 and 02 are the **before-fix** desktop/phone pictures in `r1bf1-before/`; 04 is the earlier, unsettled desktop picture in `r1bf1-tests/`, not the final loaded picture. Only 03 was the final failure state from that run. These historical files remain unchanged as evidence.
+
+Fixed the remaining context problem in 03: the failed-load message now names the saved task, with wrapping for long names, before offering Reload. The existing regression asserts that identity while confirming that no editable draft or Save action exists. Moved R1b's closing evidence paragraph back under R1b so it no longer appears to describe F1's changed files and checks.
+
+| Reported item | Disposition |
+|---|---|
+| 01: development issue pill covers sidebar status | Before-fix capture; caused by the deliberately failed emulator stream, not a production control. Existing final screenshot options omit the development overlay. |
+| 01: wrong Internal draft with no loading cue | Real original bug, already fixed in `af81df8`; the fresh desktop capture shows Loading the company and no editable draft. |
+| 02: development issue pill covers Save | Same before-fix development overlay; absent in fresh captures. There is no Save action while the company is unverified. |
+| 02: wrong Internal draft with no loading cue | Same original bug; the fresh phone capture shows the spinner/skeleton state until the company is confirmed. |
+| 02: truncated subtask example | Retained: the single-line input ellipsizes its example, while “Add a subtask” and its accessible label remain complete. It is not truncated saved data. |
+| 03: faint ghost shapes | No leftover form controls are visible in the full-size view or native middle crop; the design uses a 94%-opaque sheet with 30px backdrop blur. The test confirms no Description field is mounted. |
+| 03: generic unchanged message and no editable task | Task identity fixed in the message. Editing stays blocked until company data is verified; the normal-height sheet intentionally has empty space below its error state. |
+| 04: toast crosses the sheet border | The native crop shows overlap only with the outer gutter, left of Delete; no action or label is obscured. The design keeps toasts centred on the viewport. Fresh loaded captures wait until the temporary toast expires. |
+
+DECISION: not fixed again the 01/02 issue pills and wrong Internal drafts, because these copies are byte-identical to before-fix evidence; `af81df8` already gates the draft, and production does not include the development badge.
+DECISION: not fixed the 02 example ellipsis or 03 faint backdrop shapes, because the approved single-line capture and translucent sheet account for them; the instruction remains readable and no hidden editor is mounted.
+DECISION: not fixed the 03 blocked editing/full-height blank area, because opening an unverified draft would reintroduce the data-safety bug; the message now identifies the task without opening an editor.
+DECISION: not fixed the 04 noninteractive border overlap, because the approved viewport-centred toast leaves Delete and its label clear; final still pictures are taken after it expires.
+
+Recorded the applicable existing design rules in `docs/approved-looks.md`, with source references and explicit limits: clipped saved text or obscured actions remain faults.
+
+Checks:
+
+- Final `npx tsc --noEmit` and changed-source ESLint — passed.
+- `npm run test:unit` — 46 files / 1,358 tests passed.
+- `npm run test:data` — 12 files / 244 tests passed, emulator only.
+- `npx playwright test tests/smoke/task-sheet-company-loading.spec.ts --output=redesign/compare/r1bf1-fresh-tests` — 5 passed, including desktop/phone failure identity, delayed loading, offline/reconnect, exact saved-field preservation and confirmed deletion; only this affected capture spec reran for the wording change.
+- `npm run build` — passed; all browser/data checks used the emulator dev server, never the production build.
+- Full-size look check with native crops and `git diff --check` — passed; no new text/edge clipping or action obstruction in the corrected failure state.
+
+**Current-only gallery:** `redesign/compare/r1bf1-fresh-gallery/` contains eight key frames and ten native-scale crops; no before-fix pictures. Logs: `/tmp/deus-r1bf1-fresh-*.log`. R1b.F1 remains complete; R1b.F2 was not started.
+
+LOOKED: waiting-desktop.png · Spinner and skeletons sit inside the right sheet over the blurred list; text and close control fit, with no Internal draft or Save button.
+LOOKED: waiting-phone.png · Skeletons sit below the header of the bottom sheet; loading text is whole, edges fit the viewport, and no action is covered.
+LOOKED: failed-desktop.png · Building icon sits above the named-task explanation and Reload in the right sheet; all text is whole and the body below contains no visible form controls.
+LOOKED: failed-phone.png · Named-task explanation wraps into two lines above Reload; the icon, message and button stay inside the bottom-sheet edges without overlap.
+LOOKED: loaded-desktop.png · Company card sits between About and the group field; pinned actions sit below the scrolling form, with no toast crossing the border in this settled frame.
+LOOKED: loaded-phone.png · Description and company card are on the first screen above the pinned actions; the example hint ellipsizes and Priority continues below the scroll boundary, while company/action text stays whole.
+LOOKED: offline-desktop.png · Wi-Fi icon and explanation sit near the top of the right sheet over the blurred list; text wraps without clipping and no unsafe editor is shown.
+LOOKED: offline-phone.png · Icon sits above the complete two-line explanation; the bottom sheet meets the screen edges and neither text nor close control is obscured.

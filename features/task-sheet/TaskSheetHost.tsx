@@ -122,7 +122,7 @@ function ExistingTaskSheet({ task, gone, onClose }: { task: Task; gone: boolean;
       {companies.error ? (
         <EmptyState size="small" icon="building" title="Company couldn't be loaded"
           actions={<Button onClick={() => window.location.reload()}>Reload</Button>}>
-          Your task is unchanged. Reload to try again.
+          <span style={{ overflowWrap: "anywhere" }}>&ldquo;{task.task}&rdquo;</span> is unchanged. Reload to try again.
         </EmptyState>
       ) : status === "offline" ? (
         <EmptyState size="small" icon="wifi" title="No connection">
