@@ -1,7 +1,7 @@
 // A task's status: To Do, In Progress or Done. Done is `completed`, as everywhere else; In Progress is an unfinished task
 // with `startedAt`. Tasks from before there was a status have neither, so they read as To Do. Parking is apart from it:
 // a parked task keeps its status, and so does one marked not done again (an In Progress task goes back to In Progress).
-import type { Task } from "./types";
+import type { NewTask, Task } from "./types";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -27,4 +27,12 @@ export function statusPatch(to: TaskStatus, current?: Statused, now = Date.now()
     case "done":
       return { completed: true, startedAt: current?.startedAt };
   }
+}
+
+// Shared by writes and pure previews. Finishing ends parking; reopening clears the finish date.
+export function withCompletedAt<P extends Partial<NewTask> & { id?: unknown }>(patch: P, current?: Pick<Task, "completed" | "completedAt">, now = Date.now()): P {
+  if (patch.completed === true && !current?.completed) return { ...patch, completedAt: now, parkedAt: undefined, parkedUntil: undefined };
+  if (patch.completed === true) return { ...patch, completedAt: current?.completedAt };
+  if (patch.completed === false) return { ...patch, completedAt: undefined };
+  return patch;
 }

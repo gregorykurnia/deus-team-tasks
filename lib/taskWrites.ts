@@ -8,22 +8,16 @@ import { requestCalendarContextSync } from "./calendarContextRequests";
 import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
+import { withCompletedAt } from "./taskStatus";
 import type { NewTask, Task } from "./types";
+
+export { withCompletedAt } from "./taskStatus";
 
 export const TASKS = "tasks";
 
 export type Undo = () => Promise<void>;
 
 type TaskPatch = Partial<NewTask> & { id?: unknown };
-
-// Marking done records when, and a parked task is parked no more; marking not
-// done clears it. A task already done keeps its date when it's saved again.
-export function withCompletedAt<P extends TaskPatch>(patch: P, current?: Pick<Task, "completed" | "completedAt">, now = Date.now()): P {
-  if (patch.completed === true && !current?.completed) return { ...patch, completedAt: now, parkedAt: undefined, parkedUntil: undefined };
-  if (patch.completed === true) return { ...patch, completedAt: current?.completedAt };
-  if (patch.completed === false) return { ...patch, completedAt: undefined };
-  return patch;
-}
 
 // What a new task stores: no undefined values, no id.
 export function toNewTaskDoc(task: NewTask & { id?: unknown }): Record<string, unknown> {
