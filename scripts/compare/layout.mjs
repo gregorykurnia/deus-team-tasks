@@ -51,6 +51,16 @@ export async function auditLayout(page, { requireTaskSheet = false } = {}) {
       if (el.clientWidth && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== "ellipsis" && !el.matches("input, select")) {
         errors.push(`Overflowing text: ${label(el)}`);
       }
+      // Native selects keep scrollWidth equal to clientWidth even when the selected text is cut off.
+      if (el instanceof HTMLSelectElement && !el.multiple && el.size <= 1) {
+        const style = getComputedStyle(el);
+        const canvas = document.createElement("canvas").getContext("2d");
+        canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        canvas.letterSpacing = style.letterSpacing;
+        const width = canvas.measureText(el.selectedOptions[0]?.textContent ?? "").width;
+        const available = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        if (width > available + 1 && style.textOverflow !== "ellipsis") errors.push(`Select value clips without ellipsis: ${label(el)}`);
+      }
       if (el instanceof HTMLImageElement && (!el.complete || !el.naturalWidth)) errors.push(`Unloaded image: ${el.alt}`);
     }
     return { capture, window: { width: innerWidth, height: innerHeight }, dialogs: dialogs.map(bounds), errors };

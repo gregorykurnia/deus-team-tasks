@@ -291,3 +291,33 @@ LOOKED: r1bf2-gallery/065-desktop.png · The drawer sits within a 16px outer gut
 LOOKED: r1bf2-gallery/065-phone.png · The sheet rests on the bottom edge with a 28px top gap; the whole description, Prospect work and company card precede the pinned footer, which covers no action. The long company name is ellipsized; lower fields scroll.
 
 Changed files: `features/tasks/Tasks.module.css`, `scripts/compare/layout.mjs`, `scripts/compare/run.mjs`, `tests/smoke/chat-task-edits.spec.ts`, this results file and `docs/IMPLEMENTATION_PLAN.md`. No product data/settings changed. R1 was not started.
+
+### R1b.F2 — Fresh-eyes follow-up (2026-11-11)
+
+Opened all eleven supplied copies in `/tmp/autorun-fresh-YCQWF1` at original resolution before judging them. The real remaining fault was the selected long group name ending abruptly without an ellipsis. Native selects report equal `scrollWidth` and `clientWidth` even when they clip their selected option, so the audit missed it. The audit now measures that option against the field's available text width; the shared select style uses `text-overflow: ellipsis`. Full stored values and native option selection are unchanged.
+
+| Checker copies / finding | Disposition |
+|---|---|
+| 01 and 09: sheet too wide, off-centre handle, clipped description/controls, missing Close/footer | Historical failing-before pictures. SHA-256 prefixes `a688a60858cf` and `c2047880c515` match `r1bf2-before-tests/.../long-task.png` and `r1bf2-minimal-before/.../long-task.png` respectively. The earlier viewport fix already resolved all these symptoms; current phone recaptures remain 390×844 with a `(0,28,390,816)` sheet. |
+| 02, 03 and 04: selected group name cut at the arrow without ellipsis | Fixed. The updated audit failed before the CSS change on both shapes with `Select value clips without ellipsis: Task group`, and passes afterward. Native-size group crops show complete characters followed by an ellipsis and a clear gap before the arrow. |
+| 04 and 07: shortened subtask example | Retained. This is the same `QuickCapture` component used for single-line capture, explicitly reused at `TaskSheet.tsx:509`; the full “Add a subtask” instruction and accessible label remain visible/available. Clarified that scope in the existing rule in `docs/approved-looks.md`, rather than granting an exception to clipped saved text or actions. |
+| 05, 06, 08, 10 and 11: filename only, no described fault | No additional fault found on original-resolution inspection: Close, sheet edges and footer actions fit; text in the featured controls is readable. The long company name's ellipsis and the body's scroll boundary remain the existing presentation. |
+
+DECISION: not fixed again the 01/09 viewport, handle, Close, footer and saved-title defects, because those files are byte-identical to the original failing-before evidence and current recaptures prove the earlier fix.
+DECISION: not fixed the 04/07 subtask example ellipsis, because the field reuses the approved single-line QuickCapture pattern and preserves its complete instruction and accessible label; the approved-looks rule now names that reuse explicitly.
+DECISION: not fixed the filename-only 05/06/08/10/11 items, because no specific fault was supplied and full-size inspection found no additional clipping or action obstruction beyond the documented scroll boundary and company-name ellipsis.
+
+Checks:
+- Failing-before: `npx playwright test tests/smoke/chat-task-edits.spec.ts --grep 'long group and task' --output=redesign/compare/r1bf2-select-before` — 2 failed with the new select-clipping error; both viewport dimensions were already correct.
+- `npx tsc --noEmit` and `npx eslint scripts/compare/layout.mjs` — passed.
+- `npm run test:unit` — 46 files / 1,358 tests passed. No product Firestore reads/writes changed, so data tests were not required.
+- `npx playwright test tests/smoke/chat-task-edits.spec.ts --output=redesign/compare/r1bf2-fresh-tests` — 12 passed (2.0m), emulator/fake calendar only; includes both minimal and 065 captures. All four layout reports have zero errors. The existing 179-linked-company capture limitation remains explicit.
+- `npm run build` — passed with TypeScript and static-page generation; no browser/data check used this production build.
+- Four current key frames plus eight native group/edge/footer crops reopened and compared with the flagged originals; `git diff --check` passed. Only the task's own test servers ran and their ports were closed afterward. A full check is worth running for the shared `ui/` change; it was not requested or run here.
+
+**Current-only gallery:** `redesign/compare/r1bf2-fresh-gallery/` contains four key frames, eight crops and four reports, with no before-fix pictures. Only canonical state 065 images/pairs/report entries were refreshed; prototype pixels and other states were retained. Logs: `/tmp/deus-r1bf2-fresh-*.log`. R1b.F2 stays complete; R1 was not started.
+
+LOOKED: minimal-desktop.png · The drawer floats inside its outer gutter above the blurred list; its complete title wraps, the group value ends with an ellipsis before the arrow, and the pinned footer leaves every action readable and unobscured.
+LOOKED: minimal-phone.png · The sheet rests on the screen base with a centred handle and visible Close; its title/company fit, the group value ellipsizes cleanly, and the full-width Save row stays clear below the scrolling form.
+LOOKED: 065-desktop.png · The drawer sits above the blurred stress list; the complete description and Prospect work are readable, the company name ellipsizes, and the next body label meets the scroll cutoff above a clear footer.
+LOOKED: 065-phone.png · The sheet fits all frame edges and sits on the bottom; description, kind and company card appear above unobscured actions, with an ellipsized company name and example but complete instruction text.
