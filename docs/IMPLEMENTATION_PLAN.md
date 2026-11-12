@@ -43,7 +43,7 @@ is reachable until the owner sets one Vercel variable (O1).
 
 ## Owner steps after the run
 
-- [ ] O1 *owner*: in Vercel Production, set `MCP_TASK_EDITS_ENABLED` to `1` and redeploy. To roll back, remove it
+- [x] O1 *owner*: in Vercel Production, set `MCP_TASK_EDITS_ENABLED` to `1` and redeploy (done 2026-11-12). To roll back, remove it
   and redeploy.
 - [ ] O2 *owner*: in claude.ai, open Settings → Connectors → Teams DEUS and check that `find_tasks`,
   `preview_task_changes` and `apply_task_changes` are listed. If not, disconnect and connect it again.
