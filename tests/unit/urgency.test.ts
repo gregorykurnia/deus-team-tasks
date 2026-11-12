@@ -13,20 +13,19 @@ const TODAY = "2026-10-20";
 const t = (endDate: string, startDate = "", completed = false) => ({ endDate, startDate, completed });
 
 describe("deadline (guide 5.1)", () => {
-  it("is red with words once missed", () => {
-    expect(deadlineSignal(t("2026-10-18"), TODAY)).toEqual({ tone: "red", label: "2 days late" });
-    expect(deadlineSignal(t("2026-10-19"), TODAY)).toEqual({ tone: "red", label: "1 day late" });
+  it("names the date, with how late once missed, in red", () => {
+    expect(deadlineSignal(t("2026-10-18"), TODAY)).toEqual({ tone: "red", label: "Sun 18 Oct · 2 days late", date: "Sun 18 Oct", word: "2 days late" });
+    expect(deadlineSignal(t("2026-10-19"), TODAY)).toEqual({ tone: "red", label: "Mon 19 Oct · 1 day late", date: "Mon 19 Oct", word: "1 day late" });
   });
-  it("is amber today, tomorrow and within 3 days", () => {
-    expect(deadlineSignal(t("2026-10-20"), TODAY)).toEqual({ tone: "amber", label: "Today" });
-    expect(deadlineSignal(t("2026-10-21"), TODAY)).toEqual({ tone: "amber", label: "Tomorrow" });
-    expect(deadlineSignal(t("2026-10-23"), TODAY)).toEqual({ tone: "amber", label: "In 3 days" });
+  it("is amber within 3 days, adding Today and Tomorrow to the date", () => {
+    expect(deadlineSignal(t("2026-10-20"), TODAY)).toEqual({ tone: "amber", label: "Tue 20 Oct · Today", date: "Tue 20 Oct", word: "Today" });
+    expect(deadlineSignal(t("2026-10-21"), TODAY)).toEqual({ tone: "amber", label: "Wed 21 Oct · Tomorrow", date: "Wed 21 Oct", word: "Tomorrow" });
+    expect(deadlineSignal(t("2026-10-23"), TODAY)).toEqual({ tone: "amber", label: "Fri 23 Oct", date: "Fri 23 Oct" });
   });
-  it("is plain further out, and shows the date after 30 days", () => {
-    expect(deadlineSignal(t("2026-10-24"), TODAY)).toEqual({ tone: "plain", label: "In 4 days" });
-    expect(deadlineSignal(t("2026-11-19"), TODAY)).toEqual({ tone: "plain", label: "In 30 days" });
-    expect(deadlineSignal(t("2026-11-20"), TODAY)).toEqual({ tone: "plain", label: "20 Nov" });
-    expect(deadlineSignal(t("2027-01-05"), TODAY)).toEqual({ tone: "plain", label: "5 Jan 2027" });
+  it("is the plain date further out, never a count of days, and another year's date with its year", () => {
+    expect(deadlineSignal(t("2026-10-24"), TODAY)).toEqual({ tone: "plain", label: "Sat 24 Oct", date: "Sat 24 Oct" });
+    expect(deadlineSignal(t("2026-11-19"), TODAY)).toEqual({ tone: "plain", label: "Thu 19 Nov", date: "Thu 19 Nov" });
+    expect(deadlineSignal(t("2027-01-05"), TODAY)).toEqual({ tone: "plain", label: "5 Jan 2027", date: "5 Jan 2027" });
   });
   it("names missing dates", () => {
     expect(deadlineSignal(t(""), TODAY)).toEqual({ tone: "none", label: "No dates" });
@@ -90,6 +89,6 @@ describe("a parked task (N19)", () => {
     expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1, parkedUntil: "2026-11-03" }, TODAY)).toEqual({ tone: "none", label: "Back 3 Nov" });
   });
   it("is late again once the day it was parked until comes", () => {
-    expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1, parkedUntil: "2026-10-20" }, TODAY)).toEqual({ tone: "red", label: "2 days late" });
+    expect(deadlineSignal({ ...t("2026-10-18"), parkedAt: 1, parkedUntil: "2026-10-20" }, TODAY)).toEqual({ tone: "red", label: "Sun 18 Oct · 2 days late", date: "Sun 18 Oct", word: "2 days late" });
   });
 });

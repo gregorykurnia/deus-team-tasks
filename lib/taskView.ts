@@ -2,7 +2,7 @@
 // empty state to say when the list is empty. The address holds only the view's own params, so ?task= and ?newGroup= pass.
 import { KINDS, type CompaniesById, type Kind } from "./kinds";
 import { countByKind, defaultSort, filterTasks, sortTasks, type SortDir, type TaskSortKey, type TaskView } from "./taskQueries";
-import { nestSubtasks } from "./subtasks";
+import { nestSubtasks, subtasksStandIn } from "./subtasks";
 import type { TaskStatus } from "./taskStatus";
 import type { Task, TaskType } from "./types";
 import type { DueBucket } from "./urgency";
@@ -180,6 +180,7 @@ export interface TaskListing<T extends Task> {
   counts: Record<Kind | "all", number>;
   total: number; // what the kind switch leaves, before search and filters
   sorted: T[];
+  matched: number; // the tasks that match, a main task listed through its subtasks included (N31)
 }
 
 // The list: scoped to open, parked or done (and to the group), narrowed by kind, search and filters, then ordered.
@@ -211,7 +212,9 @@ export function listTasks<T extends Task & { completedAt?: number }>(
     ctx
   );
   const { key, dir } = effectiveSort(state, group !== null);
-  return { scoped, counts, total, sorted: nestSubtasks(sortTasks(narrowed, key, dir, ctx)) };
+  const ordered = sortTasks(narrowed, key, dir, ctx);
+  // By deadline the list is flat, each subtask at its own date (N31); any other order keeps subtasks under their task.
+  return { scoped, counts, total, sorted: key === "end" ? subtasksStandIn(ordered) : nestSubtasks(ordered), matched: narrowed.length };
 }
 
 export type EmptyCase =

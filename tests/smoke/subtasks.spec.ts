@@ -1,5 +1,6 @@
-// Subtasks (N24): added from a task's sheet, listed under their parent on All tasks with a count on the parent, opened
-// from the sheet and back to the parent, and kept as tasks of their own when the parent is deleted.
+// Subtasks (N24): added from a task's sheet, listed at their own date by deadline (N31) and otherwise under their parent
+// on All tasks with a count on the parent, opened from the sheet and back to the parent, and kept as tasks of their own
+// when the parent is deleted.
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedTasks, storedById, task } from "./data";
@@ -25,17 +26,30 @@ test("a subtask is added from its parent's sheet, sits under it on All tasks, an
   await expect(subtasks.getByRole("article")).toContainText("Book the trial room");
   await expect(subtasks.getByRole("textbox", { name: "Add a subtask" })).toHaveValue("");
 
-  // It sits under its parent, though its own empty deadline would sort it last, and the parent counts it.
+  // By deadline (the default) the list is flat (N31): the subtask stands in for its parent at its own date (none, so
+  // last) and names it, and there's nothing to hide.
   await sheet(page).getByRole("button", { name: "Close" }).click();
-  await expect(rows(page)).toHaveCount(3);
+  await expect(rows(page)).toHaveCount(2);
   await expect(rows(page).nth(0)).toContainText("Send the quote");
-  await expect(rows(page).nth(1)).toContainText("Run the Pelita trial");
-  await expect(rows(page).nth(1)).toContainText("0/1 subtask");
-  await expect(rows(page).nth(2)).toContainText("Book the trial room");
-  await expect(rows(page).nth(2)).toHaveAttribute("data-sub", "true");
+  await expect(rows(page).nth(1)).toContainText("Book the trial room");
+  await expect(rows(page).nth(1)).toContainText("Subtask of Run the Pelita trial");
+  await expect(rows(page).nth(1)).not.toHaveAttribute("data-sub");
+  // The count still says every task that matches, the parent included.
+  await expect(page.getByText("3 open tasks").first()).toBeVisible();
+  await expect(page.getByText("2 open tasks")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Hide subtasks" })).toHaveCount(0);
+
+  // Sorted by anything else it sits under its parent, and the parent counts it.
+  await page.getByRole("button", { name: /^Description/ }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await expect(rows(page).nth(0)).toContainText("Run the Pelita trial");
+  await expect(rows(page).nth(0)).toContainText("0/1 subtask");
+  await expect(rows(page).nth(1)).toContainText("Book the trial room");
+  await expect(rows(page).nth(1)).toHaveAttribute("data-sub", "true");
+  await expect(rows(page).nth(2)).toContainText("Send the quote");
 
   // The count hides the subtasks under the parent and shows them again, as does the switch for every parent (N29).
-  const count = rows(page).nth(1).getByRole("button", { name: "0/1 subtask" });
+  const count = rows(page).nth(0).getByRole("button", { name: "0/1 subtask" });
   await expect(count).toHaveAttribute("aria-expanded", "true");
   await count.click();
   await expect(rows(page)).toHaveCount(2);
@@ -49,7 +63,7 @@ test("a subtask is added from its parent's sheet, sits under it on All tasks, an
   await expect(rows(page)).toHaveCount(3);
 
   // A subtask has its parent's company, and no subtasks of its own; its sheet goes back to the parent.
-  await rows(page).nth(2).getByRole("link", { name: "Book the trial room" }).click();
+  await rows(page).nth(1).getByRole("link", { name: "Book the trial room" }).click();
   await expect(sheet(page).getByText("Subtask of")).toBeVisible();
   await expect(sheet(page).getByRole("group", { name: "Subtasks" })).toHaveCount(0);
   await sheet(page).getByRole("link", { name: "Run the Pelita trial" }).click();

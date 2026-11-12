@@ -164,6 +164,27 @@
   font-weight: var(--w-bold);
 }
 
+/* The deadline's word (N31): in the pill where it fits; under All tasks' date pill on wide screens; under the title where
+   a phone leaves the pill no room. */
+.meta > .phoneWord {
+  display: none;
+}
+
+.cellWord {
+  margin-left: 2px;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.deadline:has(.cellWord) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding-block: 2px;
+}
+
 .badge {
   display: grid;
   flex: none;
@@ -215,6 +236,14 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
+  }
+
+  .card .pillWord {
+    display: none;
+  }
+
+  .card .meta > .phoneWord {
+    display: inline;
   }
 }
 
@@ -413,6 +442,14 @@
     position: absolute;
     top: 12px;
     right: 12px;
+  }
+
+  .list .cellWord {
+    display: none;
+  }
+
+  .list .meta > .phoneWord {
+    display: inline;
   }
 
   /* A detail changed in place is a tap target, as on a company's card (guide 5.13): 32px tall, and an invisible 4px

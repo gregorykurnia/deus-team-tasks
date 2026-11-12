@@ -67,6 +67,17 @@ export function nestSubtasks<T extends Pick<Task, "id" | "parentId">>(sorted: re
   return out;
 }
 
+// The list by deadline (owner, 2026-11-12, N31): every task at its own date, nothing nested. A main task with any of
+// its subtasks in the list leaves it, since those subtasks stand in for it (each names it); one whose subtasks are all
+// filtered out or finished stays. Only a task without a listed parent can leave, so data that breaks the one level (a
+// loop) never empties the list.
+export function subtasksStandIn<T extends Pick<Task, "id" | "parentId">>(sorted: readonly T[]): T[] {
+  const listed = new Set(sorted.map((t) => t.id));
+  const hasListedParent = (t: T) => !!t.parentId && t.parentId !== t.id && listed.has(t.parentId);
+  const represented = new Set(sorted.filter(hasListedParent).map((t) => t.parentId!));
+  return sorted.filter((t) => hasListedParent(t) || !represented.has(t.id));
+}
+
 // The parents in a nested list (nestSubtasks) with subtasks listed under them: the ones whose subtasks can be hidden.
 export function parentsWithNested<T extends Pick<Task, "id" | "parentId">>(nested: readonly T[]): Set<string> {
   const listed = new Set(nested.map((t) => t.id));

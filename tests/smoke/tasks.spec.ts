@@ -7,6 +7,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedTasks, storedById, stored, task } from "./data";
 import { readFields } from "../support/emulator";
+import { shortDate, weekdayDate } from "../../lib/dates";
 
 // Writes are refused until the app has reached the server. The live status sits in the side bar (hidden on phones).
 const waitUntilLive = (page: Page) => expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
@@ -89,7 +90,7 @@ test("Q7: the app opens on empty data without adding sample data", async ({ page
   expect(await stored("clients", "pipeline")).toEqual([]);
 });
 
-test("5.1: deadline pills count whole days from today, wherever the team is", async ({ page }) => {
+test("5.1: deadline pills name the date and count whole days from today, wherever the team is", async ({ page }) => {
   await seedTasks([
     task("late", { task: "Chase the invoice", endDate: isoDay(-2) }),
     task("today", { task: "Send the quote", endDate: isoDay(0) }),
@@ -98,8 +99,12 @@ test("5.1: deadline pills count whole days from today, wherever the team is", as
   ]);
   await page.goto("/tasks");
   const pill = (title: string) => rows(page).filter({ hasText: title });
-  await expect(pill("Chase the invoice")).toContainText("2 days late");
-  await expect(pill("Send the quote")).toContainText("Today");
-  await expect(pill("Book the room")).toContainText("Tomorrow");
-  await expect(pill("Plan the offsite")).toContainText("In 12 days");
+  // The cell shows the date in the pill and the word under it; its name says both (N31). Another year's date has no weekday.
+  const date = (iso: string) => (iso.slice(0, 4) === isoDay(0).slice(0, 4) ? weekdayDate(iso) : shortDate(iso));
+  const cell = (title: string, words: string) => pill(title).getByRole("button", { name: `Deadline: ${words}. Change` });
+  await expect(cell("Chase the invoice", `${date(isoDay(-2))} · 2 days late`)).toBeVisible();
+  await expect(cell("Send the quote", `${date(isoDay(0))} · Today`)).toBeVisible();
+  await expect(cell("Book the room", `${date(isoDay(1))} · Tomorrow`)).toBeVisible();
+  await expect(cell("Plan the offsite", date(isoDay(12)))).toBeVisible();
+  await expect(pill("Plan the offsite")).not.toContainText("In 12 days");
 });

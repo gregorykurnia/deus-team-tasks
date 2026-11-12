@@ -1,4 +1,5 @@
 // Deadline pills (guide 4.4). The tone is shown by the words too, so colour is never the only signal.
+import type { ReactNode } from "react";
 import Icon, { type IconName } from "./Icon";
 import styles from "./Pill.module.css";
 
@@ -8,7 +9,7 @@ interface PillProps {
   tone: PillTone;
   icon?: IconName;
   title?: string; // the full date, shown on hover
-  children: string;
+  children: ReactNode;
 }
 
 export default function Pill({ tone, icon, title, children }: PillProps) {

@@ -55,15 +55,32 @@ const PILL_TONES: Record<RowModel["deadline"]["tone"], PillTone> = { red: "red",
 const TONE_CLASS: Record<Tone, string | undefined> = { plain: undefined, amber: styles.amber, red: styles.red };
 
 // The pill sits above the row's link, so its full date shows on hover (guide 4.4); a click on it still opens the task.
-function DeadlinePill({ row }: { row: RowModel }) {
-  const { tone, label } = row.deadline;
+// It names the date, then "3 days late", "Today" or "Tomorrow" (N31). Where a row leaves the pill too little room (All
+// tasks' column, phone cards), the pill keeps the date and DeadlineWord says the rest.
+function DeadlinePill({ row, dateOnly }: { row: RowModel; dateOnly?: boolean }) {
+  const { tone, label, date, word } = row.deadline;
   return (
     <span className={`${styles.lift} ${styles.pillBox}`}>
       <Pill tone={PILL_TONES[tone]} icon={tone === "red" ? "alert" : undefined} title={row.deadlineTitle}>
-        {label}
+        {date && word ? (
+          <span>
+            {date}
+            {!dateOnly && <span className={styles.pillWord}> · {word}</span>}
+          </span>
+        ) : (
+          label
+        )}
       </Pill>
     </span>
   );
+}
+
+// The deadline's word in its tone, said where the pill leaves it out: under the title on phones, under the pill in All
+// tasks' column. The stylesheet shows the one that fits the screen.
+function DeadlineWord({ row, className }: { row: RowModel; className: string }) {
+  const { tone, word } = row.deadline;
+  if (!word || (tone !== "red" && tone !== "amber")) return null;
+  return <span className={`${className} ${TONE_CLASS[tone]}`}>{word}</span>;
 }
 
 function Lead({ task, row, selecting, selected, onToggleDone, onSelect }: RowProps & { row: RowModel }) {
@@ -103,8 +120,9 @@ function InProgress() {
 }
 
 // In Progress, company or group, touch point, "High priority", the last action in its tone, "Just changed".
-function Meta({ row, justChanged, only, parent }: { row: RowModel; justChanged?: boolean; only?: "place"; parent?: string }) {
+function Meta({ row, justChanged, only, parent, word }: { row: RowModel; justChanged?: boolean; only?: "place"; parent?: string; word?: boolean }) {
   const bits = [
+    word && row.deadline.word && <DeadlineWord key="word" row={row} className={styles.phoneWord} />,
     row.inProgress && <InProgress key="status" />,
     parent && (
       <span key="parent" className={styles.place}>
@@ -159,7 +177,7 @@ export function TaskCard(input: RowProps) {
       </span>
       <div className={styles.main}>
         <Title task={props.task} href={props.href} selecting={props.selecting} />
-        <Meta row={row} justChanged={props.justChanged} />
+        <Meta row={row} justChanged={props.justChanged} word />
       </div>
       <div className={`${styles.right} ${styles.lift}`}>
         <DeadlinePill row={row} />
@@ -256,7 +274,12 @@ function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; 
       content = task.startDate && shortDate(task.startDate, today);
       break;
     case "end":
-      content = <DeadlinePill row={row} />;
+      content = (
+        <>
+          <DeadlinePill row={row} dateOnly />
+          <DeadlineWord row={row} className={styles.cellWord} />
+        </>
+      );
       break;
     case "last": {
       const last = row.lastAction;
@@ -338,6 +361,7 @@ export function TaskListRow(input: ListRowProps) {
   const company = row.badge.kind === "company" ? row.place : null;
   // What a hidden detail would have said goes under the title, so hiding a column never hides the task's state.
   const meta = [
+    columns.includes("end") && row.deadline.word && <DeadlineWord key="word" row={row} className={styles.phoneWord} />,
     row.inProgress && !columns.includes("status") && <InProgress key="status" />,
     subtask?.parent && (
       <span key="parent" className={styles.place}>

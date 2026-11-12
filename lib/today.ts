@@ -75,7 +75,7 @@ export function heroOf(open: DoneTask[], all: DoneTask[], companies: CompaniesBy
   let lede = "";
   if (first) {
     const company = linkedCompany(first, companies);
-    lede = `Start with ${company ? company.company : `“${first.task}”`}, it's ${deadlineSignal(first, today).label}. `;
+    lede = `Start with ${company ? company.company : `“${first.task}”`}, it's ${deadlineSignal(first, today).word}. `;
   } else if (next) {
     lede = `The next deadline is ${dayLabel(next.endDate)}: ${next.task}. `;
   }

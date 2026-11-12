@@ -573,17 +573,17 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
         <p className={styles.result} role="status">
           {filtersOn(state) ? (
             <>
-              <b>{num(listing.sorted.length)}</b> of {plural(listing.total, noun)}
+              <b>{num(listing.matched)}</b> of {plural(listing.total, noun)}
               <button type="button" className={styles.linkButton} onClick={() => update(clearedFilters)}>
                 Clear filters
               </button>
             </>
           ) : finished ? (
             <>
-              <b>{plural(listing.sorted.length, "task")}</b> finished {{ week: "in the last 7 days", month: "in the last 30 days", all: "in all" }[state.range]}
+              <b>{plural(listing.matched, "task")}</b> finished {{ week: "in the last 7 days", month: "in the last 30 days", all: "in all" }[state.range]}
             </>
           ) : (
-            <b>{plural(listing.sorted.length, noun)}</b>
+            <b>{plural(listing.matched, noun)}</b>
           )}
           {foldable.size > 0 && (
             <button type="button" className={styles.linkButton} aria-pressed={allFolded} onClick={() => setFolded(allFolded ? new Set() : new Set(foldable))}>

@@ -529,7 +529,7 @@ function BarLink({ bar, person, today, companies, href }: { bar: Bar; person: st
   const where = linkedCompany(task, companies)?.company ?? task.taskGroup ?? "Internal";
   const dates = [
     task.startDate && `starts ${shortDate(task.startDate, today)}`,
-    task.endDate ? `deadline ${shortDate(task.endDate, today)}${bar.late ? ` (${deadlineSignal(task, today).label})` : ""}` : "no deadline",
+    task.endDate ? `deadline ${shortDate(task.endDate, today)}${bar.late ? ` (${deadlineSignal(task, today).word})` : ""}` : "no deadline",
   ]
     .filter(Boolean)
     .join(", ");

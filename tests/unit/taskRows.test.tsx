@@ -124,7 +124,7 @@ describe("list row (All tasks)", () => {
 
   it("puts what a hidden detail would say under the title, so hiding a column never hides the task's state", () => {
     const markup = html(<TaskListRow {...props} task={{ ...base, taskGroup: "Year end" }} columns={["type"]} />);
-    expect(markup).toMatch(/<p class="[^"]*meta[^"]*"><span class="[^"]*place[^"]*">Pelita Foods<\/span><span class="[^"]*place[^"]*">Year end<\/span><span>2 days late<\/span><\/p>/);
+    expect(markup).toMatch(/<p class="[^"]*meta[^"]*"><span class="[^"]*place[^"]*">Pelita Foods<\/span><span class="[^"]*place[^"]*">Year end<\/span><span>Sun 18 Oct · 2 days late<\/span><\/p>/);
     // On a group's page every task is in it, so the group isn't repeated.
     expect(html(<TaskListRow {...props} task={{ ...base, taskGroup: "Year end" }} columns={["type"]} inGroup />)).not.toContain("Year end");
   });
@@ -160,7 +160,7 @@ describe("list row (All tasks)", () => {
     expect(markup).toContain('aria-label="Priority: High. Change"');
     expect(markup).toContain('aria-label="Touch point: Call. Change"');
     expect(markup).toContain('aria-label="Start: 10 Oct. Change"');
-    expect(markup).toContain('aria-label="Deadline: 2 days late. Change"');
+    expect(markup).toContain('aria-label="Deadline: Sun 18 Oct · 2 days late. Change"');
     expect(markup).toContain('aria-label="Task type: None. Change"');
     expect(markup.match(/<button[^>]*data-col/g)).toHaveLength(6);
     // Without onEdit (selecting) nothing is a button; a finished task's Finished column isn't one either.

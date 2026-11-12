@@ -69,15 +69,15 @@ describe("taskRowModel: last action (company tasks only)", () => {
 });
 
 describe("taskRowModel: deadline", () => {
-  it("says a missed deadline in words, with the date for hover", () => {
+  it("says a missed deadline by its date and in words, with the date for hover", () => {
     const row = taskRowModel(task({ endDate: "2026-10-18" }), companies, TODAY);
-    expect(row.deadline).toEqual({ tone: "red", label: "2 days late" });
+    expect(row.deadline).toEqual({ tone: "red", label: "Sun 18 Oct · 2 days late", date: "Sun 18 Oct", word: "2 days late" });
     expect(row.deadlineTitle).toMatch(/^Deadline \w{3} 18 Oct$/);
   });
 
   it("is amber within three days and plain after", () => {
-    expect(taskRowModel(task({ endDate: "2026-10-22" }), companies, TODAY).deadline).toEqual({ tone: "amber", label: "In 2 days" });
-    expect(taskRowModel(task({ endDate: "2026-11-01" }), companies, TODAY).deadline).toEqual({ tone: "plain", label: "In 12 days" });
+    expect(taskRowModel(task({ endDate: "2026-10-22" }), companies, TODAY).deadline).toEqual({ tone: "amber", label: "Thu 22 Oct", date: "Thu 22 Oct" });
+    expect(taskRowModel(task({ endDate: "2026-11-01" }), companies, TODAY).deadline).toEqual({ tone: "plain", label: "Sun 1 Nov", date: "Sun 1 Nov" });
   });
 
   it("says 'No dates' when a task has none, and what that means on hover", () => {

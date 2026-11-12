@@ -1,7 +1,7 @@
 // Subtasks (lib/subtasks, N24): a subtask names its parent, sits under it on the list, and is counted on the parent's row.
 import { describe, expect, it } from "vitest";
 import { companiesById } from "@/lib/kinds";
-import { canHoldSubtasks, countLabel, foldSubtasks, nestSubtasks, parentsWithNested, newSubtask, parentName, parentOf, subtaskCounts, subtasksOf } from "@/lib/subtasks";
+import { canHoldSubtasks, countLabel, foldSubtasks, nestSubtasks, parentsWithNested, newSubtask, parentName, parentOf, subtaskCounts, subtasksOf, subtasksStandIn } from "@/lib/subtasks";
 import { listTasks, parseTaskView } from "@/lib/taskView";
 import type { Task } from "@/lib/types";
 
@@ -31,12 +31,47 @@ describe("nestSubtasks", () => {
   });
 });
 
+describe("subtasksStandIn (N31)", () => {
+  it("keeps the list's order and drops a main task whose subtasks are listed", () => {
+    const list = [task("s2", { parentId: "p" }), task("a"), task("p"), task("s1", { parentId: "p" })];
+    expect(ids(subtasksStandIn(list))).toEqual(["s2", "a", "s1"]);
+  });
+
+  it("keeps a main task none of whose subtasks are listed, and a subtask whose main task isn't", () => {
+    expect(ids(subtasksStandIn([task("p"), task("s", { parentId: "gone" }), task("b")]))).toEqual(["p", "s", "b"]);
+  });
+
+  it("never empties the list on data that breaks the one level or loops", () => {
+    const deep = [task("c", { parentId: "b" }), task("b", { parentId: "a" }), task("a")];
+    expect(ids(subtasksStandIn(deep))).toEqual(["c", "b"]);
+    const loop = [task("x", { parentId: "y" }), task("y", { parentId: "x" }), task("self", { parentId: "self" })];
+    expect(ids(subtasksStandIn(loop))).toEqual(["x", "y", "self"]);
+  });
+});
+
 describe("All tasks with subtasks", () => {
-  it("shows a subtask under its parent whatever the sort, and on its own when only it matches", () => {
-    const all = [task("p", { task: "Plan the offsite", endDate: "2026-10-30" }), task("s", { task: "Book the venue", parentId: "p", endDate: "2026-10-21" }), task("o", { endDate: "2026-10-25" })];
-    const view = (q = "") => parseTaskView(new URLSearchParams(q), false);
-    expect(ids(listTasks(all, view(), null, companiesById([]), TODAY).sorted)).toEqual(["o", "p", "s"]);
-    expect(ids(listTasks(all, view("q=venue"), null, companiesById([]), TODAY).sorted)).toEqual(["s"]);
+  const all = [
+    task("p", { task: "Plan the offsite", endDate: "2026-10-30", taskGroup: "Events" }),
+    task("s1", { task: "Book the venue", parentId: "p", endDate: "2026-10-21", taskGroup: "Events" }),
+    task("s2", { task: "Confirm the caterer", parentId: "p", endDate: "2026-10-28", taskGroup: "Events" }),
+    task("o", { task: "Send the quote", endDate: "2026-10-25" }),
+    task("n", { task: "Draft the brief" }),
+  ];
+  const view = (q = "") => parseTaskView(new URLSearchParams(q), false);
+  const list = (q = "") => ids(listTasks(all, view(q), null, companiesById([]), TODAY).sorted);
+
+  it("by deadline lists every subtask and every task without subtasks at its own date, undated last", () => {
+    expect(list()).toEqual(["s1", "o", "s2", "n"]);
+    expect(list("sort=end&dir=desc")).toEqual(["s2", "o", "s1", "n"]);
+  });
+
+  it("by deadline keeps a main task once none of its subtasks are in the list", () => {
+    expect(list("q=offsite")).toEqual(["p"]);
+    expect(list("q=venue")).toEqual(["s1"]);
+  });
+
+  it("by anything else shows subtasks under their main task", () => {
+    expect(list("sort=desc")).toEqual(["n", "p", "s1", "s2", "o"]);
   });
 });
 

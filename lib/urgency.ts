@@ -1,6 +1,6 @@
 // Urgency rules (guide 5.1): one rule set everywhere. Urgency always has words;
 // colour is the second signal. Done tasks never show urgency.
-import { ago, daysBetween, isoOf, plural, shortDate, todayIso } from "./dates";
+import { ago, daysBetween, isoOf, plural, shortDate, todayIso, weekdayDate } from "./dates";
 import { isParked, parkedLabel } from "./parking";
 import type { Task } from "./types";
 
@@ -29,11 +29,13 @@ export function dueBucket(task: Dated, today: string = todayIso()): DueBucket {
 export interface DeadlineSignal {
   tone: Tone | "done" | "none";
   label: string;
+  date?: string; // "Mon 9 Nov", for an open task with a deadline
+  word?: string; // "3 days late", "Today" or "Tomorrow", for a sentence; the label carries it after the date
 }
 
-// The deadline pill: "2 days late" (red), "Today", "Tomorrow", "In 3 days"
-// (amber), "In 12 days" (plain), then the date after 30 days. A parked task
-// shows no urgency, only "Parked" or when it comes back.
+// The deadline pill always names the date (owner, 2026-11-12, N31): "Thu 19 Nov" (plain), "Sat 14 Nov" (amber within
+// 3 days), "Fri 13 Nov · Tomorrow" and "Thu 12 Nov · Today" (amber), "Mon 9 Nov · 3 days late" (red). Another year's
+// date is "5 Jan 2027", without the weekday. A parked task shows no urgency, only "Parked" or when it comes back.
 export function deadlineSignal(task: Dated, today: string = todayIso()): DeadlineSignal {
   if (task.completed) {
     return { tone: "done", label: task.completedAt ? `Done ${ago(isoOf(new Date(task.completedAt)), today)}` : "Done" };
@@ -41,12 +43,10 @@ export function deadlineSignal(task: Dated, today: string = todayIso()): Deadlin
   if (isParked(task, today)) return { tone: "none", label: parkedLabel(task, today) };
   if (!task.endDate) return { tone: "none", label: task.startDate ? "No deadline" : "No dates" };
   const left = daysBetween(today, task.endDate);
-  if (left < 0) return { tone: "red", label: `${plural(-left, "day")} late` };
-  if (left === 0) return { tone: "amber", label: "Today" };
-  if (left === 1) return { tone: "amber", label: "Tomorrow" };
-  if (left <= 3) return { tone: "amber", label: `In ${left} days` };
-  if (left <= 30) return { tone: "plain", label: `In ${left} days` };
-  return { tone: "plain", label: shortDate(task.endDate, today) };
+  const date = task.endDate.slice(0, 4) === today.slice(0, 4) ? weekdayDate(task.endDate, today) : shortDate(task.endDate, today);
+  const word = left < 0 ? `${plural(-left, "day")} late` : left === 0 ? "Today" : left === 1 ? "Tomorrow" : undefined;
+  if (word) return { tone: left < 0 ? "red" : "amber", label: `${date} · ${word}`, date, word };
+  return { tone: left <= 3 ? "amber" : "plain", label: date, date };
 }
 
 // Days since the last action, for company tasks and for Active and Deal done
