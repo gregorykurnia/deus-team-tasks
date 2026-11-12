@@ -174,13 +174,16 @@ describe("cells (guide 4.9, 5.1)", () => {
     expect(last("2026-10-01", "toApproach")).toMatchObject({ tone: "plain" });
   });
 
-  it("gives a target date the tones of a deadline, and a missed planned outreach amber", () => {
+  it("names a target date by its date with the tones of a deadline, words only when close or missed, and a missed planned outreach amber", () => {
     const target = (iso: string) => cellOf(co(1, { target: iso }), field("active", "target"), "active", settings, TODAY);
-    expect(target("2026-10-17")).toMatchObject({ label: "Missed by 3 days", tone: "red", pill: true });
-    expect(target("2026-10-21")).toMatchObject({ label: "Tomorrow", tone: "amber" });
-    expect(target("2026-10-30")).toMatchObject({ label: "In 10 days", tone: "plain" });
-    expect(target("2026-12-25")).toMatchObject({ label: "25 Dec", tone: "plain" });
-    expect(cellOf(co(1, { reach: "2026-10-18" }), field("toApproach", "reach"), "toApproach", settings, TODAY)).toMatchObject({ label: "2 days overdue", tone: "amber" });
+    expect(target("2026-10-17")).toMatchObject({ label: "Sat 17 Oct · Missed by 3 days", date: "Sat 17 Oct", word: "Missed by 3 days", tone: "red", pill: true });
+    expect(target("2026-10-20")).toMatchObject({ label: "Tue 20 Oct · Today", tone: "amber" });
+    expect(target("2026-10-21")).toMatchObject({ label: "Wed 21 Oct · Tomorrow", date: "Wed 21 Oct", word: "Tomorrow", tone: "amber" });
+    expect(target("2026-10-23")).toMatchObject({ label: "Fri 23 Oct", tone: "amber", word: undefined });
+    expect(target("2026-10-30")).toMatchObject({ label: "Fri 30 Oct", tone: "plain" });
+    expect(target("2026-12-25")).toMatchObject({ label: "Fri 25 Dec", tone: "plain" });
+    expect(target("2027-01-05")).toMatchObject({ label: "5 Jan 2027", tone: "plain" });
+    expect(cellOf(co(1, { reach: "2026-10-18" }), field("toApproach", "reach"), "toApproach", settings, TODAY)).toMatchObject({ label: "Sun 18 Oct · 2 days overdue", word: "2 days overdue", tone: "amber" });
   });
 
   it("leaves empty values empty, and numbers with separators", () => {

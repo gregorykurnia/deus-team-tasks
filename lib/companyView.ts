@@ -21,7 +21,7 @@ import {
 } from "./companies";
 import type { PipelineEntry } from "./clientTypes";
 import type { ChoiceOption, CompanyField, CompanySettings, OptionColour } from "./companySettings";
-import { daysBetween, plural, shortDate, todayIso } from "./dates";
+import { daysBetween, plural, shortDate, todayIso, weekdayDate } from "./dates";
 import { GONE_COLD_DAYS } from "./urgency";
 
 export const PAGE_SIZE = 100;
@@ -335,7 +335,9 @@ export type Cell =
   | { kind: "empty" }
   | { kind: "choice"; label: string; colour: OptionColour }
   | { kind: "choices"; label: string; items: { label: string; colour: OptionColour }[] } // label: all of them, in words
-  | { kind: "date"; label: string; tone: CellTone; title: string; pill: boolean } // pill: a target date or planned outreach
+  // pill: a target date or planned outreach. label says it all ("Sat 17 Oct · Missed by 3 days"); the pill shows date and
+  // the word goes under it (N31).
+  | { kind: "date"; label: string; tone: CellTone; title: string; pill: boolean; date?: string; word?: string }
   | { kind: "number"; label: string }
   | { kind: "text"; label: string };
 
@@ -353,21 +355,22 @@ function lastActionCell(iso: string, group: CompanyGroup, today: string, calm: b
   return { kind: "date", label, tone, title: `Last action ${fullDate(iso)}${tone === "red" ? ". Gone cold" : ""}`, pill: false };
 }
 
-// A target date in words, the same tones as a task's deadline; a missed planned outreach is amber, not red. A parked
-// company's stays plain.
+// A target date or planned outreach by its date, with the tones of a task's deadline and its words only when it's close or
+// missed (owner, 2026-11-12, N31): "Thu 19 Nov", "Sat 14 Nov" (amber within 3 days), "Thu 12 Nov · Tomorrow",
+// "Sat 17 Oct · Missed by 3 days" (red). A missed planned outreach is amber, "2 days overdue". Another year's date is
+// "25 Dec 2027". A parked company's stays plain.
 function pillCell(iso: string, outreach: boolean, today: string, calm: boolean): Cell {
   const n = daysBetween(today, iso);
-  let label: string;
-  let tone: CellTone;
+  const date = iso.slice(0, 4) === today.slice(0, 4) ? weekdayDate(iso, today) : shortDate(iso, today);
+  let word: string | undefined;
+  let tone: CellTone = n <= 3 ? "amber" : "plain";
   if (n < 0) {
-    label = outreach ? `${plural(-n, "day")} overdue` : `Missed by ${plural(-n, "day")}`;
+    word = outreach ? `${plural(-n, "day")} overdue` : `Missed by ${plural(-n, "day")}`;
     tone = outreach ? "amber" : "red";
-  } else if (n === 0) [label, tone] = ["Today", "amber"];
-  else if (n === 1) [label, tone] = ["Tomorrow", "amber"];
-  else if (n <= 3) [label, tone] = [`In ${n} days`, "amber"];
-  else if (n <= 30) [label, tone] = [`In ${n} days`, "plain"];
-  else [label, tone] = [shortDate(iso, today), "plain"];
-  return { kind: "date", label, tone: calm ? "plain" : tone, title: `${outreach ? "Planned outreach" : "Target date"} ${fullDate(iso)}`, pill: true };
+  } else if (n === 0) word = "Today";
+  else if (n === 1) word = "Tomorrow";
+  const title = `${outreach ? "Planned outreach" : "Target date"} ${fullDate(iso)}`;
+  return { kind: "date", label: word ? `${date} · ${word}` : date, tone: calm ? "plain" : tone, title, pill: true, date, word };
 }
 
 export function optionOf(settings: CompanySettings, key: string, name: string): ChoiceOption | undefined {

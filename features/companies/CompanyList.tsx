@@ -71,10 +71,18 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
       );
     case "date":
       if (cell.pill) {
-        return (
+        const pill = (
           <Pill tone={cell.tone === "plain" ? "calm" : cell.tone} icon={cell.tone === "red" ? "alert" : undefined} title={cell.title}>
-            {cell.label}
+            {cell.date ?? cell.label}
           </Pill>
+        );
+        // The date in the pill, and "Tomorrow" or "Missed by 3 days" under it in its tone (N31).
+        if (!cell.word) return pill;
+        return (
+          <span className={styles.dateStack}>
+            {pill}
+            <span className={cell.tone === "red" ? styles.redWords : cell.tone === "amber" ? styles.amberWords : styles.dv}>{cell.word}</span>
+          </span>
         );
       }
       return (

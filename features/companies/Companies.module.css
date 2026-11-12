@@ -467,6 +467,20 @@
   text-align: left;
 }
 
+/* A target date or planned outreach with its word under the pill (N31). */
+.dateStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.dateStack > :last-child {
+  margin-left: 2px;
+  font-size: 12px;
+  line-height: 15px;
+}
+
 .cell:hover {
   background: rgba(47, 107, 234, .07);
   box-shadow: inset 0 0 0 1px rgba(47, 107, 234, .25);

@@ -4,6 +4,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies } from "./data";
+import { shortDate, weekdayDate } from "../../lib/dates";
 
 const tile = (page: Page, name: string) => page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: new RegExp(`^${name}\\s*\\d`) }); // the count follows the name: Active isn't Active clients and partners
 const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Filter, sort and export" });
@@ -137,13 +138,19 @@ test("B8: search covers the group, highlights what matched, and says where else 
   await expect.poll(() => names(page)).toEqual(["Pelita Hotels"]);
 });
 
-test("B3: the cells say what they are: a chip, a date in words, a missed target in red", async ({ page }) => {
+test("B3: the cells say what they are: a chip, a date in words, a target by its date and in red once missed", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");
   const pelita = row(page, "Pelita Foods");
   await expect(pelita.getByText("To Follow Up")).toBeVisible();
   await expect(pelita.getByText("20 days ago")).toBeVisible();
   await expect(pelita.getByText("Missed by 2 days")).toBeVisible();
+  // A target date shows its date, with words only when it's close or missed (N31).
+  const date = (iso: string) => (iso.slice(0, 4) === isoDay(0).slice(0, 4) ? weekdayDate(iso) : shortDate(iso));
+  await expect(pelita.getByRole("button", { name: `Target date: ${date(isoDay(-2))} · Missed by 2 days. Change` })).toBeVisible();
+  const borneo = row(page, "Borneo Retail");
+  await expect(borneo.getByRole("button", { name: `Target date: ${date(isoDay(10))}. Change` })).toBeVisible();
+  await expect(borneo).not.toContainText("In 10 days");
   await expect(pelita.getByRole("button", { name: "Status: To Follow Up. Change" })).toBeVisible(); // each value names its field
   await expect(row(page, "Citra Mart").getByRole("button", { name: "Priority: empty. Change", includeHidden: true })).toBeAttached(); // an empty value is a dash
 });
