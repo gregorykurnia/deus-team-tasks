@@ -42,10 +42,10 @@ Nothing shows or writes until the owner sets one Vercel variable (O2).
 
 ## Owner steps after the run
 
-- [ ] O1 *owner*: in Google Calendar on your Gmail account, go to Settings → your calendar → **Share with specific
+- [x] O1 *owner* (done 2026-11-13): in Google Calendar on your Gmail account, go to Settings → your calendar → **Share with specific
   people**, and add the service account's email (Vercel's `GOOGLE_SERVICE_ACCOUNT_EMAIL`) with **Make changes to
   events**.
-- [ ] O2 *owner*: in Vercel Production, set `GOOGLE_EVENTS_CALENDAR_ID` to your Gmail address (your main calendar's
+- [x] O2 *owner* (done 2026-11-13): in Vercel Production, set `GOOGLE_EVENTS_CALENDAR_ID` to your Gmail address (your main calendar's
   ID) and redeploy. To roll back, remove it and redeploy. Events already made stay on your calendar.
 - [ ] O3 *owner*: live check. Put one task on the calendar with a time from the app, then save one chat plan with
   one calendar step and one task-only step. Move one of them, delete it, and check that your calendar follows.
