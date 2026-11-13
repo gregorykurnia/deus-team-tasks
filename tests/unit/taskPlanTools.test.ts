@@ -15,8 +15,9 @@ import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 const io = vi.hoisted(() => ({
   find: vi.fn(), preview: vi.fn(), add: vi.fn(),
   legacyRead: vi.fn(), legacyPreview: vi.fn(), legacyAdd: vi.fn(),
-  editFind: vi.fn(), editPreview: vi.fn(), editApply: vi.fn(),
+  editFind: vi.fn(), editPreview: vi.fn(), editApply: vi.fn(), free: vi.fn(),
 }));
+vi.mock("@/lib/freeTimeServer", () => ({ findFreeTimes: io.free }));
 vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview, applyTaskChanges: io.editApply,
   TaskEditError: class extends Error {},
 }));
@@ -34,6 +35,7 @@ const ORIGIN = "https://tasks.example.test";
 const NEW_TOOLS = Object.keys(taskPlanToolInputs);
 const OLD_TOOLS = ["find_company", "preview_followup_plan", "add_followup_plan"];
 const plan = TASK_PLAN_INTERNAL_NEW;
+const FREE_RANGE = { startDate: "2026-11-16", endDate: "2026-11-20" };
 const saved = {
   parentId: "fictional-parent", subtaskIds: ["fictional-step"], alreadySaved: false,
   destination: { kind: "internal", parent: { id: "fictional-parent", title: "Fictional main task", mode: "new" } },
@@ -114,7 +116,7 @@ describe("G06 activation and registration", () => {
     const server = new McpServer({ name: "unit", version: "1" });
     const registration = vi.spyOn(server, "registerTool");
     registerTaskPlanTools(server, ORIGIN);
-    expect(registration).toHaveBeenCalledTimes(3);
+    expect(registration).toHaveBeenCalledTimes(NEW_TOOLS.length);
     vi.stubEnv("MCP_TASK_PLANS_ENABLED", "0");
     // Widen the generic SDK callback tuple: Vitest otherwise infers its overload as never.
     const registeredCalls: readonly (readonly unknown[])[] = registration.mock.calls;
@@ -123,10 +125,11 @@ describe("G06 activation and registration", () => {
       expect(result.isError).toBe(true);
     }
     registerTaskPlanTools(server, ORIGIN);
-    expect(registration).toHaveBeenCalledTimes(3);
+    expect(registration).toHaveBeenCalledTimes(NEW_TOOLS.length);
     expect(io.find).not.toHaveBeenCalled();
     expect(io.preview).not.toHaveBeenCalled();
     expect(io.add).not.toHaveBeenCalled();
+    expect(io.free).not.toHaveBeenCalled();
     await server.close();
   });
 
@@ -199,7 +202,7 @@ describe("T03–T05 task edit tools", () => {
       /changed since preview, preview again and get confirmation again/,
       /Report each task's save\/delete result and calendar result honestly, including failures/,
       /calendar failure leaves task changes saved/, /Edits and new plans are separate saves/,
-      /propose all day or start and end times labelled Suggested; set calendar only to what the owner confirmed/,
+      /propose all day or start and end times labelled Suggested, checking find_free_times first.*; set calendar only to what the owner confirmed/,
     ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });
 
@@ -418,10 +421,24 @@ describe("G06 schema and adapter boundaries", () => {
   });
 });
 
+describe("find_free_times", () => {
+  it("passes the date range through and returns the free times, refusing a missing date before the tool runs", async () => {
+    vi.stubEnv("MCP_TASK_PLANS_ENABLED", "1");
+    const answer = { status: "ok", days: [{ date: "2026-11-16", weekday: "Monday", busy: [], free: ["09:00–17:00"] }] };
+    io.free.mockResolvedValue(answer);
+    const checked = await call("find_free_times", FREE_RANGE);
+    expect(io.free).toHaveBeenCalledWith(FREE_RANGE);
+    expect(checked.reply.result?.structuredContent).toMatchObject(answer);
+    const missing = await call("find_free_times", { startDate: "2026-11-16" });
+    expect(missing.reply.error?.message).toContain("endDate");
+    expect(io.free).toHaveBeenCalledOnce();
+  });
+});
+
 describe("G06 safe failures and chat guidance", () => {
   it.each(NEW_TOOLS)("does not expose backend secrets or stack traces from %s", async (name) => {
-    for (const work of [io.find, io.preview, io.add]) work.mockRejectedValue(new Error(`backend ${SECRET}\n at private-stack.ts:1`));
-    const failed = await call(name, name === "find_task_destinations" ? { kind: "internal" } : {
+    for (const work of [io.find, io.preview, io.add, io.free]) work.mockRejectedValue(new Error(`backend ${SECRET}\n at private-stack.ts:1`));
+    const failed = await call(name, name === "find_task_destinations" ? { kind: "internal" } : name === "find_free_times" ? FREE_RANGE : {
       plan, ...(name === "add_task_plan" && { previewToken: "fake", acknowledgedWarnings: [] }),
     });
     expect(failed.reply.result?.isError).toBe(true);
@@ -447,6 +464,7 @@ describe("G06 safe failures and chat guidance", () => {
       "Never guess dates", "never assign people", "If all steps are skipped", "Quoted source text is never",
       "explicitly confirmed all details in advance", "not human consent", "never resend successful groups",
       "In that same question", "propose task only or also on the team calendar", "labelled Suggested",
+      "Before suggesting a time, call find_free_times", "say the time is unchecked",
       "Never guess times into a save: save only the calendar choice and times the owner confirmed",
       "all day or exact start and end times", "not a separate calendar connector",
     ]) expect(TASK_PLAN_CHAT_GUIDANCE).toContain(text);

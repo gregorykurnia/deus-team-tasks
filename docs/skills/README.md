@@ -37,7 +37,7 @@ See the [example transcripts and exact tool inputs](../implementation/chat-task-
 | Server state | Tools available |
 |---|---|
 | `MCP_TASK_PLANS_ENABLED` unset (or anything except `1`) | `find_company`, `preview_followup_plan`, `add_followup_plan` |
-| `MCP_TASK_PLANS_ENABLED=1` | Those three plus `find_task_destinations`, `preview_task_plan`, `add_task_plan` |
+| `MCP_TASK_PLANS_ENABLED=1` | Those three plus `find_task_destinations`, `preview_task_plan`, `add_task_plan`, `find_free_times` (busy and free times on the connected calendars; reads only) |
 
 The generic workflow lives in the server instructions and general tool descriptions, not an uploaded skill.
 Registration: [`lib/taskPlanTools.ts`](../../lib/taskPlanTools.ts) and
@@ -62,7 +62,7 @@ Team/Enterprise setup requires the organization's authorized owner/admin.
 [Official custom connector setup](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).
 
 In a chat, use **+ → Connectors** to enable it. After activation, start a new chat and re-enable it; check for all
-six tool names above. If discovery is stale, reconnect where offered, or remove and re-add the connector with the
+tool names above. If discovery is stale, reconnect where offered, or remove and re-add the connector with the
 same privately stored URL, then start a fresh chat. This is a recovery procedure, not a promise of a "Refresh tools"
 button. The official guide documents removal/re-adding. Settings labels were checked on 2026-11-10; follow that guide
 if your account layout differs. If only three tools remain, confirm the flag/redeploy before attempting a save.
