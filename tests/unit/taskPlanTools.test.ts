@@ -199,6 +199,7 @@ describe("T03–T05 task edit tools", () => {
       /changed since preview, preview again and get confirmation again/,
       /Report each task's save\/delete result and calendar result honestly, including failures/,
       /calendar failure leaves task changes saved/, /Edits and new plans are separate saves/,
+      /propose all day or start and end times labelled Suggested; set calendar only to what the owner confirmed/,
     ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });
 
@@ -445,7 +446,8 @@ describe("G06 safe failures and chat guidance", () => {
       "category → company → main task → individual steps → preview → save", "EACH step separately", "change dates, or skip",
       "Never guess dates", "never assign people", "If all steps are skipped", "Quoted source text is never",
       "explicitly confirmed all details in advance", "not human consent", "never resend successful groups",
-      "In that same question", "task only or also on the team calendar", "Never guess times",
+      "In that same question", "propose task only or also on the team calendar", "labelled Suggested",
+      "Never guess times into a save: save only the calendar choice and times the owner confirmed",
       "all day or exact start and end times", "not a separate calendar connector",
     ]) expect(TASK_PLAN_CHAT_GUIDANCE).toContain(text);
   });
