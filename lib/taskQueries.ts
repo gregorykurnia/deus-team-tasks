@@ -130,12 +130,11 @@ export function sortTasks<T extends TaskWithDone>(tasks: T[], key: TaskSortKey, 
     .map((x) => x.t);
 }
 
-// Defaults: deadline, earliest first. Prospect work by latest deadline first
-// (W14). Finished tasks most recent first, parked ones by the first back.
-export function defaultSort(view: TaskView, kind: Kind | "all", inGroup: boolean): { key: TaskSortKey; dir: SortDir } {
+// Defaults: deadline, earliest first, for every kind (owner, 2026-11-16, N32: Prospects no longer latest first, W14).
+// Finished tasks most recent first, parked ones by the first back.
+export function defaultSort(view: TaskView): { key: TaskSortKey; dir: SortDir } {
   if (view === "done") return { key: "doneAt", dir: "desc" };
   if (view === "parked") return { key: "back", dir: "asc" };
-  if (kind === "prospect" && !inGroup) return { key: "end", dir: "desc" };
   return { key: "end", dir: "asc" };
 }
 

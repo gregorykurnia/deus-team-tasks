@@ -110,11 +110,11 @@ describe("the view in the address", () => {
 });
 
 describe("sorting", () => {
-  it("defaults to the deadline, earliest first; prospect work latest first; finished most recent first", () => {
-    expect(effectiveSort(view(), false)).toEqual({ key: "end", dir: "asc" });
-    expect(effectiveSort(view("kind=prospect"), false)).toEqual({ key: "end", dir: "desc" });
-    expect(effectiveSort(view("kind=prospect"), true)).toEqual({ key: "end", dir: "asc" });
-    expect(effectiveSort(view("view=done"), false)).toEqual({ key: "doneAt", dir: "desc" });
+  it("defaults to the deadline, earliest first, for every kind (prospect work too); finished most recent first", () => {
+    expect(effectiveSort(view())).toEqual({ key: "end", dir: "asc" });
+    expect(effectiveSort(view("kind=prospect"))).toEqual({ key: "end", dir: "asc" });
+    expect(effectiveSort(view("", true))).toEqual({ key: "end", dir: "asc" });
+    expect(effectiveSort(view("view=done"))).toEqual({ key: "doneAt", dir: "desc" });
   });
 
   it("says the direction in words", () => {
@@ -127,11 +127,11 @@ describe("sorting", () => {
   });
 
   it("flips on a second tap of the same head, and starts at the column's own direction on another", () => {
-    const flipped = sortedByHead(view(), false, "end");
-    expect(effectiveSort(flipped, false)).toEqual({ key: "end", dir: "desc" });
-    expect(effectiveSort(sortedByHead(flipped, false, "end"), false)).toEqual({ key: "end", dir: "asc" });
-    expect(effectiveSort(sortedByHead(view(), false, "last"), false)).toEqual({ key: "last", dir: "desc" });
-    expect(effectiveSort(sortedByHead(view(), false, "about"), false)).toEqual({ key: "about", dir: "asc" });
+    const flipped = sortedByHead(view(), "end");
+    expect(effectiveSort(flipped)).toEqual({ key: "end", dir: "desc" });
+    expect(effectiveSort(sortedByHead(flipped, "end"))).toEqual({ key: "end", dir: "asc" });
+    expect(effectiveSort(sortedByHead(view(), "last"))).toEqual({ key: "last", dir: "desc" });
+    expect(effectiveSort(sortedByHead(view(), "about"))).toEqual({ key: "about", dir: "asc" });
   });
 
   it("leaves a sort behind when the view changes and it no longer fits", () => {
@@ -300,7 +300,7 @@ describe("the Parked view (N19)", () => {
     const s = view("view=parked&due=overdue&idle=14");
     expect(s).toMatchObject({ view: "parked", due: null, idle: null });
     expect(viewParams(s, false).toString()).toBe("view=parked");
-    expect(effectiveSort(s, false)).toEqual({ key: "back", dir: "asc" });
+    expect(effectiveSort(s)).toEqual({ key: "back", dir: "asc" });
     expect(view("view=parked&sort=doneAt").sort).toBeNull();
     expect(view("sort=back").sort).toBeNull();
   });

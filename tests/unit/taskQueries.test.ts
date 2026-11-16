@@ -103,11 +103,9 @@ describe("sorting (guide 5.6)", () => {
     expect(ids(sortTasks(list, "prio", "asc", ctx))).toEqual(["hi", "none", "g", "c"]);
     expect(ids(sortTasks(list, "desc", "asc", ctx))[0]).toBe("hi");
   });
-  it("defaults to deadline first, prospect work latest first, finished most recent first", () => {
-    expect(defaultSort("open", "all", false)).toEqual({ key: "end", dir: "asc" });
-    expect(defaultSort("open", "prospect", false)).toEqual({ key: "end", dir: "desc" });
-    expect(defaultSort("open", "prospect", true)).toEqual({ key: "end", dir: "asc" });
-    expect(defaultSort("done", "all", false)).toEqual({ key: "doneAt", dir: "desc" });
+  it("defaults to deadline earliest first, finished most recent first", () => {
+    expect(defaultSort("open")).toEqual({ key: "end", dir: "asc" });
+    expect(defaultSort("done")).toEqual({ key: "doneAt", dir: "desc" });
   });
 });
 
@@ -154,7 +152,7 @@ describe("parked tasks (N19)", () => {
     expect(ids(todaySections(tasks, ctx).overdue)).toEqual(["open", "back"]);
   });
   it("lists the first back first, and the ones with no day last", () => {
-    expect(defaultSort("parked", "all", false)).toEqual({ key: "back", dir: "asc" });
+    expect(defaultSort("parked")).toEqual({ key: "back", dir: "asc" });
     expect(ids(sortTasks(filterTasks(tasks, { view: "parked" }, ctx), "back", "asc", ctx))).toEqual(["until", "parked"]);
   });
 });

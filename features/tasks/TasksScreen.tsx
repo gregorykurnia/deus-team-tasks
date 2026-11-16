@@ -1,7 +1,7 @@
 "use client";
 
 // All tasks and one task group (guide 6.2). The view (kind, open, parked or done, filters, sort) lives in the address, so a link
-// from Today lands on the right list and a reload keeps it. Every source loads on its own; a task just marked done stays
+// from Today lands on the right list and a reload keeps it (all but the sort, N32). Every source loads on its own; a task just marked done stays
 // in its list while it leaves. Select (?select=1) chooses several tasks to mark done, park, move or delete at once (guide 4.7).
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -95,6 +95,17 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
   }
 
+  // The list always opens by its default sort, deadline earliest first (owner, 2026-11-16, N32): a sort picked here
+  // lasts while the list is open, and opening or reloading the page drops it from the address.
+  useLayoutEffect(() => {
+    const current = new URLSearchParams(window.location.search);
+    if (!current.has("sort") && !current.has("dir")) return;
+    current.delete("sort");
+    current.delete("dir");
+    const query = current.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, []);
+
   // Selecting several is in the address too (?select=1), so a reload keeps it; what's ticked is not.
   const selecting = search.has("select");
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
@@ -180,7 +191,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
     () => (ready && today ? listTasks(source, state, inGroup ? group!.name : null, byId, today) : null),
     [ready, today, source, state, inGroup, group, byId]
   );
-  const sort = effectiveSort(state, inGroup);
+  const sort = effectiveSort(state);
   // Parents whose subtasks are hidden for now (N29): the subtasks under them leave the list, and "Select all" with them.
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const foldable = useMemo(() => (listing ? parentsWithNested(listing.sorted) : new Set<string>()), [listing]);
@@ -609,7 +620,7 @@ export default function TasksScreen({ groupId: fromRoute }: { groupId?: string }
           subtaskCounts={subtaskCountsById}
           folding={{ foldable, folded, onFold: toggleFold }}
           hrefFor={(id) => over(pathname, search, `task=${id}`)}
-          onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, inGroup, key))}
+          onSort={(key: TaskSortKey) => update((now) => sortedByHead(now, key))}
           onToggleDone={toggleDone}
           onEdit={(task, column, anchor) => {
             editAnchor.current = anchor;

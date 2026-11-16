@@ -107,6 +107,23 @@ test("D3: sorting from the menu puts empty values last whichever way round", asy
   await expect(rows(page).last()).toContainText("Plan the offsite");
 });
 
+test("N32: the list always opens by deadline, earliest first: a reload drops a picked sort, and Prospects open the same way", async ({ page }) => {
+  await seedMixed();
+  await page.goto("/tasks");
+  await expect(rows(page)).toHaveCount(4);
+  await filter(page, /^Sort/).click();
+  await page.getByRole("menuitemradio", { name: "Latest first" }).click();
+  await expect(rows(page).first()).toContainText("Book interviews");
+  await page.reload();
+  await expect(filter(page, /^Sort\s*Deadline, earliest first/)).toBeVisible();
+  await expect(rows(page).first()).toContainText("Chase the invoice");
+  await expect(rows(page).last()).toContainText("Plan the offsite");
+  await expect(page).not.toHaveURL(/sort=|dir=/);
+  await page.goto("/tasks?kind=prospect&sort=end&dir=desc");
+  await expect(filter(page, /^Sort\s*Deadline, earliest first/)).toBeVisible();
+  await expect(page).toHaveURL("/tasks?kind=prospect");
+});
+
 test("W15: details shown are chosen from a menu and remembered on this device", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");

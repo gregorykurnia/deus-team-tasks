@@ -143,9 +143,9 @@ export function viewParams(state: TaskViewState, inGroup: boolean, current: URLS
   return params;
 }
 
-export function effectiveSort(state: TaskViewState, inGroup: boolean): { key: TaskSortKey; dir: SortDir } {
+export function effectiveSort(state: TaskViewState): { key: TaskSortKey; dir: SortDir } {
   if (state.sort) return { key: state.sort, dir: state.dir ?? naturalDir(state.sort) };
-  return defaultSort(state.view, state.kind, inGroup);
+  return defaultSort(state.view);
 }
 
 // "Deadline, earliest first". "A to Z" keeps its capitals.
@@ -155,8 +155,8 @@ export function sortSummary(key: TaskSortKey, dir: SortDir): string {
 }
 
 // Tapping the head of the column that sorts flips it; another column starts at its own natural direction.
-export function sortedByHead(state: TaskViewState, inGroup: boolean, key: TaskSortKey): TaskViewState {
-  const now = effectiveSort(state, inGroup);
+export function sortedByHead(state: TaskViewState, key: TaskSortKey): TaskViewState {
+  const now = effectiveSort(state);
   if (now.key === key) return { ...state, sort: key, dir: now.dir === "asc" ? "desc" : "asc" };
   return { ...state, sort: key, dir: null };
 }
@@ -211,7 +211,7 @@ export function listTasks<T extends Task & { completedAt?: number }>(
     },
     ctx
   );
-  const { key, dir } = effectiveSort(state, group !== null);
+  const { key, dir } = effectiveSort(state);
   const ordered = sortTasks(narrowed, key, dir, ctx);
   // By deadline the list is flat, each subtask at its own date (N31); any other order keeps subtasks under their task.
   return { scoped, counts, total, sorted: key === "end" ? subtasksStandIn(ordered) : nestSubtasks(ordered), matched: narrowed.length };
