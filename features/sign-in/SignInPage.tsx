@@ -164,7 +164,7 @@ export default function SignInPage() {
       {!ready || session.person ? <div className={styles.card} role="status">{online ? "Checking this device’s sign-in…" : "No connection. Connect to the internet to sign in."}</div>
         : session.error ? <div className={styles.card}><Notice tone={online ? "error" : "warning"}>{online ? "Couldn’t read this device’s sign-in. Try again." : "No connection. Connect to the internet to sign in."}</Notice><Button disabled={!online} onClick={retrySignInSession}>Try again</Button></div>
         : showInstall ? <div className={styles.card}>
-          <Notice tone="inline" icon="install" title="Add DEUS Space to your Home Screen first,">then sign in there.</Notice>
+          <Notice tone="inline" icon="install" title="Add DEUS Team Space to your Home Screen first,">then sign in there.</Notice>
           <HomeScreenSteps />
           <Button variant="quiet" onClick={() => setAnyway(true)}>Sign in here anyway</Button>
         </div> : <form className={styles.card} noValidate onSubmit={(event) => { event.preventDefault(); void run(step === "email" || status === "expired" ? "send" : "verify"); }}>

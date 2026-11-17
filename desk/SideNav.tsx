@@ -107,8 +107,8 @@ export default function SideNav() {
         <AccountEntry />
         {!installed && (
           <OverLink className={styles.install} param="install=1">
-            <Icon name="install" size={16} />
-            Install the app
+            <Icon name="install" size={19} />
+            <span>Install the app</span>
           </OverLink>
         )}
         <LiveDot />

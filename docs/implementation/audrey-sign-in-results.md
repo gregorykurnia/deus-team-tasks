@@ -132,3 +132,47 @@ DECISION: Dismiss only the sign-in confirmation when More/account opens, rather 
 
 Full checks remain worth running for the shared auth/shell changes and are scheduled in R1a. Owner steps O1–O9
 remain unchanged, including the real iPhone Safari/Home Screen checks. Only A3 is ticked; A4 was not started.
+
+### A3 fresh-eyes corrections (2026-11-17)
+
+Opened all twelve supplied copies in `/tmp/autorun-fresh-2GkG4e/` at original resolution before deciding.
+
+- Reference 01: clarified the full app name and Home Screen short name together in the live instructions; preserved the historical approved reference. Its combined error examples are intentional, and the live form's single email input is now asserted.
+- 02/10/12: widened word spacing in sign-in/helper copy; the font remains Plus Jakarta Sans. The first adjustment still produced a 2.875px helper-space measurement and failed the new 3.5px minimum; the larger adjustment passes.
+- 03: both footer controls use 13px labels, 19px icons and the navigation's text column.
+- 05/08: More's account/sign-in row has the same white fill, blue icon and text column as neighboring cards; helper text wraps, including the 60-character email, and the live footer stays inside the viewport.
+- 06: replaced the artificially sliced test name with the complete 40-character `Audrey Wijaya Kusuma Nathalia Prameswari`; aligned account benefit titles with the name/email column.
+- 11: wrong-code boxes use the approved inset red outline without overlapping outer halos; a gap assertion covers it.
+- 04/07/09: those WRONG lines identify no specific fault. Reinspected and retook these states alongside the corrections; no additional clipping/overflow fault was found.
+
+The look also caught the avatar crowding its name after the icon-column alignment. Centering the avatar inside
+that column fixes it; both normal and long identities now have a measured gap of at least 6px. The shared-page
+captures use a real emulator sign-in and show that avatar on Today, Tasks and Prospects at 320, 390, 1280 and 1440.
+
+Files: `desk/MoreSheet.module.css`, `desk/SideNav.module.css`, `desk/SideNav.tsx`,
+`features/sign-in/{Account,SignIn}.module.css`, `features/sign-in/{AccountEntry,HomeScreenSteps,SignInPage}.tsx`,
+`tests/smoke/sign-in.spec.ts`, `docs/approved-looks.md`, this results file and the A3 Done cell.
+The approved-look notes explain only the retained reference/font choices; they do not excuse merged words.
+
+Checks:
+- `npx tsc --noEmit`: final sequential run passed.
+- `npx eslint` on the five changed TSX/spec files: final sequential run passed.
+- `npm run test:unit`: final sequential run passed, 56 files / 1,467 tests.
+- Scoped Playwright: shell/sign-in cover 23 distinct passing cases across the runs, six intentional viewport skips; final affected run 5 passed / 1 skip, with the separate desktop sign-in/Safari retry 2 passed.
+- `npm run build`: final actively awaited sequence passed, exit 0; an earlier background check sequence ended with signal 143 before build started.
+- Look: 30 final key shots in `redesign/compare/a3-fresh/` and five 100% edge/text crops opened at original resolution; includes all twelve shared-page captures.
+
+An intermediate phone round trip exceeded the old 60-second whole-test limit during its final reload. The two
+tests that sign in, reload/navigate repeatedly and capture many states now allow 120 seconds; individual request
+and assertion waits were not extended. The final desktop/phone runs pass, including persisted sign-out.
+Only CSS, copy, markup and browser assertions changed; no Firestore access or stored format changed, so data
+tests were not rerun. All calls and seeded people used the emulators. The temporary font probe was removed.
+
+HUNTED: ripple · shared entry on three other pages at four sizes, signed out and signed in across captures · entry-column/font/fill assertions and twelve signed-in regression shots.
+HUNTED: odd data · complete 40-character name and 60-character email, wrapping, avatar clearance and visible live footer · sign-in spec and original-size crops.
+HUNTED: failure/overlap · existing failed-request/retry/sign-out cases remain covered; the new layout checks caught tight word gaps, and the look caught avatar crowding · scoped browser runs and added gap assertions.
+
+DECISION: not fixed the historical reference's combined error frame, because its caption explicitly combines examples; the live form has one email input.
+DECISION: not fixed the historical reference's short app name, because it is the manifest's intentional short name; the live instructions now explain both names.
+DECISION: not fixed the apparent inserted spaces inside “notifications”/“tasks”, because the strings have none and the local font probe reproduces the approved glyph spacing; actual word gaps were widened and checked.
+DECISION: not fixed unspecified issues in 04/07/09, because no fault was described and original-size inspection found no further fault; those pictures were retaken.

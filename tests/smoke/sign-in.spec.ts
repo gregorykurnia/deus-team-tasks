@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { encodeValue, decodeValue } from "../support/emulator";
 
@@ -43,8 +43,73 @@ async function shot(page: Page, name: string) {
   await mkdir(process.env.A3_SHOTS, { recursive: true });
   await expect(page.getByText("Connecting…", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Loading tasks", { exact: true })).toHaveCount(0);
+  await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await page.screenshot({ path: `${process.env.A3_SHOTS}/${name}.png`, animations: "disabled" });
+}
+
+async function sameLeft(first: Locator, second: Locator) {
+  const [a, b] = await Promise.all([first.boundingBox(), second.boundingBox()]);
+  expect(a).not.toBeNull(); expect(b).not.toBeNull();
+  expect(Math.abs(a!.x - b!.x)).toBeLessThan(1);
+}
+
+async function entryLayout(page: Page, phone: boolean, personName?: string) {
+  const entry = page.getByRole("link", { name: personName ? new RegExp(personName) : /^Sign in/ });
+  if (phone) {
+    const plan = page.getByRole("dialog", { name: "More" }).getByRole("link", { name: /^Plan/ });
+    await sameLeft(entry.locator("b"), plan.locator("span").first());
+    await expect(entry).toHaveCSS("background-color", "rgba(255, 255, 255, 0.75)");
+    if (!personName) {
+      expect(await entry.locator("svg").first().evaluate((el) => getComputedStyle(el).color))
+        .toBe(await plan.locator("svg").evaluate((el) => getComputedStyle(el).color));
+      await readableSpaces(entry.locator("small"));
+    }
+    const liveStatus = page.getByRole("dialog", { name: "More" }).getByText("Live, everyone's up to date", { exact: true });
+    await expect(liveStatus).toBeVisible();
+    const live = await liveStatus.boundingBox();
+    expect(live).not.toBeNull();
+    expect(live!.y + live!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  } else {
+    const install = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Install the app" });
+    await sameLeft(entry.locator("b"), install.locator("span"));
+    expect(await entry.locator("b").evaluate((el) => getComputedStyle(el).fontSize))
+      .toBe(await install.evaluate((el) => getComputedStyle(el).fontSize));
+    const navLabel = await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: /^Today/ }).evaluate((el) => {
+      const text = [...el.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())!;
+      const range = document.createRange(); range.selectNodeContents(text); return range.getBoundingClientRect().x;
+    });
+    expect(Math.abs((await entry.locator("b").boundingBox())!.x - navLabel)).toBeLessThan(1);
+  }
+  if (personName) await avatarGap(entry);
+}
+
+async function avatarGap(entry: Locator) {
+  const [avatar, label] = await Promise.all([entry.locator("span[title]").boundingBox(), entry.locator("b").boundingBox()]);
+  expect(avatar).not.toBeNull(); expect(label).not.toBeNull();
+  expect(label!.x - avatar!.x - avatar!.width).toBeGreaterThanOrEqual(6);
+}
+
+async function accountLayout(page: Page, name: string) {
+  const dialog = page.getByRole("dialog", { name, exact: true });
+  await sameLeft(dialog.getByRole("heading"), dialog.getByText("New task for you", { exact: true }));
+}
+
+async function readableSpaces(text: Locator) {
+  const widths = await text.evaluate((el) => {
+    const values: number[] = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const match of node.textContent!.matchAll(/ /g)) {
+        const range = document.createRange(); range.setStart(node, match.index); range.setEnd(node, match.index + 1);
+        const width = range.getBoundingClientRect().width;
+        if (width > .1) values.push(width); // A space at a line break is collapsed, rather than drawn.
+      }
+    }
+    return values;
+  });
+  expect(widths.length).toBeGreaterThan(0);
+  expect(Math.min(...widths)).toBeGreaterThanOrEqual(3.5);
 }
 
 test.beforeEach(async () => {
@@ -55,6 +120,7 @@ test.beforeEach(async () => {
 });
 
 test("signs in from navigation, reloads with the same identity, redirects an existing session and signs out", { tag: "@phone" }, async ({ page, isMobile }) => {
+  test.setTimeout(120_000); // This round trip also captures eight states and cold-compiles both layouts in dev.
   if (!isMobile) await page.setViewportSize({ width: 1280, height: 900 });
   const shape = isMobile ? "390" : "1280";
   let verifies = 0;
@@ -62,15 +128,19 @@ test("signs in from navigation, reloads with the same identity, redirects an exi
   await page.goto("/plan?view=month");
   if (isMobile) await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByRole("link", { name: /^Sign in/ })).toBeVisible();
+  await entryLayout(page, isMobile);
   await shot(page, `${shape}-entry-out`);
   await page.getByRole("link", { name: /^Sign in/ }).click();
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fplan%3Fview%3Dmonth/);
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Work email" })).toBeFocused();
+  await readableSpaces(page.locator("main header p"));
   await shot(page, `${shape}-email`);
   await page.getByRole("textbox", { name: "Work email" }).fill("greg@deushcs.com");
   await page.getByRole("button", { name: "Send code", exact: true }).click();
   await expect(page.getByText(/isn’t added yet/)).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Work email" })).toHaveCount(1);
+  await readableSpaces(page.getByText(/isn’t added yet/));
   await shot(page, `${shape}-not-added`);
   await send(page, " AUDREY.WIJAYA@DEUSHCS.COM ");
   const right = await code();
@@ -78,6 +148,11 @@ test("signs in from navigation, reloads with the same identity, redirects an exi
   const wrong = right === "000000" ? "111111" : "000000";
   await paste(page, wrong, 3);
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(/That code isn’t right\. 4 tries left\./);
+  const edges = await page.getByRole("textbox", { name: /^Digit [12]$/ }).evaluateAll((boxes) => {
+    const spreads = [...getComputedStyle(boxes[0]).boxShadow.matchAll(/0px 0px 0px (\d+)px/g)].map((match) => Number(match[1]));
+    return { gap: boxes[1].getBoundingClientRect().left - boxes[0].getBoundingClientRect().right, spread: Math.max(0, ...spreads) };
+  });
+  expect(edges.gap - 2 * edges.spread).toBeGreaterThanOrEqual(1);
   await shot(page, `${shape}-wrong-code`);
   await page.getByRole("textbox", { name: "Digit 1", exact: true }).fill("9");
   await expect(page.getByRole("textbox", { name: "Digit 2", exact: true })).toBeFocused();
@@ -89,6 +164,7 @@ test("signs in from navigation, reloads with the same identity, redirects an exi
   if (!isMobile) await expect(page.getByRole("link", { name: /Audrey/ })).toBeVisible();
   if (isMobile) await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByRole("link", { name: /Audrey/ })).toBeVisible();
+  await avatarGap(page.getByRole("link", { name: /Audrey/ }));
   await shot(page, `${shape}-entry-in`);
   if (isMobile) await page.getByRole("dialog", { name: "More" }).getByRole("button", { name: "Close" }).click();
   await page.goto("/sign-in?next=%2Fplan%3Fview%3Dmonth");
@@ -98,6 +174,7 @@ test("signs in from navigation, reloads with the same identity, redirects an exi
   await page.reload();
   await expect(page.getByRole("dialog", { name: "Audrey", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog").getByText(EMAIL)).toBeVisible();
+  await accountLayout(page, "Audrey");
   await shot(page, `${shape}-account`);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL("/plan?view=month");
@@ -138,7 +215,8 @@ test("Safari shows Home Screen steps, standalone goes to email, and remembered i
   if (!isMobile) await page.setViewportSize({ width: 1280, height: 900 });
   await page.addInitScript(() => { Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1" }); localStorage.setItem("deus-installed", "1"); });
   await page.goto("/sign-in?next=%2Ftasks");
-  await expect(page.getByText("Add DEUS Space to your Home Screen first,")).toBeVisible();
+  await expect(page.getByText("Add DEUS Team Space to your Home Screen first,")).toBeVisible();
+  await expect(page.getByText("DEUS Space (DEUS Team Space)")).toBeVisible();
   await shot(page, `${isMobile ? "390" : "1280"}-safari`);
   await page.getByRole("button", { name: "Sign in here anyway" }).click();
   await expect(page.getByRole("textbox", { name: "Work email" })).toBeVisible();
@@ -236,7 +314,8 @@ test("320px long identity, code boxes, More and account fit without sideways scr
   test.skip(!isMobile, "Phone stress layout");
   await page.setViewportSize({ width: 320, height: 740 });
   const email = `${"a".repeat(48)}@deushcs.com`; // 60 characters
-  const name = "Audrey" + " verylongname".repeat(3).slice(0, 34); // 40 characters
+  const name = "Audrey Wijaya Kusuma Nathalia Prameswari";
+  expect(name).toHaveLength(40);
   await person(email, name);
   await page.goto("/sign-in?next=%2Ftasks");
   await send(page, email);
@@ -251,16 +330,38 @@ test("320px long identity, code boxes, More and account fit without sideways scr
   await expect(page).toHaveURL("/tasks");
   await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByRole("link", { name: new RegExp(name) })).toBeVisible();
+  await avatarGap(page.getByRole("link", { name: new RegExp(name) }));
   await expect(page.getByText(/^Signed in as/)).toHaveCount(0);
   await shot(page, "320-more");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   await page.getByRole("link", { name: new RegExp(name) }).click();
   await expect(page.getByText(/^Signed in as/)).toHaveCount(0);
+  await accountLayout(page, name);
   await shot(page, "320-account");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   // The same long name must fit the laptop side bar's fixed column too.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("dialog", { name }).getByRole("button", { name: "Close" }).click();
+  await avatarGap(page.getByRole("link", { name: new RegExp(name) }));
   await shot(page, "1280-long-sidebar");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280);
+});
+
+test("fresh-eyes: shared account entries fit three other screens at every size", { tag: "@phone" }, async ({ page, isMobile }) => {
+  test.setTimeout(120_000); // Sign-in plus six shared-page captures per project, without using live data.
+  await page.goto("/sign-in");
+  await send(page);
+  await paste(page, await code());
+  await expect(page).toHaveURL("/");
+  for (const width of isMobile ? [320, 390] : [1280, 1440]) {
+    await page.setViewportSize({ width, height: width === 320 ? 740 : isMobile ? 844 : 900 });
+    for (const [name, path] of [["today", "/"], ["tasks", "/tasks"], ["companies", "/companies"]]) {
+      await page.goto(isMobile ? `${path}?more=1` : path);
+      await expect(page.getByRole("link", { name: /Audrey/ })).toBeVisible();
+      await entryLayout(page, isMobile, "Audrey");
+      if (isMobile) await readableSpaces(page.getByRole("link", { name: /^Install on this phone/ }).locator("small"));
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      await shot(page, `${width}-shared-${name}`);
+    }
+  }
 });

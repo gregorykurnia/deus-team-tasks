@@ -1,4 +1,4 @@
-.page { min-height: 100svh; padding: 28px 32px; background: var(--backdrop); }
+.page { min-height: 100svh; padding: 28px 32px; background: var(--backdrop); word-spacing: .12em; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: var(--w-heavy); }
 .column { width: min(440px, 100%); margin: max(55px, calc(50svh - 275px)) auto 30px; display: grid; gap: 18px; }
 .hero { display: grid; gap: 6px; }
@@ -10,6 +10,7 @@
 .codes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 8px repeat(3, minmax(0, 1fr)); gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
 .codes input { min-width: 0; width: 100%; height: 54px; padding: 0; text-align: center; font-size: 24px; font-weight: var(--w-heavy); }
 .codes input:nth-of-type(4) { grid-column: 5; }
+.codes input[aria-invalid="true"], .codes input[aria-invalid="true"]:focus { box-shadow: inset 0 0 0 2px var(--red); }
 .codeError { display: flex; gap: 6px; align-items: flex-start; color: var(--red); font-size: 13px; margin: 0; }
 .actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .actions button { flex-shrink: 0; }

@@ -11,6 +11,6 @@ export default function HomeScreenSteps() {
   return <ol className={styles.steps}>
     <li><span>Tap <b>Share</b> <Icon name="share" size={16} /> in Safari’s bar.</span></li>
     <li><span>Choose <b>Add to Home Screen</b> <Icon name="addsq" size={16} />, then <b>Add</b>.</span></li>
-    <li><span>Open <b>DEUS Space</b> from your Home Screen and sign in there.</span></li>
+    <li><span>Open <b>DEUS Space (DEUS Team Space)</b> from your Home Screen and sign in there.</span></li>
   </ol>;
 }

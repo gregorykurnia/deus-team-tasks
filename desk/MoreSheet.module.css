@@ -35,6 +35,7 @@
   font-size: var(--t-label);
   font-weight: var(--w-medium);
   color: var(--muted);
+  word-spacing: .12em;
 }
 
 .install {
