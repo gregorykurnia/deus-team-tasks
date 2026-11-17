@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { EARLY_SCRIPT } from "@/features/install/earlyScript";
 import LaunchScreen from "@/features/install/LaunchScreen";
 import ServiceWorker from "@/features/install/ServiceWorker";
+import { ToasterProvider } from "@/ui/Toaster";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: EARLY_SCRIPT }} />
         <LaunchScreen />
-        {children}
+        <ToasterProvider>{children}</ToasterProvider>
         <ServiceWorker />
       </body>
     </html>

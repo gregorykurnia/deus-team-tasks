@@ -79,3 +79,56 @@ characters and `NEXT_PUBLIC_USE_EMULATOR=1`; fake mail is automatic and cannot f
 
 Owner steps O3/O4 and the later switch-on remain in the plan; no production data/settings, real mailbox,
 or production secret was accessed. A full check is worth running for the shared libraries and remains scheduled for R1a.
+
+## A3 — Sign-in page and account (2026-11-17)
+
+Built `/sign-in` outside the desk shell, with email, six code boxes, native/full-code paste, clipboard fallback,
+sixth-box submission, resend cooldown, the request/verify errors, offline recovery and safe return navigation.
+iPhone/iPad Safari starts with the Home Screen instructions; actual standalone mode goes to email, even if
+installation was remembered in Safari. Both navigation entries share Firebase identity, including custom-token
+users whose Firebase `email` is null. The account sheet supports direct links, reload, long names/emails and sign-out.
+The success toaster now lives above both layouts. A5's notifications card and device removal are still A5's work.
+
+Files: `app/sign-in/page.tsx`, `app/layout.tsx`, `app/(desk)/layout.tsx`, `desk/MoreSheet.tsx`, `desk/SideNav.tsx`,
+`features/sign-in/{SignInPage,HomeScreenSteps,AccountEntry,AccountHost}.tsx`,
+`features/sign-in/{SignIn,Account}.module.css`, `features/sign-in/signInNotice.ts`,
+`lib/{authClient,signInClient,useSignedIn}.ts`, `public/sw.js`, `playwright.config.ts`,
+`tests/smoke/sign-in.spec.ts`, `tests/unit/{signInClient.test.tsx,signInOffline.test.ts,signedInSession.test.ts}`,
+this results file and the plan's A3 Done cell. Existing tracked test evidence removed by Playwright was restored;
+subsequent browser runs used `--output=test-results/a3-run`.
+
+Checks:
+- `npx tsc --noEmit`: final sequential run passed.
+- `npx eslint` on all changed JS/TS/TSX files: final sequential run passed.
+- `npm run test:unit`: 56 files, 1,467 tests passed; initial `notifyKeys` child-process EPERM passed after escalation.
+- `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 14 files, 273 tests passed; only the local Firestore/Auth emulators.
+- Scoped Playwright: sign-in 9 passed/1 viewport skip; unchanged shell 12 passed/5 viewport skips; overlap rerun 3 passed/1 skip; clipboard and final desktop/phone correction reruns 2 passed each.
+- `npm run build`: final sequential run passed after all implementation edits.
+
+Initial checks caught absent icon names, a too-short emulator test secret, the Auth port starting after Firestore,
+a selector also matching Next's route announcer, and a reload test trying to reopen already-open More. Corrected each.
+The full sign-in and overlap runs printed their passing reports before the enclosing shell received SIGTERM (143)
+during cleanup; the final two scoped reruns and final sequential type/lint/build returned 0. Emulator/browser ports
+are checked after verification. No production settings, data, real mailbox, accounts or secrets were changed.
+
+Look gallery: `redesign/compare/a3/` (20 full-size shots plus four 100% crops). The reference was opened in Chromium.
+At 390 and 1280: navigation signed out/in, email/default and not-added, wrong code, account, and Safari guidance.
+At 320: 60-character email, 40-character name, code boxes, More and account; the fixed laptop side card is also shot
+with that identity. Account shots arrive by direct URL and reload. Additional 1440 shots show offline and sending.
+Captures hide only Next's development portal, and wait for connection/task loading to settle.
+
+Look faults fixed: the sign-in toast covered More/install and account text at 320, so opening these panels dismisses
+that one toast; the resend timer briefly displayed 1:01, now starts at 1:00; the signed-in sidebar name uses ink.
+All key shots and the four code/row/footer edge crops were opened at original resolution. No new art was added.
+
+HUNTED: ripple · More/sidebar, custom-token identity, return query, direct account URL, reload and sign-out · real-emulator sign-in spec and identity/return-path unit cases.
+HUNTED: odd data · blank/wrong-domain, case/space variants, missing claims, unsafe return links and 60/40-character identity · sign-in spec and signInClient units.
+HUNTED: failure · offline startup/token read, expired/rate-limited codes, lost send/verify replies, consumed-code retry, timeout and denied/unanswered clipboard · sign-in spec, signedInSession units and offline-worker tests.
+HUNTED: overlap · double submit, stale auth results after sign-out/new identity, leaving during a request, correction of an earlier filled box, and toast/sheet overlap · sign-in spec plus signedInSession units; pending actions lock synchronously and late replies are ignored.
+
+DECISION: Show email under the signed-in name until A5 supplies device notification state, rather than imply notifications are already enabled.
+DECISION: Skip only the optional sign-in page's 404 during precaching, rather than break offline installation while the flag is off; other fetch failures still reject installation.
+DECISION: Dismiss only the sign-in confirmation when More/account opens, rather than move all application toasts; this keeps those panels readable without changing other confirmations.
+
+Full checks remain worth running for the shared auth/shell changes and are scheduled in R1a. Owner steps O1–O9
+remain unchanged, including the real iPhone Safari/Home Screen checks. Only A3 is ticked; A4 was not started.

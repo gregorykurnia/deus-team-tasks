@@ -1,0 +1,15 @@
+.entry { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-width: 0; color: var(--blue-ink); text-decoration: none; border-radius: var(--r-m); }
+.entry:hover { background: var(--surface); }
+.entry > svg { flex: none; }
+.entry.side:has(small) { color: var(--ink); background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px var(--hair); }
+.entry.more { padding: 14px; margin-top: 12px; border-top: 1px solid var(--hair); color: var(--ink); }
+.identity { display: block; min-width: 0; flex: 1; }
+.identity b { display: block; font-size: 14px; font-weight: var(--w-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.identity small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email { overflow-wrap: anywhere; }
+.account { display: grid; gap: 18px; }
+.perks { display: grid; gap: 16px; }
+.perks > div { display: flex; align-items: flex-start; gap: 12px; }
+.perks svg { flex: none; color: var(--blue-ink); margin-top: 3px; }
+.perks b { display: block; font-size: 14px; }
+.perks small { display: block; color: var(--muted); font-size: 13px; line-height: 1.5; }

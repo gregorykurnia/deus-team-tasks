@@ -4,7 +4,7 @@ import { DeskData } from "@/desk/DeskData";
 import ManyChangesToast from "@/desk/ManyChangesToast";
 import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
-import { ToasterProvider } from "@/ui/Toaster";
+import AccountHost from "@/features/sign-in/AccountHost";
 import TabBar from "@/desk/TabBar";
 import InstallHost from "@/features/install/InstallHost";
 import TaskSheetHost from "@/features/task-sheet/TaskSheetHost";
@@ -14,7 +14,7 @@ import styles from "@/desk/DeskShell.module.css";
 export default function DeskLayout({ children }: LayoutProps<"/">) {
   return (
     <DeskData>
-      <ToasterProvider>
+      <>
         <div className={styles.app}>
           <SideNav />
           <main className={styles.main}>{children}</main>
@@ -30,9 +30,12 @@ export default function DeskLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <InstallHost />
         </Suspense>
+        <Suspense fallback={null}>
+          <AccountHost />
+        </Suspense>
         <BackOnlineToast />
         <ManyChangesToast />
-      </ToasterProvider>
+      </>
     </DeskData>
   );
 }

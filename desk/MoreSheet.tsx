@@ -11,6 +11,7 @@ import { areaOf, MORE_AREAS, over, without } from "./areas";
 import LiveDot from "./LiveDot";
 import { useInstalled } from "./useInstalled";
 import styles from "./MoreSheet.module.css";
+import AccountEntry from "@/features/sign-in/AccountEntry";
 
 // Set when the tab bar pushed ?more=1, so closing can step back instead of
 // leaving an entry that opens More again.
@@ -58,6 +59,7 @@ export default function MoreSheet() {
           </li>
         ))}
       </ul>
+      <AccountEntry more onClick={forget} />
       {!installed && (
         <Link className={styles.install} href={over(pathname, search, "install=1", ["more"])} replace onClick={forget}>
           <Icon name="install" size={20} />

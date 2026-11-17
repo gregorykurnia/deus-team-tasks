@@ -35,7 +35,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npx firebase emulators:start --only firestore --project demo-deus",
+      command: "npx firebase emulators:start --only firestore,auth --project demo-deus",
       url: "http://127.0.0.1:8180",
       reuseExistingServer: false,
       timeout: 120_000,
@@ -49,6 +49,7 @@ export default defineConfig({
         NEXT_PUBLIC_USE_EMULATOR: "1", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
         // Local-only connector credentials: chat-edit smoke tests use the same isolated dev server.
         MCP_SECRET: "mcp-smoke-emulator-only", MCP_TASK_EDITS_ENABLED: "1",
+        NEXT_PUBLIC_SIGN_IN_ENABLED: "1", CODE_SECRET: "sign-in-smoke-emulator-only-secret-32-characters",
       },
       reuseExistingServer: false,
       timeout: 180_000,

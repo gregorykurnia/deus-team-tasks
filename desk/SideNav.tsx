@@ -14,6 +14,7 @@ import LiveDot from "./LiveDot";
 import OverLink from "./OverLink";
 import { useInstalled } from "./useInstalled";
 import styles from "./SideNav.module.css";
+import AccountEntry from "@/features/sign-in/AccountEntry";
 
 const num = (n: number) => n.toLocaleString("en-GB");
 
@@ -103,6 +104,7 @@ export default function SideNav() {
       </section>
 
       <div className={styles.foot}>
+        <AccountEntry />
         {!installed && (
           <OverLink className={styles.install} param="install=1">
             <Icon name="install" size={16} />
