@@ -176,3 +176,54 @@ DECISION: not fixed the historical reference's combined error frame, because its
 DECISION: not fixed the historical reference's short app name, because it is the manifest's intentional short name; the live instructions now explain both names.
 DECISION: not fixed the apparent inserted spaces inside “notifications”/“tasks”, because the strings have none and the local font probe reproduces the approved glyph spacing; actual word gaps were widened and checked.
 DECISION: not fixed unspecified issues in 04/07/09, because no fault was described and original-size inspection found no further fault; those pictures were retaken.
+
+## A4 — Push plumbing (2026-11-17)
+
+Added per-device and all-device Web Push, emulator-only `_fakePush`, authenticated subscription save/removal,
+the approved test notification, and service-worker push/click handlers. Registration rechecks active access in its
+transaction. Expired-device cleanup compares the registration revision and snapshot time, preserving a refresh
+that finishes during delivery. Other delivery/storage failures return a failure result and log only a numeric
+provider status or `unavailable`; one failed device does not stop the rest. No screen changed.
+
+Files: `lib/push.server.ts`, `lib/pushInput.server.ts`, `lib/pushTransport.server.ts`, `lib/pushRoute.ts`,
+`app/api/push/{devices,test}/route.ts`, `public/sw.js`, `package.json`, `package-lock.json`,
+`tests/support/push.ts`, four `tests/unit/push*.test.ts` files, `lib/push.server.data.test.ts`,
+`lib/people.server.data.test.ts` (private fake-push rules coverage), this file and the A4 Done cell.
+
+Checks:
+- `npx tsc --noEmit`: passed on the final code; corrected the initial worker-test index type.
+- `npx eslint` on all 14 changed JS/TS files: passed on the final code.
+- `npm run test:unit`: initially 1,553 passed / 3 failed. Existing task-plan timeout and `notifyKeys` sandbox `spawnSync EPERM` passed on the scoped unsandboxed retry (306 passed, only the new mock test still failed); fixed its concurrent-import harness, then final push-only rerun passed 94/94, including actual local Web Push encryption with no network. Existing offline-worker tests passed in the broad run.
+- `npm run test:data`: initially 292 passed / 2 failed; push authorization corrected and final A4 rerun passed 21/21; people/rules rerun passed 15/15. The unchanged calendar 50-ID test exceeded its default 5,000 ms twice, then passed 1/1 at `--testTimeout=15000` (7.34 s). Keep this timing issue for R1a/R1b; no unrelated calendar code or tests changed.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`: passed; both push endpoints generated, production sending stayed off.
+- Own save/access diff review and `git diff --check`: no remaining findings; `public/sw.js` has 38 additions and zero removals, preserving offline caching. No browser/screenshot check applies to this no-look task.
+
+The first authorization attempt exposed an Admin SDK emulator detail: `verifyIdToken(token, false)` still checks
+revocation. The final code verifies once with revocation enabled, and only after the SDK's verified-JWT
+`auth/id-token-revoked` error reads its subject to choose 403 (removed person) or 401 (revoked active session).
+A revoked token never authorizes a write/send; a real emulator revocation test covers all three routes.
+The installed `web-push` 4 uses named exports; both its real encryption API and the transport's named send export
+are checked. Vitest can bypass a mock on concurrent dynamic imports, so parallel route requests are exercised
+against the real emulator service, and the mocked unit case checks a failed save followed by a successful retry.
+
+HUNTED: ripple · registration/read/send/remove agree on endpoint ids, keys and revisions; fake records stay private and caching is unchanged · device data, rules, worker and existing offline tests.
+HUNTED: odd data · missing/blank/long/extra JSON, invalid keys, non-company identity, duplicate endpoints, unsafe provider/click URLs and malformed push payloads · input, route, worker and data tests.
+HUNTED: failure · unconfirmed sends, partial fan-out, failed save/removal/expiry cleanup and retries, a page closed after a received write, closed windows and unavailable client lookup · route/transport/worker and emulator tests; success only after confirmation, no automatic send retry.
+HUNTED: overlap · parallel duplicate registration, access removal racing registration, and an old 410 after same-endpoint re-registration · actual parallel route/transaction tests and stale-expiry data test.
+
+DECISION!: Allow Apple, Google, Mozilla and Microsoft browser push hosts rather than arbitrary HTTPS endpoints, preventing subscriptions from making the server call private or unrelated addresses; extend the list if a new browser provider is needed.
+DECISION!: Store an opaque registration `revision` alongside the subscription rather than identify its lifetime by endpoint alone; it makes a late 404/410 unable to remove a refreshed registration.
+DECISION: Do not automatically retry an unconfirmed delivery rather than risk a duplicate accepted push; retain the device and return failure for an explicit retry.
+DECISION: Show `DEUS Space` / `Open DEUS Space to see your tasks.` for an empty or malformed payload rather than drop it, satisfying the always-visible push requirement.
+
+A5 integration: `POST /api/push/devices` accepts the browser subscription JSON directly and returns
+`{ status: "saved", id }`. DELETE there and POST `/api/push/test` accept only `{ endpoint }`; the server chooses
+the signed-in person and test words. Send an ID token in `Authorization: Bearer ...`. Flag off: 404; inactive or
+missing person: 403; invalid/revoked active session: 401; vanished device: 404/410; temporary failure: 503.
+Successful test means provider/fake acceptance, not confirmation that the phone displayed it.
+
+References consulted: [Web Push library](https://github.com/web-push-libs/web-push),
+[worker click event](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerGlobalScope/notificationclick_event),
+the installed library exports, Next's local Route Handlers guide, and Admin's local verified-token/revocation code.
+No production data/settings, secrets, SMTP or push service was used. Owner steps remain in the plan; full checks
+are worth running at R1a. Only A4 is completed; A5 was not started.

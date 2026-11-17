@@ -235,7 +235,7 @@ describe("person records, owner commands and closed device rules", () => {
   });
 
   it("both anonymous and signed-in device SDKs are denied reads, queries, writes and deletes on every server-only collection", async () => {
-    const paths = [`people/${EMAIL}`, `people/${EMAIL}/devices/phone`, `signInCodes/${EMAIL}`, "devices/phone", "assignNotices/task", "_fakeMail/message"];
+    const paths = [`people/${EMAIL}`, `people/${EMAIL}/devices/phone`, `signInCodes/${EMAIL}`, "devices/phone", "assignNotices/task", "_fakeMail/message", "_fakePush/message"];
     for (const path of paths) await adminDb.doc(path).set({ email: EMAIL, name: "Audrey", active: true, secret: "private" });
     for (const signedIn of [false, true]) {
       if (signedIn) {

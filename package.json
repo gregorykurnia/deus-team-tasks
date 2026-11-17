@@ -29,6 +29,7 @@
     "nodemailer": "^10.6.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "web-push": "^4.0.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -39,6 +40,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "firebase-tools": "^15.34.0",

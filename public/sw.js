@@ -66,6 +66,44 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Push never changes the offline cache. Even an empty/malformed message must show
+// a notification: iOS does not permit a silent push.
+function pushUrl(value) {
+  try {
+    const url = new URL(typeof value === "string" ? value : "/", self.location.origin);
+    if (url.origin === self.location.origin) return url.href;
+  } catch {}
+  return self.location.origin + "/";
+}
+
+self.addEventListener("push", (event) => {
+  let message;
+  try { message = event.data?.json(); } catch {}
+  const title = typeof message?.title === "string" && message.title.trim() ? message.title : "DEUS Space";
+  const body = typeof message?.body === "string" ? message.body : "Open DEUS Space to see your tasks.";
+  event.waitUntil(self.registration.showNotification(title, {
+    body, icon: "/icon-192x192.png", badge: "/icon-192x192.png", data: { url: pushUrl(message?.url) },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = pushUrl(event.notification.data?.url);
+  event.waitUntil((async () => {
+    const windows = (await self.clients.matchAll({ type: "window", includeUncontrolled: true }).catch(() => []))
+      .filter((client) => new URL(client.url).origin === self.location.origin);
+    // Prefer a window already showing the task, otherwise navigate an app window.
+    windows.sort((a, b) => Number(b.url === url) - Number(a.url === url));
+    for (const client of windows) {
+      try {
+        const target = client.url === url ? client : await client.navigate(url);
+        if (target) { await target.focus(); return; }
+      } catch {} // The window may have closed since matchAll; try another or open it.
+    }
+    await self.clients.openWindow(url);
+  })());
+});
+
 // The page for an address, or the page of its area (a flow's address gives the flows page), or Today.
 async function cachedPage(url) {
   const cache = await caches.open(CACHE);
