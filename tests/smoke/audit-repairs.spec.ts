@@ -50,6 +50,40 @@ test("task dates keep their visible words in their accessible names", { tag: "@p
   await expect(page.getByRole("button", { name: "Deadline: No deadline. Change", exact: true })).toBeVisible();
 });
 
+test("company date pills keep target and outreach words in their accessible names", { tag: "@phone" }, async ({ page }, info) => {
+  await seedCompanies([
+    company(1, { company: "Cedar Studio", target: isoDay(-2) }),
+    company(2, { company: "Birch Studio", _raw: true, reach: isoDay(-2) }),
+  ]);
+  for (const [name, url] of [
+    ["target-list", "/companies"],
+    ["target-record", "/companies?company=1"],
+    ["outreach-list", "/companies?group=to-approach"],
+    ["outreach-record", "/companies?group=to-approach&company=2"],
+  ]) {
+    await page.goto(url);
+    await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+    const root = url.includes("company=") ? page.getByRole("dialog") : page.getByRole("main");
+    const date = root.getByRole("button", { name: /^(Target date|Planned outreach):.*(Missed by|overdue)/ }).first();
+    await expect(date).toBeVisible();
+    await date.scrollIntoViewIfNeeded();
+    await expect(date).toBeInViewport({ ratio: 1 });
+    expect(await date.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    }), "the date must be above the sheet footer or phone navigation").toBe(true);
+    await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: info.outputPath(`${name}.png`), animations: "disabled" });
+    await date.screenshot({ path: info.outputPath(`${name}-date.png`), animations: "disabled" });
+    const size = page.viewportSize()!;
+    await page.screenshot({ path: info.outputPath(`${name}-base.png`), animations: "disabled",
+      clip: { x: 0, y: size.height - 170, width: size.width, height: 170 } });
+    const result = await new AxeBuilder({ page }).withRules(["label-content-name-mismatch"]).analyze();
+    expect(result.violations.map((v) => ({ rule: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual([]);
+  }
+});
+
 test("portalled Details menu has a landmark and keeps keyboard focus and placement", { tag: "@phone" }, async ({ page }, info) => {
   const trigger = page.getByRole("button", { name: /Details shown/ });
   await trigger.focus();

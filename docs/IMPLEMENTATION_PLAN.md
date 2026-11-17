@@ -40,7 +40,8 @@ the database locked) is a later plan.
 | A7 | Morning summary: pure builder, weekday cron route behind `CRON_SECRET`, `vercel.json` cron. [A7](implementation/audrey-sign-in.md#a7--morning-summary) [no look] | Sol Max | 2026-11-17 — checked |
 | E1 | End to end on the emulators: sign in, turn on, assigned in the app and from chat, morning summary, sign out. [E1](implementation/audrey-sign-in.md#e1--end-to-end) [no look] | Sol Max | 2026-11-17 — checked |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/audrey-sign-in.md#r1a--full-check-run) [no look] | Sol Max | 2026-11-17 — failures listed |
-| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/audrey-sign-in.md#r1b--fix-recorded-failures) [look] | Sol Max | |
+| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/audrey-sign-in.md#r1b--fix-recorded-failures) [look] | Sol Max | 2026-11-17 — repairs checked; rest → R1bb |
+| R1bb | Finish the remaining R1a emulator/stress repairs, failed-state accessibility replays and scoped comparison triage. [R1bb](implementation/audrey-sign-in.md#r1bb--finish-the-recorded-failure-replay) [look] | Sol Max | |
 | R1 | Phase review: hunt for faults in sign-in and sending, fix them, write the owner handoff. [R1](implementation/audrey-sign-in.md#r1--phase-review) [no look] | Opus 5.5 High | |
 
 ## Owner steps after the run

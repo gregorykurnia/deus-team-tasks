@@ -995,3 +995,67 @@ Tested source baseline: <code>317976b</code>. Browser tests used Next dev (the p
 Raw evidence remains in <code>/tmp/deus-r1a-20261117-01Ad0Q</code>: <code>smoke.json</code>, <code>smoke-failures.json</code>, <code>smoke.log</code>, <code>a11y-report.json</code>, <code>a11y.log</code>, <code>compare-report.json</code>, <code>compare.log</code> and command-status/light-check logs. Every primary failure is also recorded above, so that inventory does not depend on temporary files. The original JSON retains secondary errors and stack traces.
 
 The run overwrote/deleted 301 previously tracked test-output files. Its current 30 MB of screenshots, error contexts and traces were preserved in <code>/tmp/deus-r1a-20261117-01Ad0Q/test-results</code> before restoring those tracked artifacts to the clean starting revision. For attachments whose JSON path starts with <code>/home/ubuntu/deus-team-tasks/test-results/</code>, use the equivalent suffix beneath that preserved directory to inspect this run. Fresh comparison images remain under <code>redesign/compare/{proto,new,both}/</code> (ignored); only the plan and this evidence file are committed.
+
+## R1b — Recorded-failure repairs (2026-11-17)
+
+Confirmed faults first:
+
+- `ui/TaskRow.tsx:280` and `features/companies/CompanyList.tsx:83`: date and urgency spans had no text separator. On split-line date buttons, axe read joined words that did not match the accessible name. This explains S001–S006 and R1a's task/target/outreach label violations; it predates this sign-in phase.
+- `tests/smoke/gallery-rows.spec.ts:82`: the deadline hover/click test selected both CSS-hidden phone metadata and the visible pill (S024). It now selects the visible text.
+- `tests/smoke/followup-server.spec.ts:77`: the old seven-row expectation contradicted N31, which lets six subtasks stand in for their parent when sorted by deadline (S017). It now verifies six deadline rows, seven rows after choosing Description, and the N32 reset back to deadline order on reload. The first attempted repair used a sort URL and failed at line 81, `Expected: 7; Received: 6`; the final repair drives the actual sort menu instead.
+- `scripts/a11y/axe.mjs:167`: the scanner returned exit 0 despite failed states or violations. `status.mjs` now makes report failures, recipe errors and violations fail the command; four pure regression cases cover these outcomes.
+
+The application repair is two text spaces; task and company date words now match their spoken names. The task date screenshots are pixel-identical before and after on both viewports. No saving, sign-in, notification or Firestore implementation changed.
+
+Changed files: `ui/TaskRow.tsx`, `features/companies/CompanyList.tsx`; `scripts/a11y/axe.mjs` and `status.mjs`;
+`tests/smoke/audit-repairs.spec.ts`, `followup-server.spec.ts`, `gallery-rows.spec.ts`; `tests/unit/taskRows.test.tsx`,
+`a11yStatus.test.ts`; `docs/approved-looks.md`; the plan, this brief/results pair and the two R1bb replay lists.
+
+Checks (final source unless explicitly identified as an earlier attempt):
+
+- `npx tsc --noEmit`: passed, including a final rerun after the capture-locator correction; an earlier background attempt ended with signal 143 and was not counted.
+- Changed-file ESLint: passed on all nine JS/TS files, then the final changed capture spec passed again.
+- `npm run test:unit`: 68 files / 1,654 tests passed; the separate focused regression run passed 34 cases. Data tests were not rerun because read/write implementation did not change.
+- Targeted Playwright: before repair, 2 failed / 3 passed; date/visible-selector repair, 3 passed; R1a assertion replay, 14 passed / 1 stale follow-up expectation failed; final company/follow-up run, 4 passed; final corrected company gallery spec, 2 passed (eight list/record/viewport axe scans, no label violations). These runs cover **17 distinct original R1a failures passing**, not the full inventory.
+- `npm run build`: passed. No browser test used that production build; all browser runs used Next dev, local Firestore/Auth and fake calendar/mail/push only.
+- Replay-list collection: 86 outstanding smoke cases in 16 files selected correctly; the a11y list contains 142 outstanding state/viewport pairs. Diff whitespace check passed; final gallery contains ten key shots plus native date/footer crops.
+
+Remaining work is explicitly assigned to **R1bb**, directly after R1b, with the same Sol Max pick and an empty Done cell,
+under the runner's approximately-100-tool-call session split rule. R1bb was not started. Its committed inputs are
+`audrey-sign-in-r1bb-smoke.txt` (83 reset/seed cases, two stress captures and the phone shell skip-timeout case) and
+`audrey-sign-in-r1bb-a11y.txt` (76 incomplete scans plus 66 violation states). It also owns five isolated suggestion
+repeats per viewport and all unresolved scoped-comparison deltas. No original failure was silently dropped, and
+neither the full smoke suite nor the complete accessibility matrix is claimed green. A full check is worth running
+after these shared-UI repairs, once the scoped failures are resolved; it was not repeated here.
+
+The first phone record captures scrolled a background date button, leaving the featured date below the sheet body.
+The final test scopes to the active dialog, scrolls its date into view, asserts full intersection and an uncovered
+tap centre, and saves the whole frame plus native date/footer crops. It checks page/runtime errors, field overflow
+and image loading through the existing audit fixture. The gallery is `redesign/compare/r1b-gallery/` (ignored).
+Records are reached directly by `?company=1` / `?company=2`, rather than through a preview. The sideways filter edge
+is an approved guide pattern, now recorded in `docs/approved-looks.md`; sheet content continues in its scroll body.
+
+HUNTED: ripples · shared task dates and both company date variants checked on desktop and phone, in lists and directly linked records; the task look did not change by a pixel.
+HUNTED: odd data · late, undated and start-only tasks remain labelled; target and outreach dates keep separate words; incomplete scan reports cannot pass the command.
+HUNTED: failure · baseline label/strict-mode faults reproduced before repair; a reset/seed failure is kept outstanding until its own rerun passes; interrupted runs are not passes.
+HUNTED: overlap · the final date probe selects the active sheet rather than a matching background control and checks its tap centre against the pinned footer.
+
+DECISION: Split the remaining replay into R1bb instead of extending this session beyond the runner's task-size rule; exact case lists keep the continuation reviewable.
+DECISION: Kept approved N31/N32 behavior and repaired the stale test instead of restoring seven rows in deadline order or persisting its sort across reload.
+DECISION: Left shared suggestion scrolling unchanged instead of making an unproven layout repair; isolated desktop/phone attempts passed, with stability repeats explicitly assigned to R1bb.
+
+LOOKED: redesign/compare/r1b-gallery/tasks-desktop.png · Rows sit on the glass panel; deadline words sit below their pills, with no edge cuts or overlapping controls; all date text is whole.
+LOOKED: redesign/compare/r1b-gallery/tasks-phone.png · Task cards sit above the fixed tab bar; the last card continues behind it while scrolling; late, No dates and No deadline pills are whole and readable.
+LOOKED: redesign/compare/r1b-gallery/target-list-desktop.png · Cedar's row sits inside the list panel; columns continue at the right edge; the red date and missed words are whole, with no covering layer.
+LOOKED: redesign/compare/r1b-gallery/target-list-phone.png · Cedar's card sits above the tab bar; top tiles and the filter row continue outside the scrolled frame; its target date and missed words are fully readable.
+LOOKED: redesign/compare/r1b-gallery/target-record-desktop.png · The drawer covers the blurred list; target words sit beneath the date, clear of the fixed foot; lower body content scrolls and no featured text is cut.
+LOOKED: redesign/compare/r1b-gallery/target-record-phone.png · The sheet covers the page; the notice scrolls under its fixed head; the entire target date and missed words sit above the footer without overlap.
+LOOKED: redesign/compare/r1b-gallery/outreach-list-desktop.png · Birch's row sits on its panel; the far-right columns continue sideways; amber date and overdue words are whole and unobscured.
+LOOKED: redesign/compare/r1b-gallery/outreach-list-phone.png · Birch's card sits above navigation; the sort filter continues off the right edge; date and overdue text fit fully inside the card.
+LOOKED: redesign/compare/r1b-gallery/outreach-record-desktop.png · The drawer sits over the blurred page; outreach text and date stand clear of other fields and the footer; visible text is whole, without edge cuts.
+LOOKED: redesign/compare/r1b-gallery/outreach-record-phone.png · The sheet covers the list; lower fields continue beneath the fixed foot; the outreach date and overdue words remain whole in the scrolling body.
+
+Logs: `/tmp/deus-r1b-{before,dates,assertions,final-browser,gallery-final}.log`, matching JSON reports where produced,
+and `/tmp/deus-r1b-{types-final,lint-final,lint-capture,unit-final,build-final}.log`. The interrupted repaired run
+ended with signal 143 and left this task's servers on 3100/8180/9199; those exact server PIDs were stopped before
+the clean final runs. All earlier tracked test outputs were left intact by using separate output directories.

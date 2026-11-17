@@ -180,6 +180,12 @@ describe("list row (All tasks)", () => {
     expect(html(<TaskListRow {...props} task={{ ...base, startDate: "", endDate: "" }} />)).toContain("No dates");
   });
 
+  it("separates the date from its urgency words for speech and label matching", () => {
+    const markup = html(<TaskListRow {...props} task={base} columns={["end"]} onEdit={() => {}} />);
+    const deadline = markup.match(/<button[^>]*data-col="end"[^>]*>(.*?)<\/button>/)![1];
+    expect(deadline.replace(/<[^>]*>/g, "")).toContain("Sun 18 Oct 2 days late");
+  });
+
   it.each([
     ["", "No dates"],
     ["2026-10-10", "No deadline"],

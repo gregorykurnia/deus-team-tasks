@@ -74,6 +74,11 @@ test("F2: Node follow-up writes render on desktop and phone", { tag: "@phone" },
   }
 
   const rows = page.getByRole("main").getByRole("article");
+  // By deadline the six subtasks stand in for their parent (N31). Other orders nest all seven rows.
+  await expect(rows).toHaveCount(6);
+  for (const step of plan.steps) await expect(rows.getByRole("link", { name: step.name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Sort/ }).click();
+  await page.getByRole("menuitemradio", { name: "Description", exact: true }).click();
   await expect(rows).toHaveCount(7);
   const parent = rows.filter({ has: page.getByRole("link", { name: `${company.company} Follow Up`, exact: true }) });
   await expect(parent).toContainText("0/6 subtasks");
@@ -81,6 +86,10 @@ test("F2: Node follow-up writes render on desktop and phone", { tag: "@phone" },
   if (isMobile) expect(page.viewportSize()!.width).toBe(390);
   // Verify the settled, saved view too; a live-arrival toast must not obscure the evidence.
   await page.reload();
+  await expect(rows).toHaveCount(6); // N32 resets the sort on reload, so subtasks stand in again.
+  await expect(parent).toHaveCount(0);
+  await page.getByRole("button", { name: /^Sort/ }).click();
+  await page.getByRole("menuitemradio", { name: "Description", exact: true }).click();
   await expect(rows).toHaveCount(7);
   await expect(parent).toContainText("0/6 subtasks");
   await capture(page, info, "parent-list");

@@ -78,7 +78,7 @@ test("marking a finished task not done keeps it in place, where marking done mak
 
 test("the deadline pill's full date shows on hover, and a click on it still opens the task", async ({ page }) => {
   const row = rowOf(page, CALL);
-  const pill = row.getByText("2 days late");
+  const pill = row.getByText("2 days late").filter({ visible: true });
   await pill.scrollIntoViewIfNeeded();
   const box = (await pill.boundingBox())!;
   const title = await page.evaluate(

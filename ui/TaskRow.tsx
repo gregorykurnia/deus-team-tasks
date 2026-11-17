@@ -277,7 +277,7 @@ function ListCell({ id, task, row, groupLooks, today, onEdit }: { id: ColumnId; 
       content = (
         <>
           <DeadlinePill row={row} dateOnly />
-          <DeadlineWord row={row} className={styles.cellWord} />
+          {" "}<DeadlineWord row={row} className={styles.cellWord} />
         </>
       );
       break;

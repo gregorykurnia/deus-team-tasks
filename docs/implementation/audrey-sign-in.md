@@ -330,6 +330,30 @@ Done when: every failure is listed, or the file says all three passed.
 Fixes what R1a listed, rerunning only what each fix touched. [look]
 Done when: every R1a failure is fixed and its spec reruns green, or written up with why it stands.
 
+The runner's session-size rule split the remaining replay into R1bb on 2026-11-17. R1b records its verified repairs;
+R1bb must close the remaining cases before R1. This does not count the full R1a inventory as passing.
+
+## R1bb — Finish the recorded failure replay
+
+Continue R1b's unfinished cases, using its results section and the R1a failure inventory. [look]
+
+- Replay only the outstanding smoke cases in `audrey-sign-in-r1bb-smoke.txt` with
+  `npx playwright test --test-list=docs/implementation/audrey-sign-in-r1bb-smoke.txt`. Run the two stress captures
+  separately from ordinary cases so a degraded emulator cannot invalidate later cases. Diagnose repeat failures;
+  rerun only what a repair touches. Prove the intermittently clipped people suggestions with five isolated repeats
+  on each viewport before deciding whether shared scrolling code needs a repair.
+- Replay the accessibility states in `audrey-sign-in-r1bb-a11y.txt`, grouped by viewport, using the existing
+  `scripts/a11y/axe.mjs --only <base-state-id regex> --size desktop|phone --servers --distinct` filters. Keep each
+  group's report. These are the 76 incomplete scans and 66 violation states from R1a; task/company date regressions
+  now pass, but their entire state matrix has not been replayed. The command now exits nonzero for report failures.
+- Finish triaging all four scoped comparison captures and every copy delta in R1a. Retain approved later behavior
+  (for example N31's actual dates and A3/A5's sign-in additions), recording the reason; repair unexplained changes.
+- Use only local emulators and fake services. Preserve earlier passing checks, stop only this task's server PIDs,
+  and take the look check on any screens a repair changes. Evidence stays under R1bb in the results file.
+
+Done when: every remaining R1a case has a passing scoped rerun or an explicit reason it stands, each unexplained
+failure is fixed or routed to a concrete fix row before R1, and the remaining comparison deltas are decided.
+
 ## R1 — Phase review
 
 A fresh review of the whole phase's diff, hunting for faults in sign-in and sending, plus the owner handoff. [no look]

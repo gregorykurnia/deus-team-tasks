@@ -80,7 +80,7 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
         if (!cell.word) return pill;
         return (
           <span className={styles.dateStack}>
-            {pill}
+            {pill}{" "}
             <span className={cell.tone === "red" ? styles.redWords : cell.tone === "amber" ? styles.amberWords : styles.dv}>{cell.word}</span>
           </span>
         );

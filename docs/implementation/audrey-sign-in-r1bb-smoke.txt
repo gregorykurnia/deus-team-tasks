@@ -1,0 +1,87 @@
+# Outstanding R1a smoke cases; paths are relative to Playwright testDir.
+[desktop] › chat-task-edits.spec.ts › R1b.F2: capture 065 with all stress tasks and their companies
+[phone] › chat-task-edits.spec.ts › R1b.F2: capture 065 with all stress tasks and their companies
+[phone] › chat-task-edits.spec.ts › R1b.F2: layout audit rejects missing and offscreen sheets
+[phone] › chat-task-edits.spec.ts › R1b: comparison reaches the missing-description state
+[phone] › companies-screen.spec.ts › B9: the sort menu and the column heads order the list, empty values last either way round
+[phone] › empty-headings.spec.ts › empty flow headings online
+[phone] › empty-headings.spec.ts › empty flow headings offline
+[phone] › flows-screen.spec.ts › M4: the list runs A to Z, and search covers steps, outcomes and people
+[phone] › gallery-overlays.spec.ts › menus › a menu near the bottom opens above its button and stays 12px inside the window
+[phone] › gallery-overlays.spec.ts › sheets and dialogs › on a phone a sheet is a bottom sheet, full width
+[phone] › gallery-overlays.spec.ts › toasts › on a phone toasts sit above where the tab bar goes
+[phone] › gallery-overlays.spec.ts › busy, placement and timing (R2.1) › a menu too tall for either side opens on the roomier one and scrolls, never over its button
+[phone] › gallery-overlays.spec.ts › busy, placement and timing (R2.1) › a menu stays with its button when the window changes size
+[phone] › gallery-rows.spec.ts › on large screens a list row is a grid; on a phone it becomes a card, and Today's card loses its badge
+[phone] › groups.spec.ts › W9: a starred task group comes first
+[phone] › notes-screen.spec.ts › U2, U7: likelihood is picked and cleared; How likely and search narrow the list
+[phone] › notes-screen.spec.ts › E1: export says what's in the file, then downloads it
+[phone] › notifications.spec.ts › turn on, test, resave a lost device, and sign out remove this device
+[phone] › notifications.spec.ts › phone version: install, direct link and Check again
+[phone] › notifications.spec.ts › phone version: blocked, direct link and Check again
+[phone] › notifications.spec.ts › phone version: old, direct link and Check again
+[phone] › notifications.spec.ts › 320px account and setup keep long identity and actions readable
+[phone] › past-screen.spec.ts › R2: parents are cards A to Z; a parent opens its subsidiaries under a branch, and Show all subsidiaries opens every one
+[phone] › past-screen.spec.ts › R7: search covers names and sectors, highlights, opens the parent that has a match and offers its other subsidiaries
+[phone] › past-screen.spec.ts › R7: nothing matches says what was searched and Clear search brings the record back
+[phone] › past-screen.spec.ts › R7: the order menu orders the parents, and companies without a sector always go last
+[phone] › past-screen.spec.ts › R5: By sector counts every counted company once, with No sector and a total that equals the client total
+[phone] › past-screen.spec.ts › R5: pressing a sector shows its companies in the record (on a phone, the record), pressing it again lets go
+[phone] › past-screen.spec.ts › R5: the breakdown shows the top 8 sectors, and all of them on request
+[phone] › past-screen.spec.ts › A phone has a switch between Companies and By sector; a desktop shows both
+[phone] › past-screen.spec.ts › R7: 130 parents show 100 at a time, and 60 subsidiaries 50 at a time
+[phone] › past-screen.spec.ts › R3: nothing counted yet (only an umbrella company) says so, and the breakdown explains
+[phone] › past-screen.spec.ts › The view lives in the address: a link lands on the same search, sector and order
+[jakarta] › plan.spec.ts › D1: the timeline has a lane for each person, bars, diamonds and a bar that fades out
+[jakarta] › plan.spec.ts › D1: the summary names the busiest day, the tasks that aren't on it, and links on
+[jakarta] › plan.spec.ts › D2: the stepper moves two weeks, and Today brings the weeks back
+[jakarta] › plan.spec.ts › D4: Work, Person and Rows narrow the timeline, and the × clears each
+[jakarta] › plan.spec.ts › D1: a lane folds at four lines with Show more, and unfolds
+[jakarta] › plan.spec.ts › D3: nothing dated in these weeks says so, and a task with no dates is counted, not drawn
+[jakarta] › plan.spec.ts › nothing planned yet: the timeline invites the first task
+[jakarta] › plan.spec.ts › D5: a link with a date and no view opens the Day view on that day
+[jakarta] › plan.spec.ts › the team calendar row (D7, D9, D10) › counts events per day, with the words for each, and Events shows their times
+[jakarta] › plan.spec.ts › the team calendar row (D7, D9, D10) › says so when the calendar isn't connected or fails, and tasks carry on
+[phone] › plan.spec.ts › Month (D5, D7) › shows the day's deadlines and events, and a day opens the Day view
+[phone] › plan.spec.ts › Month (D5, D7) › calendar off: a notice in the month, and tasks carry on
+[jakarta] › plan.spec.ts › Month (D5, D7) › shows the day's deadlines and events, and a day opens the Day view
+[jakarta] › plan.spec.ts › Month (D5, D7) › the stepper moves a month, an empty month says so, and Back to this month returns
+[jakarta] › plan.spec.ts › Month (D5, D7) › a busy day has three deadlines, and a day with many items folds the rest into a count
+[jakarta] › plan.spec.ts › Month (D5, D7) › calendar off: a notice in the month, and tasks carry on
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › splits a day into deadline, starting and under way, with events and their links
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › lands on the next day with something, says so, and Show today stays on today
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › today lands on today when anything is happening
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › the stepper, the week strip and the date picker move the day
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › the done circle marks a task done, and Undo brings it back
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › Tasks only and Events only show one panel each; a person's page marks the part they play
+[jakarta] › plan.spec.ts › Day (D4, D5, D9) › says so when the calendar isn't connected or fails, loads tasks regardless, and an empty day offers the days around it
+[phone] › plan.spec.ts › People (D1, D6) › ranks everyone by what they own, with the words for each bar, and a name opens their page
+[jakarta] › plan.spec.ts › People (D1, D6) › ranks everyone by what they own, with the words for each bar, and a name opens their page
+[jakarta] › plan.spec.ts › People (D1, D6) › a person's page has their figures, what they own, and what they're kept informed on with their part
+[jakarta] › plan.spec.ts › People (D1, D6) › a person with nothing open says so, and a task opens over their page
+[jakarta] › plan.spec.ts › People (D1, D6) › a placeholder in the address shows everyone, and someone named both ways counts once
+[jakarta] › plan.spec.ts › People (D1, D6) › a search finds people once there are more than eight, and Work narrows the counts
+[jakarta] › plan.spec.ts › People (D1, D6) › the done circle on a person's page marks the task done, and Undo brings it back
+[phone] › shell.spec.ts › phones › A4: Today, Tasks and Companies are one tap away, and the rest two taps through More
+[phone] › shell.spec.ts › phones › A4: More closes with Esc, the back gesture, or Close, and gives focus back
+[phone] › shell.spec.ts › phones › A1: the + in the tab bar opens a new task over the current screen
+[phone] › task-sheet-company-loading.spec.ts › R1b.F1: delayed company opens the right draft and reconnect preserves typing, link and dates
+[phone] › task-sheet-company-loading.spec.ts › R1b.F1: a failed company load cannot open an Internal draft and reload recovers
+[phone] › tasks-screen.spec.ts › 4.9 on a phone: a detail on a task's card changes from a tap, without opening the task
+[jakarta] › tasks.spec.ts › W12: a company task is prospect work, client work once the deal is done, and anything else is internal
+[jakarta] › tasks.spec.ts › W7: a task's details are changed and saved, keeping what wasn't touched
+[jakarta] › tasks.spec.ts › D11: a task changed from the Plan's day is saved, with no stray id field
+[jakarta] › tasks.spec.ts › W7: clearing a task's type removes it from the stored task
+[jakarta] › tasks.spec.ts › 5.1: deadline pills name the date and count whole days from today, wherever the team is
+[jakarta] › today.spec.ts › D-007: the hero says the day in a sentence and the chips go to All tasks
+[jakarta] › today.spec.ts › W5: Needs attention has its sections, and the kind switch narrows them
+[jakarta] › today.spec.ts › D3: a section folds at six, with a link to see them all
+[jakarta] › today.spec.ts › W1: with nothing on the list, the hero holds the capture field
+[jakarta] › today.spec.ts › A3: with no connection, adding is refused and what was typed stays
+[jakarta] › today.spec.ts › A3: opened offline with nothing on the device, Today says so instead of loading forever
+[jakarta] › today.spec.ts › W5: the done circle marks a task done, it leaves the list, and Undo brings it back
+[jakarta] › today.spec.ts › D2: a task row opens its details over Today
+[jakarta] › today.spec.ts › D4: the two-week chart has a column for each day, and a day opens Plan
+[jakarta] › today.spec.ts › D6: who's carrying what ranks people by what they own and opens their page
+[jakarta] › today.spec.ts › the team calendar (D7, D9, D10) › shows today's events with their times, read only, and counts them on the chart
+[jakarta] › today.spec.ts › the team calendar (D7, D9, D10) › an amber notice when the events fail, with tasks carrying on

@@ -16,6 +16,7 @@ import { openClientTrackerRules, seed } from "../../tests/support/emulator.ts";
 import { convert, protoData, seedAll } from "../compare/seed.mjs";
 import { parseMap, plan } from "../compare/states.mjs";
 import { dataFor, recipe, tweakData, colleagueChange } from "../compare/recipes.mjs";
+import { auditFailed } from "./status.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "redesign/a11y");
@@ -164,5 +165,6 @@ async function main() {
     for (const [t, d] of [...e.targets].slice(0, 12)) console.log(`  ${t}\n    ${d.html}\n    ${d.why ?? ""}\n    in ${d.states.length} states, e.g. ${d.states.slice(0, 2).join(", ")}`);
   }
   console.log(`\n${report.length} state runs, ${report.filter((r) => r.failed).length} failed, ${byRule.size} rules hit`);
+  if (auditFailed(report)) process.exitCode = 1;
 }
 main();
