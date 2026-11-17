@@ -458,3 +458,39 @@ HUNTED: failure · unauthorized/disabled calls, failed claims, no reply, partial
 HUNTED: overlap · concurrent cron calls reserve once; an older day's completion cannot replace the newer date or unrelated person changes · concurrent-call, late-completion and person-field data cases.
 
 DECISION!: add the private daily `summaryClaimDate` reservation rather than rely only on writing `lastSummaryDate` after sending, preserving the brief's at-most-once rule under overlap/lost replies; an ambiguous or failed attempt may miss that morning and is not retried until the next weekday.
+
+## E1 — End to end (2026-11-17)
+
+Files: `tests/smoke/notifications.spec.ts`, `tests/unit/morningSummaryRoute.test.ts`, `playwright.config.ts`,
+`app/api/notify/morning/route.ts`, this evidence and the E1 Done cell.
+
+The new journey signs Audrey in by fake email, enables push and reloads her saved session/device. An anonymous
+second context creates an assigned task, saves it again and assigns a company follow-up subtask through the edit
+helper. Real MCP HTTP preview/apply assigns another task; preview writes nothing and replay sends nothing extra.
+The authorized Tuesday cron produces `1 late, 1 due today, 1 tomorrow`. Exactly four fake pushes result: three
+assignments and one summary. Each payload URL opens its task (including the subtask's parent link), with the same
+saved description after reload; the summary opens Audrey's Plan page. Self-assignment sends nothing. Sign-out
+removes the device/subscription, and a confirmed subsequent assignment adds no push.
+
+Checks:
+- `npx tsc --noEmit` and ESLint on the four changed TypeScript files: passed.
+- `npm run test:unit -- --maxWorkers=2`: 1,649 passed / 67 files, including six clock-boundary cases.
+- `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data`: 321 passed / 17 files; Firestore/Auth emulators only.
+- `npx playwright test tests/smoke/notifications.spec.ts --project=desktop --grep 'E1:' --output=/tmp/audrey-e1-playwright`: 1 passed (3.3 minutes).
+- Both named specs with `--grep 'pending test finishes|signs in from navigation' --output=/tmp/audrey-e1-regression`: 3 passed (desktop pending-send sign-out; desktop/phone navigation, reload and sign-out).
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`, own access/save diff review and `git diff --check`: passed; no remaining finding.
+
+Initial attempts hit a no-match grep, an auth-route HTML 404, a cold-response wait (200 after 10.7s versus the helper's
+10s wait), incorrect exact optional-label selectors, and one restart before port 8180 finished closing. The helper
+now awaits the real response and loaded form; E1 uses actual labels and bounded actions. Default Playwright output
+removed tracked captures; all were restored, then output moved to `/tmp`. One early unit start was interrupted to
+keep one stack at a time; the complete unit run above passed. All sending used `_fakeMail`/`_fakePush` on local
+emulators. This task changed no screen and added no screenshots; the full suite/a11y/compare remain R1a's work.
+
+HUNTED: ripple · assignment payloads, parent naming, task/subtask deep links, reload and Plan's person reader agree · E1's persisted-record and URL assertions.
+HUNTED: odd data · duplicate task IDs, absent/blank/invalid test dates and a test date outside the emulator · E1's duplicate-ID replay and six morning route clock cases.
+HUNTED: failure · a successful assignment reply is lost, then retried; unauthorized morning and signed-out delivery never add a push · E1's real HTTP abort/retry, 401 and device-removal assertions.
+HUNTED: overlap · parallel assignment replays and parallel daily cron repeats preserve exactly one push per task/day · E1's awaited concurrent requests and exact row counts.
+
+DECISION: use task creation and company-subtask editing as the two app save paths rather than bulk/follow-up creation, which cannot set Responsible; this exercises `addTaskKeptInStep` and `saveTaskKeptInStep` without adding a product control.
+DECISION: pin `MORNING_TEST_DATE=2026-11-17` only when `USE_EMULATOR` is true, rather than freeze Auth's clock or depend on the run's weekday; production ignores it and invalid values use Jakarta's real date.

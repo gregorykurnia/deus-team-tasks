@@ -1,7 +1,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { TaskChangesPreview } from "../../lib/taskEdit";
+import type { TaskChangesSaved } from "../../lib/taskEditServer";
 import { test, expect } from "./fixtures";
-import { encodeValue, decodeValue } from "../support/emulator";
+import { company, seedCompanies, seedTasks, storedById, task } from "./data";
+import { EMULATOR_HOST, encodeValue, decodeValue, readAll } from "../support/emulator";
+import { mockCalendar } from "../support/calendar";
 import { notificationBrowser } from "../support/notificationBrowser";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
 import { expectWordGaps } from "../support/wordSpacing";
@@ -31,7 +38,9 @@ async function signIn(page: Page, email = EMAIL, name = "Audrey") {
   await expect(anyway.or(page.getByRole("textbox", { name: "Work email" }))).toBeVisible();
   if (await anyway.isVisible()) await anyway.click();
   await page.getByRole("textbox", { name: "Work email" }).fill(email);
+  const sent = page.waitForResponse((response) => response.url().endsWith("/api/auth/code") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Send code", exact: true }).click();
+  expect((await sent).status()).toBe(200);
   await expect(page.getByRole("textbox", { name: "Digit 1", exact: true })).toBeEnabled();
   const mail = (await documents("_fakeMail")).find((doc: { fields: Record<string, Parameters<typeof decodeValue>[0]> }) => decodeValue(doc.fields.to) === email);
   const code = String(decodeValue(mail.fields.code)); expect(code).toMatch(/^\d{6}$/);
@@ -251,4 +260,172 @@ test("a pending test finishes after its sheet closes and sign-out wins without a
   await expect(page.getByRole("link", { name: /^Sign in/ })).toBeVisible();
   expect((await documents(`people/${EMAIL}/devices`)).length).toBe(0);
   await expect(page.getByText(/^Test sent\./)).toHaveCount(0);
+});
+
+test("E1: sign in, app and chat assignments, Tuesday summary, links, and sign out", async ({ page, browser, baseURL }) => {
+  test.setTimeout(180_000);
+  page.setDefaultTimeout(20_000);
+  expect(baseURL).toBe("http://localhost:3100");
+  expect(EMULATOR_HOST).toBe("127.0.0.1:8180");
+  const pushes = () => readAll("tasks", "_fakePush");
+  await seedCompanies([company(1, { company: "Halcyon Logistics", status: "To Follow Up" })]);
+  await seedTasks([
+    task("follow-up", { task: "Halcyon follow-up", linkedClientId: 1 }),
+    task("subtask", { task: "Book the trial room", parentId: "follow-up", linkedClientId: 1, endDate: "2026-11-17" }),
+    task("chat", { task: "Confirm the visit", endDate: "2026-11-18" }),
+    task("self", { task: "Self-assigned work" }),
+    task("after-sign-out", { task: "After sign-out" }),
+  ]);
+  await notificationBrowser(page);
+  await signIn(page);
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).getByRole("button", { name: "Turn on notifications", exact: true }).click();
+  await expect(sheet(page).getByText(/^Notifications are on for this/)).toBeVisible();
+  expect(await readAll("tasks", `people/${EMAIL}/devices`)).toHaveLength(1);
+  await sheet(page).getByRole("button", { name: "Done", exact: true }).click();
+  await page.reload(); // Restored Auth and the subscription must reach the same saved account.
+  await expect(page.getByRole("link", { name: /Audrey Notifications on/ })).toBeVisible();
+  expect(await readAll("tasks", `people/${EMAIL}/devices`)).toHaveLength(1);
+
+  const taskSheet = (target: Page) => target.getByRole("dialog", { name: "Task", exact: true });
+  const assign = async (target: Page) => {
+    const dialog = target.getByRole("dialog", { name: /^(New task|Task)$/ });
+    const responsible = dialog.getByRole("combobox", { name: /^Responsible\b/ });
+    const details = dialog.getByRole("button", { name: /Add details/ });
+    // Wait for the loaded form before choosing between the new-task and edit layouts.
+    await expect(responsible.or(details)).toBeVisible();
+    if (await details.isVisible()) await details.click();
+    await responsible.fill("Audrey");
+    await responsible.press("Enter");
+  };
+  const save = async (target: Page) => {
+    const response = target.waitForResponse((r) => r.url().endsWith("/api/notify/assigned") && r.request().method() === "POST");
+    await taskSheet(target).getByRole("button", { name: "Save changes", exact: true }).click();
+    expect((await response).status()).toBe(200);
+    await expect(taskSheet(target)).toHaveCount(0);
+  };
+
+  // Self-assignment is claimed without a push, even when that person has a registered device.
+  await page.goto("/tasks?task=self"); await assign(page); await save(page);
+  expect(await storedById("tasks", "assignNotices", "self")).toMatchObject({ notified: ["Audrey"] });
+  expect(await pushes()).toHaveLength(0);
+
+  const other = await browser.newContext({ baseURL });
+  const editor = await other.newPage();
+  editor.setDefaultTimeout(20_000);
+  const editorErrors: string[] = [];
+  editor.on("pageerror", (error) => editorErrors.push(error.message));
+  const chat = new Client({ name: "notification-e1", version: "1.0.0" });
+  try {
+    await mockCalendar(editor, "off");
+    await editor.goto("/tasks?task=new");
+    await expect(editor.getByRole("link", { name: /^Sign in/ })).toBeVisible();
+    const newTask = editor.getByRole("dialog", { name: "New task", exact: true });
+    await newTask.getByLabel("Description", { exact: true }).fill("Send the quote");
+    await assign(editor);
+    await newTask.getByLabel("Deadline").fill("2026-11-16");
+    // Lose the successful reply, then replay in parallel: provider acceptance must not send twice.
+    let processed!: (status: number) => void;
+    const firstProcessed = new Promise<number>((resolve) => { processed = resolve; });
+    await editor.route("**/api/notify/assigned", async (route) => {
+      expect(route.request().headers().authorization).toBeUndefined();
+      const response = await route.fetch();
+      await route.abort("failed");
+      processed(response.status());
+    }, { times: 1 });
+    await newTask.getByRole("button", { name: "Add task", exact: true }).click();
+    await expect(newTask).toHaveCount(0);
+    expect(await firstProcessed).toBe(200);
+    const added = (await readAll("tasks", "tasks")).find((row) => row.task === "Send the quote");
+    expect(added).toMatchObject({ responsible: ["Audrey"], endDate: "2026-11-16" });
+    expect(await pushes()).toEqual([expect.objectContaining({ email: EMAIL, title: "New task for you", body: expect.stringContaining("Send the quote"), url: `/?task=${added!.id}` })]);
+    const retries = await Promise.all([1, 2].map(() => other.request.post("/api/notify/assigned", { data: { taskIds: [added!.id, added!.id] } })));
+    for (const response of retries) expect(response.status()).toBe(200);
+    expect(await pushes()).toHaveLength(1);
+    await editor.goto(`/tasks?task=${added!.id}`);
+    await taskSheet(editor).getByLabel("Key points").fill("Confirmed the quote details");
+    await taskSheet(editor).getByRole("button", { name: "Save changes", exact: true }).click();
+    await expect(taskSheet(editor)).toHaveCount(0);
+    expect(await storedById("tasks", "tasks", added!.id)).toMatchObject({ keyPoints: "Confirmed the quote details" });
+    expect(await pushes()).toHaveLength(1);
+
+    // Edit uses saveTaskKeptInStep, separate from the first task's addTaskKeptInStep path.
+    await editor.goto("/tasks?task=subtask"); await assign(editor); await save(editor);
+    expect(await storedById("tasks", "tasks", "subtask")).toMatchObject({ responsible: ["Audrey"], parentId: "follow-up", linkedClientId: 1 });
+    expect(await pushes()).toHaveLength(2);
+    expect((await pushes()).find((row) => row.url === "/?task=subtask")).toMatchObject({ title: "New task for you", body: expect.stringContaining("Subtask of Halcyon follow-up") });
+
+    await chat.connect(new StreamableHTTPClientTransport(new URL("/api/mcp/mcp-smoke-emulator-only", baseURL)));
+    const call = async <T,>(name: string, args: Record<string, unknown>): Promise<T> => {
+      const result = CallToolResultSchema.parse(await chat.callTool({ name, arguments: args }));
+      const text = result.content.find((part) => part.type === "text");
+      expect(result.isError, text?.text).not.toBe(true);
+      if (!text) throw new Error(`${name} returned no text result`);
+      return JSON.parse(text.text) as T;
+    };
+    const changes = [{ taskId: "chat", set: { responsible: ["Audrey"] } }];
+    const preview = await call<TaskChangesPreview>("preview_task_changes", { changes });
+    expect(preview.errors).toEqual([]); expect(preview.canWrite).toBe(true);
+    expect(await storedById("tasks", "tasks", "chat")).toMatchObject({ responsible: [] });
+    expect(await pushes()).toHaveLength(2);
+    const args = { changes, seen: Object.fromEntries(preview.tasks.map((row) => [row.taskId, row.seen])), acknowledgedWarnings: preview.warnings.map((warning) => warning.id) };
+    const saved = await call<TaskChangesSaved>("apply_task_changes", args);
+    expect(saved.tasks).toContainEqual(expect.objectContaining({ taskId: "chat", saved: true }));
+    expect(saved.alreadySaved).toBe(false);
+    expect(await pushes()).toHaveLength(3);
+    expect((await pushes()).find((row) => row.url === "/?task=chat")).toMatchObject({ title: "New task for you", body: expect.stringContaining("Confirm the visit") });
+    expect((await call<TaskChangesSaved>("apply_task_changes", args)).alreadySaved).toBe(true);
+    expect(await pushes()).toHaveLength(3);
+
+    const morning = () => other.request.get("/api/notify/morning", { headers: { Authorization: "Bearer morning-smoke-emulator-only" } });
+    expect((await other.request.get("/api/notify/morning")).status()).toBe(401);
+    expect(await pushes()).toHaveLength(3);
+    const summary = await morning(); expect(summary.status()).toBe(200);
+    expect(await summary.json()).toEqual({ date: "2026-11-17", results: [{ email: EMAIL, count: 3, status: "sent" }] });
+    expect(await pushes()).toHaveLength(4);
+    expect((await pushes()).find((row) => row.title !== "New task for you")).toMatchObject({
+      title: "1 late, 1 due today, 1 tomorrow", url: "/plan?view=people&person=Audrey",
+      body: "Late: Send the quote (1 day late)\nToday: Book the trial room\nTomorrow: Confirm the visit",
+    });
+    const repeated = await Promise.all([morning(), morning()]);
+    for (const response of repeated) {
+      expect(response.status()).toBe(200);
+      expect(await response.json()).toMatchObject({ results: [{ email: EMAIL, status: "skipped" }] });
+    }
+    expect(await pushes()).toHaveLength(4);
+
+    // Drive the exact payload URLs, on the recipient's restored session, and verify the loaded record.
+    const titles = new Map([[added!.id, "Send the quote"], ["subtask", "Book the trial room"], ["chat", "Confirm the visit"]]);
+    for (const row of await pushes()) {
+      const url = new URL(String(row.url), baseURL);
+      await page.goto(`${url.pathname}${url.search}`);
+      const id = url.searchParams.get("task");
+      if (id) {
+        await expect(taskSheet(page)).toBeVisible();
+        await expect(taskSheet(page).getByLabel("Description", { exact: true })).toHaveValue(titles.get(id)!);
+        await expect(taskSheet(page).getByRole("combobox", { name: /^Responsible\b/ })).toHaveValue("");
+        await expect(taskSheet(page).getByRole("button", { name: "Remove Audrey", exact: true })).toBeVisible();
+        if (id === "subtask") await expect(taskSheet(page).getByRole("link", { name: "Halcyon follow-up", exact: true })).toBeVisible();
+        await page.reload();
+        await expect(taskSheet(page).getByLabel("Description", { exact: true })).toHaveValue(titles.get(id)!);
+      } else {
+        await expect(page).toHaveURL("/plan?view=people&person=Audrey");
+        await expect(page.getByRole("heading", { name: "Audrey", exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: /^Responsible for/ })).toBeVisible();
+      }
+    }
+    await page.goto("/plan?view=people&person=Audrey&account=1");
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page.getByRole("link", { name: /^Sign in/ })).toBeVisible();
+    expect(await readAll("tasks", `people/${EMAIL}/devices`)).toHaveLength(0);
+    expect(await page.evaluate(() => localStorage.getItem("a5-subscription"))).toBeNull();
+    await editor.goto("/tasks?task=after-sign-out"); await assign(editor); await save(editor);
+    expect(await storedById("tasks", "tasks", "after-sign-out")).toMatchObject({ responsible: ["Audrey"] });
+    expect(await storedById("tasks", "assignNotices", "after-sign-out")).toMatchObject({ notified: ["Audrey"] });
+    expect(await pushes()).toHaveLength(4);
+    expect(editorErrors).toEqual([]);
+  } finally {
+    await chat.close();
+    await other.close();
+  }
 });

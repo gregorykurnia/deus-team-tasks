@@ -1,4 +1,5 @@
-import { isWeekend } from "@/lib/dates";
+import { isIsoDay, isWeekend } from "@/lib/dates";
+import { USE_EMULATOR } from "@/lib/emulator";
 import { signInEnabled } from "@/lib/flags";
 
 export const runtime = "nodejs";
@@ -11,7 +12,9 @@ export async function GET(request: Request): Promise<Response> {
   if (!signInEnabled()) return reply({ error: "Not found" }, 404);
   try {
     const { wibToday } = await import("@/lib/followupServer");
-    const today = wibToday();
+    // Only the isolated emulator smoke stack can pin a weekday; production always uses Jakarta's clock.
+    const testDay = USE_EMULATOR ? process.env.MORNING_TEST_DATE : undefined;
+    const today = isIsoDay(testDay) ? testDay : wibToday();
     if (isWeekend(today)) return reply({ date: today, results: [] });
     // Keep Admin and production credentials behind the flag, bearer and weekday checks.
     const { sendMorningSummaries } = await import("@/lib/morningSummary.server");

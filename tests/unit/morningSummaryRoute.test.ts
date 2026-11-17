@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const io = vi.hoisted(() => ({ enabled: vi.fn(), today: vi.fn(), send: vi.fn() }));
+const io = vi.hoisted(() => ({ enabled: vi.fn(), today: vi.fn(), send: vi.fn(), emulator: false }));
+vi.mock("@/lib/emulator", () => ({ get USE_EMULATOR() { return io.emulator; } }));
 vi.mock("@/lib/flags", () => ({ signInEnabled: io.enabled }));
 vi.mock("@/lib/followupServer", () => ({ wibToday: io.today }));
 vi.mock("@/lib/morningSummary.server", () => ({ sendMorningSummaries: io.send }));
@@ -11,6 +12,7 @@ const request = (authorization?: string, signal?: AbortSignal) => new Request("h
 });
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("CRON_SECRET", "cron-test-secret");
+  io.emulator = false;
   io.enabled.mockReturnValue(true); io.today.mockReturnValue("2026-11-17");
   io.send.mockResolvedValue([{ email: "audrey@deushcs.com", count: 3, status: "sent" }]);
 });
@@ -41,6 +43,21 @@ describe("morning cron boundary", () => {
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
     expect(io.send).toHaveBeenCalledWith("2026-11-17");
     expect(await response.json()).toEqual({ date: "2026-11-17", results: [{ email: "audrey@deushcs.com", count: 3, status: "sent" }] });
+  });
+  it("pins Tuesday only on the emulator, even when the actual day is a weekend", async () => {
+    io.emulator = true; vi.stubEnv("MORNING_TEST_DATE", "2026-11-17"); io.today.mockReturnValue("2026-11-22");
+    expect(await (await GET(request("Bearer cron-test-secret"))).json()).toHaveProperty("date", "2026-11-17");
+    expect(io.send).toHaveBeenCalledWith("2026-11-17");
+  });
+  it.each([undefined, "", "2026-02-30", "Tuesday"])("ignores an invalid emulator day %s", async (day) => {
+    io.emulator = true; vi.stubEnv("MORNING_TEST_DATE", day);
+    expect(await (await GET(request("Bearer cron-test-secret"))).json()).toHaveProperty("date", "2026-11-17");
+    expect(io.today).toHaveBeenCalled();
+  });
+  it("ignores the test clock outside the emulator", async () => {
+    vi.stubEnv("MORNING_TEST_DATE", "2026-11-17"); io.today.mockReturnValue("2026-11-22");
+    expect(await (await GET(request("Bearer cron-test-secret"))).json()).toEqual({ date: "2026-11-22", results: [] });
+    expect(io.send).not.toHaveBeenCalled();
   });
   it("waits for delivery after the requester closes and reports failures truthfully", async () => {
     let finish!: (value: object[]) => void;
