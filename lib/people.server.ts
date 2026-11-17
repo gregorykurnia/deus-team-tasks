@@ -12,7 +12,7 @@ export interface Person {
 
 const people = adminDb.collection("people");
 
-function readPerson(doc: DocumentSnapshot): Person | null {
+export function readPerson(doc: DocumentSnapshot): Person | null {
   const data = doc.data();
   if (!data || data.email !== doc.id || typeof data.active !== "boolean") return null;
   try {

@@ -38,3 +38,44 @@ write transaction, so a concurrent removal cannot leave a new device behind. Emu
 
 Owner steps O1/O2/O6 remain in the plan; no production accounts, data, secrets or settings were touched.
 A full check is worth running for the shared library additions; it remains scheduled for R1a. Only A1 is completed.
+
+## A2 — Sign-in codes (2026-11-17)
+
+Added six-digit codes bound to the canonical email and code ID with HMAC-SHA256, ten-minute expiry,
+single use, the sixty-second resend wait, five requests/hour and five wrong guesses/hour. Both request and
+verify serialize through Firestore transactions and recheck the active person. SMTP uses authenticated TLS
+and the approved plain text; emulator runs write only `_fakeMail`. Both routes stay 404 with the flag off.
+`notify:keys` prints fresh secrets and a P-256 VAPID pair without storing them. No screen changed.
+
+Files: `lib/signInCodes.ts`, `lib/signInCodes.server.ts`, `lib/mailer.ts`, `lib/authCodeRoute.ts`,
+`lib/people.server.ts` (shared person validator export), `app/api/auth/{code,verify}/route.ts`,
+`scripts/notify-keys.mjs`, `package.json`, `package-lock.json`, four new unit test files,
+`lib/signInCodes.server.data.test.ts`, `lib/people.server.data.test.ts` (fake-mail rules coverage), this file and the plan.
+
+Checks:
+- `npx tsc --noEmit`: passed after final code/test edits; fixed the initial request-body annotation error.
+- `npx eslint` on all 14 changed JS/TS files: passed, with subsequent edits rechecked.
+- `npm run test:unit`: 1,439 passed; existing circular-input `taskPlan.test.ts` timed out at 5,000 ms and the new CLI test hit sandbox `spawnSync ... EPERM`; scoped subprocess-enabled retry passed the CLI, and final scoped diagnostic with `--testTimeout 15000` passed both (2/2); no timeout or existing test source changed.
+- `npm run test:data`: 273/273 passed on demo-deus Firestore/Auth, including all 13 A2 data tests and anonymous/signed-in denial of fake-mail reads, queries, writes and deletes.
+- `npm run build` with sign-in off and Admin/code secrets empty: passed; both new API routes generated without initializing Admin.
+- Own access/save diff review and `git diff --check`: no remaining findings; no browser/screenshot applies to this server-only task.
+
+HUNTED: ripple · Canonical email, active-person validation, HMAC storage, request/verify readers and hourly histories agree; device access to fake codes stays closed · rule/input/HMAC unit tests and request/token/rate-limit/rules data tests.
+HUNTED: odd data · Missing/blank/foreign/long emails, case/space duplicates, malformed guesses, damaged rows and a code row copied to another person · unit input/state/route tests and canonical-person/cross-person data tests.
+HUNTED: failure · Reservation failure sends nothing; unknown SMTP acceptance keeps the delivered code valid and blocks duplicate retries; failed signing leaves the code usable · reservation, SMTP timeout/late-error and token-signing data tests.
+HUNTED: overlap · Ten requests mail once, ten wrong verifies count only five, two correct verifies issue one token, and late mail after page closure cannot undo a newer code · parallel-request/guess/success and held-mail/aborted-page data tests.
+
+DECISION!: Store separate bounded request/guess timestamp histories and keep consumed/expired hashes for the rolling hour, rather than derive limits from live codes; expiry/use cannot reset limits or reissue the same code in that hour.
+DECISION: Retain a reservation after an uncertain mail failure rather than delete it; an already delivered email remains valid and a retry observes the cooldown.
+DECISION: Sign the token inside the verification transaction before consuming the code, rather than consume first; a signing failure rolls back, and no token is returned before commit.
+DECISION: Generate the VAPID pair with Node's P-256 crypto rather than add a push dependency in A2; the key generator prints compatible 65-byte public/32-byte private keys and writes no files.
+
+Integration for A3: POST JSON `{ email }` to `/api/auth/code`; responses use `status: sent|wrongDomain|notAdded|wait|tooMany`
+(`seconds` on wait, `minutes` on tooMany). POST `{ email, code }` (code is a string) to `/api/auth/verify`;
+success is `{ token }`, failure is `status: wrong|expired|tooMany|noCode` (`triesLeft` on wrong).
+Wait/tooMany use HTTP 429 with `Retry-After`; invalid JSON/shape is 400; infrastructure failures are a redacted
+503 `unavailable`; all replies are `no-store`. Emulator servers need a test-only `CODE_SECRET` of at least 32
+characters and `NEXT_PUBLIC_USE_EMULATOR=1`; fake mail is automatic and cannot fall back to SMTP.
+
+Owner steps O3/O4 and the later switch-on remain in the plan; no production data/settings, real mailbox,
+or production secret was accessed. A full check is worth running for the shared libraries and remains scheduled for R1a.
