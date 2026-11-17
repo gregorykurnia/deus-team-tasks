@@ -1,62 +1,79 @@
-# Change existing tasks from a Claude chat
+# Audrey signs in and gets notifications on her iPhone
 
-Prepared 2026-11-11 for `autorun all`. The details for every row are in [the build brief](implementation/chat-task-edits.md).
-The previous plan (tasks on the calendar) is [archived](implementation/calendar-events-plan-2026-11-11.md); its
-owner steps are still open there.
+Prepared 2026-11-17 for `autorun all`. The details for every row are in [the build brief](implementation/audrey-sign-in.md),
+and the screens are on [the screens page](https://claude.ai/artifact/J2YrGzCsGVeZ2D2CHi9Bay)
+(source: `docs/implementation/sign-in-screens.html`). The previous plan (chat task edits) is
+[archived](implementation/chat-task-edits-plan-2026-11-11.md); its owner step O3 is still open there.
 
 ## Outcome
 
-In an ordinary Claude chat with the Teams DEUS connector, the owner can find any task or subtask and change it:
-rename it, move its dates, rewrite its Key points, set To Do / In Progress / Done, park it or bring it back, set
-Responsible and Informed, put it on the calendar or take it off, move a subtask to another main task or free it,
-and delete it. Every change is previewed as before → after and saved only after the owner confirms in chat. Nothing
-is reachable until the owner sets one Vercel variable (O1).
+Audrey (`audrey.wijaya@deushcs.com`) signs in to DEUS Space with a 6-digit code sent to her Titan inbox, turns on
+notifications in the app on her iPhone's Home Screen, and gets "New task for you" within seconds whenever someone
+makes her Responsible (in the app or from a Claude chat), plus a summary at 09:00 Jakarta, Monday to Friday. Nobody
+else has to sign in, and nothing shows until the owner sets one Vercel variable (O5). Phase 2 (everyone signs in,
+the database locked) is a later plan.
 
 ## Before the run
 
-- [x] The calendar plan finished: every row ticked, its R1 included (these tools call its calendar sync).
+- [ ] The owner approved the screens page (or asked for changes, and they're made on the page and in its source).
 
 ## Run rules
 
 - Read only your task's section in the brief, plus **Smallest design**, **Requirements** and **Checks** there.
   The defaults are settled: no brainstorming and no questions to the owner.
 - One task per session, on `main` (this project's branch rule). Commit and push each task with its row ticked in
-  the same commit. Every push deploys, which is safe because the tools stay off until O1.
-- Tests use only the Firestore emulator and the fake calendar. Never call Google or production.
-- Evidence goes in `docs/implementation/chat-task-edits-results.md`, under each task's ID.
+  the same commit. Every push deploys, which is safe because everything stays off until O5.
+- Tests use only the Firestore and Auth emulators with the fake mailer and fake push. Never call Titan, a push
+  service or production.
+- Evidence goes in `docs/implementation/audrey-sign-in-results.md`, under each task's ID.
 
-## Phase 1: change tasks from chat
+## Phase 1: Audrey signs in and gets notifications
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| T01 | Field changes (name, dates, Key points, status, parking, people, calendar mark): before → after, warnings, `seen` stamp (pure). [T01](implementation/chat-task-edits.md#t01--field-changes-pure) [no look] | Sol xHigh | 2026-11-11 |
-| T02 | Moves and deletes: one-level rule, subtasks take the new main task's company, a main task's delete frees its subtasks (pure). [T02](implementation/chat-task-edits.md#t02--moves-and-deletes-pure) [no look] | Sol xHigh | 2026-11-11 |
-| T03 | `find_tasks` and `preview_task_changes` connector tools, read only, behind `MCP_TASK_EDITS_ENABLED`. [T03](implementation/chat-task-edits.md#t03--find-and-preview-tools-read-only) [no look] | Sol xHigh | 2026-11-11 |
-| T04 | `apply_task_changes`: one transaction, refuses if a task changed since the preview, retry-safe, company follows a deadline, calendar sync after. [T04](implementation/chat-task-edits.md#t04--save-tool) [no look] | Sol Max | 2026-11-11 |
-| T05 | Chat guidance for the edit flow, and an edit section in the MCP smoke. [T05](implementation/chat-task-edits.md#t05--chat-guidance-and-mcp-smoke) [no look] | Sol Max | 2026-11-11 |
-| E1 | End to end: edits, a move and a delete over HTTP, then checked in the task sheet and the fake calendar. [E1](implementation/chat-task-edits.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-11 |
-| R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/chat-task-edits.md#r1a--full-check-run) [no look] | Sol xHigh | 2026-11-11 |
-| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/chat-task-edits.md#r1b--fix-recorded-failures) [look] | Sol xHigh | 2026-11-11 |
-| R1b.F1 | Keep company-linked task drafts safe while company data loads or fails; delayed-company regression preserves the link and unrelated dates. [R1b.F1](implementation/chat-task-edits.md#r1bf1--keep-a-company-task-linked-while-its-company-loads) [look] | Astra xHigh | 2026-11-11 |
-| R1b.F2 | Fix the expanding stress phone viewport and detect offscreen sheets; recapture only state 065 after F1. [R1b.F2](implementation/chat-task-edits.md#r1bf2--keep-the-stress-task-sheet-inside-the-phone-capture) [look] | Astra xHigh | 2026-11-11 |
-| R1 | Phase review: hunt for faults in saving, fix them, write the owner handoff. [R1](implementation/chat-task-edits.md#r1--phase-review) [no look] | Opus 5.5 High | 2026-11-11 |
+| A1 | Server access (`firebase-admin`, auth emulator), person records, `people:add` / `people:remove` scripts with dry run, closed-rules test. [A1](implementation/audrey-sign-in.md#a1--server-access-and-person-records) [no look] | Sol Max | |
+| A2 | Sign-in codes: request and verify rules, hashed codes, limits, Titan SMTP mailer and fake, routes, `notify:keys`. [A2](implementation/audrey-sign-in.md#a2--sign-in-codes) [no look] | Sol Max | |
+| A3 | Sign-in screens: Sign in sheet (email, code), account sheet, entries in More and the side bar, `sign-in.spec.ts`. [A3](implementation/audrey-sign-in.md#a3--sign-in-screens) [look] | Sol Max | |
+| A4 | Push plumbing: sender and fake, device routes, test route, service worker push and click handlers. [A4](implementation/audrey-sign-in.md#a4--push-plumbing) [no look] | Sol Max | |
+| A5 | Turn on notifications sheet (five versions), account card, sign-out removes the device, `notifications.spec.ts`. [A5](implementation/audrey-sign-in.md#a5--turn-on-notifications) [look] | Sol Max | |
+| A6 | New task for you: the shared save helpers report tasks whose Responsible changed, the server decides who is owed and sends once, chat connector too. [A6](implementation/audrey-sign-in.md#a6--new-task-for-you) [no look] | Sol Max | |
+| A7 | Morning summary: pure builder, weekday cron route behind `CRON_SECRET`, `vercel.json` cron. [A7](implementation/audrey-sign-in.md#a7--morning-summary) [no look] | Sol Max | |
+| E1 | End to end on the emulators: sign in, turn on, assigned in the app and from chat, morning summary, sign out. [E1](implementation/audrey-sign-in.md#e1--end-to-end) [no look] | Sol Max | |
+| R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/audrey-sign-in.md#r1a--full-check-run) [no look] | Sol Max | |
+| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/audrey-sign-in.md#r1b--fix-recorded-failures) [look] | Sol Max | |
+| R1 | Phase review: hunt for faults in sign-in and sending, fix them, write the owner handoff. [R1](implementation/audrey-sign-in.md#r1--phase-review) [no look] | Opus 5.5 High | |
 
 ## Owner steps after the run
 
-- [x] O1 *owner*: in Vercel Production, set `MCP_TASK_EDITS_ENABLED` to `1` and redeploy (done 2026-11-12). To roll back, remove it
-  and redeploy.
-- [x] O2 *owner*: in claude.ai, open Settings → Connectors → Teams DEUS and check that `find_tasks`,
-  `preview_task_changes` and `apply_task_changes` are listed. If not, disconnect and connect it again (done 2026-11-12).
-- [ ] O3 *owner*: live check on a throwaway Internal task with one subtask: in a chat, rename it, move its dates, mark
-  the subtask Done, put it on the calendar, then delete it. Check the app and your calendar after each step.
+- [ ] O1 *owner*: Firebase console, project `deus-team-tasks` → Authentication → **Get started** (no sign-in
+  provider needs turning on; the app uses its own codes).
+- [ ] O2 *owner*: Firebase console → Project settings → Service accounts → **Generate new private key**. In Vercel
+  Production, add `FIREBASE_ADMIN_KEY` with the whole JSON file's contents. Delete the downloaded file afterwards.
+- [ ] O3 *owner*: in Titan, create the mailbox `noreply@deushcs.com` (or pick an existing one). In Vercel Production
+  add `SMTP_HOST=smtp.titan.email`, `SMTP_PORT=465`, `SMTP_USER=<the mailbox>`, `SMTP_PASS=<its password>`,
+  `MAIL_FROM=DEUS Space <the mailbox>`.
+- [ ] O4 *owner*: run `npm run notify:keys` and add what it prints to Vercel Production: `CODE_SECRET`,
+  `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT=mailto:<the mailbox>`.
+- [ ] O5 *owner*: add `NEXT_PUBLIC_SIGN_IN_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
+  redeploy.
+- [ ] O6 *owner*: link Audrey: `npm run people:add -- audrey.wijaya@deushcs.com Audrey` (dry run: check it finds her
+  open tasks under the name "Audrey"), then the same with `--apply`, which also marks her existing tasks as already
+  told so they never send a notification. Needs `FIREBASE_ADMIN_KEY` in your shell.
+- [ ] O7 *owner*: sign in yourself first on your own phone or laptop to check the code email arrives (look in spam;
+  if it lands there, ask Claude for the DNS records that make it come from deushcs.com).
+- [ ] O8 *owner, with Audrey's iPhone*: Safari → the app → Share → Add to Home Screen; open DEUS Space from the Home
+  Screen; More → Sign in; enter her code; Turn on notifications → Allow; Send a test; the test arrives.
+- [ ] O9 *owner*: give Audrey a throwaway task in the app; her iPhone shows "New task for you" within a minute.
+  Delete the task. The next weekday at 09:00 (Vercel's free plan may run it any time within that hour), she gets the
+  summary if anything is late or due.
 
 ## Model rationale
 
-Picks follow "Claude or Codex: one pick per task" in `~/.claude/playbooks/plans-and-models.md`. Sol Max takes the
-save tool (it writes live data, including deletes) and the chat guidance (written rules where completeness counts).
-Sol xHigh takes the pure rules, the read-only tools and the pass/fail check rows. Opus 5.5 High takes the phase
-review, because every build row is Codex-built and the review should come from the other family. A failed task's
-retry is autorun's own pick.
+Picks follow "Claude or Codex: one pick per task" in `~/.claude/playbooks/plans-and-models.md`. Sol Max takes every
+build row: sign-in and permissions (A1, A2, A4, A6) are its row, and the screens (A3, A5) follow an approved page
+built from the guide's parts, judged by specs and the look check. Opus 5.5 High takes the phase review, because every
+build row is Codex-built and the review should come from the other family. A failed task's retry is autorun's own
+pick.
 
 Start with `AUTORUN_GPT_ONLY=0 autorun all docs/IMPLEMENTATION_PLAN.md`. If Claude's limit is low, change R1 to Sol
 Max first and start with `AUTORUN_GPT_ONLY=1`.
