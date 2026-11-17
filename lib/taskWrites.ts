@@ -4,6 +4,7 @@
 // no connection.
 import { addDoc, collection, deleteField, doc, updateDoc, type WriteBatch } from "firebase/firestore";
 import { commitEach, PartlyCommitted } from "./batches";
+import { requestAssignNotify } from "./assignNotifyRequests";
 import { requestCalendarContextSync } from "./calendarContextRequests";
 import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
@@ -33,10 +34,11 @@ export function toTaskUpdate(patch: TaskPatch): Record<string, unknown> {
   return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
 }
 
-export async function addTask(task: NewTask): Promise<string> {
+export async function addTask(task: NewTask, notify = true): Promise<string> {
   assertOnline("No connection. The task wasn't added.");
   const ref = await addDoc(collection(db, TASKS), toNewTaskDoc(withCompletedAt(task)));
   if (task.calendar) requestCalendarSync([ref.id]);
+  if (notify && "responsible" in task) requestAssignNotify([ref.id]);
   return ref.id;
 }
 
@@ -44,6 +46,7 @@ export async function addTask(task: NewTask): Promise<string> {
 export async function updateTask(id: string, patch: TaskPatch, current?: Task): Promise<void> {
   assertOnline("No connection. The task wasn't saved.");
   await updateDoc(doc(db, TASKS, id), toTaskUpdate(withCompletedAt(patch, current)));
+  if ("responsible" in patch) requestAssignNotify([id]);
   if (taskCalendarChanged(current, patch)) requestCalendarSync([id]);
   if ("task" in patch && current?.task !== patch.task) void requestCalendarContextSync("parentId", id);
 }

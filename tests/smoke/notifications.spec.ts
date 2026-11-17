@@ -7,7 +7,7 @@ import { auditLayout } from "../../scripts/compare/layout.mjs";
 import { expectWordGaps } from "../support/wordSpacing";
 
 const EMAIL = "audrey.wijaya@deushcs.com";
-const DEMO = "http://127.0.0.1:8180/v1/projects/demo-deus/databases/(default)/documents";
+const DEMO = "http://127.0.0.1:8180/v1/projects/deus-team-tasks/databases/(default)/documents";
 const OWNER = { Authorization: "Bearer owner", "Content-Type": "application/json" };
 const OUT = process.env.A5_SHOTS || "redesign/compare/a5";
 const pageErrors = new WeakMap<Page, string[]>();
@@ -61,7 +61,7 @@ test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   pageErrors.set(page, errors);
   page.on("pageerror", (error) => errors.push(error.message));
-  for (const url of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
+  for (const url of ["http://127.0.0.1:8180/emulator/v1/projects/deus-team-tasks/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     // The Firestore readiness URL can answer just before Auth finishes starting.
     await expect(async () => { expect((await fetch(url, { method: "DELETE", headers: OWNER })).ok).toBe(true); }).toPass({ timeout: 15_000 });
   }

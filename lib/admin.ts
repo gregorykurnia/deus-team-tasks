@@ -34,5 +34,10 @@ function options(): AppOptions {
 
 const config = options(); // Validate even when hot reload has already initialized the app.
 export const adminApp = getApps().find((app) => app.name === "deus-server") ?? initializeApp(config, "deus-server");
-export const adminDb = getFirestore(adminApp);
+// Auth uses demo-deus test tokens; Firestore must share the app's existing tasks namespace.
+// Both are still pinned to local emulator hosts above, and production refuses emulator configuration.
+export const adminDataApp = config.projectId === "demo-deus"
+  ? getApps().find((app) => app.name === "deus-server-data") ?? initializeApp({ projectId: "deus-team-tasks" }, "deus-server-data")
+  : adminApp;
+export const adminDb = getFirestore(adminDataApp);
 export const adminAuth = getAuth(adminApp);

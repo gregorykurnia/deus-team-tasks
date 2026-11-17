@@ -3,6 +3,7 @@
 // is cleared, and new ids are never reused.
 import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitEach, commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
+import { requestAssignNotify } from "./assignNotifyRequests";
 import { requestCalendarContextSync } from "./calendarContextRequests";
 import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
@@ -108,7 +109,7 @@ function openTasksOf(companyId: number, tasks: Task[]) {
 
 type TaskChange = { t: Task; p: Partial<NewTask> };
 
-async function writeTaskChanges(changes: TaskChange[]): Promise<void> {
+async function writeTaskChanges(changes: TaskChange[], notify = true): Promise<void> {
   const sync = (written: TaskChange[]) => {
     requestCalendarSync(written.filter(({ t, p }) => taskCalendarChanged(t, p)).map(({ t }) => t.id));
     for (const { t, p } of written) {
@@ -116,7 +117,8 @@ async function writeTaskChanges(changes: TaskChange[]): Promise<void> {
     }
   };
   try {
-    await commitEach(db, changes, (b, { t, p }) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)));
+    await commitEach(db, changes, (b, { t, p }) => b.update(doc(db, TASKS, t.id), toTaskUpdate(p)),
+      undefined, undefined, notify ? undefined : () => {});
   } catch (err) {
     if (err instanceof PartlyCommitted) sync(err.done);
     throw err;
@@ -154,7 +156,8 @@ export async function saveTaskKeptInStep(task: Task, patch: Partial<NewTask>, co
   const changes: { t: Task; p: Partial<NewTask> }[] = [{ t: task, p: ownPatch }];
   const datesChanged = "lastActionDate" in patch || "endDate" in patch;
   const companyPatch = company && !next.completed && datesChanged ? companyPatchFrom(company, next) : null;
-  await writeTaskChanges(changes);
+  // The company write may roll the task back. Announce only the final successful save.
+  await writeTaskChanges(changes, false);
   if (company && companyPatch) {
     try {
       await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
@@ -162,6 +165,7 @@ export async function saveTaskKeptInStep(task: Task, patch: Partial<NewTask>, co
       return rollBack(err, () => restoreTasks(changes));
     }
   }
+  if ("responsible" in patch) requestAssignNotify([task.id]);
   return { companyChanged: !!companyPatch };
 }
 
@@ -184,11 +188,14 @@ export async function saveTaskWithUndo(task: Task, patch: Partial<NewTask>, comp
 // Adds a task. A new company task with a last action or deadline brings its company in step (B12); the company's other
 // tasks keep their own dates. If that fails, the new task goes again, so trying once more can't make two.
 export async function addTaskKeptInStep(task: NewTask, companies: CompaniesById): Promise<{ id: string; companyChanged: boolean }> {
-  const id = await addTask(task);
+  const id = await addTask(task, false);
   const company = task.linkedClientId != null ? companies.get(task.linkedClientId) : undefined;
   const dated = !!task.lastActionDate || !!task.endDate;
   const companyPatch = company && !task.completed && dated ? companyPatchFrom(company, task) : null;
-  if (!company || !companyPatch) return { id, companyChanged: false };
+  if (!company || !companyPatch) {
+    requestAssignNotify([id]);
+    return { id, companyChanged: false };
+  }
   try {
     await updateDoc(companyRef(company.id), toCompanyUpdate(companyPatch));
   } catch (err) {
@@ -198,6 +205,7 @@ export async function addTaskKeptInStep(task: NewTask, companies: CompaniesById)
       if (task.calendar) requestCalendarSync([id]);
     });
   }
+  requestAssignNotify([id]);
   return { id, companyChanged: true };
 }
 

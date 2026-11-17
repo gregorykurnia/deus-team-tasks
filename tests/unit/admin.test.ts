@@ -44,8 +44,11 @@ describe("server Firebase selection", () => {
     if (selection === "flag") vi.stubEnv("NEXT_PUBLIC_USE_EMULATOR", "1");
     if (selection === "firestore") vi.stubEnv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8180");
     if (selection === "auth") vi.stubEnv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9199");
-    await import("../../lib/admin");
+    const admin = await import("../../lib/admin");
     expect(initialize).toHaveBeenCalledWith({ projectId: "demo-deus" }, "deus-server");
+    expect(initialize).toHaveBeenCalledWith({ projectId: "deus-team-tasks" }, "deus-server-data");
+    expect(firestore).toHaveBeenCalledWith(admin.adminDataApp);
+    expect(auth).toHaveBeenCalledWith(admin.adminApp);
     expect(process.env.FIRESTORE_EMULATOR_HOST).toBe("127.0.0.1:8180");
     expect(process.env.FIREBASE_AUTH_EMULATOR_HOST).toBe("127.0.0.1:9199");
     expect(process.env.METADATA_SERVER_DETECTION).toBe("none");

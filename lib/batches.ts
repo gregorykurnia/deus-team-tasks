@@ -1,9 +1,31 @@
 import { writeBatch, type Firestore, type WriteBatch } from "firebase/firestore";
+import { requestAssignNotify } from "./assignNotifyRequests";
 
 // Firestore takes at most 500 writes per batch; 450 leaves room.
 export const BATCH_LIMIT = 450;
 
 export type BatchOp = (batch: WriteBatch) => void;
+
+// Observe the shared batch itself so a new bulk save cannot bypass assignment notices.
+function assignmentBatch(batch: WriteBatch, ids: Set<string>): WriteBatch {
+  return new Proxy(batch, {
+    get(target, key, receiver) {
+      const value = Reflect.get(target, key);
+      if (typeof value !== "function") return value;
+      return (...args: unknown[]) => {
+        if (key === "set" || key === "update") {
+          const ref = args[0] as { path?: string } | undefined;
+          const data = args[1];
+          const responsible = data && typeof data === "object" ? Object.hasOwn(data, "responsible")
+            : args.some((field, index) => index % 2 === 1 && field === "responsible");
+          if (responsible && typeof ref?.path === "string" && /^tasks\/[^/]+$/.test(ref.path)) ids.add(ref.path.slice(6));
+        }
+        const result = Reflect.apply(value, target, args);
+        return result === target ? receiver : result;
+      };
+    },
+  });
+}
 
 // A list longer than one batch that stopped part way: the items in `done` were saved, in the batches before the one
 // that failed, and `left` weren't (the failed batch and every one after it).
@@ -27,13 +49,15 @@ export async function commitEach<T>(
   items: T[],
   write: (batch: WriteBatch, item: T) => void,
   keep: (item: T) => boolean = () => true,
-  size = BATCH_LIMIT
+  size = BATCH_LIMIT,
+  onAssignments: (ids: readonly string[]) => void = requestAssignNotify
 ): Promise<T[]> {
   const done: T[] = [];
   for (let i = 0; i < items.length; i += size) {
     const chunk = items.slice(i, i + size).filter(keep);
     if (chunk.length === 0) continue;
-    const batch = writeBatch(db);
+    const ids = new Set<string>();
+    const batch = assignmentBatch(writeBatch(db), ids);
     chunk.forEach((item) => write(batch, item));
     try {
       await batch.commit();
@@ -42,6 +66,7 @@ export async function commitEach<T>(
       throw new PartlyCommitted(done, [...chunk, ...items.slice(i + size).filter(keep)], err);
     }
     done.push(...chunk);
+    if (ids.size) onAssignments([...ids]);
   }
   return done;
 }

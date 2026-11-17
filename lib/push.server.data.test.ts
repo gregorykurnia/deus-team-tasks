@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { initializeApp, deleteApp as deleteClientApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithCustomToken, signOut } from "firebase/auth";
 import { deleteApp } from "firebase-admin/app";
-import { adminApp, adminAuth, adminDb } from "./admin";
+import { adminApp, adminDataApp, adminAuth, adminDb } from "./admin";
 import { deactivatePerson } from "./people.server";
 import { activePushPerson, pushDeviceId, pushIdentity, savePushDevice, removePushDevice, sendPushToDevice, sendPushToPerson, PushAccessError } from "./push.server";
 import * as transport from "./pushTransport.server";
@@ -26,7 +26,7 @@ beforeAll(() => {
 beforeEach(async () => {
   vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "1");
   await signOut(auth);
-  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
+  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/deus-team-tasks/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     expect((await fetch(endpoint, { method: "DELETE" })).ok).toBe(true);
   }
   await person.set({ email: EMAIL, name: "Audrey", active: true });
@@ -34,7 +34,7 @@ beforeEach(async () => {
   token = await signedIn.user.getIdToken();
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
-afterAll(async () => { await deleteClientApp(client); await deleteApp(adminApp); });
+afterAll(async () => { await deleteClientApp(client); await deleteApp(adminApp); await deleteApp(adminDataApp); });
 
 describe("push devices and delivery on the emulators", () => {
   it("saves twice and in parallel to one stable device; reads the same complete payload for sending", async () => {

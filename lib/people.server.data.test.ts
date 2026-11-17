@@ -5,17 +5,21 @@ import { deleteApp as deleteClientApp, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithCustomToken, signOut } from "firebase/auth";
 import { connectFirestoreEmulator, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, setDoc, setLogLevel, terminate } from "firebase/firestore";
 import { deleteApp } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminApp, adminAuth, adminDb } from "./admin";
+import { adminApp, adminDataApp, adminAuth, adminDb } from "./admin";
 import { addPerson, deactivatePerson, getActivePerson, getPersonByName, listActivePeople, previewPersonAddition } from "./people.server";
 
 const EMAIL = "audrey.wijaya@deushcs.com";
 const exec = promisify(execFile);
 const client = initializeApp({ projectId: "demo-deus", apiKey: "fake-emulator-key" }, "people-rules");
-const clientDb = getFirestore(client), clientAuth = getAuth(client);
+const dataClient = initializeApp({ projectId: "deus-team-tasks", apiKey: "fake-emulator-key" }, "people-rules-data");
+const clientDb = getFirestore(dataClient), clientAuth = getAuth(client);
+const rulesAuth = getAuth(dataClient);
 setLogLevel("silent");
 connectFirestoreEmulator(clientDb, "127.0.0.1", 8180);
 connectAuthEmulator(clientAuth, "http://127.0.0.1:9199", { disableWarnings: true });
+connectAuthEmulator(rulesAuth, "http://127.0.0.1:9199", { disableWarnings: true });
 
 async function snapshot() {
   const rows = await Promise.all(["people", "assignNotices", "tasks"].map(async (name) => (
@@ -39,7 +43,8 @@ beforeAll(() => {
 });
 beforeEach(async () => {
   await signOut(clientAuth);
-  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
+  await signOut(rulesAuth);
+  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/deus-team-tasks/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     const response = await fetch(endpoint, { method: "DELETE" });
     expect(response.ok).toBe(true);
   }
@@ -47,8 +52,8 @@ beforeEach(async () => {
 afterEach(() => vi.restoreAllMocks());
 afterAll(async () => {
   await terminate(clientDb);
-  await deleteClientApp(client);
-  await deleteApp(adminApp);
+  await deleteClientApp(client); await deleteClientApp(dataClient);
+  await deleteApp(adminApp); await deleteApp(adminDataApp);
 });
 
 describe("person records, owner commands and closed device rules", () => {
@@ -239,7 +244,7 @@ describe("person records, owner commands and closed device rules", () => {
     for (const path of paths) await adminDb.doc(path).set({ email: EMAIL, name: "Audrey", active: true, secret: "private" });
     for (const signedIn of [false, true]) {
       if (signedIn) {
-        const result = await signInWithCustomToken(clientAuth, await adminAuth.createCustomToken(EMAIL));
+        const result = await signInWithCustomToken(rulesAuth, await getAdminAuth(adminDataApp).createCustomToken(EMAIL));
         expect(result.user.uid).toBe(EMAIL);
       }
       // A successful task write prevents an unreachable emulator or blanket-deny rules from passing this test.

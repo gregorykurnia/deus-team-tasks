@@ -1,4 +1,5 @@
 import "server-only";
+import { notifyAssignments } from "./assignNotifyDispatch.server";
 import {
   collection, doc, getDocsFromServer, runTransaction,
   type DocumentData, type Transaction,
@@ -198,7 +199,10 @@ export async function addTaskPlan(
   if (!calendarWritesEnabled() && plan.steps.some((step) => step.calendar)) throw new TaskPlanError(TASK_PLAN_CALENDAR_OFF);
   const ids = operationIds(plan);
   const saved = await completedOperation(plan, ids);
-  if (saved) return calendarResults(plan, saved, options.origin ?? "");
+  if (saved) {
+    await notifyAssignments([...(plan.newParent ? [saved.parentId] : []), ...saved.subtaskIds]);
+    return calendarResults(plan, saved, options.origin ?? "");
+  }
 
   const written = await runTransaction(db, async (transaction) => {
     const operation = await readOperation(transaction, plan, ids);
@@ -228,5 +232,6 @@ export async function addTaskPlan(
       taskDocument(task, ids, i)));
     return writeResult(ids, preview.destination!, false);
   });
+  await notifyAssignments([...(plan.newParent ? [written.parentId] : []), ...written.subtaskIds]);
   return calendarResults(plan, written, options.origin ?? "");
 }

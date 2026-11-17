@@ -1,4 +1,5 @@
 import "server-only";
+import { notifyAssignments } from "./assignNotifyDispatch.server";
 import { collection, deleteField, doc, getDocsFromServer, runTransaction, type DocumentData } from "firebase/firestore";
 import { isDeepStrictEqual } from "node:util";
 import type { PipelineEntry } from "./clientTypes";
@@ -228,6 +229,7 @@ export async function applyTaskChanges(
       throw new TaskEditError("The company update failed. All task changes were restored; nothing was saved. Preview again before retrying.");
     }
   }
+  await notifyAssignments(changes.filter((change) => change.set && Object.hasOwn(change.set, "responsible")).map((change) => change.taskId));
   const calendars = new Map<string, CalendarSyncResult>();
   for (const id of written.calendarIds) {
     try { calendars.set(id, await syncTaskCalendar(id, origin)); }

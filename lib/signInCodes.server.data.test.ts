@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { deleteApp as deleteClientApp, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithCustomToken, signOut } from "firebase/auth";
 import { deleteApp } from "firebase-admin/app";
-import { adminApp, adminAuth, adminDb } from "./admin";
+import { adminApp, adminDataApp, adminAuth, adminDb } from "./admin";
 import { CODE_COOLDOWN, CODE_LIFETIME, hashSignInCode, type SignInCodeState } from "./signInCodes";
 import { requestSignInCode, verifySignInCode } from "./signInCodes.server";
 import * as mailer from "./mailer";
@@ -32,13 +32,13 @@ beforeEach(async () => {
   vi.stubEnv("CODE_SECRET", SECRET);
   vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "1");
   await signOut(auth);
-  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
+  for (const endpoint of ["http://127.0.0.1:8180/emulator/v1/projects/deus-team-tasks/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     expect((await fetch(endpoint, { method: "DELETE" })).ok).toBe(true);
   }
   await personRef.set({ email: EMAIL, name: "Audrey", active: true });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
-afterAll(async () => { await deleteClientApp(client); await deleteApp(adminApp); });
+afterAll(async () => { await deleteClientApp(client); await deleteApp(adminApp); await deleteApp(adminDataApp); });
 
 describe("transactional email sign-in on the emulators", () => {
   it("requests only for active canonical people; case/space duplicates share one cooldown", async () => {

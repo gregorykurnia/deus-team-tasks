@@ -63,7 +63,7 @@ export async function previewPersonAddition(rawEmail: string, rawName: string) {
     const task = doc.data();
     const responsible = Array.isArray(task.responsible) ? task.responsible.filter((n): n is string => typeof n === "string") : [];
     responsible.forEach((n) => names.add(n));
-    if (!responsible.includes(name)) continue;
+    if (!responsible.some((value) => personNameKey(value) === personNameKey(name))) continue;
     total++;
     if (!task.completed && !isParked(task, today)) open++;
   }
@@ -79,8 +79,10 @@ export async function addPerson(rawEmail: string, rawName: string): Promise<Pers
     const existing = checkLink(allPeople.docs, email, name);
     // A retry must not mark assignments made after the original activation as already told.
     if (existing?.active) return person;
-    const tasks = await transaction.get(adminDb.collection("tasks").where("responsible", "array-contains", name).select());
+    const tasks = await transaction.get(adminDb.collection("tasks").select("responsible"));
     for (const task of tasks.docs) {
+      const names: unknown = task.data().responsible;
+      if (!Array.isArray(names) || !names.some((value) => typeof value === "string" && personNameKey(value) === personNameKey(name))) continue;
       transaction.set(adminDb.collection("assignNotices").doc(task.id), { notified: FieldValue.arrayUnion(name) }, { merge: true });
     }
     // Backfill and activation commit together, leaving task documents untouched.

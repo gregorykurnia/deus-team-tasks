@@ -359,4 +359,71 @@ HUNTED: odd data · narrow phone, long identity, blocked/old/install states and 
 HUNTED: failure · failed-save notice remains readable; baseline spacing regression fails before the fix · notification retry/error case and measured 2.640625 px failure.
 HUNTED: overlap · test toast cannot mask calendar dates after closing · 1 s dismissal assertion, pending-test case and fresh desktop/phone captures.
 
+## A6 — New task for you (2026-11-17)
+
+Files: `lib/assignNotify{,.server,Dispatch.server,Requests}.ts`, `app/api/notify/assigned/route.ts`;
+`lib/{taskWrites,companyWrites,batches,taskEditServer,taskPlanServer,people.server,admin}.ts` and `scripts/people.mjs`;
+the new assignment unit/data tests, existing Admin/people/code/push tests and two sign-in/notification smoke fixtures;
+this evidence and the A6 Done cell.
+
+Shared saves now report task IDs, never recipients or notice text. The flag-gated assignment route accepts at most
+50 IDs and an optional verified active ID token. One Admin transaction reads the saved task, active links and
+`assignNotices`, records current canonical linked names, and claims notices before the existing push sender runs.
+Self-assignment records the name without delivery; clearing Responsible makes a later re-addition eligible again.
+Provider acceptance is not proof of display: results say `processed`, `missing` or `failed`, never `sent`.
+
+The emulator hunt found that Admin's tasks were in `demo-deus` while the app's were in `deus-team-tasks`. Admin
+Firestore now uses the app's tasks namespace only on the pinned local emulator; Auth retains its `demo-deus`
+tokens. Production selection is unchanged. A1/A2/A4 data fixtures, A3/A5 browser fixtures, rules authentication,
+and the people command's owned-app cleanup follow that split. Backfill and its preview now use the same normalized
+name comparison as delivery, including case, whitespace and compatibility characters.
+
+### Responsible write audit
+
+Searched `lib/` and `features/` for `responsible`, task serializers and every Firestore write entry point.
+
+| Writer / input | Confirmed save and assignment hook |
+|---|---|
+| `features/task-sheet/draft.ts` → `TaskSheet` add, save, done, park and calendar saves | `addTaskKeptInStep` / `saveTaskKeptInStep`; ping after both task and company succeed. |
+| `features/today/TodayScreen.tsx`, `features/tasks/TasksScreen.tsx` quick add | `newTaskFromDraft` → `taskWrites.addTask`; ping after `addDoc`. |
+| `lib/subtasks.ts:newSubtask` → TaskSheet add | `taskWrites.addTask`; the initial empty Responsible also follows the hook. |
+| `lib/companies.ts:followUpTaskFor` → `features/companies/useCompanyActions.ts` | `companyWrites.addTaskKeptInStep`; defer ping until company side write succeeds. |
+| `lib/useTasks.ts:update` and direct task updates | `taskWrites.updateTask`; ping whenever the patch includes Responsible, including clearing. |
+| `features/tasks/TasksScreen.tsx` cell saves and Undo | `saveTaskWithUndo` → final save hook; `restoreTasks` → observed shared batch for Undo. |
+| `companyWrites.writeTaskChanges` / `restoreTasks` (including compensating writes) | `batches.commitEach` observes `set` / `update` of task Responsible; only committed chunks ping. Provisional company writes defer notification; restoration pings final data. |
+| `batches.commitEach` / `commitInChunks`, all callers | Observe task-reference writes with Responsible, including chaining and variadic updates; deduplicate IDs per committed batch. Other collections/fields do not ping. |
+| `taskEdit.ts:buildTaskChanges` → `taskEditServer.applyTaskChanges` | Direct server dispatch for explicit Responsible changes after the transaction and company following succeed; retry uses the same server claim. |
+| `taskPlan.ts:buildTaskPlan` → `taskPlanServer.addTaskPlan` | Direct server dispatch for newly created parent/child IDs after commit and on operation retry. Existing parent is excluded. Current builder initializes Responsible to `[]`. |
+| `followupPlan.ts:buildFollowupPlan` → `followupServer.addFollowupPlan` | Cannot assign a person: input has no Responsible field and both new parent and subtasks initialize to `[]`; existing parent changes dates only. No assignment hook required by A6's condition. |
+
+No other `lib/` / `features/` task save can set a person in Responsible. Task/group/calendar/status/parking writes
+that omit Responsible do not announce tasks. Task documents gain no notice fields, so load, resume, links, exports,
+counts, calendars and task-copy code keep their existing format. Notification text reads the current parent and
+company at claim time; the save hooks leave existing calendar/context-sync calls in place.
+
+### Checks
+
+- TypeScript: `npx tsc --noEmit` and the final build's TypeScript validation passed.
+- ESLint on changed and new JS/TS files: passed, including final scoped reruns; own save/access diff review and `git diff --check` clear.
+- `npm run test:unit -- --maxWorkers=2`: 1,621 passed; unchanged task-plan non-JSON test timed out at 5,000 ms, then its isolated retry passed (1,622 cases verified).
+- `npm run test:data`: all 308 tests / 16 files passed (180 s), including 14 new assignment cases; only local emulators and fake mail/push.
+- `npx playwright test tests/smoke/sign-in.spec.ts tests/smoke/notifications.spec.ts --grep 'signs in from navigation|turn on, test, resave'`: all four desktop/phone cases passed; E1 retains the complete assignment journey.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`: passed, including the new assignment route. No UI changed and no A6 look check applies; full suite/a11y/compare remain R1a's work. A full check is worth running after shared-library changes.
+
+Own review fixed exact-case backfill missing existing assignments, the split Admin/app emulator namespace, and
+notifications starting before company compensation finished. The assignment route has a 300 s allowance for a full
+50-ID request with slow push providers; the connector's existing 60 s budget is unchanged. Playwright's output
+cleanup removed tracked evidence from earlier tasks; restored it from HEAD before staging. No test touched live
+data, SMTP or a real push service; browser fixture calls and actual signed-in rules checks use their local namespaces.
+
+HUNTED: ripple · all Responsible writers, backfill, private records, parent/company labels, links and emulator namespaces agree · write-helper, pure-message, rules and assignment data tests.
+HUNTED: odd data · missing/blank/non-array lists, case/spacing/compatibility duplicates, Full Team, unlinked/inactive people, 120-character unicode names and invalid IDs · `assignNotify.test.ts`, route tests and odd-task data case.
+HUNTED: failure · first/partial saves, company rollback, offline Auth/fetch, lost provider reply, failed claim and closing after receipt · request/write/route tests and assignment retry/fan-out/closed-page data cases.
+HUNTED: overlap · simultaneous pings claim once; a late old delivery cannot overwrite current Responsible or its notice record · concurrent-claim and late-delivery data cases; responses never write task data.
+
+DECISION: keep the brief's claim-before-send policy rather than automatic provider retries, preventing duplicates when delivery landed but its reply was lost.
+DECISION: share the existing local tasks namespace rather than copy tasks into the Auth test project, preserving real task/notice transactions and backfill behavior.
+DECISION: defer company-task pings until the company side write succeeds rather than announce a provisional task that compensation may delete.
+DECISION: normalize backfill names like delivery rather than retain exact-case matching, preventing old assignments from being announced at activation.
+
 DECISION: not fixed 08-1280-sidebar-off.png as a separate defect, because no fault was described and full-size review found none; its shared spacing was updated and the picture retaken.

@@ -45,5 +45,8 @@ try {
   console.error(error instanceof Error ? error.message : "People command failed.");
   process.exitCode = 1;
 } finally {
-  if (admin) await deleteApp(admin.adminApp);
+  if (admin) {
+    if (admin.adminDataApp !== admin.adminApp) await deleteApp(admin.adminDataApp);
+    await deleteApp(admin.adminApp);
+  }
 }

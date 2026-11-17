@@ -6,7 +6,7 @@ import { expectWordGaps } from "../support/wordSpacing";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
 
 const EMAIL = "audrey.wijaya@deushcs.com";
-const DEMO = "http://127.0.0.1:8180/v1/projects/demo-deus/databases/(default)/documents";
+const DEMO = "http://127.0.0.1:8180/v1/projects/deus-team-tasks/databases/(default)/documents";
 const OWNER = { Authorization: "Bearer owner", "Content-Type": "application/json" };
 
 async function person(email = EMAIL, name = "Audrey") {
@@ -118,7 +118,7 @@ async function readableSpaces(text: Locator) {
 test.beforeEach(async ({ page }) => {
   // Auth checks keep setup dismissed; notification states have their own spec.
   await page.addInitScript(() => Object.defineProperty(Notification, "permission", { configurable: true, get: () => "denied" }));
-  for (const url of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
+  for (const url of ["http://127.0.0.1:8180/emulator/v1/projects/deus-team-tasks/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     await expect(async () => { expect((await fetch(url, { method: "DELETE", headers: OWNER })).ok).toBe(true); }).toPass({ timeout: 15_000 });
   }
   await person();
