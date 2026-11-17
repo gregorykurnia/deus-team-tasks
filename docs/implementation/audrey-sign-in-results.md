@@ -1059,3 +1059,95 @@ Logs: `/tmp/deus-r1b-{before,dates,assertions,final-browser,gallery-final}.log`,
 and `/tmp/deus-r1b-{types-final,lint-final,lint-capture,unit-final,build-final}.log`. The interrupted repaired run
 ended with signal 143 and left this task's servers on 3100/8180/9199; those exact server PIDs were stopped before
 the clean final runs. All earlier tracked test outputs were left intact by using separate output directories.
+
+## R1bb — Remaining failure replay (2026-11-17)
+
+### Scoped comparison decisions
+
+Opened all four retained R1a side-by-side captures at native resolution, plus native lower-edge crops in
+`redesign/compare/r1bb-gallery/`. The table below accounts for every copy delta in R1a, including repeated dates.
+No comparison delta requires restoring superseded behavior.
+
+| Delta in the four captures | Disposition and source |
+|---|---|
+| `Team desk` → `DEUS Team Space` | Retain the approved name/logo, Q5/Q9 in `redesign/ui-implementation-plan.md`. |
+| `Companies` → `Prospects`, desktop navigation and phone tab | Retain the owner's N21 rename; the route remains `/companies`. |
+| `Q4`/`H`/`O` → `QP`/`HI`/`OM`; company badge `AR` → `AG` | Retain consistent shared initials (first/last words, two letters for one word), `lib/people.ts:33`, `lib/deskNav.ts:38`; guide §§2.1/4.6 call for decorative initials beside the full name, not prototype-specific abbreviations. The existing `deskNav` unit cases explicitly expect two-letter single-word badges. |
+| Prototype-only `Search` on desktop | Text extraction difference: the app names its search input with `aria-label="Search"`; the identical visible placeholder and search icon remain. See `ui/Inputs.tsx` and guide §3, Page header. |
+| `2 days late`, `1 day late`, `Tomorrow`, all `In 2/3/6/10/15 days` → dated pills (`Sun 18 Oct` through `Wed 4 Nov`, including duplicates) and Today/Tomorrow/late words | Retain the owner's N31 actual dates. Desktop combines date and urgency; phone puts urgency under the title. Every repeated `Fri 23 Oct`/`Fri 30 Oct` corresponds to its own task, rather than a lost or merged row. |
+| Phone-only new `20` and `Open Plan` | Retain N17: phone chart columns are pictures with numeric day labels, with one accessible Open Plan link; the narrow prototype's Today label wraps across three lines. |
+| Desktop More title, four link/blurb pairs, and install title/blurb absent from the app capture | Retain guide §3's phone-only More sheet. On desktop those destinations and Install are in the sidebar. The prototype renders an unstyled phone sheet on desktop; `ui/Sheet.tsx` deliberately closes a phone-only sheet after resizing or opening its link on desktop. |
+| New `Sign in` in the desktop sidebar and phone More, plus phone `Get notifications about your tasks` | Retain the approved A3/A5 additions behind the sign-in flag. The phone sheet grows upward while all links, Install and live status remain readable. |
+| Different chart segment heights and responsive chip/row wraps | Retain the guide §4.12 stacked proportions (including events at 60%), implemented by `segmentShares` in a 132px chart; the prototype subtracts 3px per segment from a 118px scale. Counts, busiest-day callout and legends agree. Wider dated pills and responsive text reflow do not remove rows or obscure actions. |
+| Kevin/Dimas and Maya/Aditya swap within equal-owned-count ties | Retain the shared Plan/Today ordering from `lib/planMath.ts:165`: owned count, informed count, then name. The guide requires ranking by ownership but does not prescribe its tiebreaker; every displayed person and count is preserved. |
+
+Visual hunt: no unexplained overlap or cropped action in More. Today rows continue beyond the 1,800px capture
+limit, and the fixed phone tab bar appears at its viewport position in the tall capture; this is a full-page
+capture artifact, not the tab bar moving through the page. Existing two-line title ellipses and clipped lower
+continuation rows are scrolling/truncation patterns, not missing task data. No application copy or layout changed
+for these comparisons.
+
+### Smoke replay and capture repair
+
+Fault found: `tests/smoke/chat-task-edits.spec.ts:175` captured the Next development badge over the left edge of
+the phone's Save changes button. The suggestion probe now hides `nextjs-portal` before taking evidence, matching
+the stress probe. This is a test-capture repair; application rendering, saving and scrolling are unchanged.
+Builder attribution: R1b in the archived chat-task-edits plan (`ddd6a77`), not this sign-in plan's R1b.
+
+- Ordinary inventory: **84/84 passed**, comprising 20 completed cases before signal 143 interrupted
+  the first command and 64/64 in `ordinary-resume.json` (exit 0, 400 s). The interrupted command is not counted as
+  a successful run; only its individually completed cases are retained in `interrupted.json`. Its exact orphaned
+  server roots were stopped before the remaining cases ran in a persistent background process.
+- Suggestion stability: **10/10 passed**, five isolated browser contexts per viewport, before the capture-only
+  repair. Both existing-name and new-name options were wholly in the viewport, their tap centres unobscured by
+  the footer, and selectable. After hiding the badge, **2/2 final desktop/phone capture cases passed** on the final
+  source. No speculative change to `ui/Combobox.tsx` was made.
+- Stress: **1/1 desktop and 1/1 phone passed**, each with a fresh Firestore/Auth emulator and dev server, 50 s and
+  49 s including startup. Both retain 2,408 tasks, 48 groups and all 179 companies linked from those tasks; the
+  known 3,200-company emulator Listen limitation remains explicit in each `stress-report.json`. Both reports
+  contain zero runtime, console or layout errors, and assert the expected Prospect work and company identity.
+
+These scoped successes close the original reset/seed/timeout cases on a healthy emulator. They do not claim
+that the original 112-minute shared-emulator smoke invocation is stable. Stress runs are deliberately isolated
+as R1bb requires, so a degraded emulator cannot invalidate subsequent ordinary cases. Together with R1b's 17
+original cases, all 103 original smoke failures now have a passing scoped replay.
+
+Raw reports, logs and per-case outputs stay under `redesign/compare/r1bb-smoke/` (ignored). Representative direct
+`/tasks?task=names` suggestion states and `/tasks?task=s1` stress states are in `redesign/compare/r1bb-gallery/`.
+
+### Accessibility and final verification
+
+- Accessibility: **81/81 desktop and 61/61 phone passed**, each exit 0, zero failed scans, recipe errors or violations; exact equality with all 142 committed state/viewport IDs, with no missing or extra states.
+- Light checks: `npx tsc --noEmit`, `npx eslint tests/smoke/chat-task-edits.spec.ts`, and `npm run test:unit` passed; **68 files / 1,654 unit tests**. Firestore implementation is unchanged, so data tests were not rerun.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build` passed (49 s), and `git diff --check` passed. Browser checks used Next dev and local emulators/fakes throughout; no browser used the production build.
+
+Accessibility commands used `node scripts/a11y/axe.mjs --only <regex derived from the committed replay list>
+--size desktop|phone --servers --distinct`, with `NEXT_PUBLIC_SIGN_IN_ENABLED=1` and `JAVA_TOOL_OPTIONS=-Xmx2g`.
+The two reports are preserved as `redesign/a11y/r1bb/desktop.json` and `phone.json`, with logs and `summary.json`;
+elapsed times were 1,029 s and 623 s. All 76 incomplete scans and 66 previous violation states are accounted for.
+Smoke commands selected the supplied inventory minus the two separately run stress cases, then only its 64
+unfinished cases after interruption. Suggestions used `--grep 'people suggestions remain' --repeat-each=5` on
+desktop/phone; each stress command used `--grep 'capture 065'` on one viewport. `capture-final.json` retains the
+two final capture passes; `finish-summary.json` records every light-check/build exit code.
+
+Look hunt: the development badge in the original suggestion captures was the only new repair. The final native
+frames and 100% footer/edge crops show whole options and actions. Approved company-name ellipses, scrolling
+body boundaries, reference-capture edges and phone-only More behavior are explained above. No unexplained
+failure or comparison delta remains, and no repair row is left before R1. Only R1bb is completed.
+
+FINDING: R1b (archived chat-task-edits plan, ddd6a77) · minor · suggestion evidence included the development badge over the phone save-button edge; the capture now hides it.
+
+DECISION: Kept shared suggestion scrolling rather than making an unproven repair, because five isolated repeats on each viewport passed full-intersection, tap-centre and selection checks.
+DECISION: Isolated stress runs and grouped accessibility by viewport rather than reusing one long-lived emulator, preserving each passing report and containing emulator degradation as the task requires.
+DECISION: Retained later approved dates, navigation, branding and sign-in additions rather than restoring the older prototype; each copy delta and visible layout difference has a disposition above.
+
+LOOKED: redesign/compare/both/001-today-normal-desktop.png · Cards rest on glass panels; the bottom cuts scrolling rows; dated pills and exposed text are readable without covered controls.
+LOOKED: redesign/compare/both/001-today-normal-phone.png · Cards sit on the page; the fixed bar overlays scrolling continuation; lower rows meet the capture edge and long titles ellipsize; exposed words remain readable.
+LOOKED: redesign/compare/both/276-moving-around-on-phones-more-sheet-desktop.png · The reference sheet covers its blurred page; the app uses its clear desktop sidebar; no app action or label is cut.
+LOOKED: redesign/compare/both/276-moving-around-on-phones-more-sheet-phone.png · More sits over the blurred page; every link, Sign in, Install and live status is whole above the bottom edge, without overlap.
+LOOKED: redesign/compare/r1bb-gallery/suggestions-desktop.png · The drawer covers the list; both options sit directly above the fixed footer; scrolled top fields leave the frame while visible labels and actions remain whole.
+LOOKED: redesign/compare/r1bb-gallery/new-name-desktop.png · Nadia's choice sits above the footer over the drawer body; upper fields are scrolled away; no choice or action text is covered or cut.
+LOOKED: redesign/compare/r1bb-gallery/suggestions-phone.png · The sheet covers the page; both options stand above the footer and whole Save button; upper body content is scrolled past the header; no badge covers the controls.
+LOOKED: redesign/compare/r1bb-gallery/new-name-phone.png · Nadia's option sits above the fixed actions; top chips continue under the header; all featured names and action text are whole and unobscured.
+LOOKED: redesign/compare/r1bb-gallery/stress-desktop.png · The drawer covers the blurred list; the full description and footer actions fit; the approved company name ellipsizes and lower fields continue beneath the footer.
+LOOKED: redesign/compare/r1bb-gallery/stress-phone.png · The bottom sheet rests on the viewport edge; the long description and Save button are whole; the company name ellipsizes, with lower fields scrolling behind the footer.

@@ -168,6 +168,7 @@ base("R1b: people suggestions remain above the pinned task actions", { tag: "@ph
     task("other", { responsible: ["Dimas Prasetyo"] }),
   ]);
   const sheet = await openTask(page, "names");
+  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
   expect(await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth), "the task sheet must fit the viewport").toBe(true);
   await sheet.getByRole("combobox", { name: /^Responsible/ }).fill("ra");
   const suggestion = sheet.getByRole("option", { name: /Dimas Prasetyo/ });
