@@ -13,12 +13,15 @@
     "test:unit": "vitest run --project unit",
     "launch-data": "jiti scripts/launch/data.ts",
     "launch-data:dry": "scripts/launch/dry-run.sh",
-    "test:data": "firebase emulators:exec --only firestore --project demo-deus --log-verbosity QUIET \"vitest run --project data\"",
+    "test:data": "firebase emulators:exec --only firestore,auth --project demo-deus --log-verbosity QUIET \"vitest run --project data\"",
+    "people:add": "node scripts/people.mjs add",
+    "people:remove": "node scripts/people.mjs remove",
     "mcp:smoke": "node scripts/mcp/smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",
     "firebase": "^12.18.0",
+    "firebase-admin": "^14.5.1",
     "googleapis": "^176.0.0",
     "mcp-handler": "1.1.0",
     "next": "16.3.1",

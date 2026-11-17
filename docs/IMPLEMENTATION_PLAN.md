@@ -31,7 +31,7 @@ the database locked) is a later plan.
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| A1 | Server access (`firebase-admin`, auth emulator), person records, `people:add` / `people:remove` scripts with dry run, closed-rules test. [A1](implementation/audrey-sign-in.md#a1--server-access-and-person-records) [no look] | Sol Max | |
+| A1 | Server access (`firebase-admin`, auth emulator), person records, `people:add` / `people:remove` scripts with dry run, closed-rules test. [A1](implementation/audrey-sign-in.md#a1--server-access-and-person-records) [no look] | Sol Max | 2026-11-17 — checked |
 | A2 | Sign-in codes: request and verify rules, hashed codes, limits, Titan SMTP mailer and fake, routes, `notify:keys`. [A2](implementation/audrey-sign-in.md#a2--sign-in-codes) [no look] | Sol Max | |
 | A3 | Sign-in page `/sign-in` (email, code, iPhone Safari card), account sheet, entries in More and the side bar, `sign-in.spec.ts`. [A3](implementation/audrey-sign-in.md#a3--sign-in-page-and-account) [look] | Sol Max | |
 | A4 | Push plumbing: sender and fake, device routes, test route, service worker push and click handlers. [A4](implementation/audrey-sign-in.md#a4--push-plumbing) [no look] | Sol Max | |
