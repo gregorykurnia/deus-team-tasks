@@ -427,3 +427,34 @@ DECISION: defer company-task pings until the company side write succeeds rather 
 DECISION: normalize backfill names like delivery rather than retain exact-case matching, preventing old assignments from being announced at activation.
 
 DECISION: not fixed 08-1280-sidebar-off.png as a separate defect, because no fault was described and full-size review found none; its shared spacing was updated and the picture retaken.
+
+## A7 — Morning summary (2026-11-17)
+
+Added the pure summary builder, server delivery and `GET /api/notify/morning`, with the weekday 02:00 UTC cron
+(09:00 Jakarta). Counts use each main task/subtask's own deadline and exclude done, parked and Informed-only work.
+Friday includes Saturday through Monday. Notifications use the approved words, three names at most, four lines at
+most, the shared 60-character name formatter and the existing Plan person link. The response contains only the
+Jakarta date and each active person's email, task count and delivery status; no task names.
+
+Authorization runs before the feature flag and before Firebase is loaded: absent/blank secrets and wrong bearers
+return 401, including `Bearer undefined` when unset. The authorized flag-off route returns 404; Jakarta weekends do
+nothing. A transaction reserves `people/{email}.summaryClaimDate` before calling the existing sender, and
+`lastSummaryDate` is written only after a confirmed send. Failed/ambiguous attempts keep the daily reservation to
+avoid duplicate pushes; the next weekday can send normally. No-device and empty mornings reserve nothing. Older
+replies cannot roll back a newer date, overwrite other person fields or recreate a deleted person. Task records,
+their calendar events and their dates are never written.
+
+Checks:
+- `npx tsc --noEmit`: passed after fixing four test fixtures that incorrectly used strings for numeric `parkedAt`.
+- `npx eslint` on all seven changed/new TypeScript files: passed; final server/data-test rerun also passed.
+- `npm run test:unit -- --maxWorkers=2`: 1,641 passed / 2 failed initially; unchanged `lib/taskPlan.test.ts` non-JSON case timed out at 5,000 ms and `notifyKeys.test.ts` hit sandbox `spawnSync ... EPERM`. Each passed its scoped retry (key-generator subprocess outside the sandbox); all 1,643 cases verified, including 21 new builder/route cases and a final eight-case builder rerun.
+- `npm run test:data`: 318 passed / 3 failed initially. Fixed malformed-date completion handling and a test's failure injection (it had intercepted the sender's read transaction instead of the completion write); the unchanged calendar-preview case timed out at 5,000 ms. Scoped emulator rerun of all 13 morning cases plus that one calendar case passed: all 321 cases verified. Only local Firestore/Auth and fake push were used.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`: passed, including the dynamic morning route, without production Admin credentials being needed for the new route.
+- Own save/access diff review and `git diff --check`: clear. No screens changed; screenshots/browser checks do not apply to this no-look task. Full suite/a11y/compare remain R1a's work; a full check is worth running after these shared-library changes.
+
+HUNTED: ripple · daily markers, shared name formatting, task/subtask deadlines and the existing Plan link reader agree; tasks/calendars stay untouched · builder/link tests and morning data tests for persisted markers and unchanged fields.
+HUNTED: odd data · absent/blank/malformed data, normalized duplicate names, duplicate task IDs, invalid old markers, long unicode names and no-device/empty people · eight builder cases and malformed/excluded-record data cases.
+HUNTED: failure · unauthorized/disabled calls, failed claims, no reply, partial delivery, lost provider reply, failed completion write and requester closure never claim unconfirmed delivery or resend · route tests and morning failure data cases.
+HUNTED: overlap · concurrent cron calls reserve once; an older day's completion cannot replace the newer date or unrelated person changes · concurrent-call, late-completion and person-field data cases.
+
+DECISION!: add the private daily `summaryClaimDate` reservation rather than rely only on writing `lastSummaryDate` after sending, preserving the brief's at-most-once rule under overlap/lost replies; an ambiguous or failed attempt may miss that morning and is not retried until the next weekday.

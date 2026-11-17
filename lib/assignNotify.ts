@@ -22,7 +22,7 @@ export function assignmentRecipients(responsible: unknown, notified: unknown, pe
 }
 
 // Keep each name to 60 characters and one line, including the ellipsis.
-function noticeName(value: unknown): string {
+export function noticeName(value: unknown): string {
   const text = typeof value === "string" ? value.replace(/\s+/gu, " ").trim() : "";
   const chars = Array.from(text || "Untitled task");
   return chars.length > 60 ? chars.slice(0, 59).join("") + "…" : chars.join("");
