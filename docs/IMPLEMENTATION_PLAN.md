@@ -15,7 +15,7 @@ the database locked) is a later plan.
 
 ## Before the run
 
-- [ ] The owner approved the screens page (or asked for changes, and they're made on the page and in its source).
+- [x] The owner approved the screens page (2026-11-17, version 3: sign-in on its own page).
 
 ## Run rules
 
