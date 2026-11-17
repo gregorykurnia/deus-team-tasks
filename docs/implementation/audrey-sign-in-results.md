@@ -279,3 +279,84 @@ DECISION: keep the test toast scoped to its sheet rather than carry it over navi
 
 Only A5 is completed. Full smoke/a11y/compare remain at R1a; a full check is worth running because shared client/UI
 code changed. Real-device delivery and production setup remain the plan's owner steps.
+
+### A5 fresh-eyes corrections (2026-11-17)
+
+Opened all twelve originals in `/tmp/autorun-fresh-SZD8nJ` at original resolution. The first A5 pass spaced body
+copy but missed the title, button and side bar status rules. The new rendered-space check failed before the fix:
+`word gaps in “Turn on notifications”: Expected >= 4; Received 2.640625`. It now measures actual loaded-font gaps
+in headings, buttons, footnotes, installation steps and account-status rows, requiring at least 4 px.
+
+| Report item | Finding and disposition |
+|---|---|
+| 01, 03, 09–12 | Real cramped title/control/step spacing: `.2em` word spacing on A5's dialog and body, with explicit inheritance for buttons and links. Other sheets' base styles are unchanged. |
+| 04–05 | Real cramped Sign out/footnote spacing: covered by the body and explicit control rules; whole wording remains visible at 320 and 390. |
+| 06 | Real cramped status spacing: account-entry captions now use `.2em`, verified on three other pages at all four widths. |
+| 02 | Real capture clipping: keep the intended phone 390 px wide inside a 24 px capture margin; reference image becomes 438×904 instead of 386×856. Assertions protect the phone width, bezel clearance and caption inset. Approved source HTML is unchanged. |
+| 07 | Real obscured dates in a stale capture: the committed scoped toast already clears when its sheet closes. Retook the desktop shot and require no test toast within 1 s of closing, shorter than its 5.2 s lifetime, so natural expiry cannot hide a regression. |
+| 08 | No fault was described; full-size review found the account row intact and legible. Retaken with the shared spacing change; no separate defect or design exception. |
+
+Files: `features/sign-in/Account.module.css`, `tests/support/wordSpacing.ts`,
+`tests/smoke/{notifications.spec.ts,sign-in.spec.ts}`, this evidence and the A5 Done cell.
+
+Checks (all final recorded exit statuses are 0):
+- `npx tsc --noEmit`: passed.
+- ESLint on both changed specs and the new spacing helper: passed; the build also validates the CSS module.
+- `npm run test:unit -- --maxWorkers=2`: 1,578 passed / 61 files, with no retries.
+- Scoped notification spec plus the sign-in spec's shared-entry regression: 11 passed, 4 viewport-only skips; 20 A5 and 12 shared-screen layout audits clear; rendered-word-gap, reference-inset and toast-dismissal checks passed.
+- `SIGN_IN_SMOKE_OFF=1 npx playwright test tests/smoke/shell.spec.ts`: 12 passed, 5 viewport-only skips.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`: passed, including final TypeScript and static generation; `git diff --check` clear.
+
+No save, auth, database or notification-delivery logic changed. Browser writes still use only local emulators and
+fake push; no production setting, data, SMTP or push service was touched. The data suite was not repeated for this
+style/capture-only correction. Full checks remain at R1a.
+
+New gallery: `redesign/compare/a5-review/index.html` (20 A5 frames, 12 shared-page frames, five references, four
+100% crops). Opened all 32 app frames, the flagged reference and all four crops at original resolution. Shared
+pages are Today, Tasks and Prospects at 320×740, 390×844, 1280×900 and 1440×900. Accounts also arrive by direct
+link/reload, with a lost server device restored. No remaining finding in the changed UI.
+
+LOOKED: 1280-turn-on.png · Right drawer over Plan; title/button gaps clear, cards and words whole.
+LOOKED: reference-turn-on.png · Full bezel inside margins; caption inset, whole text, no edge clipping.
+LOOKED: 390-turn-on.png · Bottom sheet over Plan; spaced title/actions above a clear base, whole text.
+LOOKED: 390-account-off.png · Avatar above cards; Sign out and footnote distinct, whole and uncovered.
+LOOKED: 390-account-on-reload.png · Reloaded account over Plan; test/sign-out controls whole, clear gaps.
+LOOKED: 1280-sidebar-setup.png · Status below Audrey and above Install/Live; all words whole.
+LOOKED: 1280-sidebar-on.png · Account above Install/Live; no toast over the whole 17/18/19 dates.
+LOOKED: 1280-sidebar-off.png · Amber status whole within its card; Install/Live below, no overlap.
+LOOKED: 1440-save-error.png · Right drawer over Plan; title and red notice whole and clearly spaced.
+LOOKED: 390-install.png · Numbered cards above Done; title and “your Home” clear, no clipped words.
+LOOKED: 390-blocked.png · Steps above Check again; title/inline wording whole over blurred Plan.
+LOOKED: 390-old.png · Short bottom sheet; title, update notice and Done whole and uncovered.
+LOOKED: 1280-on.png · Green notice above test/Done in right drawer; all text whole.
+LOOKED: 1280-account-off.png · Header/card above Sign out; full wording within right drawer.
+LOOKED: 1280-account-on-reload.png · On/test card above Sign out; clear gaps and whole footer.
+LOOKED: 390-on.png · Green notice and buttons over Plan; text whole, nothing covers actions.
+LOOKED: 320-account-long.png · Name wraps beside round close; cards/sign-out/hint whole, no overlap.
+LOOKED: 320-turn-on.png · Bell/cards above both actions; title, buttons and base whole.
+LOOKED: 390-more-setup.png · Account above Live in More; setup words whole over Plan.
+LOOKED: 390-more-on.png · Green status above Live; no toast, whole row and footer.
+LOOKED: 390-more-off.png · Amber status above Live; full words, clear row edges.
+LOOKED: shared/1280-shared-today.png · Side bar account below navigation; status whole, clear of Today panels; long placeholder ellipsised.
+LOOKED: shared/1280-shared-tasks.png · Account above Install/Live; Tasks panel clear of side bar, status whole.
+LOOKED: shared/1280-shared-companies.png · Account below navigation; Prospects tiles beside it, no row overlap or clipped status.
+LOOKED: shared/1440-shared-today.png · Account above Install/Live; Today panels beside it, full status wording.
+LOOKED: shared/1440-shared-tasks.png · Account at side bar foot; Tasks controls above empty panel, no status clipping.
+LOOKED: shared/1440-shared-companies.png · Account above Install/Live beside Prospects; status whole and uncovered.
+LOOKED: shared/320-shared-today.png · More over Today; account above Install/Live, words and bottom edge whole.
+LOOKED: shared/320-shared-tasks.png · More over Tasks; account/Install/Live stacked without overlap, status whole.
+LOOKED: shared/320-shared-companies.png · More over Prospects; account above Install/Live, whole text and base.
+LOOKED: shared/390-shared-today.png · More over Today; account row above Install/Live, no cut words.
+LOOKED: shared/390-shared-tasks.png · More over Tasks; status whole and clear of footer, nothing overlapping.
+LOOKED: shared/390-shared-companies.png · More over Prospects; account/Install/Live whole within bottom sheet.
+LOOKED: reference-edge-crop.png · Full bezel curve inside margin; phone interior intentionally continues outside crop.
+LOOKED: 390-title-crop.png · Title/close whole with clear word gaps; bell partly outside this header crop.
+LOOKED: 390-sign-out-crop.png · Button above footnote; both whole, clear gaps and base.
+LOOKED: 1280-status-crop.png · Caption above Install/Live; whole words and rounded panel edge.
+
+HUNTED: ripple · the shared caption on three pages/four widths and every sheet state · shared-entry and notification spacing/layout assertions.
+HUNTED: odd data · narrow phone, long identity, blocked/old/install states and wrapped text · 320/390 screenshots and range checks that exclude line-break spaces.
+HUNTED: failure · failed-save notice remains readable; baseline spacing regression fails before the fix · notification retry/error case and measured 2.640625 px failure.
+HUNTED: overlap · test toast cannot mask calendar dates after closing · 1 s dismissal assertion, pending-test case and fresh desktop/phone captures.
+
+DECISION: not fixed 08-1280-sidebar-off.png as a separate defect, because no fault was described and full-size review found none; its shared spacing was updated and the picture retaken.

@@ -2,6 +2,8 @@ import { mkdir } from "node:fs/promises";
 import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { encodeValue, decodeValue } from "../support/emulator";
+import { expectWordGaps } from "../support/wordSpacing";
+import { auditLayout } from "../../scripts/compare/layout.mjs";
 
 const EMAIL = "audrey.wijaya@deushcs.com";
 const DEMO = "http://127.0.0.1:8180/v1/projects/demo-deus/databases/(default)/documents";
@@ -362,8 +364,10 @@ test("fresh-eyes: shared account entries fit three other screens at every size",
       await page.goto(isMobile ? `${path}?more=1` : path);
       await expect(page.getByRole("link", { name: /Audrey/ })).toBeVisible();
       await entryLayout(page, isMobile, "Audrey");
+      await expectWordGaps(page.getByRole("link", { name: /Audrey/ }).locator("small"));
       if (isMobile) await readableSpaces(page.getByRole("link", { name: /^Install on this phone/ }).locator("small"));
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      expect((await auditLayout(page)).errors).toEqual([]);
       await shot(page, `${width}-shared-${name}`);
     }
   }

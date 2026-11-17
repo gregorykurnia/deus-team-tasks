@@ -4,6 +4,7 @@ import { test, expect } from "./fixtures";
 import { encodeValue, decodeValue } from "../support/emulator";
 import { notificationBrowser } from "../support/notificationBrowser";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
+import { expectWordGaps } from "../support/wordSpacing";
 
 const EMAIL = "audrey.wijaya@deushcs.com";
 const DEMO = "http://127.0.0.1:8180/v1/projects/demo-deus/databases/(default)/documents";
@@ -49,6 +50,11 @@ async function shot(page: Page, name: string) {
   await writeFile(`${OUT}/${name}-audit.json`, JSON.stringify(audit));
   await page.screenshot({ path: `${OUT}/${name}.png`, animations: "disabled" });
   expect(audit.errors).toEqual([]);
+  const dialog = page.getByRole("dialog").last();
+  if (await dialog.count() && await dialog.getByRole("heading", { name: /^(Turn on notifications|Audrey)/ }).count()) {
+    await expectWordGaps(dialog.locator("h2, button, p, ol li > span"));
+  }
+  await expectWordGaps(page.getByRole("link", { name: /Audrey (Turn on notifications|Notifications on|Notifications off)/ }).locator("small"));
 }
 
 test.beforeEach(async ({ page }) => {
@@ -67,7 +73,19 @@ test("approved notification and account frames", async ({ page }) => {
   await page.setContent(await readFile("docs/implementation/sign-in-screens.html", "utf8"));
   await mkdir(OUT, { recursive: true });
   for (const [id, index, name] of [["notify", 0, "turn-on"], ["notify", 1, "install"], ["notify", 2, "blocked"], ["notify", 3, "on"], ["account", 0, "account"]] as const) {
-    await page.locator(`#${id} figure`).nth(index).screenshot({ path: `${OUT}/reference-${name}.png` });
+    // The phone's bezel is an outer shadow; a figure-only clip cuts it off.
+    // Keep the approved phone at 390px and add capture margins around it and its caption.
+    await page.locator(`#${id} figure`).nth(index).evaluate((figure) => {
+      document.getElementById("reference-capture")?.remove();
+      const stage = document.createElement("div"); stage.id = "reference-capture";
+      stage.style.cssText = "box-sizing:content-box;width:390px;padding:24px;background:var(--page)";
+      stage.appendChild(figure.cloneNode(true)); document.body.appendChild(stage);
+    });
+    const stage = page.locator("#reference-capture");
+    const bounds = await stage.boundingBox(), phone = await stage.locator(".phone").boundingBox(), caption = await stage.locator("figcaption").boundingBox();
+    expect(phone!.x - bounds!.x).toBeGreaterThanOrEqual(24); expect(phone!.y - bounds!.y).toBeGreaterThanOrEqual(24);
+    expect(phone!.width).toBe(390); expect(caption!.x - bounds!.x).toBeGreaterThanOrEqual(24);
+    await stage.screenshot({ path: `${OUT}/reference-${name}.png` });
   }
 });
 
@@ -102,6 +120,8 @@ test("turn on, test, resave a lost device, and sign out remove this device", { t
   await sheet(page).getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Audrey", exact: true })).toBeVisible();
   await page.getByRole("dialog", { name: "Audrey", exact: true }).getByRole("button", { name: "Close" }).click();
+  // Less than the toast's 5.2s lifetime: waiting for natural expiry would mask the bug.
+  await expect(page.getByText(/^Test sent\./)).toHaveCount(0, { timeout: 1000 });
   if (!isMobile) await shot(page, "1280-sidebar-on");
   else {
     await page.getByRole("button", { name: "More", exact: true }).click();

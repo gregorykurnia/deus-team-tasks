@@ -8,11 +8,13 @@
 .identity { display: block; min-width: 0; flex: 1; }
 .identity b { display: block; font-size: 14px; font-weight: var(--w-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side .identity b { font-size: var(--t-small); }
-.identity small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.more .identity small { font-size: var(--t-label); word-spacing: .12em; white-space: normal; overflow-wrap: anywhere; }
+.identity small { display: block; color: var(--muted); font-size: 12px; word-spacing: .2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more .identity small { font-size: var(--t-label); white-space: normal; overflow-wrap: anywhere; }
 .email { overflow-wrap: anywhere; }
 :global([role="dialog"]):has(.email) :global(button[aria-label="Close"]) { flex-shrink: 0; }
-.account { display: grid; gap: 18px; word-spacing: .12em; }
+:global([role="dialog"]):has(.account) { word-spacing: .2em; }
+.account { display: grid; gap: 18px; word-spacing: .2em; }
+.account :global(button), .account :global(a) { word-spacing: inherit; }
 .perks { display: grid; gap: 8px; }
 .perks > div { display: flex; align-items: flex-start; background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r-m); padding: 12px; gap: 12px; }
 .perks svg { flex: none; width: 36px; height: 36px; padding: 8px; color: var(--blue-ink); border-radius: 12px; background: var(--blue-soft); }
