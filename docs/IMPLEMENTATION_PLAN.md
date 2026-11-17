@@ -1,4 +1,4 @@
-# Audrey signs in and gets notifications on her iPhone
+# Audrey and Gregory sign in and get notifications on their phones
 
 Prepared 2026-11-17 for `autorun all`. The details for every row are in [the build brief](implementation/audrey-sign-in.md),
 and the screens are on [the screens page](https://claude.ai/artifact/J2YrGzCsGVeZ2D2CHi9Bay)
@@ -7,10 +7,10 @@ and the screens are on [the screens page](https://claude.ai/artifact/J2YrGzCsGVe
 
 ## Outcome
 
-Audrey (`audrey.wijaya@deushcs.com`) signs in to DEUS Space with a 6-digit code sent to her Titan inbox, turns on
-notifications in the app on her iPhone's Home Screen, and gets "New task for you" within seconds whenever someone
-makes her Responsible (in the app or from a Claude chat), plus a summary at 09:00 Jakarta, Monday to Friday. Nobody
-else has to sign in, and nothing shows until the owner sets one Vercel variable (O5). Phase 2 (everyone signs in,
+Audrey (`audrey.wijaya@deushcs.com`, iPhone) and Gregory (`gregory.kurnia@deushcs.com`) sign in to DEUS Space on its
+own sign-in page with a 6-digit code sent to their Titan inbox, turn on notifications (on iPhone, in the app on the
+Home Screen), and get "New task for you" within seconds whenever someone makes them Responsible (in the app or from a
+Claude chat), plus a summary at 09:00 Jakarta, Monday to Friday. Nobody else has to sign in, and nothing shows until the owner sets one Vercel variable (O5). Phase 2 (everyone signs in,
 the database locked) is a later plan.
 
 ## Before the run
@@ -33,7 +33,7 @@ the database locked) is a later plan.
 |---|---|---|---|
 | A1 | Server access (`firebase-admin`, auth emulator), person records, `people:add` / `people:remove` scripts with dry run, closed-rules test. [A1](implementation/audrey-sign-in.md#a1--server-access-and-person-records) [no look] | Sol Max | |
 | A2 | Sign-in codes: request and verify rules, hashed codes, limits, Titan SMTP mailer and fake, routes, `notify:keys`. [A2](implementation/audrey-sign-in.md#a2--sign-in-codes) [no look] | Sol Max | |
-| A3 | Sign-in screens: Sign in sheet (email, code), account sheet, entries in More and the side bar, `sign-in.spec.ts`. [A3](implementation/audrey-sign-in.md#a3--sign-in-screens) [look] | Sol Max | |
+| A3 | Sign-in page `/sign-in` (email, code, iPhone Safari card), account sheet, entries in More and the side bar, `sign-in.spec.ts`. [A3](implementation/audrey-sign-in.md#a3--sign-in-page-and-account) [look] | Sol Max | |
 | A4 | Push plumbing: sender and fake, device routes, test route, service worker push and click handlers. [A4](implementation/audrey-sign-in.md#a4--push-plumbing) [no look] | Sol Max | |
 | A5 | Turn on notifications sheet (five versions), account card, sign-out removes the device, `notifications.spec.ts`. [A5](implementation/audrey-sign-in.md#a5--turn-on-notifications) [look] | Sol Max | |
 | A6 | New task for you: the shared save helpers report tasks whose Responsible changed, the server decides who is owed and sends once, chat connector too. [A6](implementation/audrey-sign-in.md#a6--new-task-for-you) [no look] | Sol Max | |
@@ -56,13 +56,15 @@ the database locked) is a later plan.
   `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT=mailto:<the mailbox>`.
 - [ ] O5 *owner*: add `NEXT_PUBLIC_SIGN_IN_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
   redeploy.
-- [ ] O6 *owner*: link Audrey: `npm run people:add -- audrey.wijaya@deushcs.com Audrey` (dry run: check it finds her
-  open tasks under the name "Audrey"), then the same with `--apply`, which also marks her existing tasks as already
+- [ ] O6 *owner*: link the two logins: `npm run people:add -- gregory.kurnia@deushcs.com "<your name as on tasks>"`
+  and `npm run people:add -- audrey.wijaya@deushcs.com Audrey`. Each dry run says how many tasks carry that name
+  (and the closest names in use if none); then run each with `--apply`, which also marks existing tasks as already
   told so they never send a notification. Needs `FIREBASE_ADMIN_KEY` in your shell.
-- [ ] O7 *owner*: sign in yourself first on your own phone or laptop to check the code email arrives (look in spam;
-  if it lands there, ask Claude for the DNS records that make it come from deushcs.com).
+- [ ] O7 *owner*: sign in yourself first (More or the side bar → Sign in, with gregory.kurnia@deushcs.com) to check the
+  code email arrives (look in spam; if it lands there, ask Claude for the DNS records that make it come from
+  deushcs.com). Turn on notifications on your device and Send a test.
 - [ ] O8 *owner, with Audrey's iPhone*: Safari → the app → Share → Add to Home Screen; open DEUS Space from the Home
-  Screen; More → Sign in; enter her code; Turn on notifications → Allow; Send a test; the test arrives.
+  Screen; More → Sign in; enter her code on the sign-in page; Turn on notifications → Allow; Send a test; the test arrives.
 - [ ] O9 *owner*: give Audrey a throwaway task in the app; her iPhone shows "New task for you" within a minute.
   Delete the task. The next weekday at 09:00 (Vercel's free plan may run it any time within that hour), she gets the
   summary if anything is late or due.

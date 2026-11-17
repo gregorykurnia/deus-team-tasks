@@ -13,12 +13,14 @@ Owner answers, 2026-11-17: real sign-in; everyone has a deushcs.com email on **T
 sign-in), so sign in with a **6-digit code sent by email**; Audrey (`audrey.wijaya@deushcs.com`) is on **iPhone**;
 **push notifications only** (no email notifications); a summary at **09:00, weekdays only**; a notification **as
 soon as a task is given to her**. Phase 2 (everyone must sign in, the database locked) comes **later**, not in this
-plan.
+plan. Owner, later the same day: sign-in is **its own page now** (it becomes the front door in Phase 2), and
+**Gregory (`gregory.kurnia@deushcs.com`) is a second allowed login** from the start.
 
 **Smallest design:**
 - **A person record** links an email to the name already on tasks: `people/{email}` holds `{ email, name: "Audrey",
   active: true }`. Tasks don't change; `responsible` stays a list of names.
-- **Sign in with a code:** the device sends the email; the server checks it ends in `@deushcs.com` and has an active
+- **Sign in with a code, on its own page:** `/sign-in`, outside the app's shell (no side bar or tab bar), opened from
+  More and the side bar foot with `?next=<where you were>`; "Back to the app" returns there. The device sends the email; the server checks it ends in `@deushcs.com` and has an active
   person record, emails a 6-digit code through a Titan mailbox (SMTP), and on the right code returns a Firebase
   custom token (uid = the email). The device signs in with it and Firebase keeps it signed in.
 - **Push through the installed app (Web Push):** the service worker shows notifications; each device's push
@@ -34,8 +36,8 @@ plan.
   approval is the plan's "Before the run" line. It is the design for every screen task; open it in a browser and
   match it.
 - **iPhone and iPad sign in inside the Home Screen app.** Safari and the Home Screen app keep separate sign-ins, and
-  notifications only work in the Home Screen app, so on iPhone or iPad outside it, Sign in opens the "Add DEUS Space
-  to your Home Screen first" version (screens page section 5, second frame) with a quiet "Sign in here anyway"
+  notifications only work in the Home Screen app, so on iPhone or iPad outside it, the sign-in page opens on the "Add DEUS Space
+  to your Home Screen first" card (screens page section 2, third frame) with a quiet "Sign in here anyway"
   button that goes on to the email step.
 
 Settled defaults, each with the risk it closes:
@@ -88,8 +90,8 @@ Settled defaults, each with the risk it closes:
   own. Dates are Jakarta days (use `wibToday` from `lib/followupServer.ts`).
 - Test: title `Notifications work`, body `New tasks and the 09:00 summary will arrive here.`
 
-**Out of scope** (list as follow-ups, don't build): Phase 2 (everyone signs in, rules locked, a People screen to link
-emails, "who gave you this"); notifications for Informed; email notifications; reminders at other times; public
+**Out of scope** (list as follow-ups, don't build): Phase 2 (everyone signs in and the sign-in page becomes the front
+door, rules locked, a People screen to link emails, "who gave you this"); notifications for Informed; email notifications; reminders at other times; public
 holidays; notifications for saves made while offline (the summary still lists them); renaming a person's name on
 tasks.
 
@@ -98,7 +100,7 @@ tasks.
 | ID | Required behavior | Built / proven in |
 |---|---|---|
 | S1 | Only an active @deushcs.com person can get a code, and only the right code within 10 minutes and 5 tries signs in. | A1, A2, E1 |
-| S2 | Audrey can sign in from More (phone) or the side bar (laptop), stay signed in, see her account and sign out. | A3, E1 |
+| S2 | Audrey and Gregory can sign in on the sign-in page, opened from More (phone) or the side bar (laptop), stay signed in, see their account and sign out. | A3, E1 |
 | S3 | She can turn on notifications on the installed app, is guided when in Safari or blocked, and can send a test. | A4, A5, E1 |
 | S4 | A save from the app or chat that adds her to Responsible sends one "New task for you" within seconds, never twice for the same task, never for her own change. | A6, E1 |
 | S5 | At 09:00 Jakarta, Monday to Friday, she gets one summary of what's late, due today and due tomorrow (Friday: by Monday), and nothing on empty mornings. | A7, E1 |
@@ -130,7 +132,8 @@ Read **Smallest design**, `lib/firestoreSetup.ts`, `lib/emulator.ts`, `lib/calen
 - Owner scripts `npm run people:add -- <email> <name>` and `npm run people:remove -- <email>`: dry run by default
   (prints what would change, and for add how many tasks carry `<name>` in Responsible and how many are open);
   `--apply` writes, and for add first writes the `assignNotices` backfill for every task that already has the name.
-  They refuse a non-deushcs.com email and a name on no task.
+  They refuse a non-deushcs.com email. A name on no task is allowed but the dry run says so in its first line,
+  with the closest names in use (someone who gives tasks may hold none).
 - `lib/flags.ts`: `signInEnabled()` reads `NEXT_PUBLIC_SIGN_IN_ENABLED`, so tests can switch it.
 - A rules data test: the device's SDK can't read or write `people`, `signInCodes`, `devices` or `assignNotices`.
 
@@ -164,33 +167,36 @@ Done when:
   verify returns a token the auth emulator accepts.
 - Both routes answer 404 with the flag off (route tests switch `signInEnabled()`).
 
-## A3 — Sign-in screens
+## A3 — Sign-in page and account
 
-Gives Audrey the Sign in sheet, her account sheet, and the entries in More and the side bar. [look]
+Gives the sign-in page, the account sheet, and the entries in More and the side bar. [look]
 Read the screens page sections 1, 2, 3, 6 (without its notifications card) and 8; guide sections 3 (Side bar, More),
 4.1, 4.11, 4.13, 4.14; `desk/MoreSheet.tsx`, `desk/SideNav.tsx`, `desk/useOverParam.ts`, `ui/Sheet.tsx`,
 `ui/Field.tsx`, `ui/Notice.tsx`, `ui/Toaster`, `ui/Avatar.tsx`.
 - Firebase Auth on the device (`firebase/auth`), connected to the auth emulator when `USE_EMULATOR`; a
   `useSignedIn()` hook giving `{ email, name } | null`.
-- The Sign in sheet opens from `?signIn=1` (useOverParam): the email step, then the code step with six boxes (paste
-  six digits into any box fills all; the sixth digit submits; number keyboard via `inputMode="numeric"` and
+- The sign-in page `app/sign-in/page.tsx`, outside the `(desk)` layout (no side bar, tab bar or task sheet), on the
+  backdrop with the brand, as screens page sections 2, 3 and 8: the email step, then the code step with six boxes
+  (paste six digits into any box fills all; the sixth digit submits; number keyboard via `inputMode="numeric"` and
   `autoComplete="one-time-code"`), "Send a new code" after 60 s, "Use another email", every error and busy state on
-  the page. Success: toast `Signed in as Audrey`.
+  the page, and "Back to the app". `?next=` takes only a same-site path starting with `/` (anything else goes to
+  `/`). Success: go to `next` with the toast `Signed in as <name>`. Already signed in: go straight to `next`.
+  Add `/sign-in` to the pages `public/sw.js` keeps, so it opens offline and says there's no connection.
 - The account sheet opens from `?account=1`: avatar, name, email, the two "what you get" rows, Sign out (signs out;
   A5 adds the device removal). Leave a slot for A5's notifications card.
-- More: the "Sign in" row, or Audrey's row once signed in. Side bar foot: "Sign in" or her card. Both hidden when the
-  flag is off.
+- More: the "Sign in" row, or the signed-in person's row. Side bar foot: "Sign in" or their card. Both link to
+  `/sign-in?next=<current path>`, and are hidden when the flag is off.
 - `tests/smoke/sign-in.spec.ts` (emulator, fake mail): sign in with the code read from `_fakeMail`, reload and still
   signed in, wrong code shows tries left, sign out.
 
-- On iPhone or iPad outside the Home Screen app, Sign in first shows the Add to Home Screen version (brief,
+- On iPhone or iPad outside the Home Screen app, the page first shows the Add to Home Screen card (brief,
   **Smallest design**), built here from the install sheet's steps; A5 reuses it.
 
 Done when:
 - The spec passes on desktop and its `@phone` tests pass on the phone project.
 - Screenshots at 390 wide and 1280 wide of: More signed out and signed in, the side bar foot signed out and signed
-  in, the email step with the not-added error, the code step with a wrong code, and the account sheet each match the
-  screens page (layout, words, colours).
+  in, the sign-in page's email step (default and not-added error), its code step with a wrong code, its iPhone
+  Safari card, and the account sheet each match the screens page (layout, words, colours).
 - At 320 wide, with a 60-character email and a 40-character name: the six code boxes, the email, More's row and the
   side bar card fit with no sideways scroll, and long text ends in "…" or wraps as guide 2.2 says.
 - A unit test renders More and the side bar with `signInEnabled()` false and finds no sign-in entry; `shell.spec.ts`

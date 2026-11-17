@@ -236,6 +236,25 @@ th { font-size: 12.5px; color: var(--muted); font-weight: 700; border-top: 0; }
 td:first-child { font-weight: 700; color: var(--ink); width: 34%; }
 ol.defaults { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--ink-2); line-height: 1.5; }
 ol.defaults b { color: var(--ink); }
+
+/* ---------- Sign-in page (its own page, outside the app's frame) ---------- */
+.sp { position: relative; z-index: 1; padding: 14px 18px 30px; display: grid; gap: 18px; align-content: start; height: calc(100% - 44px); }
+.sp-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; }
+.sp-brand img { width: 36px; height: 36px; }
+.sp-hero { display: grid; gap: 6px; margin-top: 18px; }
+.sp-hero h3 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; }
+.sp-hero p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+.sp-card { background: var(--glass-strong); border-radius: var(--r-l); box-shadow: var(--shadow), inset 0 0 0 1px var(--glass-line); padding: 20px 18px; display: grid; gap: 16px; }
+.sp-foot { margin-top: auto; display: flex; justify-content: center; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 600; font-size: 14px; }
+.glow { position: absolute; z-index: 0; border-radius: 50%; filter: blur(40px); opacity: .65; pointer-events: none; }
+.lap-page { width: 1180px; height: 740px; margin: 0 auto; border-radius: 22px; overflow: hidden; position: relative; background: var(--backdrop); box-shadow: 0 0 0 10px var(--frame), 0 40px 80px -30px rgba(20,30,70,.5); }
+.lap-page .sp-brand { position: absolute; top: 28px; left: 32px; z-index: 1; }
+.lap-center { position: relative; z-index: 1; height: 100%; display: grid; place-items: center; }
+.lap-col { width: 440px; display: grid; gap: 18px; }
+.lap-col .sp-hero { margin-top: 0; }
+.mini-side { width: min(300px, 100%); border-radius: var(--r-xl); background: var(--glass); box-shadow: var(--shadow), inset 0 0 0 1px var(--glass-line); padding: 14px 12px; display: grid; gap: 8px; }
+.mini-side .cap2 { font-size: 12px; font-weight: 700; color: var(--muted); padding: 0 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
@@ -262,22 +281,23 @@ ol.defaults b { color: var(--ink); }
   <symbol id="i-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
   <symbol id="i-paste" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
 </svg>
 
 <div class="wrap">
   <header class="top">
     <span class="eyebrow">Draft for your look · 17 Nov 2026</span>
-    <h1>Signing in with a code, and notifications on Audrey’s iPhone</h1>
-    <p class="lead">Every new screen for the first phase, drawn with the app’s own colours, letters and parts (design guide v1.0). Phones come first, at 390 wide, then one laptop view. Only people who sign in see any of this. Everyone else uses the app exactly as today.</p>
+    <h1>Signing in with a code, and notifications on your phones</h1>
+    <p class="lead">Every new screen for the first phase, drawn with the app’s own colours, letters and parts (design guide v1.0). Two people can sign in at first: Audrey (audrey.wijaya@deushcs.com) and Gregory (gregory.kurnia@deushcs.com). Phones come first, at 390 wide, then one laptop view. Everyone else uses the app exactly as today.</p>
     <nav class="toc" aria-label="Sections">
-      <a href="#where">1 · Where it starts</a><a href="#email">2 · Email</a><a href="#code">3 · Code</a><a href="#inbox">4 · The email</a><a href="#notify">5 · Turn on notifications</a><a href="#account">6 · Account</a><a href="#lock">7 · The notifications</a><a href="#laptop">8 · Laptop</a><a href="#words">9 · Words and defaults</a>
+      <a href="#where">1 · Where it starts</a><a href="#email">2 · Sign-in page</a><a href="#code">3 · Code</a><a href="#inbox">4 · The email</a><a href="#notify">5 · Turn on notifications</a><a href="#account">6 · Account</a><a href="#lock">7 · The notifications</a><a href="#laptop">8 · Laptop</a><a href="#words">9 · Words and defaults</a>
     </nav>
   </header>
 
   <!-- 1 -->
   <section class="step" id="where">
-    <div class="step-head"><h2><span class="num">1</span>Where it starts</h2><p>One new row in More on the phone, and one line at the foot of the side bar on a laptop. Once signed in, the same place shows who you are.</p></div>
+    <div class="step-head"><h2><span class="num">1</span>Where it starts</h2><p>One new row in More on the phone, and one line at the foot of the side bar on a laptop, both opening the sign-in page. Once signed in, the same place shows who you are. Phase 2 puts the sign-in page in front of the whole app instead.</p></div>
     <div class="board">
       <figure>
         <div class="phone short">
@@ -299,7 +319,7 @@ ol.defaults b { color: var(--ink); }
             </div>
           </div>
         </div>
-        <figcaption><b>More, before signing in</b>“Sign in” sits under the areas, in the spot where “Install on this phone” shows until the app is installed. The blue ring only marks what’s new on this page.</figcaption>
+        <figcaption><b>More, before signing in</b>“Sign in” sits under the areas, in the spot where “Install on this phone” shows until the app is installed. It opens the sign-in page. The blue ring only marks what’s new on this page.</figcaption>
       </figure>
       <figure>
         <div class="phone short">
@@ -323,100 +343,145 @@ ol.defaults b { color: var(--ink); }
         </div>
         <figcaption><b>More, signed in</b>Her avatar and name replace “Sign in”, with the notification state under it: “Notifications on”, “Notifications off” (amber) or “Turn on notifications” (blue). Tapping it opens her account (step 6).</figcaption>
       </figure>
+      <figure>
+        <div class="mini-side">
+          <span class="cap2">Side bar foot, signed out</span>
+          <span class="signin" style="box-shadow:0 0 0 2px var(--blue);background:#fff"><svg class="i"><use href="#i-user"/></svg>Sign in</span>
+          <div class="live"><span class="dot"></span>Live, everyone’s up to date</div>
+          <div class="hr"></div>
+          <span class="cap2">Signed in</span>
+          <div class="me"><span class="avatar">GR</span><div><b>Gregory</b><span>Notifications on</span></div></div>
+          <div class="live"><span class="dot"></span>Live, everyone’s up to date</div>
+        </div>
+        <figcaption><b>Side bar on a laptop</b>“Sign in” at the foot, above the live status, opens the sign-in page. Signed in, your card takes its place and opens your account. The blue ring only marks what’s new on this page.</figcaption>
+      </figure>
     </div>
   </section>
 
   <!-- 2 -->
   <section class="step" id="email">
-    <div class="step-head"><h2><span class="num">2</span>Sign in: her email</h2><p>A short bottom sheet over whatever screen she was on. Only @deushcs.com emails that you have added can get a code.</p></div>
+    <div class="step-head"><h2><span class="num">2</span>The sign-in page: email</h2><p>Sign-in is its own page, <code>/sign-in</code>, without the side bar or tab bar: the logo on the app’s soft blue background and one card. For now it opens from More or the side bar, and “Back to the app” returns where you were. In Phase 2 the same page becomes the front door everyone passes. Only @deushcs.com emails you have added get a code: for now Audrey and you.</p></div>
     <div class="board">
       <figure>
         <div class="phone">
           <div class="status"><span>09:41</span><span class="dots"><i></i><i></i></span></div>
-          <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div></div>
-          <div class="scrim"></div>
-          <div class="sheet">
-            <div class="grab"></div>
-            <div class="shead"><h3>Sign in</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-            <p class="body">Sign in to get notifications about your tasks: when someone gives you a task, and a summary at 09:00 on weekdays.</p>
-            <div class="field"><label>Work email</label><div class="input focus">audrey.wijaya@deushcs.com</div></div>
-            <div class="cta">Send code</div>
-            <p class="hint">We’ll email you a 6-digit code. No password needed. Everything else in the app works without signing in.</p>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Sign in</h3><p>Get notifications about your tasks: when someone gives you a task, and a summary at 09:00 on weekdays.</p></div>
+            <div class="sp-card">
+              <div class="field"><label>Work email</label><div class="input focus">gregory.kurnia@deushcs.com</div></div>
+              <div class="cta">Send code</div>
+              <p class="hint">We’ll email you a 6-digit code. No password needed.</p>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
           </div>
         </div>
-        <figcaption><b>Default</b>The field is focused when the sheet opens, with an email keyboard. Empty, its placeholder reads “name@deushcs.com”. “Send code” is pressable once something is typed.</figcaption>
+        <figcaption><b>Default</b>The field is focused when the page opens, with an email keyboard. Empty, its placeholder reads “name@deushcs.com”. Everything else in the app works without signing in, so “Back to the app” is always there.</figcaption>
       </figure>
       <figure>
         <div class="phone">
           <div class="status"><span>09:41</span><span class="dots"><i></i><i></i></span></div>
-          <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div></div>
-          <div class="scrim"></div>
-          <div class="sheet">
-            <div class="grab"></div>
-            <div class="shead"><h3>Sign in</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-            <p class="body">Sign in to get notifications about your tasks: when someone gives you a task, and a summary at 09:00 on weekdays.</p>
-            <div class="field"><label>Work email</label><div class="input bad">audrey.wijaya@gmail.com</div>
-              <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>Use your @deushcs.com email.</div></div>
-            <div class="field"><div class="input bad">audrey@deushcs.com</div>
-              <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>audrey@deushcs.com isn’t added yet. Ask the person who manages the app to add it.</div></div>
-            <div class="cta"><span class="spin"></span>Sending…</div>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Sign in</h3><p>Get notifications about your tasks: when someone gives you a task, and a summary at 09:00 on weekdays.</p></div>
+            <div class="sp-card">
+              <div class="field"><label>Work email</label><div class="input bad">gregory.kurnia@gmail.com</div>
+                <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>Use your @deushcs.com email.</div></div>
+              <div class="field"><div class="input bad">greg@deushcs.com</div>
+                <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>greg@deushcs.com isn’t added yet. Ask the person who manages the app to add it.</div></div>
+              <div class="cta"><span class="spin"></span>Sending…</div>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
           </div>
         </div>
-        <figcaption><b>Errors and busy</b>Two errors shown together here only to save space: an email outside deushcs.com, and one nobody has added. The guide’s red outline and line under the field; the error clears as she types. While sending: “Sending…” with the spinner. No connection: the error toast “No connection. The code wasn’t sent.”</figcaption>
+        <figcaption><b>Errors and busy</b>Two errors shown together only to save space: an email outside deushcs.com, and one nobody has added. The guide’s red outline and line under the field; the error clears as you type. While sending: “Sending…” with the spinner. No connection: the error toast “No connection. The code wasn’t sent.”</figcaption>
+      </figure>
+      <figure>
+        <div class="phone">
+          <div class="status"><span>09:41</span><span class="dots"><i></i><i></i></span></div>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Sign in</h3><p>On iPhone, notifications only work in the app on your Home Screen, and it keeps its own sign-in.</p></div>
+            <div class="sp-card">
+              <div class="note blue"><svg class="i"><use href="#i-phone"/></svg><div><b>Add DEUS Space to your Home Screen first,</b> then sign in there.</div></div>
+              <ol class="steps">
+                <li><span>Tap <b>Share</b> <svg class="i sm"><use href="#i-share"/></svg> in Safari’s bar.</span></li>
+                <li><span>Choose <b>Add to Home Screen</b> <svg class="i sm"><use href="#i-addhome"/></svg>, then <b>Add</b>.</span></li>
+                <li><span>Open <b>DEUS Space</b> from your Home Screen and sign in there.</span></li>
+              </ol>
+              <div class="quiet">Sign in here anyway</div>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
+          </div>
+        </div>
+        <figcaption><b>On iPhone, in Safari</b>Shown before the email step on iPhone and iPad when the page is opened in Safari rather than the Home Screen app, so nobody signs in twice. “Sign in here anyway” goes on to the email step.</figcaption>
       </figure>
     </div>
   </section>
 
   <!-- 3 -->
   <section class="step" id="code">
-    <div class="step-head"><h2><span class="num">3</span>Sign in: the 6-digit code</h2><p>The same sheet moves on to the code. iPhone can’t fill the code from the Titan app by itself, so pasting is made easy: paste all six digits into the first box and they spread across.</p></div>
+    <div class="step-head"><h2><span class="num">3</span>The sign-in page: the 6-digit code</h2><p>The same page moves on to the code. iPhone can’t fill the code from the Titan app by itself, so pasting is made easy: paste all six digits into any box and they spread across.</p></div>
     <div class="board">
       <figure>
         <div class="phone">
           <div class="status"><span>09:42</span><span class="dots"><i></i><i></i></span></div>
-          <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div></div>
-          <div class="scrim"></div>
-          <div class="sheet">
-            <div class="grab"></div>
-            <div class="shead"><h3>Enter the code</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-            <p class="body">A 6-digit code is on its way to <b>audrey.wijaya@deushcs.com</b>. It works for 10 minutes.</p>
-            <div class="code" aria-label="Code, 6 digits"><span>4</span><span>8</span><span class="cur"></span><i></i><span></span><span></span><span></span></div>
-            <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><span class="hint">Send a new code in 0:42</span></div>
-            <div class="cta off">Sign in</div>
-            <p class="hint">Not in your inbox? Check spam. <a href="#code">Use another email</a></p>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Enter the code</h3><p>A 6-digit code is on its way to <b>gregory.kurnia@deushcs.com</b>. It works for 10 minutes.</p></div>
+            <div class="sp-card">
+              <div class="code" aria-label="Code, 6 digits"><span>4</span><span>8</span><span class="cur"></span><i></i><span></span><span></span><span></span></div>
+              <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><span class="hint">Send a new code in 0:42</span></div>
+              <div class="cta off">Sign in</div>
+              <p class="hint">Not in your inbox? Check spam. <a href="#code">Use another email</a></p>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
           </div>
         </div>
-        <figcaption><b>Typing the code</b>Six boxes in two threes, number keyboard. The sixth digit signs in by itself; “Sign in” is there for anyone who expects a button. “Send a new code” becomes a link after 60 seconds.</figcaption>
+        <figcaption><b>Typing the code</b>Six boxes in two threes, number keyboard. The sixth digit signs in by itself; “Sign in” is there for anyone who expects a button. “Send a new code” becomes a link after 60 seconds, and an earlier code still works until it expires.</figcaption>
       </figure>
       <figure>
         <div class="phone">
           <div class="status"><span>09:43</span><span class="dots"><i></i><i></i></span></div>
-          <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div></div>
-          <div class="scrim"></div>
-          <div class="sheet">
-            <div class="grab"></div>
-            <div class="shead"><h3>Enter the code</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-            <p class="body">A 6-digit code is on its way to <b>audrey.wijaya@deushcs.com</b>. It works for 10 minutes.</p>
-            <div class="code bad"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span>1</span><span>4</span></div>
-            <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>That code isn’t right. 4 tries left.</div>
-            <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><a class="link" href="#code">Send a new code</a></div>
-            <p class="hint">Not in your inbox? Check spam. <a href="#code">Use another email</a></p>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Enter the code</h3><p>A 6-digit code is on its way to <b>gregory.kurnia@deushcs.com</b>. It works for 10 minutes.</p></div>
+            <div class="sp-card">
+              <div class="code bad"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span>1</span><span>4</span></div>
+              <div class="err"><svg class="i sm"><use href="#i-alert"/></svg>That code isn’t right. 4 tries left.</div>
+              <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><a class="link" href="#code">Send a new code</a></div>
+              <p class="hint">Not in your inbox? Check spam. <a href="#code">Use another email</a></p>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
           </div>
         </div>
-        <figcaption><b>Wrong code</b>Red boxes and the tries left. Typing again clears the red. After five wrong tries the code stops working.</figcaption>
+        <figcaption><b>Wrong code</b>Red boxes and the tries left. Typing again clears the red. Five wrong tries in an hour, and the email has to wait.</figcaption>
       </figure>
       <figure>
         <div class="phone">
           <div class="status"><span>09:55</span><span class="dots"><i></i><i></i></span></div>
-          <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div></div>
-          <div class="scrim"></div>
-          <div class="sheet">
-            <div class="grab"></div>
-            <div class="shead"><h3>Enter the code</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-            <div class="code dim"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span>1</span><span>3</span></div>
-            <div class="note warn"><svg class="i"><use href="#i-clock"/></svg><div><b>This code has expired.</b> Codes work for 10 minutes. Send a new one and use the newest email.</div></div>
-            <div class="cta">Send a new code</div>
-            <div class="note warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Too many tries.</b> Wait 15 minutes, then send a new code.</div></div>
+          <span class="glow" style="width:260px;height:260px;left:-80px;top:60px;background:#c9dafc"></span>
+          <span class="glow" style="width:240px;height:240px;right:-90px;top:300px;background:#cdeef0"></span>
+          <div class="sp">
+            <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+            <div class="sp-hero"><h3>Enter the code</h3></div>
+            <div class="sp-card">
+              <div class="code dim"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span>1</span><span>3</span></div>
+              <div class="note warn"><svg class="i"><use href="#i-clock"/></svg><div><b>This code has expired.</b> Codes work for 10 minutes. Send a new one and use the newest email.</div></div>
+              <div class="cta">Send a new code</div>
+              <div class="note warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Too many tries.</b> Wait 15 minutes, then send a new code.</div></div>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
           </div>
         </div>
         <figcaption><b>Expired, and too many tries</b>Two states shown together. Expired: the boxes grey out and the main button sends a new code. Too many tries (five wrong codes, or five codes asked for in an hour): the button is gone until the wait is over.</figcaption>
@@ -426,23 +491,23 @@ ol.defaults b { color: var(--ink); }
           <div class="status"><span>09:43</span><span class="dots"><i></i><i></i></span></div>
           <div class="behind"><div class="pt">Today <small>Tue 18 Nov</small></div><div class="hero"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
           <div class="tabbar"><span class="on"><svg class="i"><use href="#i-sun"/></svg>Today</span><span><svg class="i"><use href="#i-list"/></svg>Tasks</span><span class="plus"><svg class="i"><use href="#i-plus"/></svg></span><span><svg class="i"><use href="#i-building"/></svg>Companies</span><span><svg class="i"><use href="#i-more"/></svg>More</span></div>
-          <div class="toast"><svg class="i sm"><use href="#i-check"/></svg>Signed in as Audrey</div>
+          <div class="toast"><svg class="i sm"><use href="#i-check"/></svg>Signed in as Gregory</div>
         </div>
-        <figcaption><b>Signed in</b>The sheet closes on the right code and the toast confirms. Right after, if this iPhone can take notifications, “Turn on notifications” opens (step 5). She stays signed in on this phone until she signs out.</figcaption>
+        <figcaption><b>Signed in</b>The right code takes you back to the screen you came from, with the toast. If this device can take notifications, “Turn on notifications” opens right after (step 5). You stay signed in on this device until you sign out.</figcaption>
       </figure>
     </div>
   </section>
 
   <!-- 4 -->
   <section class="step" id="inbox">
-    <div class="step-head"><h2><span class="num">4</span>The code email</h2><p>Sent from a deushcs.com mailbox on Titan, so it comes from your own domain. The code is in the subject, so it already shows in the Titan app’s notification and she may not need to open the email.</p></div>
+    <div class="step-head"><h2><span class="num">4</span>The code email</h2><p>Sent from a deushcs.com mailbox on Titan, so it comes from your own domain. The code is in the subject, so it already shows in the Titan app’s notification and often there’s no need to open the email.</p></div>
     <div class="board">
       <figure>
         <div class="phone mail short">
           <div class="status"><span>09:42</span><span class="dots"><i></i><i></i></span></div>
           <div class="mailbody">
             <div class="subj">482914 is your DEUS Space code</div>
-            <div class="from"><img src="data:image/png;base64,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" alt=""><div><b>DEUS Space</b>noreply@deushcs.com · to audrey.wijaya@deushcs.com</div></div>
+            <div class="from"><img src="data:image/png;base64,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" alt=""><div><b>DEUS Space</b>noreply@deushcs.com · to gregory.kurnia@deushcs.com</div></div>
             <div style="display:grid;gap:12px;font-size:15px;line-height:1.55;color:var(--ink)">
               <div>Your code to sign in to DEUS Space:</div>
               <div style="font-size:30px;font-weight:800;letter-spacing:.12em;font-variant-numeric:tabular-nums">482914</div>
@@ -539,7 +604,7 @@ ol.defaults b { color: var(--ink); }
 
   <!-- 6 -->
   <section class="step" id="account">
-    <div class="step-head"><h2><span class="num">6</span>Her account</h2><p>Opened from More (phone) or the side bar foot (laptop). Who is signed in, the state of notifications on this device, and sign out.</p></div>
+    <div class="step-head"><h2><span class="num">6</span>Her account</h2><p>A panel over the app, opened from More (phone) or the side bar foot (laptop): who is signed in, notifications on this device, and sign out. Audrey’s shown here; yours looks the same.</p></div>
     <div class="board">
       <figure>
         <div class="phone">
@@ -614,36 +679,26 @@ By Monday: Board update deck, Renewal call with Sinar Jaya, Q4 hiring plan</p></
 
   <!-- 8 -->
   <section class="step" id="laptop">
-    <div class="step-head"><h2><span class="num">8</span>On a laptop</h2><p>The same sheets float on the right, like the install sheet (460 wide). The side bar’s foot gets “Sign in”, or who is signed in. A laptop browser can take notifications too, without installing.</p></div>
+    <div class="step-head"><h2><span class="num">8</span>On a laptop</h2><p>The sign-in page centres its card on the soft blue background, 440 wide, with the logo top left. The notification and account panels float on the right like the install sheet. A laptop browser can take notifications too, without installing.</p></div>
     <div class="lap-scroll">
-      <div class="laptop">
-        <nav class="side" aria-label="Side bar example">
-          <div class="brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
-          <span class="nav cur"><svg class="i"><use href="#i-sun"/></svg>Today<em>5</em></span>
-          <span class="nav"><svg class="i"><use href="#i-list"/></svg>All tasks<em>128</em></span>
-          <span class="nav"><svg class="i"><use href="#i-cal"/></svg>Plan</span>
-          <span class="nav"><svg class="i"><use href="#i-building"/></svg>Companies</span>
-          <span class="nav"><svg class="i"><use href="#i-note"/></svg>Qualification notes</span>
-          <span class="nav"><svg class="i"><use href="#i-archive"/></svg>Past clients</span>
-          <span class="nav"><svg class="i"><use href="#i-flow"/></svg>Flows</span>
-          <span class="grow"></span>
-          <span class="signin" style="box-shadow:0 0 0 2px var(--blue);background:#fff"><svg class="i"><use href="#i-user"/></svg>Sign in</span>
-          <div class="me" style="margin-top:8px"><span class="avatar">AU</span><div><b>Audrey</b><span>Notifications on</span></div></div>
-          <div class="live" style="margin-top:6px"><span class="dot"></span>Live, everyone’s up to date</div>
-        </nav>
-        <div class="lap-main"><div class="pt">Today <small>Tuesday, 18 November</small></div><div class="hero"></div><div class="panel"></div></div>
-        <div class="scrim"></div>
-        <div class="lap-sheet">
-          <div class="shead"><h3>Enter the code</h3><span class="iconbtn"><svg class="i"><use href="#i-x"/></svg></span></div>
-          <p class="body">A 6-digit code is on its way to <b>audrey.wijaya@deushcs.com</b>. It works for 10 minutes.</p>
-          <div class="code"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span class="cur"></span><span></span></div>
-          <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><span class="hint">Send a new code in 0:31</span></div>
-          <div class="cta off">Sign in</div>
-          <p class="hint">Not in your inbox? Check spam. <a href="#laptop">Use another email</a></p>
+      <div class="lap-page">
+        <span class="glow" style="width:520px;height:520px;left:-120px;top:-140px;background:#c9dafc"></span>
+        <span class="glow" style="width:480px;height:480px;right:-120px;bottom:-160px;background:#cdeef0"></span>
+        <div class="sp-brand"><img src="data:image/png;base64,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" alt="">DEUS Team Space</div>
+        <div class="lap-center">
+          <div class="lap-col">
+            <div class="sp-hero"><h3>Enter the code</h3><p>A 6-digit code is on its way to <b>gregory.kurnia@deushcs.com</b>. It works for 10 minutes.</p></div>
+            <div class="sp-card">
+              <div class="code"><span>4</span><span>8</span><span>2</span><i></i><span>9</span><span class="cur"></span><span></span></div>
+              <div class="row2"><span class="btn sm"><svg class="i sm"><use href="#i-paste"/></svg>Paste code</span><span class="hint">Send a new code in 0:31</span></div>
+              <div class="cta off">Sign in</div>
+              <p class="hint">Not in your inbox? Check spam. <a href="#laptop">Use another email</a></p>
+            </div>
+            <div class="sp-foot"><span class="back"><svg class="i sm"><use href="#i-back"/></svg>Back to the app</span></div>
+          </div>
         </div>
       </div>
     </div>
-    <p class="hint" style="text-align:center">The side bar shows both footer versions stacked to compare: “Sign in” (before) and Audrey’s card (after). In the app only one shows.</p>
   </section>
 
   <!-- 9 -->
@@ -669,12 +724,13 @@ By Monday: Board update deck, Renewal call with Sinar Jaya, Q4 hiring plan</p></
       <div class="panel-l">
         <h3>Defaults I picked</h3>
         <ol class="defaults">
-          <li><b>Nothing changes for anyone who doesn’t sign in.</b> Sign in lives only in More and the side bar foot.</li>
+          <li><b>Nothing changes for anyone who doesn’t sign in.</b> The sign-in page opens only from More and the side bar foot until Phase 2.</li>
+          <li><b>Two people at first:</b> Audrey and Gregory. Each is linked to the name already on tasks.</li>
           <li><b>Responsible only.</b> Being added to Informed sends nothing.</li>
           <li><b>No self-notifications.</b> Giving yourself a task sends nothing.</li>
           <li><b>The summary skips empty mornings</b> and Friday covers the weekend and Monday.</li>
           <li><b>Done and parked tasks never count.</b> Subtasks count on their own.</li>
-          <li><b>The notification doesn’t say who gave the task.</b> Nobody else signs in yet, so the app can’t know. Phase 2 can name who gave it.</li>
+          <li><b>The notification doesn’t say who gave the task.</b> Most of the team won’t be signed in yet, so the app usually can’t know. Phase 2 can name who gave it.</li>
           <li><b>Signing out stops notifications</b> on that device. Several devices per person are fine.</li>
           <li><b>“You” and “your tasks” appear only here.</b> The rest of the app keeps the guide’s rule of no “your” (7, rule 2), since nobody else is signed in.</li>
         </ol>
