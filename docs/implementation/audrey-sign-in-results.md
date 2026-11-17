@@ -1151,3 +1151,72 @@ LOOKED: redesign/compare/r1bb-gallery/suggestions-phone.png · The sheet covers 
 LOOKED: redesign/compare/r1bb-gallery/new-name-phone.png · Nadia's option sits above the fixed actions; top chips continue under the header; all featured names and action text are whole and unobscured.
 LOOKED: redesign/compare/r1bb-gallery/stress-desktop.png · The drawer covers the blurred list; the full description and footer actions fit; the approved company name ellipsizes and lower fields continue beneath the footer.
 LOOKED: redesign/compare/r1bb-gallery/stress-phone.png · The bottom sheet rests on the viewport edge; the long description and Save button are whole; the company name ellipsizes, with lower fields scrolling behind the footer.
+
+## R1 — Phase review (2026-11-17)
+
+Reviewed `git diff 36484ac..HEAD` (A1 to R1bb): the auth code and verify routes, codes and limits, Admin set-up,
+mailer, push sender, device routes, the assignment claim and every save path that writes `responsible`, the
+morning summary and cron route, the service worker push handlers, the sign-out and removal paths, and the tests.
+
+### Findings
+
+| # | Hunted for | Result |
+|---|---|---|
+| 1 | A save by a person whose access was removed (app still open, token revoked or person inactive) | **Fixed.** `/api/notify/assigned` answered 401/403 and processed nothing, so the others on that task were never told. It now uses the verified email only to skip the sender (an inactive person is never owed a notice). Failing unit case first: `tests/unit/assignNotifyRoute.test.ts` "still tells the others…". |
+| 2 | An old task announced | **Stands, with a written workaround.** Normal order (O5 then O6) backfills every task. But if the flag is turned off and on again later, tasks given to a linked person while it was off have no notice yet, and they are announced the next time anyone changes that task's Responsible. To avoid it after a rollback: `people:remove --apply`, then `people:add --apply` for each person (this backfills again; they sign in and turn on notifications again). |
+| 3 | A notice for your own change | **Stands.** Only a signed-in ping can say who saved. Saves from the Claude chat connector, or from a device where that person isn't signed in, notify everyone linked, including the person who made the change. |
+| 4 | A route reachable with the flag off | None: code, verify, devices, test, assigned answer 404; morning answers 401 without `CRON_SECRET`, then 404; `/sign-in` is `notFound()`; the entries, sheets and session reader render nothing; the connector's dispatch returns before importing Admin. |
+| 5 | A signed-in route that skips the token or `active` | None: device save, remove and test verify the ID token with revocation and check `active` in the same transaction as the write or read. |
+| 6 | A code in plain text, a way past the limits | None: HMAC(`CODE_SECRET`, email, id, code), compared in constant time; requests, cooldown and wrong tries are counted inside Firestore transactions, so parallel requests serialize; the mail goes out only after the reservation commits; route errors are never echoed or logged. |
+| 7 | A fake reachable in production; a test that could reach Titan, a push service or production | None: the fakes need `USE_EMULATOR` (never true when `NODE_ENV=production`); real SMTP and push refuse to run when emulator hosts are set; Admin refuses any non-local emulator host and refuses emulators in production; unit tests mock `nodemailer`/`web-push`. |
+| 8 | A push twice for one task; a save path that skips the report | None: the notice claim commits before any push; the write audit under A6 still holds (no new writers of `responsible` since). |
+| 9 | Weekend summary, Jakarta/UTC mix | None: cron `0 2 * * 1-5` (09:00 WIB), `wibToday()` for the day, every comparison in Jakarta days, weekend guard in both route and server, one claim per person per day before the push. |
+| 10 | Device rows left after sign-out or removal; data readable from the device | None: sign-out unsubscribes, then deletes the row (an offline delete leaves a dead endpoint that the next send removes on 404/410); `people:remove` deletes devices and revokes tokens; `firestore.rules` closes `people`, `signInCodes`, `assignNotices` (rules data test). |
+
+### Checks
+
+- `npx tsc --noEmit`, `npx eslint` on the two changed files: passed.
+- `npm run test:unit`: 68 files, 1,655 passed. `npm run test:data`: 17 files, 321 passed (emulators only).
+- `npx playwright test tests/smoke/sign-in.spec.ts tests/smoke/notifications.spec.ts`: 21 passed, 5 skipped (phone-only cases on desktop), 5.1 min, emulators and fakes only.
+
+### Owner handoff
+
+**Proven on the emulators with the fake mailer and fake push (not yet on real services):** code request and
+verify with every limit; sign-in and sign-out from More and the side bar; the five notification sheet versions;
+device save, test and removal; "New task for you" from an app save, a company follow-up and a chat edit, once per
+task and not for your own signed-in change; the weekday summary text and its one-per-day rule; the flag-off build.
+
+**Proven only on real services by you:** that Titan delivers the code email (and not to spam), that Firebase Auth
+accepts the custom token in production, that Apple's push service delivers to an iPhone, and that Vercel's cron
+calls the route with `CRON_SECRET`.
+
+**Your steps, in the plan's order:**
+1. O1 Firebase console → Authentication → Get started.
+2. O2 Service account key → `FIREBASE_ADMIN_KEY` in Vercel Production; delete the downloaded file.
+3. O3 Titan mailbox → `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` in Vercel Production.
+4. O4 `npm run notify:keys` → `CODE_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+   `VAPID_SUBJECT=mailto:<the mailbox>`.
+5. O5 `NEXT_PUBLIC_SIGN_IN_ENABLED=1`, redeploy (roll back: remove it and redeploy; see finding 2 before turning it on again).
+6. O6 `people:add` dry run, then `--apply`, for Gregory and for Audrey.
+7. O7 Sign in yourself, check the code email, turn on notifications, Send a test.
+8. O8 Audrey's iPhone: Add to Home Screen, open from the Home Screen, sign in, turn on, Send a test.
+9. O9 Give Audrey a throwaway task; "New task for you" arrives within a minute; delete it. The next weekday
+   09:00–10:00 Jakarta, the summary arrives if anything is late or due.
+
+**If O8 or O9 fails on the iPhone:**
+- iOS must be 16.4 or later (Settings › General › About). The sheet says so on older versions.
+- DEUS Space must be opened from the Home Screen icon, not Safari; Safari and the Home Screen app keep separate sign-ins.
+- iPhone Settings › Notifications › DEUS Space: Allow Notifications on, Lock Screen and Banners on; Focus modes off for the test.
+- Vercel Production has `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` from the same
+  `notify:keys` run, and the site was redeployed after adding them. If the keys changed, turn notifications off
+  and on again on the iPhone (sign out, sign in, Turn on).
+- Vercel → the project → Logs, filter `/api/push/test` (or `/api/notify/assigned` for O9): "Push delivery failed."
+  with 400 or 403 means Apple refused the VAPID keys or `VAPID_SUBJECT` (it must be `mailto:` a real address); 410
+  means the device's subscription is gone (turn on again); "unavailable" means a key or variable is missing or the
+  push service didn't answer.
+- O9 only: the person who gives the task must not be Audrey herself, and her name on the task must be the one used in `people:add`.
+
+**Follow-ups (out of scope, not built):** Phase 2 (everyone signs in, the sign-in page becomes the front door,
+rules locked, a People screen to link emails, "who gave you this"); notifications for Informed; email
+notifications; reminders at other times; public holidays; notifications for saves made while offline; renaming a
+person's name on tasks; telling who made a chat connector change (finding 3).

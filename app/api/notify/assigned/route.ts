@@ -23,10 +23,11 @@ export async function POST(request: Request): Promise<Response> {
     if (authorization !== null) {
       const token = /^Bearer ([^\s]{1,8192})$/i.exec(authorization)?.[1];
       if (!token) return reply({ error: "Sign in again." }, 401);
-      const { pushIdentity, activePushPerson } = await import("@/lib/push.server");
+      const { pushIdentity } = await import("@/lib/push.server");
       const identity = await pushIdentity(token);
-      if (!identity || identity.revoked) return reply({ error: "Sign in again." }, 401);
-      if (!await activePushPerson(identity.email)) return reply({ error: "Access has been removed." }, 403);
+      if (!identity) return reply({ error: "Sign in again." }, 401);
+      // A removed (inactive or revoked) sender still saved the task: the others on it are owed their notice.
+      // The verified email only suppresses a push to the sender; an inactive person is never owed one.
       senderEmail = identity.email;
     }
     const results = await notifyAssignments(ids, senderEmail);

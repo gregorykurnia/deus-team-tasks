@@ -42,7 +42,7 @@ the database locked) is a later plan.
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/audrey-sign-in.md#r1a--full-check-run) [no look] | Sol Max | 2026-11-17 — failures listed |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/audrey-sign-in.md#r1b--fix-recorded-failures) [look] | Sol Max | 2026-11-17 — repairs checked; rest → R1bb |
 | R1bb | Finish the remaining R1a emulator/stress repairs, failed-state accessibility replays and scoped comparison triage. [R1bb](implementation/audrey-sign-in.md#r1bb--finish-the-recorded-failure-replay) [look] | Sol Max | 2026-11-17 — scoped replays and look checked |
-| R1 | Phase review: hunt for faults in sign-in and sending, fix them, write the owner handoff. [R1](implementation/audrey-sign-in.md#r1--phase-review) [no look] | Opus 5.5 High | |
+| R1 | Phase review: hunt for faults in sign-in and sending, fix them, write the owner handoff. [R1](implementation/audrey-sign-in.md#r1--phase-review) [no look] | Opus 5.5 High | 2026-11-17 — 1 fixed, 2 written up; handoff written |
 
 ## Owner steps after the run
 

@@ -33,11 +33,16 @@ describe("assignment route", () => {
   it.each(["", "Basic token", "Bearer a b", `Bearer ${"a".repeat(8193)}`])("refuses malformed optional credentials %#", async (token) => {
     expect((await POST(request(undefined, token))).status).toBe(401); expect(io.dispatch).not.toHaveBeenCalled();
   });
-  it("refuses invalid, revoked and removed identities", async () => {
+  it("refuses an invalid identity", async () => {
     io.identity.mockResolvedValueOnce(null); expect((await POST(request(undefined, "Bearer token"))).status).toBe(401);
-    io.identity.mockResolvedValueOnce({ email: "audrey@deushcs.com", revoked: true }); expect((await POST(request(undefined, "Bearer token"))).status).toBe(401);
-    io.active.mockResolvedValueOnce(false); expect((await POST(request(undefined, "Bearer token"))).status).toBe(403);
     expect(io.dispatch).not.toHaveBeenCalled();
+  });
+  it("still tells the others when a revoked or removed sender saved the task, never the sender", async () => {
+    io.identity.mockResolvedValueOnce({ email: "sam@deushcs.com", revoked: true });
+    expect((await POST(request(undefined, "Bearer token"))).status).toBe(200);
+    io.identity.mockResolvedValueOnce({ email: "sam@deushcs.com", revoked: false }); io.active.mockResolvedValue(false);
+    expect((await POST(request(undefined, "Bearer token"))).status).toBe(200);
+    expect(io.dispatch.mock.calls).toEqual([[["task"], "sam@deushcs.com"], [["task"], "sam@deushcs.com"]]);
   });
   it("awaits processing even when the received request's page closes", async () => {
     let finish!: (value: object[]) => void;
