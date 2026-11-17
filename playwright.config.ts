@@ -49,7 +49,9 @@ export default defineConfig({
         NEXT_PUBLIC_USE_EMULATOR: "1", CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
         // Local-only connector credentials: chat-edit smoke tests use the same isolated dev server.
         MCP_SECRET: "mcp-smoke-emulator-only", MCP_TASK_EDITS_ENABLED: "1",
-        NEXT_PUBLIC_SIGN_IN_ENABLED: "1", CODE_SECRET: "sign-in-smoke-emulator-only-secret-32-characters",
+        NEXT_PUBLIC_SIGN_IN_ENABLED: process.env.SIGN_IN_SMOKE_OFF === "1" ? "0" : "1", CODE_SECRET: "sign-in-smoke-emulator-only-secret-32-characters",
+        // Public placeholder used only with the browser push stub; no real push service is contacted.
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: Buffer.from([4, ...Array<number>(64).fill(1)]).toString("base64url"),
       },
       reuseExistingServer: false,
       timeout: 180_000,

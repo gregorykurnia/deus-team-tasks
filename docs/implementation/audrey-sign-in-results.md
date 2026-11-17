@@ -227,3 +227,55 @@ References consulted: [Web Push library](https://github.com/web-push-libs/web-pu
 the installed library exports, Next's local Route Handlers guide, and Admin's local verified-token/revocation code.
 No production data/settings, secrets, SMTP or push service was used. Owner steps remain in the plan; full checks
 are worth running at R1a. Only A4 is completed; A5 was not started.
+
+## A5 — Turn on notifications (2026-11-17)
+
+More and the side bar show the device's notification state beneath the signed-in name. The account card opens
+`?notifications=1`: turn on, Home Screen instructions, blocked, on, or unsupported/old iOS, in the brief's priority.
+The permission request runs directly from the tap. Only a confirmed device POST shows On. Opening/resuming the app
+resaves an existing subscription; a removed person's 403 unsubscribes and signs out. Sign-out waits for work already
+started, unsubscribes before DELETE, tolerates a failed DELETE, then clears Auth. Its own failed unsubscribe stays
+retryable. Test toasts belong to their sheet and cannot appear after leaving it.
+
+Files: `app/(desk)/layout.tsx`; `features/sign-in/{Account.module.css,AccountEntry.tsx,AccountHost.tsx,NotificationsHost.tsx,SignInPage.tsx}`;
+`lib/{notificationClient.ts,useNotifications.ts,useSignedIn.ts}`; `ui/Icon.tsx`; `playwright.config.ts`;
+`tests/smoke/{notifications.spec.ts,sign-in.spec.ts}`; `tests/support/notificationBrowser.ts`;
+`tests/unit/{notificationClient.test.ts,signInClient.test.tsx}`; this file, the A5 Done cell and both N34 gap records
+(`redesign/ui-implementation-plan.md`, `redesign/handoff/needs.md`). No saved data shape or server route changed.
+
+Checks:
+- `npx tsc --noEmit` and ESLint on the changed TS/TSX files: passed; final scoped lint and the build's final TypeScript validation also passed. Initial job-reference/mock return typing and `prefer-const` findings were fixed.
+- `npm run test:unit`: 1,577 passed, one existing `lib/taskPlan.test.ts` case exceeded 5,000 ms; its isolated retry passed (1,578 cases verified). The earlier key-generator `spawnSync EPERM` passed with child-process permission, including in the final broad run. All 17 new notification lifecycle cases passed.
+- `npm run test:data`: all 294 tests / 15 files passed on Firestore and Auth emulators (182 s).
+- Scoped `notifications.spec.ts` and `sign-in.spec.ts`: all 18 applicable cases passed across the broad and focused runs; five startup captures and five phone notification round trips passed in the repeat run. Final error/retry + 320px rerun: 2 passed; final numbered blocked version: 1 passed. The unchanged A3 gallery of other app pages was excluded from the final broad run. All 20 layout audits are clear.
+- `SIGN_IN_SMOKE_OFF=1 ... shell.spec.ts`: all 12 applicable cases passed (9 before interruption, 3 resumed phone cases); 5 desktop/phone-only cases skipped as configured. Actual navigation and notification-host renders also have flag-off unit coverage.
+- `NEXT_PUBLIC_SIGN_IN_ENABLED=0 npm run build`: passed, including final TypeScript and static generation; the build status file records 0. `git diff --check` and the own save/access diff review: clear.
+
+Some tool wait wrappers ended with SIGTERM (143): the first broad browser run stopped before its final unrelated
+A3 gallery; the final blocked run had already reported `1 passed`; the shell run stopped after 9 passes. Only this
+task's identified test PIDs were stopped, unfinished/affected cases were rerun, and data/build ran in isolated process
+groups with recorded status files. No tests reached production, SMTP or a real push service. The fake browser push
+APIs still exercise real Auth, HTTP device routes, emulator documents and `_fakePush` writes.
+
+Look gallery: `redesign/compare/a5/index.html` — 20 app frames, five approved-reference frames and six 100% crops.
+All 20 app frames and six crops were opened at original resolution. Phone: every version and both account states at
+390, all three More states, and setup/long identity at 320. Desktop: all three side bar states and setup/on/account
+at 1280, plus the failed-save notice at 1440. Account On arrives by direct link and reload, after deleting its server
+device, and proves the same device id comes back. Layout checks cover viewport edges, text overflow, control coverage,
+loaded images and page errors. No imported art was added.
+
+Look faults fixed: the setup's missing white perk cards and cramped word spacing; blocked steps' missing numbers
+and split inline wording; a squeezed narrow-phone close button (now the design's full 40px); raw `Failed to fetch`
+copy; a test toast surviving its sheet. The first automatic sheet's close also stepped back to `about:blank`; arriving
+with the notification parameter already in the return URL fixes it and preserves the original screen/view.
+
+HUNTED: ripple · one endpoint feeds registration, test, sign-out, More, account and side bar; lost server device restores on reload · notification main flow and A4's existing data tests.
+HUNTED: odd data · missing subscription, unsupported/old iOS, denied permission, 60-character email and 40-character name · priority/missing-device unit cases, phone versions and 320px layout/close-target assertions.
+HUNTED: failure · no answer, landed save with lost reply, test 503/410, offline DELETE, failed unsubscribe and removed-person 403 · lifecycle unit tests plus real route/fake-push retry and inactive-person browser case.
+HUNTED: overlap · repeated taps, sign-out during save/test, old identity replies and late subscription creation, leaving before a test reply · lifecycle race tests and pending-test/More-toast browser checks.
+
+DECISION: reuse the existing Notice, numbered Safari steps and buttons for unsupported/desktop instructions rather than wait for another design; N34 remains open for studio review.
+DECISION: keep the test toast scoped to its sheet rather than carry it over navigation, so it cannot cover More or announce an old action.
+
+Only A5 is completed. Full smoke/a11y/compare remain at R1a; a full check is worth running because shared client/UI
+code changed. Real-device delivery and production setup remain the plan's owner steps.

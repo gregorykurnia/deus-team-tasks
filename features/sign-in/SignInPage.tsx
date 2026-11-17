@@ -15,6 +15,7 @@ import { useToast } from "@/ui/Toaster";
 import HomeScreenSteps, { needsHomeScreen } from "./HomeScreenSteps";
 import styles from "./SignIn.module.css";
 import { showSignInNotice } from "./signInNotice";
+import { afterSignInNotifications } from "@/lib/useNotifications";
 
 const emptyCode = () => Array<string>(6).fill("");
 const noSubscription = () => () => {};
@@ -88,9 +89,10 @@ export default function SignInPage() {
       setNow(answeredAt);
       if (typeof answer.token === "string" && response.ok && kind === "verify") {
         const person = await acceptSignInToken(answer.token);
+        const destination = await afterSignInNotifications(next, person.email);
         if (!mounted.current) return;
         showSignInNotice(toast, person.name);
-        router.replace(next);
+        router.replace(destination);
       } else if (answer.status === "sent" && response.ok && kind === "send") {
         setEmail(address); setStep("code"); setDigits(emptyCode());
         setResendAt(answeredAt + 60_000); setStatus("Code sent. Check your inbox.");

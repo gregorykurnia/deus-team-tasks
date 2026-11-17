@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 // The design's icon set: the prototype's ICONS map (design/prototype/assets/app.js), as JSX.
 // Each entry is the icon's shapes on the 24px grid; Icon sets the stroke.
 const ICONS = {
+  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></>,
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

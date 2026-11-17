@@ -5,6 +5,7 @@ import ManyChangesToast from "@/desk/ManyChangesToast";
 import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
 import AccountHost from "@/features/sign-in/AccountHost";
+import NotificationsHost from "@/features/sign-in/NotificationsHost";
 import TabBar from "@/desk/TabBar";
 import InstallHost from "@/features/install/InstallHost";
 import TaskSheetHost from "@/features/task-sheet/TaskSheetHost";
@@ -32,6 +33,7 @@ export default function DeskLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <Suspense fallback={null}>
           <AccountHost />
+          <NotificationsHost />
         </Suspense>
         <BackOnlineToast />
         <ManyChangesToast />

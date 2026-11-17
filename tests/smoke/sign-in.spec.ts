@@ -92,7 +92,8 @@ async function avatarGap(entry: Locator) {
 
 async function accountLayout(page: Page, name: string) {
   const dialog = page.getByRole("dialog", { name, exact: true });
-  await sameLeft(dialog.getByRole("heading"), dialog.getByText("New task for you", { exact: true }));
+  // A5's approved white perk cards have their own inset, shared by both labels.
+  await sameLeft(dialog.getByText("Morning summary", { exact: true }), dialog.getByText("New task for you", { exact: true }));
 }
 
 async function readableSpaces(text: Locator) {
@@ -112,7 +113,9 @@ async function readableSpaces(text: Locator) {
   expect(Math.min(...widths)).toBeGreaterThanOrEqual(3.5);
 }
 
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
+  // Auth checks keep setup dismissed; notification states have their own spec.
+  await page.addInitScript(() => Object.defineProperty(Notification, "permission", { configurable: true, get: () => "denied" }));
   for (const url of ["http://127.0.0.1:8180/emulator/v1/projects/demo-deus/databases/(default)/documents", "http://127.0.0.1:9199/emulator/v1/projects/demo-deus/accounts"]) {
     await expect(async () => { expect((await fetch(url, { method: "DELETE", headers: OWNER })).ok).toBe(true); }).toPass({ timeout: 15_000 });
   }

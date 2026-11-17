@@ -6,6 +6,7 @@ import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
 import SignInPage from "../../app/sign-in/page";
 import { needsHomeScreen } from "@/features/sign-in/HomeScreenSteps";
+import NotificationsHost from "@/features/sign-in/NotificationsHost";
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("more=1"), usePathname: () => "/plan", useRouter: () => ({ replace: vi.fn() }),
@@ -53,6 +54,7 @@ describe("sign-in navigation and account identity", () => {
     vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "0");
     expect(renderToStaticMarkup(<MoreSheet />)).not.toContain("Sign in");
     expect(renderToStaticMarkup(<SideNav />)).not.toContain("Sign in");
+    expect(renderToStaticMarkup(<NotificationsHost />)).toBe("");
     expect(() => SignInPage()).toThrow("404");
   });
   it("shows both navigation entries when enabled", () => {

@@ -63,6 +63,6 @@ export async function acceptSignInToken(token: string): Promise<SignedInPerson> 
 }
 
 export async function signOutDevice() {
-  const [{ signOut }, { clientAuth }] = await Promise.all([import("firebase/auth"), import("./authClient")]);
-  await signOut(clientAuth);
+  const { notifications } = await import("./useNotifications");
+  await notifications.signOut();
 }
