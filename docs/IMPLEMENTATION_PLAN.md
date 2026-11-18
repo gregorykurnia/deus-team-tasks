@@ -46,7 +46,7 @@ the database locked) is a later plan.
 
 ## Owner steps after the run
 
-- [ ] O1 *owner*: Firebase console, project `deus-team-tasks` → Authentication → **Get started** (no sign-in
+- [x] O1 *owner* (2026-11-18): Firebase console, project `deus-team-tasks` → Authentication → **Get started** (no sign-in
   provider needs turning on; the app uses its own codes).
 - [x] O2 *owner* (key added to Vercel by Claude 2026-11-18): Firebase console → Project settings → Service accounts → **Generate new private key**. In Vercel
   Production, add `FIREBASE_ADMIN_KEY` with the whole JSON file's contents. Delete the downloaded file afterwards.
