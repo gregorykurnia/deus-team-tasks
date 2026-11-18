@@ -36,6 +36,8 @@ function safeErrorSummary(error: unknown): Record<string, string> {
     const value = fields[key];
     if (typeof value === "number" || (typeof value === "string" && /^[\w./-]{1,60}$/.test(value))) summary[key] = String(value);
   }
+  // Module-load failures name a package and a resolution error, never request data.
+  if (error.message.startsWith("Failed to load external module")) summary.load = error.message.slice(0, 600);
   // Stack frames only (the first line repeats the message): function names and file positions.
   const frames = (error.stack ?? "").split("\n").slice(1).map((line) => line.trim()).filter((line) => line.startsWith("at "));
   summary.at = frames.slice(0, 4).join(" | ").slice(0, 600);
