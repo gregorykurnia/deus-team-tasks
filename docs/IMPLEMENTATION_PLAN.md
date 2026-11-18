@@ -25,7 +25,7 @@ notification per save (a save holds up to 50 tasks), not one per task. Nothing c
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| M1 | Edit tools: `find_tasks` paging (`offset`, `total`), `addResponsible` / `removeResponsible`, bulk guidance. [M1](implementation/responsible-from-chat.md#m1--bulk-responsible-in-the-edit-tools) [no look] | Sol Max | |
+| M1 | Edit tools: `find_tasks` paging (`offset`, `total`), `addResponsible` / `removeResponsible`, bulk guidance. [M1](implementation/responsible-from-chat.md#m1--bulk-responsible-in-the-edit-tools) [no look] | Sol Max | 2026-11-18 — checked |
 | M2 | One push per person per save: claim per task as now, send grouped. [M2](implementation/responsible-from-chat.md#m2--one-push-per-person-per-save) [no look] | Sol Max | |
 | M3 | `add_task_plan` takes `responsible` per step and on a new main task; guidance and README. [M3](implementation/responsible-from-chat.md#m3--responsible-in-add_task_plan) [no look] | Sol Max | |
 | M4 | Deal skill Step 5: Responsible column, names passed on, bulk offer after saving; rebuild the zip. [M4](implementation/responsible-from-chat.md#m4--the-deal-skill-passes-responsible) [no look] | Opus 5.5 High | |

@@ -137,6 +137,27 @@ describe("server assignment claims and real fake-push delivery", () => {
     await applyTaskChanges(changes, stamps, warnings, "http://localhost");
     expect(await pushes()).toHaveLength(1); expect((await pushes())[0].body).toContain("Subtask of Main task");
   });
+  it("recovers assignment delivery after a lost bulk reply and only claims changed tasks", async () => {
+    await storeTask({ responsible: ["Greg"] });
+    await storeTask({ id: "already", responsible: ["Audrey"] });
+    const changes = [task.id, "already"].map((taskId) => ({ taskId, set: { addResponsible: ["audrey"] } }));
+    const shown = await previewTaskChanges(changes);
+    expect(shown.unchanged).toEqual(["already"]);
+    const save = () => applyTaskChanges(changes, shown.seen, [], "http://localhost");
+    vi.spyOn(dispatch, "notifyAssignments").mockRejectedValueOnce(new Error("Interrupted after saving"));
+    await expect(save()).rejects.toThrow("Interrupted after saving");
+    expect(await pushes()).toEqual([]);
+    expect((await save()).alreadySaved).toBe(true);
+    expect((await save()).alreadySaved).toBe(true);
+    expect(await pushes()).toEqual([expect.objectContaining({ email: EMAIL, url: `/?task=${task.id}` })]);
+    expect(await notice("already")).toBeUndefined();
+
+    const remove = [{ taskId: task.id, set: { removeResponsible: ["AUDREY"] } }];
+    const removal = await previewTaskChanges(remove);
+    await applyTaskChanges(remove, removal.seen, [], "http://localhost");
+    expect(await notice()).toEqual([]);
+    expect(await pushes()).toHaveLength(1);
+  });
   it("chat plans report newly created task IDs after commit and safely revisit them on retry", async () => {
     const plan = { kind: "internal", newParent: { title: "Main task" }, steps: [{ name: "Next action", startDate: "2027-11-19", endDate: "2027-11-20" }] };
     const options = { secret: "assignment-test-secret", now: Date.UTC(2026, 10, 17) };

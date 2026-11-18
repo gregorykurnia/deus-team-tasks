@@ -11,6 +11,7 @@ import { statusPatch, withCompletedAt, type TaskStatus } from "./taskStatus";
 import type { InformedPerson, NewTask, Task } from "./types";
 
 export const MAX_TASK_CHANGES = 50;
+export const TASK_EDIT_SEEN = /^[a-f0-9]{64}(?:\.[a-f0-9]{32})?$/;
 
 export interface TaskEditFields {
   task?: string;
@@ -20,6 +21,8 @@ export interface TaskEditFields {
   status?: TaskStatus;
   parked?: { until: string | null } | false;
   responsible?: string[];
+  addResponsible?: string[];
+  removeResponsible?: string[];
   informed?: InformedPerson[];
   calendar?: Task["calendar"] | null;
 }
@@ -41,6 +44,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const tidyName = (name: string) => name.trim().replace(/\s+/g, " ");
 const nameKey = (name: string) => tidyName(name).toLowerCase();
+export const editsResponsibleMembership = ({ set }: TaskChange) =>
+  set?.addResponsible !== undefined || set?.removeResponsible !== undefined;
 
 export function validateTaskChanges(input: unknown): TaskChangesValidation {
   const errors: string[] = [];
@@ -106,7 +111,7 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
     const fields = change.set;
     const set: TaskEditFields = {};
     const fieldPath = `${path}.set`;
-    knownFields(fields, ["task", "startDate", "endDate", "keyPoints", "status", "parked", "responsible", "informed", "calendar"], fieldPath);
+    knownFields(fields, ["task", "startDate", "endDate", "keyPoints", "status", "parked", "responsible", "addResponsible", "removeResponsible", "informed", "calendar"], fieldPath);
     if (Object.hasOwn(fields, "task") && text(fields.task, `${fieldPath}.task`)) set.task = fields.task.trim();
     // Key points are a whole-text replacement, including intentional spaces and line breaks.
     if (Object.hasOwn(fields, "keyPoints") && text(fields.keyPoints, `${fieldPath}.keyPoints`, true)) set.keyPoints = fields.keyPoints;
@@ -128,9 +133,17 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
         else errors.push(`${fieldPath}.parked.until must be a real yyyy-mm-dd calendar day or null.`);
       } else errors.push(`${fieldPath}.parked must be false or an object with until.`);
     }
-    if (Object.hasOwn(fields, "responsible")) {
-      if (!Array.isArray(fields.responsible)) errors.push(`${fieldPath}.responsible must be a list of names.`);
-      else set.responsible = fields.responsible.filter((name, i): name is string => text(name, `${fieldPath}.responsible[${i}]`)).map(tidyName);
+    for (const field of ["responsible", "addResponsible", "removeResponsible"] as const) {
+      if (!Object.hasOwn(fields, field)) continue;
+      if (!Array.isArray(fields[field])) errors.push(`${fieldPath}.${field} must be a list of names.`);
+      else set[field] = fields[field].filter((name, i): name is string => text(name, `${fieldPath}.${field}[${i}]`)).map(tidyName);
+    }
+    if (set.responsible && (set.addResponsible || set.removeResponsible)) {
+      errors.push(`${fieldPath}.responsible cannot be combined with addResponsible or removeResponsible.`);
+    }
+    const added = new Set(set.addResponsible?.map(nameKey));
+    for (const name of set.removeResponsible ?? []) {
+      if (added.has(nameKey(name))) errors.push(`${fieldPath} cannot add and remove "${name}" on the same task.`);
     }
     if (Object.hasOwn(fields, "informed")) {
       if (!Array.isArray(fields.informed)) errors.push(`${fieldPath}.informed must be a list of people.`);
@@ -219,6 +232,8 @@ export interface TaskChangesPreview {
   warnings: TaskEditWarning[];
   errors: string[];
   canWrite: boolean;
+  unchanged?: string[];
+  seen?: Record<string, string>; // Membership edits include stamps even for listed tasks with no change.
 }
 
 function patchedTask(task: Task, patch: Partial<NewTask>): Task {
@@ -234,6 +249,9 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
   if (errors.length) return result;
   const byId = new Map(context.tasks.map((task) => [task.id, task]));
   const names = new Map<string, string>();
+  const addedNames = new Map<string, string>();
+  const requestedRemovals = new Map<string, string>();
+  const matchedRemovals = new Set<string>();
   for (const name of namesInUse([...context.tasks], context.names)) {
     if (!names.has(nameKey(name))) names.set(nameKey(name), name);
   }
@@ -260,6 +278,33 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     // One entry per person: a repeated name in another spelling keeps its first entry.
     const once = <T>(list: T[], name: (entry: T) => string) => list.filter((entry, i) => list.findIndex((other) => name(other) === name(entry)) === i);
     if (set.responsible) patch.responsible = once(set.responsible.map(person), nameKey);
+    if (editsResponsibleMembership(change)) {
+      const removals = new Set<string>();
+      for (const name of set.removeResponsible ?? []) {
+        const key = nameKey(name);
+        removals.add(key);
+        if (!requestedRemovals.has(key)) requestedRemovals.set(key, name);
+      }
+      const current = before.responsible ?? [];
+      const responsible = current.filter((name) => {
+        const key = nameKey(name);
+        if (!removals.has(key)) return true;
+        matchedRemovals.add(key);
+        return false;
+      });
+      const kept = new Set(responsible.map(nameKey));
+      for (const name of set.addResponsible ?? []) {
+        const key = nameKey(name);
+        if (kept.has(key)) continue;
+        const spelling = addedNames.get(key) ?? name;
+        addedNames.set(key, spelling);
+        responsible.push(person(spelling));
+        kept.add(key);
+      }
+      if (responsible.length !== current.length || responsible.some((name, i) => name !== current[i])) {
+        patch.responsible = responsible;
+      }
+    }
     if (set.informed) patch.informed = once(set.informed.map((entry) => ({ ...entry, name: person(entry.name) })), (entry) => nameKey(entry.name));
     if (set.status !== undefined) Object.assign(patch, withCompletedAt(statusPatch(set.status, before, context.now), before, context.now));
     if (set.parked !== undefined) {
@@ -382,6 +427,19 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
         message: `Main task "${after.task}" new dates (${after.startDate} to ${after.endDate}) leave subtask "${child.task}" (${child.startDate || "no start"} to ${child.endDate || "no end"}) outside its range. The subtask keeps its own dates unless explicitly listed.`,
       });
     }
+  }
+  for (const [key, name] of requestedRemovals) {
+    if (!matchedRemovals.has(key)) errors.push(`"${name}" is not Responsible on any task listed for its removal.`);
+  }
+  if (changes.some(editsResponsibleMembership)) {
+    result.seen = Object.fromEntries(result.tasks.map((row) => [row.taskId, row.seen]));
+    const unchanged: string[] = [];
+    result.tasks = result.tasks.filter((row) => {
+      if (!row.after || row.seen !== taskSeen(row.after)) return true;
+      unchanged.push(row.taskId);
+      return false;
+    });
+    result.unchanged = unchanged;
   }
   for (const preview of result.tasks) preview.warnings = [...new Map(preview.warnings.map((warning) => [warning.id, warning])).values()];
   result.warnings = [...new Map(result.tasks.flatMap((preview) => preview.warnings).map((warning) => [warning.id, warning])).values()];

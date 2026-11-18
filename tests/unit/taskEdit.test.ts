@@ -209,6 +209,71 @@ describe("field previews", () => {
   });
 });
 
+describe("M1 Responsible membership previews", () => {
+  it("adds one known person without replacing co-owners and stamps unchanged tasks too", () => {
+    const first = task();
+    const second = task("b", { responsible: ["Audrey", "Thania"] });
+    const changes = [first, second].map(({ id }) => ({ taskId: id, set: { addResponsible: [" audrey ", "AUDREY"] } }));
+    const result = buildTaskChanges(changes, context([first, second]));
+    expect(result).toMatchObject({ canWrite: true, errors: [], warnings: [], unchanged: ["b"],
+      seen: { a: taskSeen(first), b: taskSeen(second) }, tasks: [{ taskId: "a", patch: { responsible: ["Greg", "Audrey"] } }] });
+    expect(result.tasks).toHaveLength(1);
+    expect(first.responsible).toEqual(["Greg"]);
+  });
+
+  it("removes all case variants, can empty a list, and combines additions with removals", () => {
+    const first = task("a", { responsible: ["Greg", "Audrey", " audrey "] });
+    const second = task("b", { responsible: ["AUDREY"] });
+    const third = task("c", { responsible: ["Greg"] });
+    const result = buildTaskChanges([
+      { taskId: first.id, set: { removeResponsible: ["AUDREY", "audrey"], addResponsible: [" thania "] } },
+      ...[second, third].map(({ id }) => ({ taskId: id, set: { removeResponsible: ["AUDREY"] } })),
+    ], context([first, second, third]));
+    expect(result.errors).toEqual([]);
+    expect(result.tasks.map((row) => row.after?.responsible)).toEqual([["Greg", "Thania"], []]);
+    expect(result.unchanged).toEqual([third.id]);
+  });
+
+  it("names a removal that would affect none of its targeted tasks", () => {
+    const other = task("b", { responsible: ["Audrey"] });
+    const result = buildTaskChanges([
+      { taskId: "a", set: { removeResponsible: ["AUDREY"] } }, { taskId: "b", set: { task: "New title" } },
+    ], context([task(), other]));
+    expect(result.canWrite).toBe(false);
+    expect(result.errors).toEqual([expect.stringContaining('"AUDREY"')]);
+  });
+
+  it.each([
+    [{ responsible: [], addResponsible: ["Audrey"] }, "cannot be combined"],
+    [{ responsible: [], removeResponsible: ["Audrey"] }, "cannot be combined"],
+    [{ addResponsible: [" Audrey Lee "], removeResponsible: ["AUDREY   LEE"] }, "cannot add and remove"],
+    [{ addResponsible: [" "] }, "non-empty"],
+    [{ removeResponsible: [null] }, "non-empty"],
+    [{ addResponsible: "Audrey" }, "list of names"],
+  ])("rejects invalid membership inputs (%#)", (set, error) => {
+    expect(validateTaskChanges([{ taskId: "a", set }])).toEqual({ changes: null, errors: [expect.stringContaining(error)] });
+  });
+
+  it("handles an old missing list, empty edits and long names", () => {
+    const { responsible: _responsible, ...stored } = task();
+    void _responsible;
+    const current = stored as Task;
+    const name = "Audry".repeat(400);
+    const long = build({ addResponsible: [name, name.toUpperCase()] }, current);
+    expect(long.tasks[0].after?.responsible).toEqual([name]);
+    expect(long.warnings.map(({ id }) => id)).toEqual([`new-person:${name}`]);
+    expect(build({ addResponsible: [], removeResponsible: [] }, current)).toMatchObject({ canWrite: true, tasks: [], unchanged: [current.id] });
+  });
+
+  it("shows one warning and one spelling for a new person across the batch", () => {
+    const result = buildTaskChanges([
+      { taskId: "a", set: { addResponsible: ["Audry"] } }, { taskId: "b", set: { addResponsible: ["AUDRY"] } },
+    ], context([task(), task("b")]));
+    expect(result.tasks.map((row) => row.after?.responsible)).toEqual([["Greg", "Audry"], ["Greg", "Audry"]]);
+    expect(result.warnings.map(({ id }) => id)).toEqual(["new-person:Audry"]);
+  });
+});
+
 describe("independent dates and company deadline warnings", () => {
   const parent = task("parent");
   const child = task("child", { parentId: parent.id, startDate: "2026-11-13", endDate: "2026-11-19" });

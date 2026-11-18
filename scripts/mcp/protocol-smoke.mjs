@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { payload } from "./legacy-smoke.mjs";
 
-const GENERAL = ["add_task_plan", "find_task_destinations", "preview_task_plan"];
+const GENERAL = ["add_task_plan", "find_free_times", "find_task_destinations", "preview_task_plan"];
 const LEGACY = ["add_followup_plan", "find_company", "preview_followup_plan"];
 
 export function toolsFor({ client, unchanged, safe }) {

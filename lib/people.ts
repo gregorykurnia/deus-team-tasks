@@ -17,8 +17,8 @@ export function namesInUse(
 ): string[] {
   const set = new Set<string>(extra);
   for (const t of tasks) {
-    t.responsible.forEach((n) => set.add(n));
-    t.informed.forEach((p) => set.add(p.name));
+    t.responsible?.forEach((n) => set.add(n));
+    t.informed?.forEach((p) => set.add(p.name));
   }
   for (const role of flowRoles) role.names.forEach((n) => set.add(n));
   return [...set].filter(isPerson).sort((a, b) => a.localeCompare(b));

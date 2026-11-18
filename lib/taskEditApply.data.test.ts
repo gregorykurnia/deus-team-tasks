@@ -44,7 +44,7 @@ beforeEach(async () => {
 afterEach(async () => { await openClientTrackerRules(); vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 afterAll(async () => { await Promise.all([firestore.terminate(db), firestore.terminate(clientsDb)]); });
 
-const stamps = (preview: TaskChangesPreview) => Object.fromEntries(preview.tasks.map((row) => [row.taskId, row.seen]));
+const stamps = (preview: TaskChangesPreview) => preview.seen ?? Object.fromEntries(preview.tasks.map((row) => [row.taskId, row.seen]));
 const save = (changes: TaskChange[], preview: TaskChangesPreview) =>
   applyTaskChanges(changes, stamps(preview), preview.warnings.map((warning) => warning.id), ORIGIN);
 async function snapshot() {
@@ -210,11 +210,11 @@ describe("T04 company dates and rollback", () => {
     expect(await readFields("clients", `pipeline/${company.id}`)).toMatchObject({ target: "2027-05-01" });
   });
 
-  it("restores the entire task list, deletions and freed subtasks when the real company write fails", async () => {
+  it.each([false, true])("restores the entire list when a real company write fails (bulk Responsible %s)", async (bulk) => {
     const changes: TaskChange[] = [
       { taskId: parked.id, set: { endDate: "2027-04-01" } },
       { taskId: parent.id, delete: true }, { taskId: done.id, delete: true },
-      { taskId: internal.id, set: { task: "Must roll back too" } },
+      { taskId: internal.id, set: { task: "Must roll back too", ...(bulk ? { addResponsible: ["Audrey"] } : {}) } },
     ];
     const preview = await previewTaskChanges(changes);
     const before = await snapshot();
@@ -225,6 +225,12 @@ describe("T04 company dates and rollback", () => {
     if (!response.ok) throw new Error(`Emulator rules failed: ${response.status}`);
     await expect(save(changes, preview)).rejects.toThrow("All task changes were restored");
     expect(await snapshot()).toEqual(before);
+    if (bulk) {
+      await openClientTrackerRules();
+      expect((await save(changes, preview)).alreadySaved).toBe(false);
+      expect((await save(changes, preview)).alreadySaved).toBe(true);
+      expect(await readFields("tasks", `tasks/${internal.id}`)).toMatchObject({ responsible: [...internal.responsible, "Audrey"] });
+    }
   });
 });
 

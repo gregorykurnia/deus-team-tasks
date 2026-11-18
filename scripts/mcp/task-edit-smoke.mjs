@@ -19,7 +19,7 @@ export async function checkTaskEditProtocol(context) {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
     "find_company", "preview_followup_plan", "add_followup_plan",
-    "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS,
+    "find_free_times", "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS,
   ].sort());
   assert.match(client.getInstructions(), /category → company → main task → individual steps → preview → save/);
   for (const guidance of [client.getInstructions(), ...tools.filter((tool) => EDITS.includes(tool.name)).map((tool) => tool.description)]) {

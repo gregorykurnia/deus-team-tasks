@@ -1,18 +1,19 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { terminate } from "firebase/firestore";
-import { clearAll, EMULATOR_HOST, readAll, seed } from "../tests/support/emulator";
+import { clearAll, EMULATOR_HOST, PROJECTS, readAll, readFields, seed } from "../tests/support/emulator";
 import { TASK_PLAN_INTERNAL_PARENT, TASK_PLAN_PROSPECT } from "../tests/fixtures/taskPlan";
 import { USE_EMULATOR } from "./emulator";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
-import { taskSeen } from "./taskEdit";
-import { findTasks, previewTaskChanges } from "./taskEditServer";
+import { taskSeen, type TaskChange } from "./taskEdit";
+import { applyTaskChanges, findTasks, previewTaskChanges } from "./taskEditServer";
 import type { Task } from "./types";
 
 vi.mock("./connection", () => { throw new Error("Server reads must not import browser connection guards."); });
 vi.mock("googleapis", () => { throw new Error("Read-only previews must never load Google clients."); });
 
 const now = Date.UTC(2026, 10, 11, 18); // November 12 in Asia/Jakarta.
+const ORIGIN = "https://tasks.example.test";
 const parent: Task = { ...TASK_PLAN_INTERNAL_PARENT, id: "parent", task: "Fictional launch", linkedClientId: TASK_PLAN_PROSPECT.id };
 const child: Task = { ...parent, id: "child", parentId: parent.id, task: "Draft memo", keyPoints: "Needle in notes", startedAt: 10, order: 101 };
 const done: Task = { ...child, id: "done", task: "Completed memo", completed: true, completedAt: 20 };
@@ -29,6 +30,7 @@ beforeEach(async () => {
   vi.spyOn(Date, "now").mockReturnValue(now);
   vi.stubEnv("GOOGLE_EVENTS_CALENDAR_ID", "test-calendar");
   vi.stubEnv("CALENDAR_FAKE", "1");
+  vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "0");
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 afterAll(async () => { await Promise.all([terminate(db), terminate(clientsDb)]); });
@@ -76,7 +78,7 @@ describe("T03 find tasks from the server", () => {
     expect(result.tasks[0].task).toBe("Many 00");
     expect(result.hasMore).toBe(true);
     expect((await findTasks({ query: "Many 00" })).hasMore).toBe(false);
-    expect((await findTasks({ query: "Not present" }))).toEqual({ tasks: [], hasMore: false });
+    expect((await findTasks({ query: "Not present" }))).toEqual({ tasks: [], hasMore: false, total: 0 });
   });
 
   it("reads fresh server fields, calendar marks and numeric fallback company IDs", async () => {
@@ -86,6 +88,105 @@ describe("T03 find tasks from the server", () => {
     expect((await findTasks({ parentId: parent.id })).tasks[0]).toMatchObject({ task: "Fresh memo", calendar: { startTime: "14:00", endTime: "15:00" } });
     expect((await findTasks({ companyId: 0 })).tasks[0].company).toEqual({ id: 0, name: "Fallback company" });
   });
+});
+
+describe("M1 bulk Responsible from the server", () => {
+  it("pages 23 open company matches in stable name and ID order without counting nested details", async () => {
+    const companyId = TASK_PLAN_PROSPECT.id + 1;
+    const mains = Array.from({ length: 20 }, (_, i) => ({ ...parent, linkedClientId: companyId,
+      id: `main-${String(i).padStart(2, "0")}`, task: "Same name", ...(i === 11 ? { parkedAt: 30 } : {}) }));
+    const children = Array.from({ length: 3 }, (_, i) => ({ ...mains[0], id: `sub-${i}`, parentId: mains[0].id, task: "First in name order" }));
+    await seed("tasks", "tasks", [...mains, ...children, { ...mains[0], id: "finished", completed: true },
+      { ...parent, id: "other-company", task: mains[0].task }]);
+    const pages = await Promise.all([undefined, 10, 20].map((offset) => findTasks({ companyId, offset })));
+    const matches = pages.flatMap((page) => page.tasks);
+    expect(pages.map(({ total, tasks, hasMore }) => [total, tasks.length, hasMore])).toEqual([[23, 10, true], [23, 10, true], [23, 3, false]]);
+    expect(matches.map((task) => task.id)).toEqual([...children, ...mains].map(({ id }) => id));
+    expect(matches.find((task) => task.id === mains[0].id)?.subtasks.map((task) => task.id)).toEqual(children.map(({ id }) => id));
+    expect(matches.find((task) => task.id === mains[11].id)?.parked).toBe(true);
+    expect(await findTasks({ companyId, offset: 23 })).toEqual({ tasks: [], hasMore: false, total: 23 });
+    expect(await findTasks({ companyId, offset: Number.MAX_SAFE_INTEGER })).toEqual({ tasks: [], hasMore: false, total: 23 });
+    expect((await findTasks({ companyId, includeDone: true })).total).toBe(24);
+  });
+
+  const addAudrey = [parent, child].map(({ id }) => ({ taskId: id, set: { addResponsible: ["audrey"] } }));
+  const greg = { ...parent, responsible: ["Greg"] };
+  const already = { ...child, responsible: ["Audrey"] };
+  const apply = (changes: TaskChange[], shown: Awaited<ReturnType<typeof previewTaskChanges>>) =>
+    applyTaskChanges(changes, shown.seen, shown.warnings.map(({ id }) => id), ORIGIN);
+
+  async function updateTimes() {
+    const response = await fetch(`http://${EMULATOR_HOST}/v1/projects/${PROJECTS.tasks}/databases/(default)/documents/tasks`,
+      { headers: { Authorization: "Bearer owner" } });
+    if (!response.ok) throw new Error(`Emulator read failed: ${response.status}`);
+    const { documents } = await response.json() as { documents: { name: string; updateTime: string }[] };
+    return Object.fromEntries(documents.map(({ name, updateTime }) => [name, updateTime]));
+  }
+
+  it("saves only changed IDs and replays those exact IDs after a lost response without writing again", async () => {
+    await seed("tasks", "tasks", [{ ...greg, calendar: {} }, already]);
+    const beforeTimes = await updateTimes();
+    const shown = await previewTaskChanges(addAudrey);
+    expect(shown).toMatchObject({ canWrite: true, unchanged: [child.id], tasks: [{ taskId: parent.id, after: { responsible: ["Greg", "Audrey"] } }] });
+    expect(Object.keys(shown.seen ?? {})).toEqual([parent.id, child.id]);
+    const first = await apply(addAudrey, shown);
+    expect(first).toMatchObject({ alreadySaved: false, tasks: [{ taskId: parent.id, saved: true, calendar: null }] });
+    expect(await readFields("tasks", `tasks/${parent.id}`)).toMatchObject({ responsible: ["Greg", "Audrey"], calendar: {} });
+    const times = await updateTimes();
+    expect(Object.entries(times).filter(([path, time]) => time !== beforeTimes[path]).map(([path]) => path.split("/").at(-1))).toEqual([parent.id]);
+    const after = await snapshot();
+    expect(await apply(addAudrey, shown)).toEqual({ ...first, alreadySaved: true });
+    expect(await snapshot()).toEqual(after);
+    expect(await updateTimes()).toEqual(times);
+    expect(await readAll("tasks", "testCalendarEvents")).toEqual([]);
+  });
+
+  it("requires confirmation for a new spelling before saving anything", async () => {
+    const changes = [parent, child].map(({ id }) => ({ taskId: id, set: { addResponsible: ["Audry"] } }));
+    const shown = await previewTaskChanges(changes);
+    expect(shown.warnings.map(({ id }) => id)).toEqual(["new-person:Audry"]);
+    const before = await snapshot();
+    await expect(applyTaskChanges(changes, shown.seen, [], ORIGIN)).rejects.toThrow("Confirm these warnings");
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it("rejects even an unchanged listed row's new name and refuses an external edit identical to the proposed save", async () => {
+    await seed("tasks", "tasks", [greg, already]);
+    const shown = await previewTaskChanges(addAudrey);
+    await expect(applyTaskChanges(addAudrey, { [parent.id]: shown.seen?.[parent.id] }, [], ORIGIN)).rejects.toThrow("each task's seen stamp");
+    await seed("tasks", "tasks", [{ ...already, responsible: ["Audrey", "Other owner"] }]);
+    const before = await snapshot();
+    await expect(apply(addAudrey, shown)).rejects.toThrow(`Tasks changed since the preview: ${child.id}`);
+    expect(await snapshot()).toEqual(before);
+
+    const next = await previewTaskChanges(addAudrey);
+    await seed("tasks", "tasks", [{ ...greg, responsible: ["Greg", "Audrey"] }]);
+    const updated = await snapshot();
+    await expect(apply(addAudrey, next)).rejects.toThrow(`Tasks changed since the preview: ${parent.id}`);
+    expect(await snapshot()).toEqual(updated);
+  });
+
+  it("handles overlapping saves, retries removals and allows a fresh re-add after undo", async () => {
+    await seed("tasks", "tasks", [greg, already]);
+    const original = await previewTaskChanges(addAudrey);
+    const results = await Promise.all([apply(addAudrey, original), apply(addAudrey, original)]);
+    expect(results.map(({ alreadySaved }) => alreadySaved).sort()).toEqual([false, true]);
+    expect(results.map(({ tasks }) => tasks.map(({ taskId }) => taskId))).toEqual([[parent.id], [parent.id]]);
+
+    const removal = [{ taskId: parent.id, set: { removeResponsible: ["AUDREY"] } }];
+    const undo = await previewTaskChanges(removal);
+    expect((await apply(removal, undo)).tasks.map(({ taskId }) => taskId)).toEqual([parent.id]);
+    const times = await updateTimes();
+    expect((await apply(removal, undo)).alreadySaved).toBe(true);
+    expect((await apply(addAudrey, original)).alreadySaved).toBe(true);
+    expect(await updateTimes()).toEqual(times);
+    expect(await readFields("tasks", `tasks/${parent.id}`)).toEqual(expect.objectContaining({ responsible: ["Greg"] }));
+    expect(await readFields("tasks", `tasks/${child.id}`)).toEqual(expect.objectContaining({ responsible: ["Audrey"] }));
+
+    const fresh = await previewTaskChanges(addAudrey);
+    expect((await apply(addAudrey, fresh)).alreadySaved).toBe(false);
+    expect(await readFields("tasks", `tasks/${parent.id}`)).toEqual(expect.objectContaining({ responsible: ["Greg", "Audrey"] }));
+  }, 20_000);
 });
 
 describe("T03 preview changes without writes", () => {

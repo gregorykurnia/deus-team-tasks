@@ -74,7 +74,7 @@ beforeEach(() => {
   io.legacyRead.mockResolvedValue({ companies: [], tasks: [] });
   io.legacyPreview.mockResolvedValue({ canWrite: true });
   io.legacyAdd.mockResolvedValue({ parentId: "legacy-parent", subtaskIds: [], alreadySaved: false });
-  io.editFind.mockResolvedValue({ tasks: [], hasMore: false });
+  io.editFind.mockResolvedValue({ tasks: [], hasMore: false, total: 0 });
   io.editPreview.mockResolvedValue({ tasks: [], warnings: [], errors: [], canWrite: true });
   io.editApply.mockResolvedValue({ tasks: [], alreadySaved: false });
 });
@@ -179,9 +179,9 @@ describe("T03–T05 task edit tools", () => {
       expect(tool.annotations).toEqual({ readOnlyHint: tool.name !== "apply_task_changes", destructiveHint: tool.name === "apply_task_changes", idempotentHint: true, openWorldHint: false });
     }
     expect((await call("find_tasks", { query: "  Updated  " })).reply.result?.structuredContent)
-      .toEqual({ tasks: [], hasMore: false });
-    expect(io.editFind).toHaveBeenCalledWith({ query: "Updated", includeDone: false });
-    const input = { query: "Task", companyId: 0, parentId: "parent", includeDone: true };
+      .toEqual({ tasks: [], hasMore: false, total: 0 });
+    expect(io.editFind).toHaveBeenCalledWith({ query: "Updated", includeDone: false, offset: 0 });
+    const input = { query: "Task", companyId: 0, parentId: "parent", includeDone: true, offset: 10 };
     await call("find_tasks", input);
     expect(io.editFind).toHaveBeenLastCalledWith(input);
     await call("preview_task_changes", { changes });
@@ -203,6 +203,9 @@ describe("T03–T05 task edit tools", () => {
       /Report each task's save\/delete result and calendar result honestly, including failures/,
       /calendar failure leaves task changes saved/, /Edits and new plans are separate saves/,
       /propose all day or start and end times labelled Suggested, checking find_free_times first.*; set calendar only to what the owner confirmed/,
+      /pick the company by ID from find_task_destinations.*offset.*hasMore is false.*equal total/,
+      /addResponsible or removeResponsible.*batches of up to 50.*before → after, marking parked tasks/,
+      /complete seen map.*unchanged IDs.*list the changed IDs.*undo only the changes made.*existing tasks only/,
     ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });
 
@@ -210,6 +213,8 @@ describe("T03–T05 task edit tools", () => {
     ["find_tasks", {}], ["find_tasks", { query: " " }], ["find_tasks", { query: "x", extra: true }],
     ["find_tasks", { companyId: -1 }], ["find_tasks", { companyId: "1" }],
     ["find_tasks", { parentId: " " }], ["find_tasks", { query: "x", includeDone: "true" }],
+    ["find_tasks", { offset: 10 }], ["find_tasks", { query: "x", offset: -1 }],
+    ["find_tasks", { query: "x", offset: 1.5 }], ["find_tasks", { query: "x", offset: "10" }],
     ["preview_task_changes", { changes: [] }],
     ["preview_task_changes", { changes: Array.from({ length: 51 }, (_, i) => ({ taskId: `t${i}`, delete: true })) }],
     ["preview_task_changes", { changes: [...changes, ...changes] }],
@@ -218,6 +223,9 @@ describe("T03–T05 task edit tools", () => {
     ["preview_task_changes", { changes: [{ taskId: "t", set: { linkedClientId: 1 } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { startDate: "2026-02-30" } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { calendar: { startTime: "14:00" } } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { addResponsible: [" "] } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { responsible: [], removeResponsible: ["Audrey"] } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { addResponsible: ["audrey"], removeResponsible: ["Audrey"] } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { task: "Name" }, delete: true }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", move: { toParentId: "bad/id" } }] }],
   ])("rejects invalid %s input before the handler", async (name, input) => {
@@ -239,6 +247,20 @@ describe("T03–T05 task edit tools", () => {
     ];
     expect((await call("preview_task_changes", { changes: mixed })).reply.error).toBeUndefined();
     expect(io.editPreview).toHaveBeenCalledWith(mixed);
+  });
+
+  it("passes Responsible edits and the complete preview stamp map through the MCP tools", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    const changes = ["changed", "unchanged"].map((taskId) => ({ taskId, set: { addResponsible: ["Audrey"], removeResponsible: ["Greg"] } }));
+    const seen = { changed: `${"a".repeat(64)}.${"c".repeat(32)}`, unchanged: `${"b".repeat(64)}.${"c".repeat(32)}` };
+    const shown = { tasks: [{ taskId: "changed" }], seen, unchanged: ["unchanged"], warnings: [], errors: [], canWrite: true };
+    io.editPreview.mockResolvedValue(shown);
+    expect((await call("preview_task_changes", { changes })).reply.result?.structuredContent).toEqual(shown);
+    expect(io.editPreview).toHaveBeenCalledWith(changes);
+    const saved = await call("apply_task_changes", { changes, seen, acknowledgedWarnings: [] });
+    expect(saved.reply.error).toBeUndefined();
+    expect(saved.reply.result?.isError).toBeFalsy();
+    expect(io.editApply).toHaveBeenCalledWith(changes, seen, [], ORIGIN);
   });
 
   it("refuses retained callbacks after the edit flag is switched off", async () => {
