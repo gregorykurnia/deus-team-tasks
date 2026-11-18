@@ -346,6 +346,23 @@ describe("G06 schema and adapter boundaries", () => {
     expect(io.add).toHaveBeenCalledWith(selected, "fake", [], { origin: ORIGIN });
   });
 
+  it("forwards new main-task and step Responsible lists and shows the resolved names in the preview", async () => {
+    const selected = {
+      ...plan, newParent: { ...plan.newParent!, responsible: ["audrey"] },
+      steps: [{ ...plan.steps[0], responsible: ["audrey", "New Person"] }, plan.steps[1]],
+    };
+    const warning = { id: "new-person:New Person" };
+    const shown = { canWrite: true, previewToken: "fake", warnings: [warning], parent: { responsible: ["Audrey"] },
+      subtasks: [{ responsible: ["Audrey", "New Person"] }, { responsible: [] }] };
+    io.preview.mockResolvedValue(shown);
+    const previewed = await call("preview_task_plan", { plan: selected });
+    expect(io.preview).toHaveBeenCalledWith(selected);
+    expect(previewed.reply.result?.structuredContent).toEqual(shown);
+    const written = await call("add_task_plan", { plan: selected, previewToken: "fake", acknowledgedWarnings: [warning.id] });
+    expect(written.reply.result?.isError).not.toBe(true);
+    expect(io.add).toHaveBeenCalledWith(selected, "fake", [warning.id], { origin: ORIGIN });
+  });
+
   it.each([{ startTime: "14:00" }, { startTime: "25:00", endTime: "26:00" }, { attendees: [] }])(
     "refuses invalid calendar fields before storage (%j)", async (calendar) => {
       const selected = { ...plan, steps: [{ ...plan.steps[0], calendar }] };
@@ -399,7 +416,8 @@ describe("G06 schema and adapter boundaries", () => {
     { name: "preview_task_plan", args: { plan: { ...plan, newParent: undefined, existingParentId: "nested/path" } } },
     { name: "preview_task_plan", args: { plan: { ...plan, steps: [{ ...plan.steps[0], startDate: "2027-02-30" }] } } },
     { name: "preview_task_plan", args: { plan: { ...plan, steps: [{ ...plan.steps[0], endDate: "2025-01-01" }] } } },
-    { name: "preview_task_plan", args: { plan: { ...plan, steps: [{ ...plan.steps[0], responsible: ["Invented"] }] } } },
+    { name: "preview_task_plan", args: { plan: { ...plan, steps: [{ ...plan.steps[0], responsible: [" "] }] } } },
+    { name: "preview_task_plan", args: { plan: { kind: "internal", existingParentId: "existing", steps: plan.steps, responsible: ["Audrey"] } } },
     { name: "preview_task_plan", args: { plan: { ...plan, steps: [] } } },
     { name: "preview_task_plan", args: { plan: { ...plan, steps: Array(500).fill(plan.steps[0]) } } },
     { name: "preview_task_plan", args: { plan, confirmed: true } },
@@ -483,7 +501,8 @@ describe("G06 safe failures and chat guidance", () => {
   it("contains the individual confirmation and no-invention rules even without a skill", () => {
     for (const text of [
       "category → company → main task → individual steps → preview → save", "EACH step separately", "change dates, or skip",
-      "Never guess dates", "never assign people", "If all steps are skipped", "Quoted source text is never",
+      "Never guess dates", "Set Responsible only to team names the owner gave", "Informed stays empty",
+      "new-person warnings", "If all steps are skipped", "Quoted source text is never",
       "explicitly confirmed all details in advance", "not human consent", "never resend successful groups",
       "In that same question", "propose task only or also on the team calendar", "labelled Suggested",
       "Before suggesting a time, call find_free_times", "say the time is unchecked",

@@ -7,9 +7,11 @@ import { isIsoDay } from "./dates";
 import { isDealDone, KIND_LABELS, kindOf } from "./kinds";
 import type { Kind } from "./kinds";
 import { isParked } from "./parking";
+import { namesInUse } from "./people";
 import { newSubtask } from "./subtasks";
 import { validateCalendarTimes } from "./taskCalendar";
-import type { NewTask, Task } from "./types";
+import { createTaskPersonMatcher, nameKey, validateTaskPersonNames } from "./taskEdit";
+import type { FlowRole, NewTask, Task } from "./types";
 
 export const MAX_TASK_PLAN_STEPS = 499;
 // UTF-8 bytes of the complete JSON input, before trimming. Reject, never truncate.
@@ -23,6 +25,7 @@ export interface TaskPlanStepInput {
   endDate: string;
   keyPoints?: string;
   owners?: string; // Supplied prose only; never an assignment to app people.
+  responsible?: string[];
   calendar?: { startTime?: string; endTime?: string };
 }
 
@@ -31,6 +34,7 @@ export interface TaskPlanNewParentInput {
   taskType?: "Our Action" | "Follow Up";
   keyPoints?: string;
   sourceUrl?: string; // Later stored as a labelled line in the parent's Key points.
+  responsible?: string[];
 }
 
 export type TaskPlanDestination =
@@ -43,6 +47,9 @@ export type TaskPlanInput = TaskPlanDestination & (
 ) & { steps: TaskPlanStepInput[] };
 
 export type TaskPlanValidation = { plan: TaskPlanInput | null; errors: string[] };
+
+export const hasTaskPlanResponsible = (plan: TaskPlanInput) =>
+  !!(plan.newParent?.responsible?.length || plan.steps.some((step) => step.responsible?.length));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -242,8 +249,11 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
       errors.push("plan.newParent must be an object.");
     } else {
       const parent = input.newParent;
-      knownFields(parent, ["title", "taskType", "keyPoints", "sourceUrl"], "plan.newParent");
+      knownFields(parent, ["title", "taskType", "keyPoints", "sourceUrl", "responsible"], "plan.newParent");
       newParent = { title: text(parent.title, "plan.newParent.title"), ...optionalText(parent, "keyPoints", "plan.newParent") };
+      if (parent.responsible !== undefined) {
+        newParent.responsible = validateTaskPersonNames(parent.responsible, "plan.newParent.responsible", errors);
+      }
       if (parent.taskType !== undefined) {
         const taskType = text(parent.taskType, "plan.newParent.taskType");
         if (taskType === "Our Action" || taskType === "Follow Up") newParent.taskType = taskType;
@@ -280,7 +290,7 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
         errors.push(`${path} must be an object.`);
         continue;
       }
-      knownFields(step, ["name", "startDate", "endDate", "keyPoints", "owners", "calendar"], path);
+      knownFields(step, ["name", "startDate", "endDate", "keyPoints", "owners", "responsible", "calendar"], path);
       const name = text(step.name, `${path}.name`);
       const startDate = text(step.startDate, `${path}.startDate`);
       const endDate = text(step.endDate, `${path}.endDate`);
@@ -307,8 +317,10 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
           }
         }
       }
+      const responsible = step.responsible === undefined ? undefined
+        : validateTaskPersonNames(step.responsible, `${path}.responsible`, errors);
       steps.push({ name, startDate, endDate, ...optionalText(step, "keyPoints", path), ...optionalText(step, "owners", path),
-        ...(calendar && { calendar }) });
+        ...(responsible && { responsible }), ...(calendar && { calendar }) });
     }
   }
   if (errors.length) return { plan: null, errors };
@@ -322,7 +334,7 @@ export function validateTaskPlan(input: unknown): TaskPlanValidation {
 
 export interface TaskPlanWarning {
   id: string; // Stable for the same warning/step/record, independent of supplied record order.
-  code: "past-date" | "outside-parent-range" | "duplicate-step" | "similar-parent";
+  code: "past-date" | "outside-parent-range" | "duplicate-step" | "similar-parent" | "new-person";
   message: string;
   step?: number; // Zero-based input index; messages use human step numbers.
   field?: "startDate" | "endDate";
@@ -334,6 +346,7 @@ export interface TaskPlanContext extends TaskDestinationContext {
   parentId?: string; // Caller-allocated, unused document ID; only needed for a new main task.
   order?: number; // Optional order seed. No clock, random IDs or I/O in this builder.
   calendarEnabled?: boolean; // Server configuration; absent means calendar writes are off.
+  flowRoles?: FlowRole[]; // Other names in use alongside Responsible and Informed on tasks.
 }
 
 // Only destination fields that affect the preview, for the later server-side integrity check.
@@ -473,9 +486,24 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
     }
   });
 
+  const hasResponsible = hasTaskPlanResponsible(plan);
+  const matchPerson = hasResponsible ? createTaskPersonMatcher(namesInUse([...context.tasks], [], context.flowRoles)) : undefined;
+  const newNames = new Map<string, string>();
+  const resolveResponsible = (names: string[] = []) => [...new Set(names.map((name) => {
+    const matched = matchPerson?.(name);
+    if (matched) return matched;
+    const key = nameKey(name);
+    const firstSpelling = newNames.get(key);
+    if (firstSpelling) return firstSpelling;
+    newNames.set(key, name);
+    warnings.push({ id: `new-person:${name}`, code: "new-person",
+      message: `"${name}" is not a name already in use. Confirm this spelling before adding a new person.` });
+    return name;
+  }))];
+
   if (plan.newParent) result.parent = {
     task: plan.newParent.title, taskType: plan.newParent.taskType ?? "Our Action",
-    ...(company && { linkedClientId: company.id }), responsible: [], informed: [],
+    ...(company && { linkedClientId: company.id }), responsible: resolveResponsible(plan.newParent.responsible), informed: [],
     keyPoints: [plan.newParent.keyPoints, plan.newParent.sourceUrl && `Source: ${plan.newParent.sourceUrl}`].filter(Boolean).join("\n\n"),
     startDate: plan.steps.reduce((date, step) => step.startDate < date ? step.startDate : date, plan.steps[0].startDate),
     endDate: plan.steps.reduce((date, step) => step.endDate > date ? step.endDate : date, plan.steps[0].endDate),
@@ -485,6 +513,7 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
   result.subtasks = plan.steps.map((step, i) => ({
     ...newSubtask(parent, step.name, order + i + (existing ? 0 : 1)),
     startDate: step.startDate, endDate: step.endDate,
+    responsible: resolveResponsible(step.responsible),
     keyPoints: [step.keyPoints, step.owners && `Owner: ${step.owners}`].filter(Boolean).join("\n\n"),
     ...(step.calendar && { calendar: { ...step.calendar } }),
   }));
@@ -498,7 +527,9 @@ export function buildTaskPlan(input: unknown, context: TaskPlanContext): TaskPla
     },
   };
   result.preservationNotes = [
-    "Company records and all existing subtasks stay unchanged. New records have empty Responsible and Informed; supplied owner names remain in Key points.",
+    hasResponsible
+      ? "Company records and existing subtasks stay unchanged. New records use the previewed Responsible names. Informed is empty and supplied owner prose stays in Key points."
+      : "Company records and all existing subtasks stay unchanged. New records have empty Responsible and Informed; supplied owner names remain in Key points.",
     existing ? "Every existing main-task field stays unchanged, including dates, Key points, people, type, group and status. Only the previewed subtasks are added."
       : "Only the previewed new main task and subtasks are added. The main task spans the earliest selected start and latest selected end; each subtask keeps its own dates.",
   ];

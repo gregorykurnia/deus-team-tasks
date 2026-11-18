@@ -9,8 +9,9 @@ import { calendarWritesEnabled, readTaskCalendarState, syncTaskCalendar } from "
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { wibToday } from "./followupServer";
+import { readFlowRoles } from "./taskEditServer";
 import {
-  buildTaskPlan, findTaskDestinations, taskPlanCalendarPreview, TASK_PLAN_CALENDAR_OFF, validateTaskPlan,
+  buildTaskPlan, findTaskDestinations, hasTaskPlanResponsible, taskPlanCalendarPreview, TASK_PLAN_CALENDAR_OFF, validateTaskPlan,
   type TaskPlanDestinationState, type TaskPlanInput, type TaskPlanPreview,
 } from "./taskPlan";
 import {
@@ -147,6 +148,7 @@ export async function previewTaskPlan(input: unknown, options: TaskPlanTokenOpti
   } : buildTaskPlan(plan, {
     tasks: await readTasks(), today: wibToday(), parentId: ids.parentId, calendarEnabled,
     ...(plan.kind !== "internal" && { companies: await readCompanies() }),
+    ...(hasTaskPlanResponsible(plan) && { flowRoles: await readFlowRoles() }),
   });
   if (preview.canWrite) preview.previewToken = createTaskPlanToken(preview, options);
   return preview;
@@ -220,7 +222,9 @@ export async function addTaskPlan(
     const parent = operation.snapshots[0];
     if (parent.exists()) current.set(parent.id, { ...parent.data() as NewTask, id: parent.id });
     const preview = buildTaskPlan(plan, { tasks: [...current.values()], companies, today: wibToday(), parentId: ids.parentId,
-      calendarEnabled: calendarWritesEnabled() });
+      calendarEnabled: calendarWritesEnabled(),
+      ...(hasTaskPlanResponsible(plan) && { flowRoles: await readFlowRoles(transaction) }),
+    });
     assertTaskPlanPreview(verified, preview, acknowledgedWarnings);
 
     // Keep the 499-step input cap. Firestore removed its old 500-write transaction cap on 2023-03-29;

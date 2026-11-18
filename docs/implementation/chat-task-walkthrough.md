@@ -44,10 +44,11 @@ don't invent them. The only general sequence is:
 5. Return the tool's category/company/main-task summary and absolute link. Its path is `/tasks?task=<parentId>`;
    from the app navigate **Tasks → All tasks → category → main task → subtasks**. Existing Plan views show dates too.
 
-New generic main tasks default to `Our Action` and take the earliest selected start/latest selected end. Every
-new Responsible/Informed list is empty. Supplied names are prose in Key points, never assignments. Subtasks inherit
-the main task's company/task group and use ordinary subtask defaults. Appending never changes the existing main
-task's dates/notes or old subtasks. No automatic company creation/move, editing/deleting tasks or deeper nesting.
+New generic main tasks default to `Our Action` and take the earliest selected start/latest selected end. Put
+owner-supplied team names in `responsible` on a step or on `newParent`, and review the resolved spelling and any
+`new-person` warning in the preview. Informed stays empty. Keep names outside the team in Key points using `owners`
+on a step. Subtasks inherit the main task's company and task group. Appending preserves the existing main task's
+people, dates, notes and old subtasks. No automatic company creation/move, editing/deleting tasks or deeper nesting.
 
 ## 1. Prospect follow-up, without the deal skill
 

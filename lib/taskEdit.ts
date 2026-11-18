@@ -43,9 +43,31 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
   && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const tidyName = (name: string) => name.trim().replace(/\s+/g, " ");
-const nameKey = (name: string) => tidyName(name).toLowerCase();
+export const nameKey = (name: string) => tidyName(name).toLowerCase();
 export const editsResponsibleMembership = ({ set }: TaskChange) =>
   set?.addResponsible !== undefined || set?.removeResponsible !== undefined;
+
+export function createTaskPersonMatcher(names: Iterable<string>) {
+  const byKey = new Map<string, string>();
+  for (const name of names) {
+    const key = nameKey(name);
+    if (!byKey.has(key)) byKey.set(key, name);
+  }
+  return (name: string) => byKey.get(nameKey(name));
+}
+
+export function validateTaskPersonNames(value: unknown, path: string, errors: string[]): string[] | undefined {
+  if (!Array.isArray(value)) {
+    errors.push(`${path} must be a list of names.`);
+    return;
+  }
+  const names: string[] = [];
+  for (const [i, name] of value.entries()) {
+    if (typeof name !== "string" || !name.trim()) errors.push(`${path}[${i}] must be non-empty text.`);
+    else names.push(tidyName(name));
+  }
+  return names;
+}
 
 export function validateTaskChanges(input: unknown): TaskChangesValidation {
   const errors: string[] = [];
@@ -135,8 +157,8 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
     }
     for (const field of ["responsible", "addResponsible", "removeResponsible"] as const) {
       if (!Object.hasOwn(fields, field)) continue;
-      if (!Array.isArray(fields[field])) errors.push(`${fieldPath}.${field} must be a list of names.`);
-      else set[field] = fields[field].filter((name, i): name is string => text(name, `${fieldPath}.${field}[${i}]`)).map(tidyName);
+      const names = validateTaskPersonNames(fields[field], `${fieldPath}.${field}`, errors);
+      if (names) set[field] = names;
     }
     if (set.responsible && (set.addResponsible || set.removeResponsible)) {
       errors.push(`${fieldPath}.responsible cannot be combined with addResponsible or removeResponsible.`);
@@ -248,13 +270,10 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
   if (!Number.isFinite(context.now) || context.now <= 0) errors.push("now must be positive epoch milliseconds.");
   if (errors.length) return result;
   const byId = new Map(context.tasks.map((task) => [task.id, task]));
-  const names = new Map<string, string>();
+  const matchPerson = createTaskPersonMatcher(namesInUse([...context.tasks], context.names));
   const addedNames = new Map<string, string>();
   const requestedRemovals = new Map<string, string>();
   const matchedRemovals = new Set<string>();
-  for (const name of namesInUse([...context.tasks], context.names)) {
-    if (!names.has(nameKey(name))) names.set(nameKey(name), name);
-  }
   for (const change of changes) {
     const before = byId.get(change.taskId);
     if (!before) { errors.push(`Task ${change.taskId} was not found. Find the task again.`); continue; }
@@ -266,7 +285,7 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     const set = change.set ?? {};
     const patch: Partial<NewTask> = {};
     const person = (name: string) => {
-      const stored = names.get(nameKey(name));
+      const stored = matchPerson(name);
       if (stored) return stored;
       warnings.push({ id: `new-person:${name}`, code: "new-person", taskId: before.id,
         message: `"${name}" is not a name already in use. Confirm this spelling before adding a new person.` });

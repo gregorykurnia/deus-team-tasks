@@ -651,6 +651,45 @@ describe("exact read-only task previews", () => {
   });
 });
 
+describe("Responsible in task-plan previews", () => {
+  it("uses names in use, deduplicates spellings, and preserves external names as prose", () => {
+    const input = structuredClone(TASK_PLAN_INTERNAL_NEW);
+    input.newParent!.responsible = ["   AUDREY ", "Audrey"];
+    input.steps[0].responsible = ["audrey", " FICTIONAL   EXISTING OWNER ", "fictional existing owner"];
+    input.steps[0].owners = "External contact";
+    const preview = buildTaskPlan(input, previewContext({ flowRoles: [{ label: "Responsible", names: ["Audrey"] }] }));
+    expect(preview.warnings).toEqual([]);
+    expect(preview.parent).toMatchObject({ responsible: ["Audrey"], informed: [] });
+    expect(preview.subtasks.map((task) => task.responsible)).toEqual([["Audrey", "Fictional existing owner"], []]);
+    expect(preview.subtasks[0].keyPoints).toContain("Owner: External contact");
+    expect(preview.subtasks.every((task) => task.informed.length === 0)).toBe(true);
+  });
+
+  it("previews one spelling and warning for the same new person throughout a plan", () => {
+    const input = structuredClone(TASK_PLAN_INTERNAL_NEW);
+    input.newParent!.responsible = ["New Person"];
+    input.steps[0].responsible = [" new   person ", "NEW PERSON"];
+    input.steps[1].responsible = [];
+    const preview = buildTaskPlan(input, previewContext());
+    expect(preview.warnings).toEqual([expect.objectContaining({ id: "new-person:New Person", code: "new-person" })]);
+    expect(preview.parent?.responsible).toEqual(["New Person"]);
+    expect(preview.subtasks.map((task) => task.responsible)).toEqual([["New Person"], []]);
+  });
+
+  it.each(["Audrey", null, ["  "], [42], Array(1)].map((responsible) => ({ responsible })))("refuses invalid Responsible lists or entries (%j)", ({ responsible }) => {
+    rejects(oneStep({ responsible }), "plan.steps[0].responsible");
+    rejects({ ...plan(), newParent: { ...plan().newParent, responsible } }, "plan.newParent.responsible");
+  });
+
+  it("preserves long names within the plan byte limit and rejects input over it", () => {
+    const longName = "A".repeat(8192);
+    const shown = buildTaskPlan(oneStep({ responsible: [longName] }), previewContext({ flowRoles: [{ label: "Responsible", names: [longName] }] }));
+    expect(shown.warnings).toEqual([]);
+    expect(shown.subtasks[0].responsible).toEqual([longName]);
+    rejects(oneStep({ responsible: ["A".repeat(MAX_TASK_PLAN_INPUT_BYTES)] }), "UTF-8 JSON bytes");
+  });
+});
+
 describe("task preview destination and input errors", () => {
   const noWrites = (input: unknown, context: TaskPlanContext, error: string) => {
     const preview = buildTaskPlan(input, context);

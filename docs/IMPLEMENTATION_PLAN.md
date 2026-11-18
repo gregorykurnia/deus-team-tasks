@@ -27,7 +27,7 @@ notification per save (a save holds up to 50 tasks), not one per task. Nothing c
 |---|---|---|---|
 | M1 | Edit tools: `find_tasks` paging (`offset`, `total`), `addResponsible` / `removeResponsible`, bulk guidance. [M1](implementation/responsible-from-chat.md#m1--bulk-responsible-in-the-edit-tools) [no look] | Sol Max | 2026-11-18 — checked |
 | M2 | One push per person per save: claim per task as now, send grouped. [M2](implementation/responsible-from-chat.md#m2--one-push-per-person-per-save) [no look] | Sol Max | 2026-11-18 — checked |
-| M3 | `add_task_plan` takes `responsible` per step and on a new main task; guidance and README. [M3](implementation/responsible-from-chat.md#m3--responsible-in-add_task_plan) [no look] | Sol Max | |
+| M3 | `add_task_plan` takes `responsible` per step and on a new main task; guidance and README. [M3](implementation/responsible-from-chat.md#m3--responsible-in-add_task_plan) [no look] | Sol Max | 2026-11-18 — checked |
 | M4 | Deal skill Step 5: Responsible column, names passed on, bulk offer after saving; rebuild the zip. [M4](implementation/responsible-from-chat.md#m4--the-deal-skill-passes-responsible) [no look] | Opus 5.5 High | |
 | E1 | End to end on the emulators through the connector: page, bulk add and remove, one push, plan save with Responsible. [E1](implementation/responsible-from-chat.md#e1--end-to-end-on-the-emulators) [no look] | Sol xHigh | |
 | R1 | Phase review: hunt for faults, `npm run test:smoke`, quick fixes, owner handoff. [R1](implementation/responsible-from-chat.md#r1--phase-review) [no look] | Opus 5.5 High | |

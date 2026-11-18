@@ -264,15 +264,31 @@ describe("server assignment claims and real fake-push delivery", () => {
     expect(await notice()).toEqual([]);
     expect(await pushes()).toHaveLength(1);
   });
-  it("chat plans report newly created task IDs after commit and safely revisit them on retry", async () => {
-    const plan = { kind: "internal", newParent: { title: "Main task" }, steps: [{ name: "Next action", startDate: "2027-11-19", endDate: "2027-11-20" }] };
+  it("chat plans claim and group new assignments after commit, including a retry after a lost response", async () => {
+    await storeTask({ id: "known-team-name" });
+    const plan = { kind: "internal", newParent: { title: "Main task", responsible: ["audrey"] },
+      steps: [{ name: "Next action", responsible: ["audrey"], startDate: "2027-11-19", endDate: "2027-11-20" }] };
     const options = { secret: "assignment-test-secret", now: Date.UTC(2026, 10, 17) };
     const shown = await previewTaskPlan(plan, options); expect(shown.errors).toEqual([]);
-    const observe = vi.spyOn(dispatch, "notifyAssignments");
-    const saved = await addTaskPlan(plan, shown.previewToken, shown.warnings.map((w) => w.id), options);
-    expect(observe).toHaveBeenCalledWith([saved.parentId, ...saved.subtaskIds]);
-    expect((await adminDb.doc(`assignNotices/${saved.subtaskIds[0]}`).get()).exists).toBe(true);
-    const retry = await addTaskPlan(plan, shown.previewToken, shown.warnings.map((w) => w.id), options);
-    expect(retry.alreadySaved).toBe(true); expect(observe).toHaveBeenCalledTimes(2); expect(await pushes()).toEqual([]);
+    const observe = vi.spyOn(dispatch, "notifyAssignments").mockRejectedValueOnce(new Error("Interrupted after saving"));
+    const save = () => addTaskPlan(plan, shown.previewToken, shown.warnings.map((w) => w.id), options);
+    await expect(save()).rejects.toThrow("Interrupted after saving");
+    expect(await pushes()).toEqual([]);
+    const saved = await save();
+    const [childId] = saved.subtaskIds;
+    expect(saved.alreadySaved).toBe(true);
+    expect(observe).toHaveBeenCalledWith([saved.parentId, childId]);
+    expect(await notice(saved.parentId)).toEqual(["Audrey"]);
+    expect(await notice(childId)).toEqual(["Audrey"]);
+    expect(await pushes()).toEqual([{ email: EMAIL, title: "2 new tasks for you", body: "Main task and 1 more", url: "/" }]);
+
+    const child = adminDb.doc(`tasks/${childId}`);
+    await child.update({ responsible: [] });
+    const refreshed = await previewTaskPlan(plan, options);
+    expect(refreshed.alreadySaved).toEqual(saved);
+    expect(await addTaskPlan(plan, refreshed.previewToken, [], options)).toEqual(saved);
+    expect((await child.get()).data()?.responsible).toEqual([]);
+    expect(await notice(childId)).toEqual([]);
+    expect(await pushes()).toHaveLength(1);
   });
 });

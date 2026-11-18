@@ -12,6 +12,7 @@ import { clearAll, EMULATOR_HOST, PROJECTS, readAll, readFields, seed } from "..
 import { USE_EMULATOR } from "./emulator";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
+import { findTasks } from "./taskEditServer";
 import { TASK_PLAN_CALENDAR_OFF, type TaskPlanInput } from "./taskPlan";
 import {
   addTaskPlan, findTaskPlanDestinations, previewTaskPlan, TaskPlanConflictError,
@@ -19,7 +20,7 @@ import {
 } from "./taskPlanServer";
 import { TASK_PLAN_TOKEN_TTL_MS } from "./taskPlanToken";
 import { calendarEventId, calendarKey, taskEventBody } from "./taskCalendar";
-import type { Task } from "./types";
+import type { Flow, Task } from "./types";
 
 vi.mock("./connection", () => { throw new Error("Server code must not import browser connection guards."); });
 vi.mock("googleapis", () => { throw new Error("Data tests must never load Google clients."); });
@@ -66,6 +67,105 @@ async function taskRules(content: string) {
 const preview = (plan: TaskPlanInput, clock = options) => previewTaskPlan(plan, clock);
 const save = (plan: TaskPlanInput, shown: TaskPlanServerPreview, clock = options) =>
   addTaskPlan(plan, shown.previewToken, shown.warnings.map((warning) => warning.id), clock);
+
+describe("M3 Responsible on chat-created tasks", () => {
+  const plan: TaskPlanInput = {
+    kind: "internal",
+    newParent: { ...TASK_PLAN_INTERNAL_NEW.newParent!, responsible: ["audrey"] },
+    steps: [
+      ...TASK_PLAN_INTERNAL_NEW.steps.map((step) => ({ ...step, responsible: ["audrey"] })),
+      { name: "File the notes", startDate: "2099-01-06", endDate: "2099-01-06" },
+    ],
+  };
+  const flow = (name: string): Flow => ({
+    id: "flow-with-a-team-name", name: "Fictional handover flow", order: 1, description: "",
+    steps: [{ id: "handover", title: "Handover", description: "", roles: [{ label: "Responsible", names: [name] }] }],
+  });
+
+  it("previews and saves the same Responsible lists, and binds the token to the submitted names", async () => {
+    await seed("tasks", "flows", [flow("Audrey")]);
+    const before = await readAll("tasks", "tasks");
+    const shown = await preview(plan);
+    expect(shown.warnings).toEqual([]);
+    expect(shown.parent).toMatchObject({ responsible: ["Audrey"], informed: [] });
+    expect(shown.subtasks.map((step) => step.responsible)).toEqual([["Audrey"], ["Audrey"], []]);
+    expect(await readAll("tasks", "tasks")).toEqual(before);
+    const changed = structuredClone(plan);
+    changed.steps[1].responsible = ["Different person"];
+    await expect(save(changed, shown)).rejects.toThrow(/plan changed after preview/);
+    expect(await readAll("tasks", "tasks")).toEqual(before);
+    expect(await readAll("tasks", "settings")).toEqual([]);
+
+    const result = await save(plan, shown);
+    expect(await readFields("tasks", `tasks/${result.parentId}`)).toMatchObject({ responsible: ["Audrey"], informed: [] });
+    const found = await findTasks({ parentId: result.parentId });
+    expect(found.total).toBe(3);
+    const children = new Map(found.tasks.map((task) => [task.id, task]));
+    for (const [i, id] of result.subtaskIds.entries()) {
+      expect(children.get(id)).toMatchObject({ responsible: shown.subtasks[i].responsible, informed: [] });
+    }
+  });
+
+  it("rejects an assignment for an existing main task and preserves it when appending an assigned step", async () => {
+    const parent = TASK_PLAN_INTERNAL_PARENT;
+    const append: TaskPlanInput = { kind: "internal", existingParentId: parent.id,
+      steps: [{ ...plan.steps[0], responsible: ["fictional existing owner"] }] };
+    const before = await readFields("tasks", `tasks/${parent.id}`);
+    const shown = await preview(append);
+    const invalid = { ...append, responsible: ["Audrey"] };
+    expect(await previewTaskPlan(invalid, options)).toMatchObject({ canWrite: false, errors: [expect.stringContaining("plan.responsible")] });
+    await expect(addTaskPlan(invalid, shown.previewToken, [], options)).rejects.toThrow(/plan\.responsible/);
+    const saved = await save(append, shown);
+    expect(await readFields("tasks", `tasks/${saved.subtaskIds[0]}`)).toMatchObject({ responsible: parent.responsible, informed: [] });
+    expect(await readFields("tasks", `tasks/${parent.id}`)).toEqual(before);
+  });
+
+  it("creates no tasks or receipt until the owner acknowledges the new-person warning", async () => {
+    const before = await readAll("tasks", "tasks");
+    const shown = await preview(plan);
+    expect(shown.warnings).toEqual([expect.objectContaining({ id: "new-person:audrey", code: "new-person" })]);
+    await expect(addTaskPlan(plan, shown.previewToken, [], options)).rejects.toThrow(/Unacknowledged preview warnings: new-person:audrey/);
+    expect(await readAll("tasks", "tasks")).toEqual(before);
+    expect(await readAll("tasks", "settings")).toEqual([]);
+    const saved = await save(plan, shown);
+    expect(await readFields("tasks", `tasks/${saved.parentId}`)).toMatchObject({ responsible: ["audrey"] });
+    expect(await readFields("tasks", `tasks/${saved.subtaskIds[0]}`)).toMatchObject({ responsible: ["audrey"] });
+  });
+
+  it("refuses a save when a flow spelling changes during its transaction", async () => {
+    await seed("tasks", "flows", [flow("Audrey")]);
+    const before = await readAll("tasks", "tasks");
+    const shown = await preview(plan);
+    expect(shown.parent?.responsible).toEqual(["Audrey"]);
+    let changed = false;
+    vi.mocked(firestore.runTransaction).mockImplementation((db, update, settings) => real.runTransaction(db, async (transaction) => {
+      const result = await update(transaction);
+      if (!changed && result && typeof result === "object" && "alreadySaved" in result && !result.alreadySaved) {
+        changed = true;
+        await seed("tasks", "flows", [flow("AUDREY")]);
+      }
+      return result;
+    }, settings));
+    await expect(save(plan, shown)).rejects.toThrow(/Responsible names resolved differently/);
+    expect(changed).toBe(true);
+    expect(await readAll("tasks", "tasks")).toEqual(before);
+    expect(await readAll("tasks", "settings")).toEqual([]);
+    const fresh = await preview(plan);
+    expect(fresh.parent?.responsible).toEqual(["AUDREY"]);
+    expect(await save(plan, fresh)).toMatchObject({ alreadySaved: false });
+  });
+
+  it("saves only one set of assigned tasks when the same plan arrives concurrently", async () => {
+    await seed("tasks", "flows", [flow("Audrey")]);
+    const shown = await preview(plan);
+    const [a, b] = await Promise.all([save(plan, shown), save(plan, shown)]);
+    expect([a.alreadySaved, b.alreadySaved].sort()).toEqual([false, true]);
+    expect(a.subtaskIds).toEqual(b.subtaskIds);
+    expect(await readAll("tasks", "tasks")).toHaveLength(5 + plan.steps.length + 1);
+    expect(await readAll("tasks", "settings")).toHaveLength(1);
+    expect(await readFields("tasks", `tasks/${a.subtaskIds[0]}`)).toMatchObject({ responsible: ["Audrey"] });
+  });
+});
 
 describe("M01 calendar preview activation", () => {
   const plan: TaskPlanInput = { ...TASK_PLAN_INTERNAL_NEW, steps: [
@@ -316,12 +416,14 @@ describe("general task-plan transactions", () => {
     });
   });
 
-  it.each(cases.filter(({ name }) => name.startsWith("internal")))("rolls back every task if the last subtask is refused: $name", async ({ plan }) => {
+  it.each(cases.filter(({ name }) => name.startsWith("internal")))("rolls back every task if the last subtask is refused: $name", async ({ plan: base }) => {
+    const plan = { ...base, steps: base.steps.map((step) => ({ ...step, responsible: ["fictional existing owner"] })) };
     const shown = await preview(plan);
     const before = await readAll("tasks", "tasks");
     const companies = await readAll("clients", "pipeline");
     await taskRules(`rules_version = '2'; service cloud.firestore { match /databases/{database}/documents {
       match /tasks/{id} { allow read: if true; allow write: if request.resource.data.task != '${plan.steps.at(-1)!.name}'; }
+      match /flows/{id} { allow read: if true; }
       match /settings/{id} { allow read, write: if true; }
     } }`);
     try {

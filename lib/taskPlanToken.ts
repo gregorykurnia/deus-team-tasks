@@ -66,7 +66,17 @@ function checkPreview(preview: TaskPlanPreview) {
 }
 
 const warningHash = (preview: TaskPlanPreview) => hash(canonicalJson([...new Set(preview.warnings.map((warning) => warning.id))].sort()));
-const destinationHash = (preview: TaskPlanPreview) => hash(canonicalJson(preview.destination));
+
+function previewStateHash(preview: TaskPlanPreview): string {
+  const parent = preview.parent?.responsible ?? [];
+  const steps = preview.subtasks.map((step) => step.responsible);
+  // Include the resolved spelling when assigning people. Plans without assignments keep their existing tokens.
+  const state = parent.length || steps.some((names) => names.length)
+    ? { destination: preview.destination, responsible: { parent, steps } }
+    : preview.destination;
+  return hash(canonicalJson(state));
+}
+
 const signature = (payload: string, secret: string) => createHmac("sha256", secret).update(DOMAIN).update(payload).digest("base64url");
 
 export function createTaskPlanToken(preview: TaskPlanPreview, options: TaskPlanTokenOptions = {}): string {
@@ -74,7 +84,7 @@ export function createTaskPlanToken(preview: TaskPlanPreview, options: TaskPlanT
   const { secret, now } = settings(options);
   const payload: VerifiedTaskPlanToken = {
     version: 1, issuedAt: now, expiresAt: now + TASK_PLAN_TOKEN_TTL_MS,
-    planHash: taskPlanFingerprint(preview.plan), warningsHash: warningHash(preview), destinationHash: destinationHash(preview),
+    planHash: taskPlanFingerprint(preview.plan), warningsHash: warningHash(preview), destinationHash: previewStateHash(preview),
   };
   // Only hashes and times travel in the token, never the secret or the owner's notes.
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -126,8 +136,8 @@ export function assertTaskPlanPreview(
 ): void {
   checkPreview(preview);
   if (taskPlanFingerprint(preview.plan) !== verified.planHash) throw new TaskPlanTokenError("The task plan changed after preview. Preview it again before saving.");
-  if (destinationHash(preview) !== verified.destinationHash || warningHash(preview) !== verified.warningsHash) {
-    throw new TaskPlanTokenError("The preview destination or warnings changed. Preview the plan again before saving.");
+  if (previewStateHash(preview) !== verified.destinationHash || warningHash(preview) !== verified.warningsHash) {
+    throw new TaskPlanTokenError("The preview destination or warnings changed, or the Responsible names resolved differently. Preview the plan again before saving.");
   }
   const current = new Set(preview.warnings.map((warning) => warning.id));
   if (!Array.isArray(acknowledgedWarnings) || acknowledgedWarnings.some((id) => typeof id !== "string" || !current.has(id))) {

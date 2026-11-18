@@ -1,6 +1,6 @@
 import "server-only";
 import { notifyAssignments } from "./assignNotifyDispatch.server";
-import { collection, deleteField, doc, getDocsFromServer, runTransaction, updateDoc, type DocumentData, type DocumentReference } from "firebase/firestore";
+import { collection, deleteField, doc, getDocsFromServer, runTransaction, updateDoc, type DocumentData, type DocumentReference, type Transaction } from "firebase/firestore";
 import { createHash, randomBytes } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { PipelineEntry } from "./clientTypes";
@@ -72,13 +72,17 @@ export async function findTasks(input: FindTasksInput) {
   };
 }
 
+export async function readFlowRoles(transaction?: Transaction) {
+  const { docs } = await getDocsFromServer(collection(db, "flows"));
+  const snapshots = transaction ? await Promise.all(docs.map(({ ref }) => transaction.get(ref))) : docs;
+  const flows = snapshots.filter((entry) => entry.exists()).map((entry) => ({ ...entry.data(), id: entry.id } as Flow));
+  return rolesIn(flows);
+}
+
 // Shared read context for previews; no browser listeners, cached reads or write helpers.
 export async function readTaskEditData() {
-  const [tasks, companies, snapshot] = await Promise.all([
-    readTasks(), readCompanies(), getDocsFromServer(collection(db, "flows")),
-  ]);
-  const flows = snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id } as Flow));
-  return { tasks, companies, names: namesInUse(tasks, [], rolesIn(flows)) };
+  const [tasks, companies, roles] = await Promise.all([readTasks(), readCompanies(), readFlowRoles()]);
+  return { tasks, companies, names: namesInUse(tasks, [], roles) };
 }
 
 export async function previewTaskChanges(changes: unknown) {

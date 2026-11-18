@@ -172,9 +172,24 @@ describe("canonical task-plan binding", () => {
     const verified = verifyTaskPlanToken(reverseKeys(input), token, options);
     expect(() => assertTaskPlanPreview(verified, build(reverseKeys(input)), [])).not.toThrow();
   });
+
+  it("binds the resolved Responsible lists so a changed spelling needs a fresh preview", () => {
+    const input = structuredClone(TASK_PLAN_INTERNAL_NEW);
+    input.newParent!.responsible = ["audrey"];
+    input.steps[0].responsible = ["audrey"];
+    const shown = build(input, { flowRoles: [{ label: "Responsible", names: ["Audrey"] }] });
+    const token = createTaskPlanToken(shown, options);
+    const verified = verifyTaskPlanToken(input, token, options);
+    expect(() => assertTaskPlanPreview(verified, shown, [])).not.toThrow();
+    const changed = build(input, { flowRoles: [{ label: "Responsible", names: ["AUDREY"] }] });
+    expect(changed.warnings).toEqual(shown.warnings);
+    expect(() => assertTaskPlanPreview(verified, changed, [])).toThrow(/Responsible names resolved differently/);
+  });
+
   const edits: { label: string; edit: (plan: TaskPlanInput) => void }[] = [
     { label: "step notes", edit: (p) => { p.steps[0].keyPoints += "\nOne changed line."; } },
     { label: "owner text", edit: (p) => { p.steps[0].owners = "Different fictional owner"; } },
+    { label: "step Responsible", edit: (p) => { p.steps[0].responsible = ["Audrey"]; } },
     { label: "start date", edit: (p) => { p.steps[0].startDate = "2026-12-29"; } },
     { label: "end date", edit: (p) => { p.steps[0].endDate = "2027-01-03"; } },
     { label: "step order", edit: (p) => { p.steps.reverse(); } },
@@ -186,6 +201,7 @@ describe("canonical task-plan binding", () => {
     { label: "main task title", edit: (p) => { p.newParent!.title += " changed"; } },
     { label: "main task type", edit: (p) => { p.newParent!.taskType = "Follow Up"; } },
     { label: "main task notes", edit: (p) => { p.newParent!.keyPoints += "\nChanged."; } },
+    { label: "main task Responsible", edit: (p) => { p.newParent!.responsible = ["Audrey"]; } },
     { label: "source link", edit: (p) => { p.newParent!.sourceUrl = "https://example.com/changed"; } },
   ];
   it.each(edits)("requires another preview after changing $label", ({ edit }) => {

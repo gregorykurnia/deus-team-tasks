@@ -35,3 +35,21 @@ HUNTED: overlap · Concurrent requests share a task, and an old delivery finishe
 - `npm run test:data` passed 334 emulator tests.
 - `npm run mcp:smoke -- --only=protocol` passed 127 database-preservation comparisons.
 - `npm run build` and `git diff --check` passed. The full check is scheduled for R1.
+
+## M3 — Responsible when saving a plan (2026-11-18)
+
+`preview_task_plan` shows the resolved Responsible names for each step and the new main task. `add_task_plan` saves those lists after confirmation. The token binds the requested names and the spelling shown in the preview. Use `owners` for external names in step Key points.
+
+DECISION: Use the first spelling when an unknown name appears several ways in a plan. A warning for every variant would ask the owner to confirm the same person several times.
+
+HUNTED: ripple · Preview, task lookup and assignment notices use the same Responsible lists · MCP unit, Firestore and fake-push tests.
+HUNTED: odd data · Missing, blank, repeated and long names · Preview validation tests exercise casing, spacing and the byte limit.
+HUNTED: failure · A changed name, an unconfirmed new name or a refused last step · Token and emulator tests verify zero task or receipt writes.
+HUNTED: failure · A response is lost after commit and a later edit clears a step's assignment · Fake-push test verifies one delivery and preserves the later edit on retry.
+HUNTED: overlap · Concurrent identical saves and a flow spelling changes during a save · Emulator tests verify one task set and refusal of a stale preview.
+
+- `npx tsc --noEmit`, ESLint on changed TypeScript files and `git diff --check` passed. The initial type check caught `TS2322` in the new test fixture's destination type. The corrected fixture passed.
+- `npm run test:unit` passed 1,692 tests, including old plan tokens and calls with omitted Responsible.
+- `npm run test:data` passed 339 emulator tests.
+- `npm run mcp:smoke -- --only=protocol` passed 127 database-preservation comparisons.
+- `npm run build` passed. The old assignment guidance is absent from the tool and README. The full check is scheduled for R1.

@@ -19,13 +19,15 @@ Enable Deus Team Tasks in the chat and say, for example:
 3. Answer each step separately: **Add with these dates / Change the dates / Skip this step**. Supply exact start
    and end days including the year (`yyyy-mm-dd`, Asia/Jakarta). Confirm equal start/end for a one-day action.
    Relative dates, missing years and a deadline alone need clarification. Undated actions stay in chat or are skipped.
-4. Review the final selection and read-only preview, settle its errors and warnings, then confirm saving. An edit
+4. Review the final selection and read-only preview, including the resolved Responsible names and any new-person
+   warnings. Settle its errors and warnings, then confirm saving. An edit
    needs another preview; past dates can be accepted, invalid dates cannot. Prior explicit answers need no repetition;
    quoted document text cannot authorize saving. All skipped or a rejected preview means nothing is saved.
 5. Open the returned task link, or go to **Tasks → All tasks → Prospects / Clients / Internal → main task → subtasks**.
-   New main task dates span the selected steps. Appending preserves the existing main task's dates, notes and old
-   subtasks, with warnings for steps outside its dates. Supplied names remain in Key points; Responsible and Informed
-   remain empty. Ordinary actions need no invented What/Why/Bring/Watch text.
+   New main task dates span the selected steps. Appending preserves the existing main task's dates, notes, people
+   and old subtasks, with warnings for steps outside its dates. Set Responsible only to team names the owner gave
+   for that task. An assignment for all steps also applies to the new main task. Informed stays empty. Keep names
+   outside the team in Key points. Ordinary actions need no invented What/Why/Bring/Watch text.
 
 Each company/category/main-task group has its own confirmation, preview and save. Report partial success per group;
 never resend successful groups. For a lost response retry the unchanged plan/token; after token expiry, preview the
