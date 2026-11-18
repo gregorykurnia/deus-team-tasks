@@ -35,6 +35,16 @@ describe("push service worker handlers", () => {
     await w.fire("push", { data: { json: () => ({ title: "New task for you", body: "Task\nNo deadline", url: "/?task=a%20b" }) } });
     expect(w.showNotification).toHaveBeenCalledExactlyOnceWith("New task for you", { body: "Task\nNo deadline", icon: "/icon-192x192.png", badge: "/icon-192x192.png", data: { url: "https://deus.invalid/?task=a%20b" } });
   });
+  it("shows a grouped assignment and opens Today from its notification", async () => {
+    const w = worker();
+    await w.fire("push", { data: { json: () => ({ title: "12 new tasks for you", body: "Company", url: "/" }) } });
+    expect(w.showNotification).toHaveBeenCalledExactlyOnceWith("12 new tasks for you", expect.objectContaining({
+      body: "Company", data: { url: "https://deus.invalid/" },
+    }));
+    const { data } = w.showNotification.mock.calls[0][1];
+    await w.fire("notificationclick", { notification: { data, close: vi.fn() } });
+    expect(w.openWindow).toHaveBeenCalledExactlyOnceWith("https://deus.invalid/");
+  });
   it.each([undefined, null, [], "garbage", {}, { title: " ", body: 123 }, { title: 123, url: "javascript:alert(1)" }])("still displays an empty, missing or odd payload %#", async (value) => {
     const w = worker();
     await w.fire("push", value === undefined ? {} : { data: { json: () => value } });

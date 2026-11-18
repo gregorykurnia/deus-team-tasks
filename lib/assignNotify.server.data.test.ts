@@ -4,7 +4,6 @@ import { connectAuthEmulator, getAuth, signInWithCustomToken, signOut } from "fi
 import { getDocFromServer, doc, terminate } from "firebase/firestore";
 import { deleteApp } from "firebase-admin/app";
 import { adminApp, adminDataApp, adminAuth, adminDb } from "./admin";
-import { notifyAssignedTask } from "./assignNotify.server";
 import * as dispatch from "./assignNotifyDispatch.server";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
@@ -56,6 +55,64 @@ describe("server assignment claims and real fake-push delivery", () => {
     expect((await ping()).status).toBe(200); expect(await notice()).toEqual(["Audrey"]);
     expect(await pushes()).toEqual([{ email: EMAIL, title: "New task for you", body: "Send the quote\nDeadline Sat 20 Nov · Internal", url: "/?task=task" }]);
   });
+  it("sends one chat-save notification after claiming all 12 tasks of a company", async () => {
+    await seed("clients", "pipeline", [{ id: 7, company: "Company", status: "Deal Done" }], { keepIdField: true });
+    const ids = Array.from({ length: 12 }, (_, index) => `company-task-${index}`);
+    await Promise.all(ids.map((id) => storeTask({ id, linkedClientId: 7, responsible: [] })));
+    const changes = ids.map((taskId) => ({ taskId, set: { addResponsible: ["Audrey"] } }));
+    const shown = await previewTaskChanges(changes);
+    expect(shown.errors).toEqual([]);
+    const claimsAtDelivery: number[] = [];
+    const deliver = transport.deliverPush;
+    vi.spyOn(transport, "deliverPush").mockImplementation(async (...args) => {
+      claimsAtDelivery.push((await adminDb.collection("assignNotices").get()).size);
+      await deliver(...args);
+    });
+    const save = () => applyTaskChanges(changes, shown.seen, shown.warnings.map(({ id }) => id), "http://localhost");
+    expect((await save()).tasks.map(({ taskId }) => taskId)).toEqual(ids);
+    expect((await save()).alreadySaved).toBe(true);
+    expect(claimsAtDelivery).toEqual([12]);
+    expect(await Promise.all(ids.map(notice))).toEqual(ids.map(() => ["Audrey"]));
+    expect(await pushes()).toEqual([{ email: EMAIL, title: "12 new tasks for you", body: "Company", url: "/" }]);
+  });
+  it("uses the first owed task's shortened name for two distinct companies with the same name", async () => {
+    await seed("clients", "pipeline", [7, 8].map((id) => ({ id, company: "Same name", status: "Deal Done" })), { keepIdField: true });
+    await storeTask({ id: "z-first", task: "a".repeat(70), linkedClientId: 7 });
+    await storeTask({ id: "a-second", task: "Second action", linkedClientId: 8 });
+    expect((await ping(["z-first", "a-second"])).status).toBe(200);
+    expect(await pushes()).toEqual([{
+      email: EMAIL, title: "2 new tasks for you", body: `${"a".repeat(59)}… and 1 more`, url: "/",
+    }]);
+  });
+  it("sends one push to each of two people across three tasks, skipping duplicates and missing IDs", async () => {
+    const ids = ["first", "second", "third"];
+    await Promise.all(ids.map((id) => storeTask({
+      id, task: " ", linkedClientId: 999, responsible: ["Audrey", " Ａｕｄｒｅｙ ", "Gregory", "gregory", " ", "Full Team"],
+    })));
+    expect(await dispatch.notifyAssignments(["missing", ids[0], ...ids])).toEqual([
+      { taskId: "missing", status: "missing" }, ...ids.map((taskId) => ({ taskId, status: "processed" })),
+    ]);
+    expect(await notice("missing")).toBeUndefined();
+    expect(await pushes()).toHaveLength(2);
+    expect(await pushes()).toEqual(expect.arrayContaining([EMAIL, GREG].map((email) => ({
+      email, title: "3 new tasks for you", body: "Untitled task and 2 more", url: "/",
+    }))));
+  });
+  it("counts only newly owed tasks per recipient and keeps the single-task message within a batch", async () => {
+    const companyName = "Company " + "b".repeat(62);
+    await seed("clients", "pipeline", [{ id: 7, company: companyName, status: "Deal Done" }], { keepIdField: true });
+    const ids = [task.id, ...Array.from({ length: 11 }, (_, index) => `new-${index}`)];
+    await storeTask({ responsible: ["Audrey", "Gregory"] });
+    await adminDb.doc(`assignNotices/${task.id}`).set({ notified: ["aUDRey"] });
+    await Promise.all(ids.slice(1).map((id) => storeTask({ id, linkedClientId: 7 })));
+    expect((await ping(ids)).status).toBe(200);
+    const delivered = await pushes();
+    expect(delivered).toHaveLength(2);
+    expect(delivered).toEqual(expect.arrayContaining([
+      { email: EMAIL, title: "11 new tasks for you", body: companyName.slice(0, 59) + "…", url: "/" },
+      { email: GREG, title: "New task for you", body: "Send the quote\nDeadline Sat 20 Nov · Internal", url: "/?task=task" },
+    ]));
+  });
   it("sends again only after removal has cleared the name, then re-addition", async () => {
     await storeTask(); await ping(); await storeTask({ responsible: [] }); await ping(); expect(await notice()).toEqual([]);
     await storeTask(); await ping(); await ping(); expect(await pushes()).toHaveLength(2);
@@ -79,7 +136,7 @@ describe("server assignment claims and real fake-push delivery", () => {
     expect(await notice()).toEqual(["Audrey"]); expect(await pushes()).toEqual([]);
   });
   it("does nothing for missing, deleted or oddly shaped tasks", async () => {
-    expect(await notifyAssignedTask("deleted")).toBe("missing");
+    expect(await dispatch.notifyAssignments(["deleted"])).toEqual([{ taskId: "deleted", status: "missing" }]);
     for (const responsible of [null, "Audrey", [null, " ", "Full Team", "Unlinked"]]) {
       await adminDb.doc("tasks/odd").set({ responsible }); await ping(["odd"]);
     }
@@ -89,6 +146,13 @@ describe("server assignment claims and real fake-push delivery", () => {
     await storeTask(); const responses = await Promise.all([ping(), ping(), ping()]);
     expect(responses.map((r) => r.status)).toEqual([200, 200, 200]); expect(await pushes()).toHaveLength(1);
   }, 20_000);
+  it("includes a shared task once across simultaneous bulk requests", async () => {
+    await Promise.all(["left", "shared", "right"].map((id) => storeTask({ id })));
+    const responses = await Promise.all([ping(["left", "shared"]), ping(["right", "shared"])]);
+    expect(responses.map(({ status }) => status)).toEqual([200, 200]);
+    expect((await pushes()).map(({ title }) => title).sort()).toEqual(["2 new tasks for you", "New task for you"]);
+    expect(await notice("shared")).toEqual(["Audrey"]);
+  }, 20_000);
   it("uses current parent names and company kinds, including a missing company", async () => {
     await seed("clients", "pipeline", [{ id: 7, company: "Company", status: "Deal Done" }], { keepIdField: true });
     await storeTask({ id: "parent", task: "Renamed main task", responsible: [] });
@@ -97,34 +161,76 @@ describe("server assignment claims and real fake-push delivery", () => {
     await storeTask({ id: "orphan", parentId: "deleted", linkedClientId: 999, endDate: "" }); await ping(["orphan"]);
     expect((await pushes()).find((p) => p.url === "/?task=orphan")?.body).toBe("Send the quote\nNo deadline · Internal");
   });
-  it("a failed claim is retryable without a partial record", async () => {
-    await storeTask(); vi.spyOn(adminDb, "runTransaction").mockRejectedValueOnce(new Error("unavailable"));
-    expect((await ping()).status).toBe(503); expect(await notice()).toBeUndefined(); expect(await pushes()).toEqual([]);
-    expect((await ping()).status).toBe(200); expect(await pushes()).toHaveLength(1);
+  it("sends for successful claims and retries only the failed claim in a batch", async () => {
+    const ids = [task.id, "another", "third"];
+    await Promise.all(ids.map((id) => storeTask({ id })));
+    vi.spyOn(adminDb, "runTransaction").mockRejectedValueOnce(new Error("unavailable"));
+    const failed = await ping(ids);
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toEqual({ results: [
+      { taskId: task.id, status: "failed" }, ...ids.slice(1).map((taskId) => ({ taskId, status: "processed" })),
+    ] });
+    expect(await notice()).toBeUndefined();
+    expect(await pushes()).toEqual([{ email: EMAIL, title: "2 new tasks for you", body: "Send the quote and 1 more", url: "/" }]);
+    expect((await ping(ids)).status).toBe(200);
+    expect((await ping(ids)).status).toBe(200);
+    expect(await pushes()).toHaveLength(2);
+    expect((await pushes()).find((push) => push.url === "/?task=task")?.title).toBe("New task for you");
   });
-  it("does not resend a delivery that landed but lost its response, or starve another recipient", async () => {
+  it.each([true, false])("keeps grouped claims after push failure (landed: %s) and delivers to the other recipient", async (landed) => {
     const deliver = transport.deliverPush;
-    vi.spyOn(transport, "deliverPush").mockImplementationOnce(async (...args) => { await deliver(...args); throw new Error("reply lost"); });
-    await storeTask({ responsible: ["Audrey", "Gregory"] }); expect((await ping()).status).toBe(503);
-    expect(await pushes()).toHaveLength(2); expect(await notice()).toEqual(["Audrey", "Gregory"]);
-    expect((await ping()).status).toBe(200); expect(await pushes()).toHaveLength(2);
+    const deliveries = vi.spyOn(transport, "deliverPush").mockImplementation(async (...args) => {
+      if (landed || args[0] === GREG) await deliver(...args);
+      if (args[0] === EMAIL) throw new Error("No push response");
+    });
+    const ids = [task.id, "another", "gregory"];
+    await storeTask();
+    await storeTask({ id: "another" });
+    await storeTask({ id: "gregory", responsible: ["Gregory"] });
+    const failed = await ping(ids);
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toEqual({ results: ids.map((taskId) => ({
+      taskId, status: taskId === "gregory" ? "processed" : "failed",
+    })) });
+    expect(await Promise.all(ids.map(notice))).toEqual([["Audrey"], ["Audrey"], ["Gregory"]]);
+    expect((await ping(ids)).status).toBe(200);
+    expect(deliveries).toHaveBeenCalledTimes(2);
+    expect((await pushes()).map((push) => push.email).sort()).toEqual((landed ? [EMAIL, GREG] : [GREG]).sort());
   });
-  it("a late old delivery cannot overwrite a newer assignment, and a received request survives closing the page", async () => {
-    await storeTask(); const deliver = transport.deliverPush;
+  it("survives an overlapping retry and page close without undoing newer claims when the old grouped push finishes", async () => {
+    const ids = [task.id, "another"];
+    await Promise.all(ids.map((id) => storeTask({ id })));
+    const deliver = transport.deliverPush;
     let finish!: () => void;
     vi.spyOn(transport, "deliverPush").mockImplementationOnce(async (...args) => {
       await new Promise<void>((resolve) => { finish = resolve; }); await deliver(...args);
     });
-    const controller = new AbortController(); const first = ping(undefined, undefined, controller.signal);
-    await vi.waitFor(() => expect(finish).toBeTypeOf("function")); controller.abort();
-    await storeTask({ responsible: ["Gregory"] }); expect((await ping()).status).toBe(200); expect(await notice()).toEqual(["Gregory"]);
-    finish(); expect((await first).status).toBe(200); await ping();
-    expect(await notice()).toEqual(["Gregory"]); expect((await adminDb.doc("tasks/task").get()).data()?.responsible).toEqual(["Gregory"]);
-    expect((await pushes()).map((p) => p.email).sort()).toEqual([EMAIL, GREG].sort());
+    const controller = new AbortController();
+    const first = ping(ids, undefined, controller.signal);
+    await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
+    try {
+      controller.abort();
+      expect((await ping(ids)).status).toBe(200);
+      expect(await pushes()).toEqual([]);
+      await Promise.all(ids.map((id) => storeTask({ id, responsible: ["Gregory"] })));
+      expect((await ping(ids)).status).toBe(200);
+      expect(await Promise.all(ids.map(notice))).toEqual([["Gregory"], ["Gregory"]]);
+    } finally {
+      finish();
+      expect((await first).status).toBe(200);
+    }
+    expect((await ping(ids)).status).toBe(200);
+    expect(await Promise.all(ids.map(notice))).toEqual([["Gregory"], ["Gregory"]]);
+    expect((await adminDb.doc("tasks/task").get()).data()?.responsible).toEqual(["Gregory"]);
+    const delivered = await pushes();
+    expect(delivered).toHaveLength(2);
+    expect(delivered).toEqual(expect.arrayContaining([EMAIL, GREG].map((email) => ({
+      email, title: "2 new tasks for you", body: "Send the quote and 1 more", url: "/",
+    }))));
   });
   it("stays off on direct calls, dispatch and routes", async () => {
     await storeTask(); vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "0");
-    expect(await dispatch.notifyAssignments([task.id])).toEqual([]); await notifyAssignedTask(task.id);
+    expect(await dispatch.notifyAssignments([task.id])).toEqual([]);
     expect((await ping()).status).toBe(404); expect(await pushes()).toEqual([]); expect(await notice()).toBeUndefined();
   });
   it("chat edits notify from the shared server service after commit and do not repeat on retry", async () => {

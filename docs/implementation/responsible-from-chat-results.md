@@ -18,3 +18,20 @@ HUNTED: overlap · An unchanged task changes, an outside edit matches the previe
 - `npm run test:data` passed 328 emulator tests.
 - `npm run mcp:smoke -- --only=protocol` passed 127 preservation comparisons after the tool-list assertions were updated to include the existing `find_free_times`.
 - `npm run build` and `git diff --check` passed. Playwright is deferred to the phase review under the run rules.
+
+## M2 — One push per person per save (2026-11-18)
+
+The dispatcher claims assignments per task, then sends each person one push for their newly claimed tasks in that call. A multi-task push opens Today. A single-task push keeps its message and task link.
+
+DECISION: Match company IDs for a shared-company message because matching display names would combine distinct companies with the same name.
+
+HUNTED: ripple · Chat saves and the app route use the same dispatcher, and the service worker opens Today or the linked task · Chat-save, route, and push worker tests.
+HUNTED: odd data · Missing tasks and companies, blank names, duplicate IDs and spellings, previously claimed tasks, and long names · Fake-push tests verify counts and exact copy.
+HUNTED: failure · One claim fails in a batch or the push response is lost before or after delivery · Emulator tests verify only unclaimed tasks send on retry.
+HUNTED: overlap · Concurrent requests share a task, and an old delivery finishes after a page close and a newer assignment · Emulator tests verify each assignment is claimed once and the newer claims remain current.
+
+- `npx tsc --noEmit` and ESLint on changed TypeScript files passed.
+- The unit suite passed all 1,679 cases across two runs. The sandbox returned `spawnSync … EPERM` on one test, which passed when rerun on its own.
+- `npm run test:data` passed 334 emulator tests.
+- `npm run mcp:smoke -- --only=protocol` passed 127 database-preservation comparisons.
+- `npm run build` and `git diff --check` passed. The full check is scheduled for R1.
