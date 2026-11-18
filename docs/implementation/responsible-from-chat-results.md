@@ -65,3 +65,10 @@ Checked by reading `docs/skills/deus-deal-followup/SKILL.md`:
 - Line 121: "Responsible and Informed stay empty" is now "Informed stays empty"; line 120 shows resolved names and `new-person` warnings.
 - Worked examples P6 ("Audrey for all", new main task) and P7 (per-step names, appending) are in `chat-task-walkthrough.md` under "Optional deal-skill mapping".
 - Zip rebuilt with the README command; the Done-when `diff` of the zipped SKILL.md against the folder prints nothing. `git diff --check` passed.
+
+## E1 — End to end on the emulators (2026-11-18)
+
+- `npm run mcp:smoke -- --only=protocol` passed 144 database-preservation comparisons with local Firestore and Auth, fake push and fake calendar. The first attempt hit `EPERM` on the loopback bind and passed with loopback permission.
+- The connector found all 23 open tasks across three pages, including all three subtasks and the marked parked task. Adding Audrey in batches of 20 and 3 sent one push each. Removal kept Greg and sent no push. The done task and unlinked task stayed unchanged.
+- The plan preview and saved records showed Audrey on the new main task and both steps. The fake inbox recorded one push for that save, including after retry.
+- Type checking, ESLint on both smoke scripts, `git diff --check` and the build passed. Of 1,692 unit tests, 1,691 passed on the first run. The remaining test hit `spawnSync … EPERM` and passed on its targeted rerun. All 339 Firebase data tests passed.

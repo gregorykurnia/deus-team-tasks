@@ -33,8 +33,10 @@ const SECRET = "mcp-smoke-emulator-only";
 const METHODS = ["GET", "POST", "DELETE", "HEAD", "OPTIONS", "PUT", "PATCH"];
 const ENDPOINT = `${ORIGIN}/api/mcp/${SECRET}`;
 const EMULATOR_HOST = `${HOST}:8180`;
+const AUTH_EMULATOR_HOST = `${HOST}:9199`;
 // Ignore caller overrides: every data helper and server must use this local emulator.
 process.env.FIRESTORE_EMULATOR_HOST = EMULATOR_HOST;
+process.env.FIREBASE_AUTH_EMULATOR_HOST = AUTH_EMULATOR_HOST;
 const jiti = createJiti(import.meta.url, {
   alias: { "server-only": path.join(ROOT, "node_modules/next/dist/compiled/server-only/empty.js") },
 });
@@ -109,10 +111,10 @@ for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
   process.once(signal, () => { void stopAll().finally(() => process.exit(code)); });
 }
 
-function startNext(name, secret, flag = "0", editFlag) {
+function startNext(name, secret, flag = "0", editFlag, env = {}) {
   return start(name, ["node_modules/next/dist/bin/next", "dev", "--hostname", HOST, "--port", String(PORT)], {
     MCP_SECRET: secret, MCP_TASK_PLANS_ENABLED: flag, MCP_TASK_EDITS_ENABLED: editFlag,
-    CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar",
+    CALENDAR_FAKE: "1", GOOGLE_EVENTS_CALENDAR_ID: "test-calendar", ...env,
   });
 }
 
@@ -160,9 +162,10 @@ async function connect() {
 
 try {
   // Refuse existing ports before opening rules or seeding anything.
-  for (const port of [8180, 4400, 4500, 9150, PORT]) await assertPortFree(port);
-  const emulator = start("firestore", ["node_modules/firebase-tools/lib/bin/firebase.js", "emulators:start", "--only", "firestore", "--project", "demo-deus", "--log-verbosity", "QUIET"]);
+  for (const port of [8180, 4400, 4500, 9150, PORT, ...(protocol ? [9199] : [])]) await assertPortFree(port);
+  const emulator = start("firestore", ["node_modules/firebase-tools/lib/bin/firebase.js", "emulators:start", "--only", protocol ? "firestore,auth" : "firestore", "--project", "demo-deus", "--log-verbosity", "QUIET"]);
   await ready(emulator, `http://${EMULATOR_HOST}`);
+  if (protocol) await ready(emulator, `http://${AUTH_EMULATOR_HOST}`);
   await openClientTrackerRules();
   await seed("clients", "pipeline", [company], { keepIdField: true });
 
@@ -248,8 +251,8 @@ try {
     await stop(general);
   }
   if (protocol) {
-    console.log("Checking task edits with activation on (emulator and fake calendar only).");
-    const edits = startNext("next-edits", SECRET, "1", "1");
+    console.log("Checking task edits with activation on (emulators, fake push and fake calendar only).");
+    const edits = startNext("next-edits", SECRET, "1", "1", { NEXT_PUBLIC_SIGN_IN_ENABLED: "1" });
     await ready(edits, `${ORIGIN}/api/mcp/wrong-secret`, 404);
     const editClient = await connect();
     await checkTaskEditProtocol({ client: editClient, jiti, readAll, seed, unchanged, safe,
