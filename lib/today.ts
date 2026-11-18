@@ -5,6 +5,7 @@ import type { CalendarEvent } from "./calendarEvents";
 import { addDays, dayLabel, daysBetween, isoOf, isWeekend, plural } from "./dates";
 import { kindOf, linkedCompany, type CompaniesById, type Kind } from "./kinds";
 import { isPerson } from "./people";
+import { personNameKey } from "./peopleInput";
 import { loadPerPerson, type PersonLoad } from "./planMath";
 import { fold, sortTasks } from "./taskQueries";
 import type { Task } from "./types";
@@ -232,6 +233,39 @@ export function attentionOf(tasks: DoneTask[], kind: Kind | "all", companies: Co
   }).filter((s) => s.shown.length > 0);
   const has = (key: SectionKey) => sections.some((s) => s.key === key);
   return { counts, sections, none: list.length === 0, calm: sections.length > 0 && !has("overdue") && !has("soon") };
+}
+
+/* ---------- Your tasks and Mine (N36, provisional) ---------- */
+
+// The signed-in person owns a task when they are responsible for it, matched the way the morning summary matches names
+// (case and spacing don't count).
+export function ownsTask(task: Pick<Task, "responsible">, name: string): boolean {
+  const key = personNameKey(name);
+  return !!key && Array.isArray(task.responsible) && task.responsible.some((v) => typeof v === "string" && personNameKey(v) === key);
+}
+
+export const YOURS_LIMIT = 5;
+
+export interface Yours {
+  open: number; // every open task they own
+  due: number; // of those, overdue or due in the next three days
+  summary: string; // "1 overdue · 1 due today · 2 due in the next 3 days"
+  shown: DoneTask[]; // the due ones, soonest deadline first, at most five
+  hidden: number;
+}
+
+// `tasks` are the ones to list (open, plus any just marked done on their way out), as for Needs attention.
+export function yoursOf(tasks: DoneTask[], name: string, companies: CompaniesById, today: string): Yours {
+  const mine = tasks.filter((t) => ownsTask(t, name));
+  const due = sortTasks(mine.filter((t) => ["overdue", "soon"].includes(dueBucket(t, today))), "end", "asc", { companies, today });
+  const counting = due.filter((t) => !t.completed);
+  const late = counting.filter((t) => t.endDate < today).length;
+  const now = counting.filter((t) => t.endDate === today).length;
+  const soon = counting.length - late - now;
+  const summary = [late && `${late.toLocaleString("en-GB")} overdue`, now && `${now.toLocaleString("en-GB")} due today`,
+    soon && `${soon.toLocaleString("en-GB")} due in the next 3 days`].filter(Boolean).join(" · ");
+  const { shown, hidden } = fold(due, YOURS_LIMIT);
+  return { open: mine.filter((t) => !t.completed).length, due: counting.length, summary, shown, hidden };
 }
 
 /* ---------- Calendar today ---------- */

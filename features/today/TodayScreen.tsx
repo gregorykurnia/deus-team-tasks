@@ -2,7 +2,8 @@
 
 // Today (guide 6.1): see what needs attention today and act on it. The hero says the day in a sentence, then Needs
 // attention (with quick capture) sits beside Calendar today and Who's carrying what. Every source loads on its own:
-// tasks can show while the team calendar is still loading, and the reverse.
+// tasks can show while the team calendar is still loading, and the reverse. For the signed-in person, Your tasks sits
+// above the hero and Needs attention gets a Mine toggle (N36, provisional).
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompanies, useCompaniesById, useTasks } from "@/desk/DeskData";
@@ -12,8 +13,9 @@ import { longDayLabel } from "@/lib/dates";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import { isOpen } from "@/lib/taskQueries";
 import { addTask, setTasksDone } from "@/lib/taskWrites";
-import { attentionOf, carriersOf, heroOf, twoWeeksOf, CHART_DAYS } from "@/lib/today";
+import { attentionOf, carriersOf, heroOf, ownsTask, twoWeeksOf, yoursOf, CHART_DAYS } from "@/lib/today";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
+import { useSignedIn } from "@/lib/useSignedIn";
 import Notice from "@/ui/Notice";
 import { SearchField } from "@/ui/Inputs";
 import { useToday } from "@/ui/useToday";
@@ -22,9 +24,12 @@ import CalendarToday from "./CalendarToday";
 import Hero from "./Hero";
 import NeedsAttention, { type KindChoice } from "./NeedsAttention";
 import WhoCarries from "./WhoCarries";
+import YourTasks from "./YourTasks";
 import styles from "./Today.module.css";
 
 const LEAVE_MS = 900; // the row's leaving animation: .35s of waiting, then .5s sliding and fading
+
+const personHref = (name: string) => `/plan?view=people&person=${encodeURIComponent(name)}`;
 
 export default function TodayScreen() {
   const today = useToday();
@@ -35,8 +40,10 @@ export default function TodayScreen() {
   const companies = useCompanies();
   const byId = useCompaniesById();
   const events = useCalendarEvents(today, CHART_DAYS);
+  const person = useSignedIn();
 
   const [kind, setKind] = useState<KindChoice>("all");
+  const [mine, setMine] = useState(false);
   const [search, setSearch] = useState("");
   const [leaving, setLeaving] = useState<ReadonlySet<string>>(new Set());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -64,10 +71,11 @@ export default function TodayScreen() {
     return {
       hero: heroOf(open, tasks.rows, byId, today),
       weeks: twoWeeksOf(open, eventList, byId, today),
-      attention: attentionOf(listed, kind, byId, today),
+      attention: attentionOf(mine && person ? listed.filter((t) => ownsTask(t, person.name)) : listed, kind, byId, today),
+      yours: person ? yoursOf(listed, person.name, byId, today) : null,
       people: carriersOf(open, eventList, today),
     };
-  }, [ready, open, listed, tasks.rows, byId, eventList, kind, today]);
+  }, [ready, open, listed, tasks.rows, byId, eventList, kind, today, mine, person]);
 
   function stopLeaving(id: string) {
     clearTimeout(timers.current.get(id));
@@ -142,6 +150,9 @@ export default function TodayScreen() {
           </Notice>
         </div>
       )}
+      {person && !tasksFailed && !offlineEmpty && (
+        <YourTasks name={person.name} yours={model?.yours ?? null} companies={byId} today={today ?? ""} leaving={leaving} onDone={markDone} />
+      )}
       <Hero hero={model?.hero ?? null} weeks={model?.weeks ?? null} events={events} error={tasksFailed} offline={offlineEmpty} onAdd={capture} />
       <div className={styles.board}>
         <NeedsAttention
@@ -157,6 +168,9 @@ export default function TodayScreen() {
           leaving={leaving}
           onDone={markDone}
           onAdd={capture}
+          mine={person ? mine : null}
+          onMine={setMine}
+          mineHref={person ? personHref(person.name) : ""}
         />
         <div className={styles.rail}>
           <CalendarToday events={events} today={today} offline={status === "offline"} />

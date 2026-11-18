@@ -3,7 +3,7 @@ import type { PipelineEntry } from "@/lib/clientTypes";
 import type { CalendarEvent } from "@/lib/calendarEvents";
 import { dayLabel, longDayLabel } from "@/lib/dates";
 import { companiesById, DEAL_DONE_STATUS } from "@/lib/kinds";
-import { attentionOf, carriersOf, countWord, eventsOnDay, eventTimes, heroOf, segmentShares, twoWeeksOf } from "@/lib/today";
+import { attentionOf, carriersOf, countWord, eventsOnDay, eventTimes, heroOf, ownsTask, segmentShares, twoWeeksOf, yoursOf } from "@/lib/today";
 import type { Task } from "@/lib/types";
 
 const TODAY = "2026-10-20"; // a Tuesday
@@ -200,6 +200,45 @@ describe("Needs attention (guide 6.1)", () => {
     expect(a.sections[0].shown.map((t) => t.id)).toEqual(["late1", "late2"]);
     expect(a.sections[0].count).toBe(1);
     expect(a.counts.all).toBe(1);
+  });
+});
+
+describe("Your tasks and Mine (N36)", () => {
+  const tasks = [
+    task("late", { responsible: ["Audrey"], endDate: day(-2) }),
+    task("today", { responsible: [" audrey "], endDate: TODAY }),
+    task("soon", { responsible: ["Bayu", "Audrey"], endDate: day(3) }),
+    task("later", { responsible: ["Audrey"], endDate: day(10) }),
+    task("nodate", { responsible: ["Audrey"] }),
+    task("theirs", { responsible: ["Bayu"], endDate: day(-1) }),
+    task("informed", { responsible: ["Bayu"], informed: [{ name: "Audrey" }] as Task["informed"], endDate: day(1) }),
+  ];
+
+  it("owns a task only when responsible, ignoring case and spaces", () => {
+    expect(tasks.filter((t) => ownsTask(t, "AUDREY")).map((t) => t.id)).toEqual(["late", "today", "soon", "later", "nodate"]);
+    expect(ownsTask(tasks[0], "  ")).toBe(false);
+  });
+
+  it("lists their overdue and due-soon tasks, soonest first, with a summary", () => {
+    const y = yoursOf(tasks, "Audrey", companies, TODAY);
+    expect(y.shown.map((t) => t.id)).toEqual(["late", "today", "soon"]);
+    expect(y.summary).toBe("1 overdue · 1 due today · 1 due in the next 3 days");
+    expect(y.open).toBe(5);
+    expect(y.due).toBe(3);
+  });
+
+  it("folds at five and doesn't count a task just marked done", () => {
+    const many = Array.from({ length: 7 }, (_, i) => task(`t${i}`, { responsible: ["Audrey"], endDate: day(-1 - i) }));
+    const y = yoursOf([...many, task("done", { responsible: ["Audrey"], endDate: day(-1), completed: true })], "Audrey", companies, TODAY);
+    expect(y.shown).toHaveLength(5);
+    expect(y.hidden).toBe(3);
+    expect(y.due).toBe(7);
+    expect(y.summary).toBe("7 overdue");
+  });
+
+  it("has nothing due for someone with no urgent work", () => {
+    const y = yoursOf(tasks, "Sari", companies, TODAY);
+    expect(y).toEqual({ open: 0, due: 0, summary: "", shown: [], hidden: 0 });
   });
 });
 

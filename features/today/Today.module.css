@@ -5,6 +5,26 @@
   margin-top: 14px;
 }
 
+/* ---------- Your tasks (N36) ---------- */
+.yours {
+  margin-top: var(--gap-section);
+}
+
+.yoursSummary {
+  margin: -4px 14px 10px;
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  font-weight: var(--w-semibold);
+}
+
+.mineAndKind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
 /* ---------- Hero ---------- */
 .hero {
   display: grid;
@@ -612,8 +632,13 @@ a.who:hover {
     gap: 16px;
   }
 
-  .board {
+  .board,
+  .yours {
     margin-top: 16px;
+  }
+
+  .mineAndKind {
+    display: contents;
   }
 
   .kindSwitch {

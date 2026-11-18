@@ -1,13 +1,15 @@
 "use client";
 
 // Needs attention (guide 6.1): the kind switch with counts, quick capture, then Overdue, Due in the next 3 days, Under
-// way today and Needs a date, six each at most. A task just marked done stays in its place while it leaves.
+// way today and Needs a date, six each at most. A task just marked done stays in its place while it leaves. For the
+// signed-in person, a Mine toggle narrows it to the tasks they are responsible for (N36, provisional).
 import Link from "next/link";
 import type { CompaniesById, Kind } from "@/lib/kinds";
 import { plural } from "@/lib/dates";
 import type { Attention, SectionKey } from "@/lib/today";
-import { buttonClass } from "@/ui/Button";
+import Button, { buttonClass } from "@/ui/Button";
 import EmptyState from "@/ui/EmptyState";
+import { FilterToggle } from "@/ui/FilterButton";
 import Notice from "@/ui/Notice";
 import Panel, { PanelRows } from "@/ui/Panel";
 import Segmented from "@/ui/Segmented";
@@ -45,15 +47,18 @@ interface NeedsAttentionProps {
   leaving: ReadonlySet<string>;
   onDone: (id: string) => void;
   onAdd: (text: string) => Promise<boolean>;
+  mine: boolean | null; // null when nobody is signed in: no Mine toggle
+  onMine: (on: boolean) => void;
+  mineHref: string; // the signed-in person's page on Plan, the foot's link while Mine is on
 }
 
-export default function NeedsAttention({ pending, error, offline, attention, kind, onKind, openCount, companies, today, leaving, onDone, onAdd }: NeedsAttentionProps) {
+export default function NeedsAttention({ pending, error, offline, attention, kind, onKind, openCount, companies, today, leaving, onDone, onAdd, mine, onMine, mineHref }: NeedsAttentionProps) {
   const phone = useMediaQuery("(max-width: 640px)");
   const ready = !pending && !error && attention;
   const count = (k: KindChoice) => (ready ? attention.counts[k] : undefined);
   const kindQuery = kind === "all" ? "" : `&kind=${kind}`;
 
-  const tools = (
+  const kindSwitch = (
     <div className={styles.kindSwitch}>
       <Segmented<KindChoice>
         label="Kind of work"
@@ -69,6 +74,15 @@ export default function NeedsAttention({ pending, error, offline, attention, kin
       />
     </div>
   );
+  const tools =
+    mine === null ? (
+      kindSwitch
+    ) : (
+      <div className={styles.mineAndKind}>
+        <FilterToggle label="Mine" icon="pin" pressed={mine} onClick={() => onMine(!mine)} />
+        {kindSwitch}
+      </div>
+    );
 
   let body;
   if (error) {
@@ -96,6 +110,21 @@ export default function NeedsAttention({ pending, error, offline, attention, kin
         </PanelRows>
       </>
     );
+  } else if (attention.none && mine) {
+    body = (
+      <EmptyState
+        size="small"
+        icon="done"
+        title={kind === "all" ? "None of your tasks need attention" : `None of your ${NAMES[kind].noun} tasks need attention`}
+        actions={
+          <Button variant="secondary" small onClick={() => onMine(false)}>
+            Show everyone&rsquo;s
+          </Button>
+        }
+      >
+        Nothing you are responsible for is overdue, due soon, under way or missing a date.
+      </EmptyState>
+    );
   } else if (attention.none) {
     body =
       kind === "all" || openCount === 0 ? (
@@ -122,7 +151,7 @@ export default function NeedsAttention({ pending, error, offline, attention, kin
         {attention.calm && (
           <div className={styles.calmNotice}>
             <Notice tone="success">
-              Nothing {kind === "all" ? "" : `${NAMES[kind].for} `}is overdue or due in the next three days.
+              Nothing {mine ? "of yours " : ""}{kind === "all" ? "" : `${NAMES[kind].for} `}is overdue or due in the next three days.
             </Notice>
           </div>
         )}
@@ -162,7 +191,11 @@ export default function NeedsAttention({ pending, error, offline, attention, kin
       title="Needs attention"
       tools={tools}
       foot={
-        ready && openCount > 0 ? (
+        ready && mine ? (
+          <Link href={mineHref} className={buttonClass("quiet", true)}>
+            See all your tasks
+          </Link>
+        ) : ready && openCount > 0 ? (
           <Link href="/tasks" className={buttonClass("quiet", true)}>
             All {plural(openCount, "open task")}
           </Link>
