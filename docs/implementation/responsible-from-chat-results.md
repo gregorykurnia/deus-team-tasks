@@ -72,3 +72,37 @@ Checked by reading `docs/skills/deus-deal-followup/SKILL.md`:
 - The connector found all 23 open tasks across three pages, including all three subtasks and the marked parked task. Adding Audrey in batches of 20 and 3 sent one push each. Removal kept Greg and sent no push. The done task and unlinked task stayed unchanged.
 - The plan preview and saved records showed Audrey on the new main task and both steps. The fake inbox recorded one push for that save, including after retry.
 - Type checking, ESLint on both smoke scripts, `git diff --check` and the build passed. Of 1,692 unit tests, 1,691 passed on the first run. The remaining test hit `spawnSync … EPERM` and passed on its targeted rerun. All 339 Firebase data tests passed.
+
+## R1 — Phase review (2026-11-18)
+
+Read the diff since `82e89cb`, then the tests, then this file. Hunted where the brief pointed:
+- **Paging while tasks change.** `offset` over name-then-ID order. A rename between pages shows up as a duplicate
+  (unique IDs ≠ `total`), but a task completed between pages could shift the next page past one task while the last
+  page's unique IDs still equal its smaller `total`. Fixed in the guidance: start over if `total` changes between pages.
+- **`alreadySaved` with add/remove lists.** Each membership preview adds one nonce to every stamp; apply refuses mixed
+  nonces and writes a receipt (`settings/task-edit-<hash of changes + stamps>`) in the same transaction as the tasks.
+  An exact retry returns the original changed IDs even after later edits; a failed company follow-up deletes the receipt
+  with the restore. No fault found.
+- **Push grouping under parallel saves.** Claims stay per task in their own transactions before any send, so two
+  saves racing on the same task send it once; two saves on different tasks send one push each (one per save, as the
+  brief allows). No fault found.
+- **Skill text against "No owners".** Its one exception named only the Responsible column, while the legacy fallback
+  in the same Step 5 still has an Owners column. Fixed: the exception names both; zip rebuilt, the Done-when `diff`
+  prints nothing.
+- Also checked: removal batches. A removal batch whose tasks don't have the person is an error by design; the guidance
+  now sends `removeResponsible` only to listed tasks that have that person. Calendar events don't carry Responsible, so
+  skipping calendar sync on membership-only edits is right. Subtasks inherit the company ID, so company paging finds them.
+
+Checks: `npx tsc --noEmit` and ESLint on the changed files clean; `npm run test:unit` 1,692 passed;
+Done-when zip `diff` empty. `npm run test:smoke`: all 456 tests covered, none failing. The single run hit the one-hour background limit at test 353 (338 passed, 14 skipped, 1 failed); the rest ran as `--project=phone` from `chat-task-edits` on (55 passed) and `--project=jakarta` (49 passed). The one failure, `task-sheet.spec.ts:15` (custom task types, desktop), came during a stretch of emulator connection errors in the log and passed alone; this phase didn't touch that screen.
+
+### Owner handoff
+
+1. **Reconnect (O1).** In Claude, start a new chat with Teams DEUS on; check `find_tasks` shows an `offset` input. If
+   not, remove and re-add the connector as in `docs/skills/README.md`.
+2. **Upload the skill (O2).** Customize → Skills: replace `deus-deal-followup` with `docs/skills/deus-deal-followup.zip`
+   (rebuilt in R1).
+3. **Live try (O3).** "Preview only: Audrey is responsible for all tasks related to Royal Golden Eagle". Pick the company
+   by ID; check the count equals the open RGE tasks in the app and co-owners stay. Say save, open a few tasks, and check
+   Audrey got one notification per batch (once O8 in the archived plan is done). "Undo that" removes her from only the
+   tasks that changed.

@@ -204,7 +204,8 @@ describe("T03–T05 task edit tools", () => {
       /calendar failure leaves task changes saved/, /Edits and new plans are separate saves/,
       /propose all day or start and end times labelled Suggested, checking find_free_times first.*; set calendar only to what the owner confirmed/,
       /pick the company by ID from find_task_destinations.*offset.*hasMore is false.*equal total/,
-      /addResponsible or removeResponsible.*batches of up to 50.*before → after, marking parked tasks/,
+      /Start over if total changes between pages or the unique IDs differ from it/,
+      /addResponsible on every listed task, or removeResponsible only on listed tasks that have that person.*batches of up to 50.*before → after, marking parked tasks/,
       /complete seen map.*unchanged IDs.*list the changed IDs.*undo only the changes made.*existing tasks only/,
     ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });

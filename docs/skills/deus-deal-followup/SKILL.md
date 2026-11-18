@@ -13,7 +13,7 @@ Before writing, read:
 
 ## No owners
 
-Never assign a task, gap or step to a named person or role, whether at DEUS or at the prospect, and never guess who is responsible for something. The team decides who does what. This applies everywhere in this skill: the summary's action items, the deal plan, the step-by-step path, the action list and the follow-up message. Describe what needs to happen and by when, and leave the who out. Don't add an Owner column. The one exception is Step 5's **Responsible** column, filled only from DEUS team names the user gives in Step 5; it says "Not assigned" otherwise. Never fill it from the transcript, the speakers or the team list.
+Never assign a task, gap or step to a named person or role, whether at DEUS or at the prospect, and never guess who is responsible for something. The team decides who does what. This applies everywhere in this skill: the summary's action items, the deal plan, the step-by-step path, the action list and the follow-up message. Describe what needs to happen and by when, and leave the who out. Don't add an Owner column. The one exception is Step 5's **Responsible** column (the **Owners** column in its legacy fallback), filled only from names the user gives in Step 5 (DEUS team names for Responsible); it says "Not assigned" otherwise. Never fill it from the transcript, the speakers or the team list.
 
 ## Dates
 
