@@ -50,12 +50,12 @@ the database locked) is a later plan.
   provider needs turning on; the app uses its own codes).
 - [x] O2 *owner* (key added to Vercel by Claude 2026-11-18): Firebase console → Project settings → Service accounts → **Generate new private key**. In Vercel
   Production, add `FIREBASE_ADMIN_KEY` with the whole JSON file's contents. Delete the downloaded file afterwards.
-- [ ] O3 *owner*: in Titan, create the mailbox `noreply@deushcs.com` (or pick an existing one). In Vercel Production
+- [x] O3 *owner* (2026-11-18, noreply@deushcs.com): in Titan, create the mailbox `noreply@deushcs.com` (or pick an existing one). In Vercel Production
   add `SMTP_HOST=smtp.titan.email`, `SMTP_PORT=465`, `SMTP_USER=<the mailbox>`, `SMTP_PASS=<its password>`,
   `MAIL_FROM=DEUS Space <the mailbox>`.
 - [x] O4 *owner* (done by Claude 2026-11-18, `VAPID_SUBJECT=mailto:noreply@deushcs.com`): run `npm run notify:keys` and add what it prints to Vercel Production: `CODE_SECRET`,
   `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT=mailto:<the mailbox>`.
-- [ ] O5 *owner*: add `NEXT_PUBLIC_SIGN_IN_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
+- [x] O5 *owner* (Claude, 2026-11-18): add `NEXT_PUBLIC_SIGN_IN_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
   redeploy.
 - [x] O6 *owner* (done by Claude 2026-11-18: Greg and Audrey linked): link the two logins: `npm run people:add -- gregory.kurnia@deushcs.com "<your name as on tasks>"`
   and `npm run people:add -- audrey.wijaya@deushcs.com Audrey`. Each dry run says how many tasks carry that name
