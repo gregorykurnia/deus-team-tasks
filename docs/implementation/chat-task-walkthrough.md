@@ -243,6 +243,57 @@ lines; `owners` contains only supplied names. Source becomes a parent `Source:` 
 in selected step notes and leaves parent notes untouched. Omit a missing source. Do not pass legacy-only fields to
 the general tools. The rest of the confirmation/preview/token/warning/retry sequence above is unchanged.
 
+Step 5's table has a **Responsible** column ("Not assigned" unless the owner names a DEUS team member); the skill asks
+no new question. Names reach `responsible` only from the owner's words in Step 5. Two worked examples (fictional
+company, IDs from earlier `find_task_destinations` calls; `T6`/`T7` are the returned preview tokens):
+
+**Audrey for all, new main task.** **Owner** (during Step 5): "Audrey for all." Every row's Responsible becomes
+Audrey, and because the same name covers all steps, the new main task gets it too. Plan P6:
+
+```json
+{
+  "kind": "prospect",
+  "companyId": 4101,
+  "newParent": {
+    "title": "Cedar Lantern Labs Follow Up",
+    "taskType": "Follow Up",
+    "keyPoints": "<deal short answer>",
+    "responsible": ["Audrey"]
+  },
+  "steps": [
+    {"name": "Send sample report", "startDate": "2026-12-02", "endDate": "2026-12-02", "keyPoints": "What: …\n\nWhy: …\n\nBring: None\n\nWatch: None\n\nDone when: …", "responsible": ["Audrey"]},
+    {"name": "Demo session", "startDate": "2026-12-09", "endDate": "2026-12-09", "keyPoints": "What: …\n\nWhy: …\n\nBring: …\n\nWatch: None\n\nDone when: …", "responsible": ["Audrey"], "calendar": {"startTime": "10:00", "endTime": "11:00"}}
+  ]
+}
+```
+
+`preview_task_plan({plan:P6})` → shows Responsible `Audrey` on the main task and both steps → owner confirms →
+`add_task_plan({plan:P6,previewToken:T6,acknowledgedWarnings:[]})`. If the owner had said "Audrey handles everything
+for Cedar Lantern Labs", the skill then offers once to add her to the company's other open tasks
+(`find_tasks({companyId:4101,offset:0})`, paged until `hasMore` is false → `preview_task_changes({changes:[{taskId:"<id>",set:{addResponsible:["Audrey"]}}, …]})`
+in batches of up to 50 → confirm → `apply_task_changes`). "Audrey for all" alone covers only these steps: no offer.
+
+**Per-step names, appending to an existing main task.** **Owner:** "Add under the open Cedar Lantern Labs Follow Up.
+Bima on step 1, Audrey on step 3." Step 2 stays "Not assigned". The existing main task's people never change, so the
+plan has no `responsible` for it. Plan P7:
+
+```json
+{
+  "kind": "prospect",
+  "companyId": 4101,
+  "existingParentId": "<selected main-task ID>",
+  "steps": [
+    {"name": "Send pricing note", "startDate": "2026-12-03", "endDate": "2026-12-03", "keyPoints": "What: …\n\nWhy: …\n\nBring: None\n\nWatch: None\n\nDone when: …", "responsible": ["Bima"]},
+    {"name": "Chase if no reply", "startDate": "2026-12-08", "endDate": "2026-12-08", "keyPoints": "What: …\n\nWhy: …\n\nBring: None\n\nWatch: None\n\nDone when: …"},
+    {"name": "Decision call", "startDate": "2026-12-15", "endDate": "2026-12-15", "keyPoints": "What: …\n\nWhy: …\n\nBring: …\n\nWatch: …\n\nDone when: …", "responsible": ["Audrey"], "calendar": {"startTime": "14:00", "endTime": "15:00"}}
+  ]
+}
+```
+
+`preview_task_plan({plan:P7})` → read any `new-person:<name>` warning (a name nobody uses yet) and any step outside
+the main task's dates → owner confirms and accepts each warning ID →
+`add_task_plan({plan:P7,previewToken:T7,acknowledgedWarnings:["<accepted IDs>"]})`. Step 2 saves with empty Responsible.
+
 With only the legacy trio, use **`find_company({query})` → company and each step confirmed →
 `preview_followup_plan({plan})` → warnings resolved → `add_followup_plan({plan})`**. Its plan still contains
 `companyId`, `shortAnswer`, optional `docUrl`/confirmed `existingParentId`, and steps with `name`, `startDate`,

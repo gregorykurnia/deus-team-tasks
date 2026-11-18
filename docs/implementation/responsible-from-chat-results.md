@@ -53,3 +53,15 @@ HUNTED: overlap · Concurrent identical saves and a flow spelling changes during
 - `npm run test:data` passed 339 emulator tests.
 - `npm run mcp:smoke -- --only=protocol` passed 127 database-preservation comparisons.
 - `npm run build` passed. The old assignment guidance is absent from the tool and README. The full check is scheduled for R1.
+
+## M4 — The deal skill passes Responsible (2026-11-18)
+
+Checked by reading `docs/skills/deus-deal-followup/SKILL.md`:
+- Responsible column, "Not assigned" by default, no new question: line 116 (`# | Step | Start | End | Calendar | Responsible`, "don't ask who is responsible"; names accepted at any point in Step 5).
+- Names only from the owner's words: line 16 ("No owners" keeps "never guess"; its one exception is Step 5's Responsible column, never filled from the transcript, speakers or team list) and line 119 (`responsible` only with names the user gave; `owners` for names outside DEUS).
+- Appending never sends `responsible` for the main task: line 119 ("When appending (`existingParentId`), never pass `responsible` for the main task").
+- Bulk offer after saving, only when the person covers the whole company: line 123 (step 8, offered once, company groups only, via `find_tasks` paging and `addResponsible` batches with confirmation).
+- Legacy path leaves Responsible empty and says so: lines 136 and 146.
+- Line 121: "Responsible and Informed stay empty" is now "Informed stays empty"; line 120 shows resolved names and `new-person` warnings.
+- Worked examples P6 ("Audrey for all", new main task) and P7 (per-step names, appending) are in `chat-task-walkthrough.md` under "Optional deal-skill mapping".
+- Zip rebuilt with the README command; the Done-when `diff` of the zipped SKILL.md against the folder prints nothing. `git diff --check` passed.
