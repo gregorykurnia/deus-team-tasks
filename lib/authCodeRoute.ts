@@ -20,8 +20,24 @@ export async function handleAuthCode(request: Request, kind: "code" | "verify"):
     const result = kind === "code" ? await service.requestSignInCode(body.email) : await service.verifySignInCode(body.email, body.code);
     const retry = "status" in result && (result.status === "tooMany" ? result.minutes * 60 : result.status === "wait" ? result.seconds : null);
     return Response.json(result, { status: retry ? 429 : 200, headers: retry ? { ...headers, "Retry-After": String(retry) } : headers });
-  } catch {
-    // SMTP/Auth errors can contain credentials, email content or tokens: never echo or log them.
+  } catch (error) {
+    // SMTP/Auth errors can contain credentials, email content or tokens: never echo or log their messages.
+    // Log only the type, codes and code location so production failures can be diagnosed.
+    console.error(`auth ${kind} unavailable`, safeErrorSummary(error));
     return Response.json({ status: "unavailable", error: "We couldn’t finish that request. Try again shortly." }, { status: 503, headers });
   }
+}
+
+function safeErrorSummary(error: unknown): Record<string, string> {
+  if (!(error instanceof Error)) return { type: typeof error };
+  const fields = error as Error & { code?: unknown; responseCode?: unknown; command?: unknown };
+  const summary: Record<string, string> = { name: error.name };
+  for (const key of ["code", "responseCode", "command"] as const) {
+    const value = fields[key];
+    if (typeof value === "number" || (typeof value === "string" && /^[\w./-]{1,60}$/.test(value))) summary[key] = String(value);
+  }
+  // Stack frames only (the first line repeats the message): function names and file positions.
+  const frames = (error.stack ?? "").split("\n").slice(1).map((line) => line.trim()).filter((line) => line.startsWith("at "));
+  summary.at = frames.slice(0, 4).join(" | ").slice(0, 600);
+  return summary;
 }

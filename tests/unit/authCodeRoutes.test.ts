@@ -75,7 +75,9 @@ describe("flag-gated code routes", () => {
     const response = await route(request(route === requestCode ? { email: EMAIL } : { email: EMAIL, code: "001234" }));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unavailable", error: "We couldn’t finish that request. Try again shortly." });
-    expect(error).not.toHaveBeenCalled();
+    const logged = JSON.stringify(error.mock.calls);
+    expect(error).toHaveBeenCalledTimes(1);
+    for (const secret of ["SMTP password", "001234", "private key", "token", EMAIL]) expect(logged).not.toContain(secret);
     error.mockRestore();
   });
 });
