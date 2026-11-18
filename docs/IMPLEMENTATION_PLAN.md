@@ -53,7 +53,7 @@ the database locked) is a later plan.
 - [ ] O3 *owner*: in Titan, create the mailbox `noreply@deushcs.com` (or pick an existing one). In Vercel Production
   add `SMTP_HOST=smtp.titan.email`, `SMTP_PORT=465`, `SMTP_USER=<the mailbox>`, `SMTP_PASS=<its password>`,
   `MAIL_FROM=DEUS Space <the mailbox>`.
-- [ ] O4 *owner*: run `npm run notify:keys` and add what it prints to Vercel Production: `CODE_SECRET`,
+- [x] O4 *owner* (done by Claude 2026-11-18, `VAPID_SUBJECT=mailto:noreply@deushcs.com`): run `npm run notify:keys` and add what it prints to Vercel Production: `CODE_SECRET`,
   `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT=mailto:<the mailbox>`.
 - [ ] O5 *owner*: add `NEXT_PUBLIC_SIGN_IN_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
   redeploy.
