@@ -54,6 +54,16 @@ const ICONS = {
       <circle cx="19" cy="12" r="1.6" fill="currentColor" />
     </>
   ),
+  grip: (
+    <g fill="currentColor" stroke="none">
+      <circle cx="9" cy="5" r="1.6" />
+      <circle cx="15" cy="5" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="19" r="1.6" />
+      <circle cx="15" cy="19" r="1.6" />
+    </g>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="6.5" />

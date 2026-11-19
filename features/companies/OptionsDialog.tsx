@@ -1,16 +1,17 @@
 "use client";
 
-// A choice field's options (guide 6.5, C3): each with its colour, its name, how many companies use it, and remove. A name
-// is changed in place and saved on Enter or on leaving it, and every company using it follows; the message says how
-// many. Removing asks first and says how many companies it's cleared from. The locked options (Deal done, Follow-up due,
-// and High, Not now and No: gap N9) say why, and only their colour changes. A new option is added with a colour.
-import { useEffect, useMemo, useRef, useState } from "react";
+// A choice field's options (guide 6.5, C3): each with its colour, its name, how many companies use it, and remove. Drag
+// its handle or use the arrow keys to change the order. A name is saved on Enter or on leaving it, and every company
+// using it follows. Removing asks first and says how many companies it's cleared from. The locked options (Deal done,
+// Follow-up due, and High, Not now and No: gap N9) say why, and can be recoloured and moved. A new option is added with a colour.
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
 import {
   addOption,
   CompaniesBehindError,
   LOCKED_DEPEND,
   lockReason,
+  moveOption,
   OPTION_COLOURS,
   recolourOption,
   removeOption,
@@ -34,6 +35,7 @@ import { usePending } from "./usePending";
 import styles from "./Settings.module.css";
 
 const NEW = "+new"; // the new option's row, where an error or a colour belongs to it
+const MOVE_HELP = "Drag, or use the up and down arrow keys";
 
 export interface OptionChanges {
   onRenamed?: (fieldKey: string, from: string, to: string) => void; // a filter on the old name follows it
@@ -80,6 +82,44 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
   const saving = useRef(new Set<string>()); // Enter, then leaving the field, saves once
   const newInput = useRef<HTMLInputElement>(null);
   const colours = usePending<OptionColour>();
+  // The order shown while moves save, by name. Every settings snapshot is a fresh copy, so it's compared by the names in
+  // order, not by identity. It's kept until the last queued move has saved and the stored order has moved on from
+  // what it was then (to this order, or a colleague's).
+  const storedOrder = options.map((o) => o.name).join("\n");
+  const latestStoredOrder = useRef(storedOrder);
+  useEffect(() => {
+    latestStoredOrder.current = storedOrder;
+  });
+  const [pendingOrder, setPendingOrder] = useState<{ names: string[]; settledFrom: string | null } | null>(null);
+  const movesSaving = useRef(0);
+  const moveFailed = useRef(false); // one of the queued moves didn't save
+  const showPending = pendingOrder !== null && (pendingOrder.settledFrom === null || pendingOrder.settledFrom === storedOrder);
+  const orderedOptions = useMemo(() => {
+    if (!showPending) return options;
+    const byName = new Map(options.map((o) => [o.name, o]));
+    const listed = pendingOrder.names.flatMap((name) => byName.get(name) ?? []);
+    return [...listed, ...options.filter((o) => !pendingOrder.names.includes(o.name))]; // a colleague's new option
+  }, [options, pendingOrder, showPending]);
+  const shownOrder = orderedOptions.map((o) => o.name).join("\n");
+  const optionList = useRef<HTMLDivElement>(null);
+  const cancelDrag = useRef<(() => void) | null>(null);
+  const lastMove = useRef(Promise.resolve());
+  const movedHandle = useRef<HTMLButtonElement | null>(null);
+  const moveHelpId = useId();
+  const [announcement, setAnnouncement] = useState("");
+
+  // A change from the live list can have moved, renamed or removed the row under the pointer. A snapshot that leaves
+  // the names and their order as they were doesn't let go of it.
+  useLayoutEffect(() => () => cancelDrag.current?.(), [shownOrder]);
+
+  useLayoutEffect(() => {
+    const handle = movedHandle.current;
+    movedHandle.current = null;
+    if (!handle?.isConnected) return;
+    // Moving a row in the DOM can blur its button even though the row is keyed by name.
+    if (document.activeElement === document.body) handle.focus({ preventScroll: true });
+    if (document.activeElement === handle) handle.scrollIntoView({ block: "nearest" });
+  }, [shownOrder]);
 
   // Try again runs later, maybe once the dialog is closed: it uses the companies as they are then.
   const latest = useRef(companies);
@@ -173,6 +213,151 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
     }
   }
 
+  async function move(from: number, to: number, handle: HTMLButtonElement) {
+    if (to === from || to < 0 || to >= orderedOptions.length) return;
+    const next = [...orderedOptions];
+    const [option] = next.splice(from, 1);
+    next.splice(to, 0, option);
+    movedHandle.current = handle;
+    setPendingOrder({ names: next.map((o) => o.name), settledFrom: null });
+    setAnnouncement(`${option.name} moved to ${to + 1} of ${next.length}`);
+    movesSaving.current += 1;
+
+    // If arrows are pressed quickly, the transactions still save the moves in the order they were made.
+    const save = lastMove.current.catch(() => {}).then(() => moveOption(field.key, option.name, to));
+    lastMove.current = save;
+    try {
+      await save;
+    } catch (err) {
+      moveFailed.current = true;
+      toast(failureMessage(err, "The order couldn’t be changed. Check your connection and try again."), { error: true });
+    } finally {
+      movesSaving.current -= 1;
+    }
+    if (movesSaving.current > 0) return;
+    if (moveFailed.current) {
+      moveFailed.current = false;
+      // Show the stored order again: the moves that did save are in it.
+      setPendingOrder(null);
+      setAnnouncement("The order couldn’t be changed");
+    } else {
+      // The stored order may not have caught up yet: keep this one until it moves.
+      setPendingOrder((now) => now && { ...now, settledFrom: latestStoredOrder.current });
+    }
+  }
+
+  function nudge(e: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const step = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    // A name still saving would make the move ask for the old name: the arrow waits until it has saved.
+    if (!cancelDrag.current && !saving.current.size) void move(index, index + step, e.currentTarget);
+  }
+
+  function startDrag(e: PointerEvent<HTMLButtonElement>, from: number) {
+    const list = optionList.current;
+    if (!list || e.button !== 0 || !e.isPrimary || cancelDrag.current) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const pointerId = e.pointerId;
+    // Leaving a name field saves it. While a name saves, the row isn't lifted: its move would ask for the old name.
+    handle.focus({ preventScroll: true });
+    if (saving.current.size) return;
+    handle.setPointerCapture(pointerId);
+
+    const listTop = list.getBoundingClientRect().top - list.scrollTop;
+    const rows = Array.from(list.children, (child) => {
+      const row = child as HTMLElement;
+      const { top, height, bottom } = row.getBoundingClientRect();
+      return { row, top: top - listTop, height, bottom: bottom - listTop, centre: top - listTop + height / 2 };
+    });
+    const lifted = rows[from];
+    const last = rows[rows.length - 1];
+    const step = lifted.height + parseFloat(getComputedStyle(list).rowGap);
+    const grab = e.clientY - listTop - lifted.top;
+    let clientY = e.clientY;
+    let to = from;
+    let frame = 0;
+
+    // Keep the DOM in place while the handle has the pointer. The row follows it and its neighbours make a gap.
+    const preview = () => {
+      const top = clientY - list.getBoundingClientRect().top + list.scrollTop - grab;
+      const centre = top + lifted.height / 2;
+      to = from;
+      while (to > 0 && centre <= rows[to - 1].centre) to--;
+      while (to < rows.length - 1 && centre >= rows[to + 1].centre) to++;
+
+      const liftedTop = Math.max(rows[0].top, Math.min(top, last.bottom - lifted.height));
+      const gapTop = to <= from ? rows[to].top : rows[to].bottom - lifted.height;
+      list.style.setProperty("--drop-top", `${gapTop}px`);
+      rows.forEach(({ row }, index) => {
+        let shift = 0;
+        if (index === from) shift = liftedTop - lifted.top;
+        else if (index >= to && index < from) shift = step;
+        else if (index > from && index <= to) shift = -step;
+        row.style.transform = shift ? `translateY(${shift}px)` : "";
+      });
+    };
+
+    // A long list scrolls when the pointer reaches within one handle of its top or bottom.
+    const scroll = () => {
+      frame = 0;
+      const { top, bottom } = list.getBoundingClientRect();
+      const edge = handle.offsetHeight;
+      const distance = Math.min(0, clientY - top - edge) + Math.max(0, clientY - bottom + edge);
+      const before = list.scrollTop;
+      list.scrollTop += Math.max(-edge, Math.min(edge, distance)) / 4;
+      if (list.scrollTop !== before) frame = requestAnimationFrame(scroll);
+    };
+    const track = (event: globalThis.PointerEvent) => {
+      if (event.pointerId !== pointerId || event.clientY === clientY) return;
+      clientY = event.clientY;
+      preview();
+      if (!frame) frame = requestAnimationFrame(scroll);
+    };
+    const stop = () => {
+      cancelDrag.current = null;
+      cancelAnimationFrame(frame);
+      handle.removeEventListener("pointermove", track);
+      handle.removeEventListener("pointerup", drop);
+      handle.removeEventListener("pointercancel", cancel);
+      handle.removeEventListener("lostpointercapture", cancel);
+      list.removeEventListener("scroll", preview);
+      if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+      delete list.dataset.dragging;
+      delete lifted.row.dataset.lifted;
+      list.style.removeProperty("--drop-top");
+      list.style.removeProperty("--drop-height");
+      rows.forEach(({ row }) => { row.style.transform = ""; });
+    };
+    const cancel = (event: globalThis.PointerEvent) => {
+      if (event.pointerId === pointerId) stop();
+    };
+    const drop = (event: globalThis.PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      clientY = event.clientY;
+      preview();
+      stop();
+      void move(from, to, handle);
+    };
+
+    cancelDrag.current = stop;
+    list.dataset.dragging = "";
+    lifted.row.dataset.lifted = "";
+    list.style.setProperty("--drop-height", `${lifted.height}px`);
+    preview();
+    handle.addEventListener("pointermove", track);
+    handle.addEventListener("pointerup", drop);
+    handle.addEventListener("pointercancel", cancel);
+    handle.addEventListener("lostpointercapture", cancel);
+    list.addEventListener("scroll", preview);
+  }
+
+  function close() {
+    if (cancelDrag.current) cancelDrag.current(); // Escape lets go of the row first.
+    else onClose();
+  }
+
   async function confirmRemove() {
     if (!removing || removeBusy) return;
     const o = removing;
@@ -213,25 +398,38 @@ export default function OptionsDialog({ field, settings, companies, onClose, onR
 
   return (
     <>
-      <Dialog open onClose={onClose} title={`${field.label} options`} wide initialFocus="[data-done]" actions={<Button variant="main" data-done onClick={onClose}>Done</Button>}>
+      <Dialog open onClose={close} title={`${field.label} options`} wide initialFocus="[data-done]" actions={<Button variant="main" data-done onClick={onClose}>Done</Button>}>
         <p>Renaming changes it on every company that uses it. Removing clears it from them.</p>
         {locked.length > 0 && (
           <div className={styles.noticeGap}>
             <Notice tone="info" icon="lock">
               <b>{andList(locked.map((o) => o.name))}</b> can’t be renamed or removed: {LOCKED_DEPEND[field.key] ?? "the groups depend on"} {locked.length === 1 ? "it" : "them"}.{" "}
-              {locked.length === 1 ? "Its" : "Their"} colour can change.
+              {locked.length === 1 ? "Its" : "Their"} colour and position can change.
             </Notice>
           </div>
         )}
-        <div className={styles.options}>
-          {options.map((o, i) => {
+        <span id={moveHelpId} hidden>{MOVE_HELP}</span>
+        <span className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
+        <div ref={optionList} className={styles.options}>
+          {orderedOptions.map((o, i) => {
             const n = usedBy(o);
             const tone = colours.value(o.name, o.colour);
             const err = error?.at === o.name ? error.message : null;
-            const errId = `option-error-${i}`;
+            const errId = `${moveHelpId}-error-${i}`;
             return (
-              <div key={i}>
+              <div key={o.name}>
                 <div className={styles.option}>
+                  <button
+                    type="button"
+                    className={styles.moveHandle}
+                    aria-label={`Move ${o.name}`}
+                    aria-describedby={moveHelpId}
+                    title={MOVE_HELP}
+                    onPointerDown={(e) => startDrag(e, i)}
+                    onKeyDown={(e) => nudge(e, i)}
+                  >
+                    <Icon name="grip" size={16} />
+                  </button>
                   <button
                     type="button"
                     className={styles.swatchButton}

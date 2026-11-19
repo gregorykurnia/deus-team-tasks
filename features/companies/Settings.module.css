@@ -231,6 +231,7 @@
 /* ---------- Options ---------- */
 
 .options {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -238,22 +239,77 @@
   margin-top: 16px;
   padding: 2px;
   overflow-y: auto;
+  isolation: isolate;
+}
+
+.options[data-dragging] {
+  overflow-anchor: none;
+}
+
+.options[data-dragging]::before {
+  position: absolute;
+  inset-inline: var(--sp-1);
+  top: var(--drop-top);
+  height: var(--drop-height);
+  border: 1px dashed var(--line-quiet);
+  border-radius: var(--r-s);
+  background: var(--fill);
+  pointer-events: none;
+  content: "";
+}
+
+.options > [data-lifted] {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--r-s);
+  background: var(--surface);
+  box-shadow: var(--shadow-current);
 }
 
 .option {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 104px 36px; /* the count's column is the same on every row */
-  gap: 8px;
+  grid-template-columns: 36px 38px minmax(0, 1fr) 104px 36px; /* the count's column is the same on every row */
+  gap: var(--sp-4);
   align-items: center;
 }
 
 .newRow {
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 36px 38px minmax(0, 1fr) auto;
   margin-top: 12px;
+  padding-inline: var(--sp-1);
+}
+
+.newRow > .swatchButton {
+  grid-column: 2;
 }
 
 .option input {
   height: 38px;
+}
+
+.moveHandle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-xs);
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.moveHandle:hover,
+[data-lifted] .moveHandle {
+  background: var(--fill);
+}
+
+.moveHandle:focus-visible {
+  outline-offset: calc(-1 * var(--sp-1));
+}
+
+[data-lifted] .moveHandle {
+  cursor: grabbing;
 }
 
 .swatchButton {
@@ -302,11 +358,11 @@
 }
 
 .optionError {
-  margin: 0 0 4px 46px;
+  margin: 0 0 4px calc(36px + 38px + 2 * var(--sp-4));
 }
 
 .newError {
-  margin: 6px 0 0 46px;
+  margin: 6px 0 0 calc(36px + 38px + 2 * var(--sp-4));
 }
 
 .noticeGap {
@@ -375,18 +431,40 @@
     margin-left: -8px;
   }
 
+  /* The count sits under its name: keep it close to its own row and the rows apart. */
+  .options {
+    gap: var(--sp-6);
+  }
+
   .option {
-    grid-template-columns: 38px minmax(0, 1fr) 36px;
+    column-gap: var(--sp-2);
+    row-gap: var(--sp-2);
+  }
+
+  .option:not(.newRow) {
+    grid-template-columns: 36px 38px minmax(0, 1fr) 36px;
+  }
+
+  .option .moveHandle,
+  .option .swatchButton {
+    align-self: start;
   }
 
   .option .count {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 2;
     padding-left: 4px;
   }
 
-  .newRow {
-    grid-template-columns: 38px minmax(0, 1fr) auto;
+  .option .noRemove,
+  .option > button[aria-label^="Remove"] {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .optionError,
+  .newError {
+    margin-left: calc(36px + 38px + 2 * var(--sp-2));
   }
 }
 

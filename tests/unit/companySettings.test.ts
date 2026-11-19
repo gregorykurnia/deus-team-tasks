@@ -11,6 +11,7 @@ import {
   CompaniesBehindError,
   DEFAULT_COMPANY_SETTINGS,
   fieldNameTaken,
+  moveOption,
   nearestOptionColour,
   readCompanySettings,
   recolourOption,
@@ -186,6 +187,40 @@ describe("options (C3)", () => {
   it("adds an option with its colour", async () => {
     await addOption("type", "Reseller", "pink");
     expect((await storedSettings()).options.type.at(-1)).toEqual({ name: "Reseller", colour: "pink" });
+  });
+
+  it("moves an option down and up without changing colours, other fields or company values", async () => {
+    await seed("clients", "pipeline", [co(1, { status: "Meeting Soon" })], { keepIdField: true });
+    await recolourOption("priority", "High", "pink");
+    const before = await storedSettings();
+    const [dealDone, followUp, waiting, scheduling, meeting, raw, drop] = before.options.status;
+
+    await moveOption("status", meeting.name, 6);
+    expect(await storedSettings()).toEqual({
+      ...before,
+      options: { ...before.options, status: [dealDone, followUp, waiting, scheduling, raw, drop, meeting] },
+    });
+    await moveOption("status", meeting.name, 2);
+    expect(await storedSettings()).toEqual({
+      ...before,
+      options: { ...before.options, status: [dealDone, followUp, meeting, waiting, scheduling, raw, drop] },
+    });
+    expect(await readFields("clients", "pipeline/1")).toMatchObject({ status: "Meeting Soon" });
+  });
+
+  it("moves a locked option and clamps indexes to the ends of the list", async () => {
+    const [high, medium, low] = DEFAULT_COMPANY_SETTINGS.options.priority;
+    await moveOption("priority", high.name, 100);
+    expect((await storedSettings()).options.priority).toEqual([medium, low, high]);
+    await moveOption("priority", high.name, -100);
+    expect((await storedSettings()).options.priority).toEqual([high, medium, low]);
+  });
+
+  it("rejects a move by an unknown name", async () => {
+    const save = moveOption("status", "Unknown", 0);
+    await expect(save).rejects.toBeInstanceOf(SettingsError);
+    await expect(save).rejects.toMatchObject({ problem: "notFound" });
+    expect(await readFields("tasks", "settings/companies")).toBeNull();
   });
 });
 

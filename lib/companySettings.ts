@@ -19,9 +19,9 @@ import { TASK_TYPES } from "./types";
 export const OPTION_COLOURS = ["blue", "sky", "teal", "green", "amber", "red", "violet", "pink", "slate"] as const;
 export type OptionColour = (typeof OPTION_COLOURS)[number];
 
-// The options the groups, where to act and follow-up tasks depend on: they can only be recoloured. Deal done and
-// Follow-up due are the guide's (6.5). High, Not now and No follow the same rule (R1, gap N9, provisional): where to
-// act counts High, a follow-up task takes its priority from it, and the two answers tell on hold from rejected.
+// The options the groups, where to act and follow-up tasks depend on keep their names and can be recoloured or moved.
+// Deal done and Follow-up due are the guide's (6.5). High, Not now and No follow the same rule (R1, gap N9, provisional):
+// where to act counts High, a follow-up task takes its priority from it, and the two answers tell on hold from rejected.
 export type LockedRole = "dealDone" | "followUp" | "highPriority" | "notNow" | "no";
 
 export interface ChoiceOption {
@@ -276,7 +276,7 @@ async function companiesFollow(write: () => Promise<number>): Promise<number> {
   }
 }
 
-const lockedMessage = (o: ChoiceOption) => `“${o.name}” can’t be renamed or removed: ${lockReason(o.role!).toLowerCase()}. Its colour can change.`;
+const lockedMessage = (o: ChoiceOption) => `“${o.name}” can’t be renamed or removed: ${lockReason(o.role!).toLowerCase()}. Its colour and position can change.`;
 
 export async function addOption(fieldKey: string, name: string, colour: OptionColour): Promise<void> {
   await changeSettings(`No connection. The ${fieldKey === "taskType" ? "task type" : "option"} wasn't added.`, (s) => {
@@ -287,6 +287,15 @@ export async function addOption(fieldKey: string, name: string, colour: OptionCo
 export async function recolourOption(fieldKey: string, name: string, colour: OptionColour): Promise<void> {
   await changeSettings("No connection. The colour wasn't changed.", (s) => {
     findOption(s, fieldKey, name).colour = colour;
+  });
+}
+
+export async function moveOption(fieldKey: string, name: string, toIndex: number): Promise<void> {
+  await changeSettings("No connection. The order wasn't changed.", (s) => {
+    const option = findOption(s, fieldKey, name);
+    const options = optionsOf(s, fieldKey);
+    options.splice(options.indexOf(option), 1);
+    options.splice(Math.max(0, Math.min(toIndex, options.length)), 0, option);
   });
 }
 

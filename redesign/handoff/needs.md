@@ -1,4 +1,4 @@
-Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15, N16, N17, N18, N19, N20, N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32, N33, N34, N35
+Open needs: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15, N16, N17, N18, N19, N20, N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, N31, N32, N33, N34, N35, N36, N37
 
 # Needs
 
@@ -42,3 +42,4 @@ Design gaps found after the design was approved, written as job stories.
 | N34 | When I'm signed in on my iPhone, I want to turn on notifications from the app, be told what to do when I'm in Safari instead of the Home Screen app, when I blocked them or when my iPhone is too old, and send myself a test, so that I know notifications will actually reach me. On a computer I need equivalent browser instructions. A5 uses existing Notice and button parts for the separate unsupported version and desktop blocked instructions; these still need studio review. | Owner, 2026-11-17 | open |
 | N35 | When someone makes me Responsible for a task, I want a notification on my phone right away, and on weekday mornings a summary of what's late, due today and due tomorrow, that opens the task or my tasks when I tap it, so that I don't miss work given to me or deadlines coming up. | Owner, 2026-11-17 | open |
 | N36 | When I'm signed in and open Today, I want to see straight away which of my own tasks are late or due in the next few days, and be able to narrow Needs attention to only my tasks, so that I don't have to pick my work out of the whole team's list. Uses the copy rule 2 change in N33 ("your" for the signed-in person). | Owner, 2026-11-18 | open |
+| N37 | When I edit a choice field, I want to move options by dragging or using the arrow keys, so that the menu, filter and sort follow the team's order. Option reorder handle in the options dialog (built provisionally with existing tokens, 2026-11-19). | Owner, 2026-11-19 | open |
