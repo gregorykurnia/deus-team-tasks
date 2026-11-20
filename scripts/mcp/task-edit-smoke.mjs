@@ -100,6 +100,126 @@ export async function checkTaskEditProtocol(context) {
   });
   console.log("Task edits MCP: find/current fields, read-only previews, warning confirmation, whole-list stale refusal, exact save and no-write retry passed.");
   await checkCompanyResponsible(context, base);
+  await checkCompanyGroups(context, base);
+}
+
+async function checkCompanyGroups(context, base) {
+  const { origin, readAll, seed, unchanged } = context;
+  const { call, read, refuse } = toolsFor(context);
+  const name = "Smoke Partners";
+  const newName = "Smoke Allies";
+  const company = { id: 9355, company: "PT Fiktif MCP Groups" };
+  const companyTask = { ...base, linkedClientId: company.id, responsible: ["Audrey"] };
+  delete companyTask.taskGroup;
+  const main = Array.from({ length: 50 }, (_, index) => {
+    const suffix = String(index + 1).padStart(2, "0");
+    return { ...companyTask, id: `mcp-group-main-${suffix}`, task: `Fictional group main ${suffix}`, order: 600 + index,
+      ...(index === 0 ? { parkedAt: Date.UTC(2026, 10, 1), parkedUntil: null } : {}) };
+  });
+  const children = main.slice(0, 5).map((parent, index) => ({
+    ...companyTask, id: `${parent.id}-child`, task: `Fictional group step ${index + 1}`, parentId: parent.id,
+    order: 650 + index, ...(index === 0 ? { calendar: {} } : {}),
+  }));
+  const done = { ...companyTask, id: "mcp-group-done", task: "Fictional group finished action", completed: true };
+  await seed("clients", "pipeline", [company], { keepIdField: true });
+  await seed("tasks", "tasks", [...main, ...children, done]);
+  const sideEffects = () => Promise.all([readAll("tasks", "_fakePush"), readAll("tasks", "testCalendarEvents"),
+    readAll("clients", "pipeline")]);
+  const originalSideEffects = await sideEffects();
+
+  async function findAll(filters, total) {
+    const tasks = [];
+    for (let offset = 0; offset < total; offset += 10) {
+      const page = await read("find_tasks", { companyId: company.id, ...filters, offset });
+      assert.equal(page.total, total);
+      assert.equal(page.tasks.length, Math.min(10, total - offset));
+      assert.equal(page.hasMore, offset + page.tasks.length < total);
+      tasks.push(...page.tasks);
+    }
+    return tasks;
+  }
+
+  async function apply(changes, patch) {
+    const shown = await read("preview_task_changes", { changes });
+    assert.equal(shown.canWrite, true);
+    assert.deepEqual(shown.errors, []);
+    assert.deepEqual(shown.warnings, []);
+    assert.deepEqual(shown.unchanged ?? [], []);
+    assert.deepEqual(shown.tasks.map(({ taskId, patch: shownPatch }) => ({ taskId, patch: shownPatch })),
+      changes.map(({ taskId }) => ({ taskId, patch })));
+    const args = editSaveArgs(changes, shown);
+    const saved = await call("apply_task_changes", args);
+    assert.equal(saved.alreadySaved, false);
+    assert.deepEqual(saved.tasks, changes.map(({ taskId }) => ({ taskId, saved: true, deleted: false,
+      url: `${origin}/tasks?task=${taskId}`, calendar: null })));
+    return { args, saved };
+  }
+
+  const created = await call("change_task_group", { action: "create", name });
+  assert.equal(created.created, true);
+  assert.ok(created.id);
+  const groups = async () => (await read("list_task_groups", {})).groups;
+  const groupRow = async () => (await groups()).find(({ id }) => id === created.id);
+  assert.deepEqual(await groupRow(), { id: created.id, name, starred: false, openTasks: 0, taskCount: 0 });
+  await refuse("group name already taken, ignoring case", "change_task_group", { action: "create", name: name.toLowerCase() }, /already exists/);
+
+  const found = await findAll({}, 55);
+  assert.deepEqual(found.map(({ id }) => id), [...main, ...children].map(({ id }) => id));
+  assert.deepEqual(found.filter(({ parked }) => parked).map(({ id }) => id), [main[0].id]);
+  const foundMain = found.filter(({ mainTask }) => mainTask === null);
+  for (const parent of foundMain) {
+    assert.deepEqual(parent.subtasks.map(({ id }) => id), children.filter(({ parentId }) => parentId === parent.id).map(({ id }) => id));
+  }
+  const picked = [...foundMain, ...foundMain.flatMap(({ subtasks }) => subtasks)].map(({ id }) => id);
+  assert.deepEqual(picked, found.map(({ id }) => id));
+  const move = (ids, taskGroup) => apply(ids.map((taskId) => ({ taskId, set: { taskGroup } })),
+    taskGroup === null ? {} : { taskGroup: name });
+  const firstBatch = await move(picked.slice(0, 50), name.toLowerCase());
+  await move(picked.slice(50), name);
+
+  const grouped = await findAll({ group: name, includeDone: true }, 55);
+  assert.deepEqual(grouped.map(({ id }) => id), picked);
+  assert.ok(grouped.every(({ taskGroup }) => taskGroup === name));
+  assert.deepEqual(grouped.filter(({ parked }) => parked).map(({ id }) => id), [main[0].id]);
+  assert.deepEqual(grouped.flatMap(({ subtasks }) => subtasks.map(({ id, taskGroup }) => ({ id, taskGroup }))),
+    children.map(({ id }) => ({ id, taskGroup: name })));
+  const parkedCount = await groupRow();
+  assert.deepEqual(parkedCount, { id: created.id, name, starred: false, openTasks: 54, taskCount: 55 });
+
+  // Search includes parked tasks for bulk moves; the app's open count includes them once unparked.
+  await apply([{ taskId: main[0].id, set: { parked: false } }], {});
+  const allOpen = await groupRow();
+  assert.deepEqual(allOpen, { ...parkedCount, openTasks: 55 });
+  const cleared = picked.slice(0, 2);
+  await move(cleared, null);
+  assert.deepEqual((await findAll({ group: null }, 2)).map(({ id }) => id), cleared);
+
+  const remaining = await groupRow();
+  assert.deepEqual(remaining, { ...allOpen, openTasks: 53, taskCount: 53 });
+  const rename = { action: "rename", name, newName, taskCount: remaining.taskCount };
+  assert.deepEqual(await call("change_task_group", rename), { renamed: true, name: newName, tasksMoved: 53 });
+  assert.deepEqual(await groupRow(), { ...remaining, name: newName });
+  assert.ok((await groups()).every((group) => group.name !== name));
+  assert.deepEqual((await findAll({ group: newName }, 53)).map(({ id }) => id), picked.slice(2));
+  await unchanged("group move retry after rename and clearing", async () => {
+    assert.deepEqual(await call("apply_task_changes", firstBatch.args), { ...firstBatch.saved, alreadySaved: true });
+  });
+
+  const deletion = { action: "delete", name: newName, taskCount: remaining.taskCount };
+  await refuse("stale group deletion", "change_task_group", { ...deletion, taskCount: allOpen.taskCount }, /count.*changed from 55 to 53/);
+  assert.deepEqual(await call("change_task_group", deletion), { deleted: true, name: newName, tasksUngrouped: 53 });
+  assert.ok((await groups()).every((group) => group.id !== created.id && group.name !== newName));
+  assert.deepEqual((await findAll({ group: null }, 55)).map(({ id }) => id), picked);
+  await unchanged("group delete retry", async () => {
+    assert.deepEqual(await call("change_task_group", deletion), { alreadyDone: true });
+  });
+  const stored = new Map((await readAll("tasks", "tasks")).map((task) => [task.id, task]));
+  const unparked = { ...main[0] };
+  delete unparked.parkedAt;
+  delete unparked.parkedUntil;
+  for (const task of [unparked, ...main.slice(1), ...children, done]) assert.deepEqual(stored.get(task.id), task, task.id);
+  assert.deepEqual(await sideEffects(), originalSideEffects, "Group edits must preserve push, calendar and company data.");
+  console.log("Company groups MCP: moved 55 in two batches, kept subtasks and company links, renamed 53, refused stale deletion, and ungrouped all 53 on delete.");
 }
 
 async function checkCompanyResponsible(context, base) {

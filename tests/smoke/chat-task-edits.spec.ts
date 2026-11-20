@@ -8,6 +8,7 @@ import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { calendar_v3 } from "googleapis";
 import type { TaskChange, TaskChangesPreview } from "../../lib/taskEdit";
 import type { FindTasksInput, TaskChangesSaved, findTasks } from "../../lib/taskEditServer";
+import type { listTaskGroups } from "../../lib/taskGroupServer";
 import { EMULATOR_HOST } from "../support/emulator";
 import { test as base, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedGroups, seedTasks, stored, storedById, task } from "./data";
@@ -296,4 +297,45 @@ test("HTTP moves show the new parent, freeing makes a main task, and deleting a 
   await expect(rows.filter({ has: page.getByRole("link", { name: survivor.task, exact: true }) })).not.toHaveAttribute("data-sub");
   await expect(rows.filter({ has: page.getByRole("link", { name: parent.task, exact: true }) })).toHaveCount(0);
   expect((await find(edits, { query: survivor.task })).tasks[0].mainTask).toBeNull();
+});
+
+test("HTTP group moves show on the group page and an HTTP rename updates the group list", async ({ page, edits }) => {
+  const name = "Fictional chat partners";
+  const newName = "Fictional chat allies";
+  const moved = [
+    task("chat-group-brief", { task: "Write the partner brief" }),
+    task("chat-group-call", { task: "Arrange the partner call" }),
+    task("chat-group-notes", { task: "Review the partner notes" }),
+  ];
+  await seedTasks([...moved, task("chat-group-other", { task: "Book the office meeting" })]);
+  const created = await call<{ created: boolean; id: string }>(edits, "change_task_group", { action: "create", name });
+  expect(created).toMatchObject({ created: true, id: expect.any(String) });
+  await save(edits, moved.map(({ id }) => ({ taskId: id, set: { taskGroup: name } })));
+
+  await page.goto("/tasks");
+  const groupList = page.getByRole("region", { name: "Task groups", exact: true });
+  const groupLink = (label: string) => groupList.getByRole("link").filter({ has: page.getByText(label, { exact: true }) });
+  const groupUrl = `/tasks/groups/${created.id}`;
+  await expect(groupLink(name)).toHaveAttribute("href", groupUrl);
+  await groupLink(name).click();
+  // The dev server compiles the group route on first navigation.
+  await expect(page).toHaveURL(groupUrl, { timeout: 40_000 });
+
+  async function expectGroupContents(label: string) {
+    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible();
+    const rows = page.getByRole("region", { name: label, exact: true }).getByRole("article");
+    await expect(rows).toHaveCount(3);
+    for (const entry of moved) {
+      await expect(rows.getByRole("link", { name: entry.task, exact: true })).toBeVisible();
+    }
+  }
+  await expectGroupContents(name);
+
+  const { groups } = await call<Awaited<ReturnType<typeof listTaskGroups>>>(edits, "list_task_groups", {});
+  expect(groups).toEqual([{ id: created.id, name, starred: false, openTasks: 3, taskCount: 3 }]);
+  expect(await call(edits, "change_task_group", { action: "rename", name, newName, taskCount: groups[0].taskCount }))
+    .toEqual({ renamed: true, name: newName, tasksMoved: 3 });
+  await expect(groupLink(newName)).toHaveAttribute("aria-current", "page");
+  await expect(groupLink(name)).toHaveCount(0);
+  await expectGroupContents(newName);
 });

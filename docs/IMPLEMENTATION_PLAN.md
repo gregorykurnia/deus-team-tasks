@@ -26,7 +26,7 @@ it says how many tasks follow. Nothing changes on screen, and calls without the 
 |---|---|---|---|
 | G1 | New `list_task_groups` and `change_task_group` (create, rename, star, unstar, delete; atomic, task-count guard). [G1](implementation/groups-from-chat.md#g1--the-group-tools) [no look] | Sol Max | 2026-11-20 — group tools checked |
 | G2 | Edit tools: `set.taskGroup` (name or null), `find_tasks` `group` filter, bulk guidance. [G2](implementation/groups-from-chat.md#g2--move-tasks-between-groups-in-the-edit-tools) [no look] | Sol Max | 2026-11-20 — group edits and search checked |
-| E1 | End to end on the emulators: smoke section (55 tasks, two batches, rename, stale and real delete) and a browser test that the app shows chat-moved tasks in the group. [E1](implementation/groups-from-chat.md#e1--end-to-end-on-the-emulators) [no look] | Sol xHigh | |
+| E1 | End to end on the emulators: smoke section (55 tasks, two batches, rename, stale and real delete) and a browser test that the app shows chat-moved tasks in the group. [E1](implementation/groups-from-chat.md#e1--end-to-end-on-the-emulators) [no look] | Sol xHigh | 2026-11-20 — connector and browser checked |
 | R1 | Phase review: hunt for faults, the group screens' Playwright specs, quick fixes, owner handoff. [R1](implementation/groups-from-chat.md#r1--phase-review) [no look] | Opus 5.5 High | |
 
 ## Owner steps after the run

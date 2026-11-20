@@ -18,3 +18,11 @@ Chat can preview and save group moves or clear a task's group in batches of 50. 
 - The first `npm run test:data` passed 367 of 370 cases. The overlapping Responsible save returned `Tasks changed since the preview: parent` because it read the receipt before a concurrent commit. The receipt check now follows the task reads. Two existing push and calendar cases reported `Test timed out in 5000ms.`
 - All 71 focused task-edit and group emulator tests passed after the fix, including both forms of the receipt race, destination renames during a transaction, rollback and retries. The two timed-out cases also passed on rerun with a 15-second limit.
 - The local Webpack production build passed using the cached Plus Jakarta Sans font.
+
+## E1 — End to end on the emulators
+
+- `npm run mcp:smoke -- --only=protocol` passed 188 database-preservation comparisons. It paged 55 company tasks, previewed and moved batches of 50 and 5, cleared 2, renamed the remaining 53, refused a stale count of 55, and deleted the group with 53 members. It checked subtasks, the done task, company links, fake push and calendar records, and safe retries.
+- The bulk move included the parked main task. The group listed 54 open and 55 total, then 55 open after the test unparked it.
+- `chat-task-edits.spec.ts` passed all 12 existing cases in the full run. The new case timed out at 10 seconds on the first group route load. The focused rerun passed with a longer navigation allowance, showing all three tasks and the renamed group in the open app.
+- Type checking, ESLint, all 1,718 unit tests, and all 372 Firestore data tests passed.
+- An isolated Webpack production build passed with the cached Plus Jakarta Sans font.
