@@ -134,6 +134,7 @@ describe("G1 task group transactions", () => {
     expect(committed).toEqual(before.map((task) => ({ ...task, taskGroup: "Allies" })));
     await expect(changeTaskGroup(rename)).resolves.toEqual({ alreadyDone: true });
     expect(await rows()).toEqual(committed);
+    await expect(changeTaskGroup({ ...rename, name: "Partnres", taskCount: 1 })).rejects.toThrow(/could not be found/);
     await changeTaskGroup({ ...rename, name: "Allies", newName: "Operations" });
     await expect(changeTaskGroup(rename)).rejects.toThrow(/could not be found/);
     expect(await rows()).toEqual(before.map((task) => ({ ...task, taskGroup: "Operations" })));

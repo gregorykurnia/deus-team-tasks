@@ -94,7 +94,10 @@ export async function changeTaskGroup(input: ChangeTaskGroupInput) {
 
     const name = matchTaskGroupName(input.name, names);
     if (!name) {
-      if (action === "delete" || (action === "rename" && names.includes(newName))) return { alreadyDone: true };
+      // A repeated rename finds the confirmed tasks under the new name; any other group with that name is not this one.
+      const renamed = action === "rename" && names.includes(newName)
+        && tasks.filter((task) => task.taskGroup === newName).length === taskCount;
+      if (action === "delete" || renamed) return { alreadyDone: true };
       throw new TaskGroupError(`Group “${input.name}” could not be found. Use list_task_groups to check its current name.`);
     }
     const groupRecords = records.filter((record) => record.name === name);
