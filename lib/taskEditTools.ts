@@ -4,14 +4,17 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { MAX_TASK_CHANGES, TASK_EDIT_SEEN, validateTaskChanges } from "./taskEdit";
 import { applyTaskChanges, findTasks, previewTaskChanges, TaskEditError } from "./taskEditServer";
+import { isTaskGroupName, TaskGroupError } from "./taskGroupModel";
 
 export const taskEditsEnabled = () => process.env.MCP_TASK_EDITS_ENABLED === "1";
 
 // Repeat this in every description: clients may omit initialize instructions.
 export const TASK_EDIT_CHAT_GUIDANCE = "Use find_tasks to find the task and show what it holds now; show each proposed change as before → after, one task at a time. Never guess dates, times, people or which task is meant: ask for missing details or show matches for the owner to select by ID. Use confirmed yyyy-mm-dd dates and, for timed calendar events, both HH:MM times in Asia/Jakarta. To put a task on the calendar or change its time, you may propose all day or start and end times labelled Suggested, checking find_free_times first when it is available and saying when a time is unchecked; set calendar only to what the owner confirmed. The saved change updates the task and its Google Calendar event together; never use a separate calendar connector for a task's event. Call preview_task_changes with only explicitly listed tasks; a preview writes nothing and is not consent. Show every warning and get explicit confirmation of the exact changes and every warning, naming every task to delete one by one. Then call apply_task_changes with the unchanged list, all preview seen stamps (including freed subtasks) and acknowledgedWarnings IDs. If a task changed since preview, preview again and get confirmation again. Retry an uncertain save with the exact same list and stamps. Report each task's save/delete result and calendar result honestly, including failures; a calendar failure leaves task changes saved. Edits and new plans are separate saves." +
-  " For bulk Responsible edits, have the owner pick the company by ID from find_task_destinations. Use find_tasks with that companyId and page with offset (initially 0, then advance by the page length) until hasMore is false and unique top-level result IDs equal total. Start over if total changes between pages or the unique IDs differ from it. Include parked tasks and include done tasks only if requested. Use addResponsible on every listed task, or removeResponsible only on listed tasks that have that person, in batches of up to 50. Label each batch and show one compact table with task, main task and Responsible before → after, marking parked tasks. Report unchanged IDs separately and pass the preview's complete seen map with the same changes, including unchanged IDs. After saving, list the changed IDs and use the actual before and after lists to undo only the changes made. Say the save covers existing tasks only.";
+  " For bulk Responsible edits, have the owner pick the company by ID from find_task_destinations. Use find_tasks with that companyId and page with offset (initially 0, then advance by the page length) until hasMore is false and unique top-level result IDs equal total. Start over if total changes between pages or the unique IDs differ from it. Include parked tasks and include done tasks only if requested. Use addResponsible on every listed task, or removeResponsible only on listed tasks that have that person, in batches of up to 50. Label each batch and show one compact table with task, main task and Responsible before → after, marking parked tasks. Report unchanged IDs separately and pass the preview's complete seen map with the same changes, including unchanged IDs. After saving, list the changed IDs and use the actual before and after lists to undo only the changes made. Say the save covers existing tasks only." +
+  " For bulk group moves, look up the stored names with list_task_groups and use set.taskGroup with the chosen name or null to clear it. For a company-wide move, have the owner pick the company by ID from find_task_destinations and page through find_tasks with that companyId as above. Include each selected main task's open subtasks by default, deduplicate by task ID, include parked tasks, and include done tasks only when requested. The owner can remove subtasks from the list before confirming. Preview in batches of up to 50 and show one compact table with task, main task and group before → after, marking parked tasks. Save the confirmed batches separately using each preview's complete seen map, including unchanged IDs.";
 
 const text = z.string().trim().min(1, "Enter non-empty text.");
+const groupName = z.string().refine(isTaskGroupName, "Enter a group name.").nullable().optional();
 const changes = z.array(z.object({
   taskId: z.string().describe("The exact task ID returned by find_tasks."),
   set: z.object({
@@ -25,6 +28,7 @@ const changes = z.array(z.object({
     addResponsible: z.array(z.string()).optional().describe("Add these names and keep existing people. Cannot be used with responsible."),
     removeResponsible: z.array(z.string()).optional().describe("Remove these names and keep the others. Cannot be used with responsible."),
     informed: z.array(z.object({ name: z.string(), note: z.string().optional() }).strict()).optional(),
+    taskGroup: groupName.describe("An existing group name, or null to take the task out of its group."),
     calendar: z.object({ startTime: z.string().optional(), endTime: z.string().optional() }).strict().nullable().optional()
       .describe("{} for all day, both confirmed HH:MM times in Asia/Jakarta, or null to take off the calendar."),
   }).strict().optional(),
@@ -40,10 +44,11 @@ export const taskEditToolInputs = {
     query: text.optional().describe("Case-insensitive text in task names or Key points."),
     companyId: z.number().int().nonnegative().optional().describe("The stored numeric company ID."),
     parentId: text.optional().describe("Find subtasks of this exact main-task ID."),
+    group: groupName.describe("An existing group name, or null to find ungrouped tasks."),
     includeDone: z.boolean().optional().default(false),
     offset: z.number().int().nonnegative().optional().default(0).describe("Number of matching results to skip. Advance by the previous page length."),
-  }).strict().refine((input) => input.query !== undefined || input.companyId !== undefined || input.parentId !== undefined,
-    "Supply query, companyId or parentId; combine them to narrow the search."),
+  }).strict().refine((input) => input.query !== undefined || input.companyId !== undefined || input.parentId !== undefined || input.group !== undefined,
+    "Supply query, companyId, parentId or group; combine them to narrow the search."),
   preview_task_changes: z.object({ changes }).strict(),
   apply_task_changes: z.object({
     changes,
@@ -60,7 +65,7 @@ export function isTaskEditTool(name: unknown): name is keyof typeof taskEditTool
 export async function runTaskEditTool(
   work: () => Promise<object>,
   failure: string,
-  isPublicError: (error: unknown) => error is Error = (error) => error instanceof TaskEditError,
+  isPublicError: (error: unknown) => error is Error = (error) => error instanceof TaskEditError || error instanceof TaskGroupError,
 ): Promise<CallToolResult> {
   if (!taskEditsEnabled()) return { isError: true, content: [{ type: "text", text: "Tool not found." }] };
   try {
@@ -75,15 +80,15 @@ export function registerTaskEditTools(server: McpServer, origin: string) {
   if (!taskEditsEnabled()) return;
   const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   server.registerTool("find_tasks", {
-    description: `Find up to 10 tasks or subtasks per page by name/Key points text, company ID and/or main-task ID. Use offset to page through the name-then-ID order. The total counts each matching task or subtask once. Nested subtasks are extra detail. Includes stored fields, main task, company, group, dates, status, parking, people, Key points, calendar mark and subtasks. Done tasks are omitted unless includeDone is true. Reads only. ${TASK_EDIT_CHAT_GUIDANCE}`,
+    description: `Find up to 10 tasks or subtasks per page by name/Key points text, company ID, main-task ID or group, alone or combined. Use offset to page through the name-then-ID order. The total counts each matching task or subtask once. Nested subtasks are extra detail. Includes stored fields, main task, company, group, dates, status, parking, people, Key points, calendar mark and subtasks. Done tasks are omitted unless includeDone is true. Reads only. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.find_tasks, annotations,
   }, (input) => runTaskEditTool(() => findTasks(input), "Could not read tasks and companies. Try again shortly."));
   server.registerTool("preview_task_changes", {
-    description: `Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Responsible additions and removals return unchanged IDs and a complete seen map as well. Show the exact changes and warnings to the owner; a preview never saves or confirms consent. ${TASK_EDIT_CHAT_GUIDANCE}`,
+    description: `Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Group moves and Responsible additions and removals return unchanged IDs and a complete seen map as well. Show the exact changes and warnings to the owner; a preview never saves or confirms consent. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.preview_task_changes, annotations,
   }, ({ changes }) => runTaskEditTool(() => previewTaskChanges(changes), "Could not preview task changes. Try again shortly."));
   server.registerTool("apply_task_changes", {
-    description: `Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure restores the task changes. Calendar sync runs after saving and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries calendar work. Never save an unlisted task or infer consent from a preview. ${TASK_EDIT_CHAT_GUIDANCE}`,
+    description: `Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure attempts to restore the task changes and reports the result. Calendar sync runs when relevant and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries applicable calendar work. Never save an unlisted task or infer consent from a preview. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.apply_task_changes,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   }, ({ changes, seen, acknowledgedWarnings }) => runTaskEditTool(() => applyTaskChanges(changes, seen, acknowledgedWarnings, origin),

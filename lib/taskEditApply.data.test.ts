@@ -139,6 +139,44 @@ describe("T04 atomic task edits", () => {
     expect(await readFields("tasks", `tasks/${internal.id}`)).toMatchObject({ task: internal.task, keyPoints: "Concurrent edit" });
   });
 
+  it.each(["record", "task-only"])("refuses a %s destination renamed after the transaction read it", async (kind) => {
+    const ops = { id: "ops", name: "Ops", order: 1 };
+    if (kind === "record") await seed("tasks", "taskGroups", [ops]);
+    else await seed("tasks", "tasks", [{ ...unrelated, taskGroup: ops.name }]);
+    const changes = [{ taskId: internal.id, set: { taskGroup: "ops" } }];
+    const preview = await previewTaskChanges(changes);
+    let attempts = 0;
+    vi.mocked(firestore.runTransaction).mockImplementationOnce((database, work, options) => real.runTransaction(database, async (transaction) => {
+      attempts++;
+      const result = await work(transaction);
+      if (attempts === 1) {
+        if (kind === "record") await seed("tasks", "taskGroups", [{ ...ops, name: "Partners" }]);
+        else await seed("tasks", "tasks", [{ ...unrelated, taskGroup: "Partners" }]);
+      }
+      return result;
+    }, options));
+    await expect(save(changes, preview)).rejects.toThrow("Existing groups:");
+    expect(attempts).toBeGreaterThan(1);
+    expect(await readFields("tasks", `tasks/${internal.id}`)).toHaveProperty("taskGroup", internal.taskGroup);
+    expect(await readAll("tasks", "settings")).toEqual([]);
+  }, 15_000);
+
+  it.each([{ taskGroup: "Ops" }, { addResponsible: ["Audrey"] }])("recognizes an identical save that commits during the group's or Responsible's task reads (%j)", async (set) => {
+    await seed("tasks", "taskGroups", [{ id: "ops", name: "Ops", order: 1 }]);
+    const changes = [{ taskId: internal.id, set }];
+    const preview = await previewTaskChanges(changes);
+    let first: Awaited<ReturnType<typeof save>> | undefined;
+    vi.mocked(firestore.getDocsFromServer).mockImplementationOnce(async (query) => {
+      const listed = await real.getDocsFromServer(query);
+      first = await save(changes, preview);
+      return listed;
+    });
+    const retry = await save(changes, preview);
+    expect(first).toMatchObject({ alreadySaved: false, tasks: [{ taskId: internal.id }] });
+    expect(retry).toEqual({ ...first, alreadySaved: true });
+    expect(await readAll("tasks", "settings")).toHaveLength(1);
+  }, 15_000);
+
   it("handles simultaneous identical saves as one save and one retry", async () => {
     const changes: TaskChange[] = [{ taskId: internal.id, set: { task: "Saved once", status: "done" } }];
     const preview = await previewTaskChanges(changes);
@@ -180,6 +218,33 @@ describe("T04 atomic task edits", () => {
 });
 
 describe("T04 company dates and rollback", () => {
+  it.each([false, true])("handles a company failure during a group move, with source renamed=%s", async (renameSource) => {
+    const source = { id: "old", name: "Old group", order: 1 };
+    await seed("tasks", "taskGroups", [source, { id: "ops", name: "Ops", order: 2 }]);
+    await seed("tasks", "tasks", [{ ...parent, taskGroup: source.name }]);
+    const changes = [{ taskId: parent.id, set: { taskGroup: "Ops", endDate: "2027-04-01" } }];
+    const preview = await previewTaskChanges(changes);
+    const before = await snapshot();
+    let taskAtFailure: unknown;
+    vi.mocked(firestore.runTransaction).mockImplementation(async (database, work, options) => {
+      if (database !== clientsDb) return real.runTransaction(database, work, options);
+      taskAtFailure = await readFields("tasks", `tasks/${parent.id}`);
+      if (renameSource) await seed("tasks", "taskGroups", [{ ...source, name: "New group" }]);
+      throw new Error("Fictional company update failure");
+    });
+    await expect(save(changes, preview)).rejects.toThrow(renameSource ? "source group “Old group” changed" : "All task changes were restored");
+    expect(taskAtFailure).toMatchObject({ taskGroup: "Ops", endDate: "2027-04-01" });
+    if (renameSource) {
+      expect(await readFields("tasks", `tasks/${parent.id}`)).toHaveProperty("taskGroup", "Ops");
+      expect(await readFields("tasks", "taskGroups/old")).toHaveProperty("name", "New group");
+    } else {
+      expect(await snapshot()).toEqual(before);
+      vi.mocked(firestore.runTransaction).mockImplementation(real.runTransaction);
+      expect((await save(changes, preview)).alreadySaved).toBe(false);
+      expect((await save(changes, preview)).alreadySaved).toBe(true);
+    }
+  }, 15_000);
+
   it("moves the company's target and last action, leaving sibling dates untouched", async () => {
     const changes: TaskChange[] = [{ taskId: parent.id, set: { endDate: "2027-04-01" } }];
     const preview = await previewTaskChanges(changes);

@@ -7,11 +7,12 @@ import { isParked } from "./parking";
 import { namesInUse } from "./people";
 import { newSubtask } from "./subtasks";
 import { validateCalendarTimes } from "./taskCalendar";
+import { isTaskGroupName, requireTaskGroupName, TaskGroupError } from "./taskGroupModel";
 import { statusPatch, withCompletedAt, type TaskStatus } from "./taskStatus";
 import type { InformedPerson, NewTask, Task } from "./types";
 
 export const MAX_TASK_CHANGES = 50;
-export const TASK_EDIT_SEEN = /^[a-f0-9]{64}(?:\.[a-f0-9]{32})?$/;
+export const TASK_EDIT_SEEN = /^[a-f0-9]{64}(?:\.[a-f0-9]{32}(?:\.[a-f0-9]{64})?)?$/;
 
 export interface TaskEditFields {
   task?: string;
@@ -25,6 +26,7 @@ export interface TaskEditFields {
   removeResponsible?: string[];
   informed?: InformedPerson[];
   calendar?: Task["calendar"] | null;
+  taskGroup?: string | null;
 }
 
 export interface TaskChange {
@@ -46,6 +48,7 @@ const tidyName = (name: string) => name.trim().replace(/\s+/g, " ");
 export const nameKey = (name: string) => tidyName(name).toLowerCase();
 export const editsResponsibleMembership = ({ set }: TaskChange) =>
   set?.addResponsible !== undefined || set?.removeResponsible !== undefined;
+export const editsTaskGroup = ({ set }: TaskChange) => set?.taskGroup !== undefined;
 
 export function createTaskPersonMatcher(names: Iterable<string>) {
   const byKey = new Map<string, string>();
@@ -133,10 +136,14 @@ export function validateTaskChanges(input: unknown): TaskChangesValidation {
     const fields = change.set;
     const set: TaskEditFields = {};
     const fieldPath = `${path}.set`;
-    knownFields(fields, ["task", "startDate", "endDate", "keyPoints", "status", "parked", "responsible", "addResponsible", "removeResponsible", "informed", "calendar"], fieldPath);
+    knownFields(fields, ["task", "startDate", "endDate", "keyPoints", "status", "parked", "responsible", "addResponsible", "removeResponsible", "informed", "calendar", "taskGroup"], fieldPath);
     if (Object.hasOwn(fields, "task") && text(fields.task, `${fieldPath}.task`)) set.task = fields.task.trim();
     // Key points are a whole-text replacement, including intentional spaces and line breaks.
     if (Object.hasOwn(fields, "keyPoints") && text(fields.keyPoints, `${fieldPath}.keyPoints`, true)) set.keyPoints = fields.keyPoints;
+    if (Object.hasOwn(fields, "taskGroup")) {
+      if (fields.taskGroup === null || isTaskGroupName(fields.taskGroup)) set.taskGroup = fields.taskGroup;
+      else errors.push(`${fieldPath}.taskGroup must be a non-empty group name or null.`);
+    }
     for (const field of ["startDate", "endDate"] as const) {
       if (!Object.hasOwn(fields, field)) continue;
       if (!isIsoDay(fields[field])) errors.push(`${fieldPath}.${field} must be a real yyyy-mm-dd calendar day.`);
@@ -234,6 +241,7 @@ export interface TaskEditContext {
   tasks: readonly Task[];
   companies: readonly PipelineEntry[];
   names: Iterable<string>;
+  groupNames?: readonly string[];
   today: string;
   calendarOn: boolean;
   now: number; // Caller-supplied epoch ms so timestamp patches are deterministic and use the save's clock.
@@ -255,7 +263,7 @@ export interface TaskChangesPreview {
   errors: string[];
   canWrite: boolean;
   unchanged?: string[];
-  seen?: Record<string, string>; // Membership edits include stamps even for listed tasks with no change.
+  seen?: Record<string, string>; // Group and Responsible membership edits also stamp unchanged tasks.
 }
 
 function patchedTask(task: Task, patch: Partial<NewTask>): Task {
@@ -268,6 +276,14 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
   if (!changes) return result;
   if (!isIsoDay(context.today)) errors.push("today must be a real yyyy-mm-dd Asia/Jakarta calendar day.");
   if (!Number.isFinite(context.now) || context.now <= 0) errors.push("now must be positive epoch milliseconds.");
+  const groupNames = new Map<string, string>();
+  for (const name of new Set(changes.map(({ set }) => set?.taskGroup).filter(isTaskGroupName))) {
+    try { groupNames.set(name, requireTaskGroupName(name, context.groupNames ?? [])); }
+    catch (error) {
+      if (!(error instanceof TaskGroupError)) throw error;
+      errors.push(error.message);
+    }
+  }
   if (errors.length) return result;
   const byId = new Map(context.tasks.map((task) => [task.id, task]));
   const matchPerson = createTaskPersonMatcher(namesInUse([...context.tasks], context.names));
@@ -293,6 +309,10 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
     };
     for (const field of ["task", "startDate", "endDate", "keyPoints"] as const) {
       if (set[field] !== undefined) patch[field] = set[field];
+    }
+    if (set.taskGroup !== undefined) {
+      const group = set.taskGroup === null ? undefined : groupNames.get(set.taskGroup);
+      if (group !== before.taskGroup) patch.taskGroup = group;
     }
     // One entry per person: a repeated name in another spelling keeps its first entry.
     const once = <T>(list: T[], name: (entry: T) => string) => list.filter((entry, i) => list.findIndex((other) => name(other) === name(entry)) === i);
@@ -376,8 +396,8 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
       errors.push(`Task "${parent.task}" must be an open, unparked, top-level main task (even if its parent is missing).`);
     }
     if (context.tasks.some((task) => task.parentId === before.id)) errors.push(`Task "${before.task}" has subtasks and cannot become a subtask; only one level is allowed.`);
-    const { linkedClientId, taskGroup } = newSubtask(parent, before.task, before.order);
-    mergePatch(preview, { parentId, linkedClientId, taskGroup });
+    const { linkedClientId, taskGroup } = newSubtask(previews.get(parentId)?.after ?? parent, before.task, before.order);
+    mergePatch(preview, { parentId, linkedClientId, ...(!editsTaskGroup(change) && { taskGroup }) });
     if ((before.linkedClientId ?? null) !== (linkedClientId ?? null)) warnings.push({
       id: `company-change:${encodeURIComponent(before.id)}`, code: "company-change", taskId: before.id, relatedTaskId: parentId,
       message: `Task "${before.task}" takes main task "${parent.task}"'s company: ${companyName(before.linkedClientId)} → ${companyName(linkedClientId)}. Confirm this company change.`,
@@ -450,7 +470,7 @@ export function buildTaskChanges(input: unknown, context: TaskEditContext): Task
   for (const [key, name] of requestedRemovals) {
     if (!matchedRemovals.has(key)) errors.push(`"${name}" is not Responsible on any task listed for its removal.`);
   }
-  if (changes.some(editsResponsibleMembership)) {
+  if (changes.some((change) => editsResponsibleMembership(change) || editsTaskGroup(change))) {
     result.seen = Object.fromEntries(result.tasks.map((row) => [row.taskId, row.seen]));
     const unchanged: string[] = [];
     result.tasks = result.tasks.filter((row) => {

@@ -48,11 +48,17 @@ describe("validateTaskChanges", () => {
     expect(validateTaskChanges([change]).changes).toBeNull();
   });
 
-  it.each(["id", "taskType", "priority", "touchPoint", "linkedClientId", "taskGroup", "completed", "completedAt", "startedAt", "lastActionDate", "parentId", "calendarSync"])(
+  it.each(["id", "taskType", "priority", "touchPoint", "linkedClientId", "completed", "completedAt", "startedAt", "lastActionDate", "parentId", "calendarSync"])(
     "refuses changing %s directly", (field) => {
       expect(validateTaskChanges([{ taskId: "a", set: { [field]: "changed" } }]).errors).toContain(`changes[0].set.${field} is not a supported field.`);
     },
   );
+
+  it.each(["", " \t ", undefined, false, 17, ["Ops"]])("rejects invalid group choices (%#)", (taskGroup) => {
+    const result = validateTaskChanges([{ taskId: "a", set: { taskGroup } }]);
+    expect(result.changes).toBeNull();
+    expect(result.errors).toContain("changes[0].set.taskGroup must be a non-empty group name or null.");
+  });
 
   it.each(["2026-02-29", "2026-13-01", "11/12/2026", "", null])("rejects bad dates (%#)", (date) => {
     for (const field of ["startDate", "endDate"] as const) {
@@ -206,6 +212,48 @@ describe("field previews", () => {
     expect(missing).toMatchObject({ canWrite: false, tasks: [], errors: [expect.stringContaining("not found")] });
     expect(build({ task: "Renamed" }, task(), { today: "invalid" }).canWrite).toBe(false);
     expect(build({ task: "Renamed" }, task(), { now: NaN }).canWrite).toBe(false);
+  });
+});
+
+describe("G2 group membership previews", () => {
+  it("shows the stored spelling and only the selected task changes, including a seen stamp for an unchanged task", () => {
+    const main = task();
+    const already = task("b", { taskGroup: "Ops" });
+    const child = task("child", { parentId: main.id, taskGroup: "Other" });
+    const changes = [main, already].map(({ id }) => ({ taskId: id, set: { taskGroup: " ops " } }));
+    const shown = buildTaskChanges(changes, context([main, child, already], { groupNames: ["Ops", "Other"] }));
+    expect(shown).toMatchObject({ canWrite: true, unchanged: [already.id], seen: { a: taskSeen(main), b: taskSeen(already) },
+      tasks: [{ taskId: main.id, before: main, after: { ...main, taskGroup: "Ops" }, patch: { taskGroup: "Ops" } }] });
+    expect(shown.tasks).toHaveLength(1);
+    expect(main).not.toHaveProperty("taskGroup");
+  });
+
+  it("clears a selected group, skips a missing group, and preserves an exact long legacy name", () => {
+    const longName = ` ${"x".repeat(4096)} `;
+    const current = task("a", { taskGroup: "Ops", linkedClientId: 7 });
+    const cleared = build({ taskGroup: null }, current);
+    expect(cleared.tasks[0].patch).toEqual({ taskGroup: undefined });
+    expect(cleared.tasks[0].after).toHaveProperty("linkedClientId", 7);
+    expect(cleared.tasks[0].after).not.toHaveProperty("taskGroup");
+    expect(build({ taskGroup: null }).unchanged).toEqual(["a"]);
+    expect(build({ taskGroup: longName }, current, { groupNames: [longName] }).tasks[0].after?.taskGroup).toBe(longName);
+  });
+
+  it("keeps explicit group choices in a reparent and otherwise inherits the destination's resulting group", () => {
+    const main = task("parent", { taskGroup: "Old" });
+    const first = task("first", { taskGroup: "Old" });
+    const second = task("second");
+    const shown = buildTaskChanges([
+      { taskId: first.id, move: { toParentId: main.id }, set: { taskGroup: null } },
+      { taskId: second.id, move: { toParentId: main.id } },
+      { taskId: main.id, set: { taskGroup: "ops" } },
+    ], context([main, first, second], { groupNames: ["Old", "Ops"] }));
+    expect(shown).toMatchObject({ canWrite: true, tasks: [
+      { after: { id: first.id, parentId: main.id } },
+      { after: { id: second.id, parentId: main.id, taskGroup: "Ops" } },
+      { after: { id: main.id, taskGroup: "Ops" } },
+    ] });
+    expect(shown.tasks[0].after).not.toHaveProperty("taskGroup");
   });
 });
 

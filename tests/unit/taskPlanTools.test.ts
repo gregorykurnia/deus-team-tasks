@@ -10,6 +10,7 @@ import { registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditToolInputs } fr
 import { TaskEditError } from "@/lib/taskEditServer";
 import { taskGroupToolInputs } from "@/lib/taskGroupTools";
 import { TaskGroupError } from "@/lib/taskGroupServer";
+import { requireTaskGroupName } from "@/lib/taskGroupModel";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
 import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 
@@ -218,6 +219,9 @@ describe("T03–T05 task edit tools", () => {
       /Start over if total changes between pages or the unique IDs differ from it/,
       /addResponsible on every listed task, or removeResponsible only on listed tasks that have that person.*batches of up to 50.*before → after, marking parked tasks/,
       /complete seen map.*unchanged IDs.*list the changed IDs.*undo only the changes made.*existing tasks only/,
+      /bulk group moves.*list_task_groups.*set\.taskGroup.*null to clear it.*find_task_destinations.*find_tasks/,
+      /Include each selected main task's open subtasks by default, deduplicate by task ID, include parked tasks, and include done tasks only when requested/,
+      /Preview in batches of up to 50.*task, main task and group before → after, marking parked tasks.*complete seen map, including unchanged IDs/,
     ]) expect(TASK_EDIT_CHAT_GUIDANCE).toMatch(rule);
   });
 
@@ -227,12 +231,15 @@ describe("T03–T05 task edit tools", () => {
     ["find_tasks", { parentId: " " }], ["find_tasks", { query: "x", includeDone: "true" }],
     ["find_tasks", { offset: 10 }], ["find_tasks", { query: "x", offset: -1 }],
     ["find_tasks", { query: "x", offset: 1.5 }], ["find_tasks", { query: "x", offset: "10" }],
+    ["find_tasks", { group: "  " }], ["find_tasks", { group: 4 }],
     ["preview_task_changes", { changes: [] }],
     ["preview_task_changes", { changes: Array.from({ length: 51 }, (_, i) => ({ taskId: `t${i}`, delete: true })) }],
     ["preview_task_changes", { changes: [...changes, ...changes] }],
     ["preview_task_changes", { changes: [{ taskId: "bad/id", delete: true }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: {} }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { linkedClientId: 1 } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { taskGroup: " " } }] }],
+    ["preview_task_changes", { changes: [{ taskId: "t", set: { taskGroup: [] } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { startDate: "2026-02-30" } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { calendar: { startTime: "14:00" } } }] }],
     ["preview_task_changes", { changes: [{ taskId: "t", set: { addResponsible: [" "] } }] }],
@@ -273,6 +280,27 @@ describe("T03–T05 task edit tools", () => {
     expect(saved.reply.error).toBeUndefined();
     expect(saved.reply.result?.isError).toBeFalsy();
     expect(io.editApply).toHaveBeenCalledWith(changes, seen, [], ORIGIN);
+  });
+
+  it("passes named and null group filters and group previews through the MCP tools", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    for (const group of [" Ops ", null]) {
+      expect((await call("find_tasks", { group })).reply.error).toBeUndefined();
+      expect(io.editFind).toHaveBeenLastCalledWith({ group, includeDone: false, offset: 0 });
+    }
+    const changes = [{ taskId: "changed", set: { taskGroup: "ops" } }, { taskId: "unchanged", set: { taskGroup: null } }];
+    const suffix = `${"c".repeat(32)}.${"d".repeat(64)}`;
+    const seen = { changed: `${"a".repeat(64)}.${suffix}`, unchanged: `${"b".repeat(64)}.${suffix}` };
+    const shown = { tasks: [{ taskId: "changed" }], seen, unchanged: ["unchanged"], warnings: [], errors: [], canWrite: true };
+    io.editPreview.mockResolvedValue(shown);
+    expect((await call("preview_task_changes", { changes })).reply.result?.structuredContent).toEqual(shown);
+    expect(io.editPreview).toHaveBeenCalledWith(changes);
+    expect((await call("apply_task_changes", { changes, seen, acknowledgedWarnings: [] })).reply.result?.isError).toBeFalsy();
+    expect(io.editApply).toHaveBeenCalledWith(changes, seen, [], ORIGIN);
+    io.editFind.mockImplementationOnce(() => requireTaskGroupName("Opps", ["Ops"]));
+    const error = await call("find_tasks", { group: "Opps" });
+    expect(error.reply.result?.isError).toBe(true);
+    expect(error.body).toContain("Existing groups: “Ops”.");
   });
 
   it("refuses retained callbacks after the edit flag is switched off", async () => {

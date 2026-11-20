@@ -12,15 +12,18 @@ import { rolesIn } from "./flows";
 import { wibToday } from "./followupServer";
 import { isParked } from "./parking";
 import { namesInUse } from "./people";
-import { buildTaskChanges, editsResponsibleMembership, TASK_EDIT_SEEN, taskSeen, validateTaskChanges,
+import { buildTaskChanges, editsResponsibleMembership, editsTaskGroup, TASK_EDIT_SEEN, taskSeen, validateTaskChanges,
   type TaskChange, type TaskChangePreview, type TaskEditContext } from "./taskEdit";
+import { groupNamesInUse, isTaskGroupName, requireTaskGroupName, TASK_GROUPS } from "./taskGroupModel";
 import { taskStatus } from "./taskStatus";
+import { toTaskUpdate } from "./taskWriteFields";
 import type { Flow, NewTask, Task } from "./types";
 
 export interface FindTasksInput {
   query?: string;
   companyId?: number;
   parentId?: string;
+  group?: string | null;
   includeDone?: boolean;
   offset?: number;
 }
@@ -38,8 +41,34 @@ async function readCompanies(): Promise<PipelineEntry[]> {
   });
 }
 
+async function readTaskGroupRecords(transaction?: Transaction) {
+  const { docs } = await getDocsFromServer(collection(db, TASK_GROUPS));
+  // Guard existing group names and deletions with the same transaction that writes the task.
+  const snapshots = transaction ? await Promise.all(docs.map((record) => transaction.get(record.ref))) : docs;
+  return snapshots.flatMap((record) => {
+    const name: unknown = record.data()?.name;
+    return isTaskGroupName(name) ? [{ id: record.id, name }] : [];
+  });
+}
+
+type TaskGroupRecord = Awaited<ReturnType<typeof readTaskGroupRecords>>[number];
+const taskGroupNames = (groups: TaskGroupRecord[], tasks: Task[]) =>
+  [...new Set(groupNamesInUse(groups, tasks.filter((task) => isTaskGroupName(task.taskGroup))))];
+
+function groupTargetsStamp(changes: TaskChange[], groups: TaskGroupRecord[], names: readonly string[]) {
+  const targets = changes.flatMap(({ taskId, set }) => {
+    if (set?.taskGroup === undefined) return [];
+    const name = set.taskGroup === null ? null : requireTaskGroupName(set.taskGroup, names);
+    return [{ taskId, name, records: groups.filter((group) => group.name === name).map((group) => group.id).sort() }];
+  });
+  // A case-only rename still matches the input. Bind the preview to the spelling and records it showed.
+  return createHash("sha256").update(JSON.stringify(targets)).digest("hex");
+}
+
 export async function findTasks(input: FindTasksInput) {
-  const [tasks, companies] = await Promise.all([readTasks(), readCompanies()]);
+  const [tasks, companies, groups] = await Promise.all([readTasks(), readCompanies(),
+    typeof input.group === "string" ? readTaskGroupRecords() : []]);
+  const group = typeof input.group === "string" ? requireTaskGroupName(input.group, taskGroupNames(groups, tasks)) : input.group;
   const byId = new Map(tasks.map((task) => [task.id, task]));
   const byCompany = new Map(companies.map((company) => [company.id, company]));
   const today = wibToday();
@@ -48,7 +77,8 @@ export async function findTasks(input: FindTasksInput) {
   const matches = visible.filter((task) =>
     (!query || `${task.task}\n${task.keyPoints}`.toLowerCase().includes(query))
     && (input.companyId === undefined || task.linkedClientId === input.companyId)
-    && (input.parentId === undefined || task.parentId === input.parentId))
+    && (input.parentId === undefined || task.parentId === input.parentId)
+    && (group === undefined || (group === null ? !isTaskGroupName(task.taskGroup) : task.taskGroup === group)))
     .sort((a, b) => a.task.localeCompare(b.task) || a.id.localeCompare(b.id));
   const summary = (task: Task) => {
     const parent = task.parentId ? byId.get(task.parentId) : undefined;
@@ -86,15 +116,18 @@ export async function readTaskEditData() {
 }
 
 export async function previewTaskChanges(changes: unknown) {
-  const data = await readTaskEditData();
+  const groupEdit = validateTaskChanges(changes).changes?.some(editsTaskGroup);
+  const [data, groups] = await Promise.all([readTaskEditData(), groupEdit ? readTaskGroupRecords() : []]);
+  const groupNames = groupEdit ? taskGroupNames(groups, data.tasks) : [];
   const now = Date.now();
   const preview = buildTaskChanges(changes, {
-    ...data, now, today: wibToday(new Date(now)), calendarOn: calendarWritesEnabled(),
+    ...data, groupNames, now, today: wibToday(new Date(now)), calendarOn: calendarWritesEnabled(),
   });
   if (preview.seen) {
     // A fresh preview can repeat an earlier intent after it was undone, even with identical task data.
     const nonce = randomBytes(16).toString("hex");
-    for (const [id, stamp] of Object.entries(preview.seen)) preview.seen[id] = `${stamp}.${nonce}`;
+    const groupStamp = groupEdit && preview.canWrite ? `.${groupTargetsStamp(preview.changes!, groups, groupNames)}` : "";
+    for (const [id, stamp] of Object.entries(preview.seen)) preview.seen[id] = `${stamp}.${nonce}${groupStamp}`;
     for (const row of preview.tasks) row.seen = preview.seen[row.taskId];
   }
   return preview;
@@ -166,7 +199,24 @@ async function followCompanies(dated: Task[]) {
   });
 }
 
-async function restoreTaskChanges(rows: TaskChangePreview[], receipt: DocumentReference | null) {
+interface TaskGroupSource {
+  name: string;
+  recordIds: string[];
+  memberIds: string[];
+}
+
+function groupSourcesForRestore(rows: TaskChangePreview[], groups: TaskGroupRecord[], tasks: Task[]): TaskGroupSource[] {
+  const written = new Set(rows.map((row) => row.taskId));
+  const names = new Set(rows.flatMap(({ before, after }) =>
+    isTaskGroupName(before.taskGroup) && before.taskGroup !== after?.taskGroup ? [before.taskGroup] : []));
+  // If all the old members moved in this save, its rollback can restore their legacy group.
+  return [...names].map((name) => ({ name,
+    recordIds: groups.filter((group) => group.name === name).map((group) => group.id),
+    memberIds: tasks.filter((task) => task.taskGroup === name && !written.has(task.id)).map((task) => task.id),
+  })).filter(({ recordIds, memberIds }) => recordIds.length || memberIds.length);
+}
+
+async function restoreTaskChanges(rows: TaskChangePreview[], receipt: DocumentReference | null, sourceGroups: TaskGroupSource[] = []) {
   await runTransaction(db, async (transaction) => {
     const snapshots = await Promise.all(rows.map((row) => transaction.get(doc(db, "tasks", row.taskId))));
     for (const [index, snapshot] of snapshots.entries()) {
@@ -174,6 +224,15 @@ async function restoreTaskChanges(rows: TaskChangePreview[], receipt: DocumentRe
       const current = snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } as Task : null;
       if (expected ? !current || taskSeen(current) !== taskSeen(expected) : current !== null) {
         throw new TaskEditError(`The company update failed, and task ${snapshot.id} changed again before it could be restored. Find the tasks and check them before retrying.`);
+      }
+    }
+    for (const { name, recordIds, memberIds } of sourceGroups) {
+      const savedNames = await Promise.all([
+        ...recordIds.map(async (id) => (await transaction.get(doc(db, TASK_GROUPS, id))).data()?.name),
+        ...memberIds.map(async (id) => (await transaction.get(doc(db, "tasks", id))).data()?.taskGroup),
+      ]);
+      if (!savedNames.includes(name)) {
+        throw new TaskEditError(`The company update failed, and source group “${name}” changed before the tasks could be restored. Find the tasks and check them before retrying.`);
       }
     }
     for (const row of rows) transaction.set(doc(db, "tasks", row.taskId), fields(row.before));
@@ -187,9 +246,10 @@ export async function applyTaskChanges(
   const validated = validateTaskChanges(input);
   if (!validated.changes) throw new TaskEditError(validated.errors.join(" "));
   const changes = validated.changes;
+  const groupEdit = changes.some(editsTaskGroup);
   if (!seen || typeof seen !== "object" || Array.isArray(seen)
     || Object.entries(seen).some(([id, stamp]) => !validateTaskChanges([{ taskId: id, delete: true }]).changes
-      || typeof stamp !== "string" || !TASK_EDIT_SEEN.test(stamp))
+      || typeof stamp !== "string" || !TASK_EDIT_SEEN.test(stamp) || (!groupEdit && stamp.split(".").length > 2))
     || changes.some((change) => !Object.hasOwn(seen, change.taskId))) {
     throw new TaskEditError("Supply each task's seen stamp from preview_task_changes. Preview again before saving.");
   }
@@ -201,17 +261,28 @@ export async function applyTaskChanges(
   }
   const stamps = seen as Record<string, string>;
   const membershipEdit = changes.some(editsResponsibleMembership);
+  const recordedEdit = membershipEdit || groupEdit;
   const stampEntries = Object.entries(stamps);
-  const nonce = membershipEdit ? stampEntries[0][1].split(".")[1] : undefined;
-  if (membershipEdit && (!nonce || stampEntries.some(([, stamp]) => stamp.slice(65) !== nonce))) {
-    throw new TaskEditError("Use the complete seen map from one preview before saving Responsible changes.");
+  const suffix = recordedEdit ? stampEntries[0][1].slice(64) : "";
+  const [, nonce, groupStamp] = suffix.split(".");
+  if (recordedEdit && (!nonce || (groupEdit && !groupStamp) || stampEntries.some(([, stamp]) => stamp.slice(64) !== suffix))) {
+    throw new TaskEditError(`Use the complete seen map from one preview before saving ${groupEdit ? "task group" : "Responsible"} changes.`);
   }
-  const operation = membershipEdit ? createHash("sha256").update(JSON.stringify([changes,
+  const operation = recordedEdit ? createHash("sha256").update(JSON.stringify([changes,
     [...stampEntries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0),
   ])).digest("hex") : null;
   const receiptRef = operation ? doc(db, "settings", `task-edit-${operation}`) : null;
   const replacementIds = changes.filter((change) => change.set?.responsible !== undefined).map((change) => change.taskId);
   const written = await runTransaction(db, async (transaction) => {
+    // Re-enumerate on each transaction retry, then guard every context record with transaction.get.
+    // Include missing listed/destination IDs as reads too; a cache must never decide what can be saved.
+    const data = await readTaskEditData();
+    const ids = [...new Set([...data.tasks.map((task) => task.id), ...Object.keys(stamps),
+      ...changes.flatMap((change) => change.move?.toParentId ? [change.move.toParentId] : [])])];
+    const [snapshots, groups] = await Promise.all([Promise.all(ids.map((id) => transaction.get(doc(db, "tasks", id)))),
+      groupEdit ? readTaskGroupRecords(transaction) : []]);
+    // An identical save can commit while these optimistic reads are in flight.
+    // Check its receipt after reading the tasks so it takes precedence over a stale preview.
     if (receiptRef) {
       const saved = (await transaction.get(receiptRef)).data() as TaskEditReceipt | undefined;
       if (saved?.companyPending) {
@@ -219,17 +290,12 @@ export async function applyTaskChanges(
       }
       if (saved) return { alreadySaved: true, rows: [], companyTasks: [], saved };
     }
-    // Re-enumerate on each transaction retry, then guard every context record with transaction.get.
-    // Include missing listed/destination IDs as reads too; a cache must never decide what can be saved.
-    const data = await readTaskEditData();
-    const ids = [...new Set([...data.tasks.map((task) => task.id), ...Object.keys(stamps),
-      ...changes.flatMap((change) => change.move?.toParentId ? [change.move.toParentId] : [])])];
-    const snapshots = await Promise.all(ids.map((id) => transaction.get(doc(db, "tasks", id))));
     const tasks = snapshots.filter((entry) => entry.exists()).map((entry) => ({ ...entry.data() as NewTask, id: entry.id }));
+    const groupNames = groupEdit ? taskGroupNames(groups, tasks) : [];
     const now = Date.now();
-    const context = { ...data, tasks, now, today: wibToday(new Date(now)), calendarOn: calendarWritesEnabled() };
+    const context = { ...data, tasks, groupNames, now, today: wibToday(new Date(now)), calendarOn: calendarWritesEnabled() };
     const byId = new Map(tasks.map((task) => [task.id, task]));
-    if (!membershipEdit && matchesSaved(changes, context, stamps)) {
+    if (!recordedEdit && matchesSaved(changes, context, stamps)) {
       const ids = Object.keys(stamps);
       const calendarIds = ids.filter((id) => {
         const task = byId.get(id);
@@ -241,17 +307,20 @@ export async function applyTaskChanges(
     const changed = stampEntries.filter(([id, stamp]) => !byId.has(id) || taskSeen(byId.get(id)!) !== stamp.slice(0, 64)).map(([id]) => id);
     if (changed.length) throw new TaskEditError(`Tasks changed since the preview: ${changed.join(", ")}. Preview again; nothing was saved.`);
     const preview = buildTaskChanges(changes, context);
-    if (preview.errors.length) throw new TaskEditError(preview.errors.join(" "));
+    if (preview.errors.length) throw new TaskEditError(preview.errors.join(" ") + (groupEdit ? " Preview again; nothing was saved." : ""));
+    if (groupEdit && groupStamp !== groupTargetsStamp(changes, groups, groupNames)) {
+      throw new TaskEditError("A destination group changed since the preview. Preview again; nothing was saved.");
+    }
     const previewSeen = preview.seen ?? Object.fromEntries(preview.tasks.map((row) => [row.taskId, row.seen]));
     if (Object.keys(previewSeen).length !== stampEntries.length
-      || Object.entries(previewSeen).some(([id, stamp]) => stamps[id] !== (nonce ? `${stamp}.${nonce}` : stamp))) {
+      || Object.entries(previewSeen).some(([id, stamp]) => stamps[id] !== `${stamp}${suffix}`)) {
       throw new TaskEditError("The affected tasks changed since the preview. Preview again; nothing was saved.");
     }
     const unacknowledged = preview.warnings.filter((warning) => !acknowledgedWarnings.includes(warning.id));
     if (unacknowledged.length) throw new TaskEditError(`Confirm these warnings before saving: ${unacknowledged.map((warning) => warning.id).join(", ")}. Nothing was saved.`);
     for (const row of preview.tasks) {
       const ref = doc(db, "tasks", row.taskId);
-      if (row.after) transaction.update(ref, updateFields(row.patch));
+      if (row.after) transaction.update(ref, toTaskUpdate(row.patch));
       else transaction.delete(ref);
     }
     // A renamed main task changes its marked subtasks' event descriptions, as requestCalendarContextSync does in the app.
@@ -261,7 +330,7 @@ export async function applyTaskChanges(
     const companyTasks = preview.tasks.flatMap(({ before, after }) =>
       after && !after.completed && after.linkedClientId != null && after.endDate !== before.endDate ? [after] : []);
     const calendarRows = preview.tasks.filter((row) => (row.before.calendar || row.after?.calendar || row.before.calendarSync)
-      && (!membershipEdit || !row.after || Object.keys(row.patch).some((field) => field !== "responsible")));
+      && (!recordedEdit || !row.after || Object.keys(row.patch).some((field) => field !== "taskGroup" && (!membershipEdit || field !== "responsible"))));
     const saved: TaskEditReceipt = {
       ids: preview.tasks.map((row) => row.taskId),
       deletedIds: preview.tasks.filter((row) => !row.after).map((row) => row.taskId),
@@ -272,12 +341,13 @@ export async function applyTaskChanges(
     };
     // An exact retry must return the original changed IDs, even if someone subsequently edits the tasks.
     if (receiptRef && saved.ids.length) transaction.set(receiptRef, saved);
-    return { alreadySaved: false, rows: preview.tasks, companyTasks, saved };
+    const sourceGroups = groupEdit && companyTasks.length ? groupSourcesForRestore(preview.tasks, groups, tasks) : [];
+    return { alreadySaved: false, rows: preview.tasks, companyTasks, saved, sourceGroups };
   });
   if (!written.alreadySaved) {
     try { await followCompanies(written.companyTasks); }
     catch {
-      try { await restoreTaskChanges(written.rows, receiptRef); }
+      try { await restoreTaskChanges(written.rows, receiptRef, written.sourceGroups); }
       catch (error) {
         if (error instanceof TaskEditError) throw error;
         throw new TaskEditError("The company update failed and the task changes could not be restored. Find the tasks and check them before retrying.");

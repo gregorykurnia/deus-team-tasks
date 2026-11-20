@@ -24,6 +24,27 @@ export class GroupNameError extends Error {
 }
 
 export const groupNameKey = (name: string) => name.trim().toLowerCase();
+export const isTaskGroupName = (value: unknown): value is string => typeof value === "string" && !!groupNameKey(value);
+
+export class TaskGroupError extends Error {}
+
+// Membership is stored by exact spelling. Old case variants remain separately addressable.
+export function matchTaskGroupName(name: string, names: readonly string[]): string | undefined {
+  if (names.includes(name)) return name;
+  const key = groupNameKey(name);
+  const matches = names.filter((candidate) => groupNameKey(candidate) === key);
+  if (matches.length > 1) {
+    throw new TaskGroupError(`More than one group matches “${name}”. Use the stored spelling: ${matches.map((match) => `“${match}”`).join(", ")}.`);
+  }
+  return matches[0];
+}
+
+export function requireTaskGroupName(name: string, names: readonly string[]): string {
+  const match = matchTaskGroupName(name, names);
+  if (match !== undefined) return match;
+  const available = names.length ? [...names].sort().map((group) => `“${group}”`).join(", ") : "none";
+  throw new TaskGroupError(`Group “${name}” could not be found. Existing groups: ${available}. Create it first with change_task_group.`);
+}
 
 // A group's name is required and unique, ignoring case (guide 5.5).
 export function groupNameProblem(name: string, groups: GroupRef[], exceptId?: string): GroupNameProblem | null {

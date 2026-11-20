@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deleteApp } from "firebase-admin/app";
 import { terminate } from "firebase/firestore";
 import { clearAll, EMULATOR_HOST, PROJECTS, readAll, readFields, seed } from "../tests/support/emulator";
 import { TASK_PLAN_INTERNAL_PARENT, TASK_PLAN_PROSPECT } from "../tests/fixtures/taskPlan";
@@ -7,6 +8,7 @@ import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { taskSeen, type TaskChange } from "./taskEdit";
 import { applyTaskChanges, findTasks, previewTaskChanges } from "./taskEditServer";
+import { changeTaskGroup, listTaskGroups } from "./taskGroupServer";
 import type { Task } from "./types";
 
 vi.mock("./connection", () => { throw new Error("Server reads must not import browser connection guards."); });
@@ -33,12 +35,26 @@ beforeEach(async () => {
   vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "0");
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
-afterAll(async () => { await Promise.all([terminate(db), terminate(clientsDb)]); });
+afterAll(async () => {
+  const { adminApp, adminDataApp } = await import("./admin");
+  await Promise.all([terminate(db), terminate(clientsDb), deleteApp(adminApp), deleteApp(adminDataApp)]);
+});
 
 async function snapshot() {
   return Promise.all([
     readAll("tasks", "tasks"), readAll("clients", "pipeline"), readAll("tasks", "flows"), readAll("tasks", "settings"),
   ].map(async (records) => (await records).sort((a, b) => a.id.localeCompare(b.id))));
+}
+
+const savePreview = (changes: TaskChange[], shown: Awaited<ReturnType<typeof previewTaskChanges>>) =>
+  applyTaskChanges(changes, shown.seen, shown.warnings.map(({ id }) => id), ORIGIN);
+
+async function updateTimes() {
+  const response = await fetch(`http://${EMULATOR_HOST}/v1/projects/${PROJECTS.tasks}/databases/(default)/documents/tasks`,
+    { headers: { Authorization: "Bearer owner" } });
+  if (!response.ok) throw new Error(`Emulator read failed: ${response.status}`);
+  const { documents } = await response.json() as { documents: { name: string; updateTime: string }[] };
+  return Object.fromEntries(documents.map(({ name, updateTime }) => [name, updateTime]));
 }
 
 describe("T03 find tasks from the server", () => {
@@ -90,6 +106,140 @@ describe("T03 find tasks from the server", () => {
   });
 });
 
+describe("G2 task groups from the edit tools", () => {
+  const ops = { id: "ops", name: "Ops", order: 1 };
+  const other = { id: "other", name: "Other", order: 2 };
+  const moves = [parent, child, parked, internal].map(({ id }) => ({ taskId: id, set: { taskGroup: "ops" } }));
+  const groupRows = () => readAll("tasks", "taskGroups");
+  beforeEach(() => seed("tasks", "tasks", [parent, child, done, parked, internal].map((task) => ({ ...task, taskGroup: undefined }))));
+
+  it("previews and moves three tasks in the stored spelling, skips unchanged rows and leaves dates, companies, calendar and push alone", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "1");
+    await seed("tasks", "taskGroups", [ops]);
+    await seed("tasks", "tasks", [{ ...parent, calendar: {} }, { ...internal, taskGroup: "Ops" }]);
+    const before = await snapshot();
+    const beforeTimes = await updateTimes();
+    const shown = await previewTaskChanges(moves);
+    expect(shown).toMatchObject({ canWrite: true, unchanged: [internal.id], warnings: [] });
+    expect(shown.tasks.map(({ taskId, after }) => [taskId, after?.taskGroup])).toEqual([[parent.id, "Ops"], [child.id, "Ops"], [parked.id, "Ops"]]);
+    expect(Object.keys(shown.seen ?? {})).toEqual(moves.map(({ taskId }) => taskId));
+    expect(await snapshot()).toEqual(before);
+    const saved = await savePreview(moves, shown);
+    expect(saved.alreadySaved).toBe(false);
+    expect(saved.tasks.map(({ taskId, calendar }) => [taskId, calendar])).toEqual([[parent.id, null], [child.id, null], [parked.id, null]]);
+    const after = await snapshot();
+    expect(after[0]).toEqual(before[0].map((task) => [parent.id, child.id, parked.id].includes(task.id) ? { ...task, taskGroup: "Ops" } : task));
+    expect(after[1]).toEqual(before[1]);
+    expect(await groupRows()).toEqual([ops]);
+    expect(await readAll("tasks", "testCalendarEvents")).toEqual([]);
+    expect(await readAll("tasks", "_fakePush")).toEqual([]);
+    expect(await readAll("tasks", "assignNotices")).toEqual([]);
+    const times = await updateTimes();
+    expect(Object.entries(times).filter(([path, time]) => time !== beforeTimes[path]).map(([path]) => path.split("/").at(-1)).sort())
+      .toEqual([child.id, parent.id, parked.id].sort());
+    expect(await savePreview(moves, shown)).toEqual({ ...saved, alreadySaved: true });
+    expect(await snapshot()).toEqual(after);
+    expect(await updateTimes()).toEqual(times);
+  });
+
+  it("removes the stored group field, including an old blank value, and retries without overwriting a newer move", async () => {
+    await seed("tasks", "taskGroups", [ops, other]);
+    await seed("tasks", "tasks", [{ ...parent, taskGroup: ops.name }, { ...child, taskGroup: " " }]);
+    const changes = [parent, child, internal].map(({ id }) => ({ taskId: id, set: { taskGroup: null } }));
+    const shown = await previewTaskChanges(changes);
+    expect(shown.unchanged).toEqual([internal.id]);
+    expect(shown.tasks.map(({ after }) => after?.taskGroup)).toEqual([undefined, undefined]);
+    const saved = await savePreview(changes, shown);
+    for (const task of [parent, child]) {
+      expect(await readFields("tasks", `tasks/${task.id}`)).toMatchObject({ linkedClientId: task.linkedClientId });
+      expect(await readFields("tasks", `tasks/${task.id}`)).not.toHaveProperty("taskGroup");
+    }
+    expect((await findTasks({ group: null })).tasks.map(({ id }) => id)).toContain(parent.id);
+    const newer = [{ taskId: parent.id, set: { taskGroup: other.name } }];
+    await savePreview(newer, await previewTaskChanges(newer));
+    const times = await updateTimes();
+    expect(await savePreview(changes, shown)).toEqual({ ...saved, alreadySaved: true });
+    expect(await updateTimes()).toEqual(times);
+    expect(await readFields("tasks", `tasks/${parent.id}`)).toHaveProperty("taskGroup", other.name);
+  });
+
+  it("names the groups for a misspelling in search, preview and apply and writes nothing", async () => {
+    await seed("tasks", "taskGroups", [ops]);
+    await seed("tasks", "tasks", [{ ...internal, taskGroup: "Legacy" }]);
+    const invalid = [{ taskId: parent.id, set: { taskGroup: "Opps" } }];
+    const before = await snapshot();
+    const error = "Group “Opps” could not be found. Existing groups: “Legacy”, “Ops”. Create it first with change_task_group.";
+    await expect(findTasks({ group: "Opps" })).rejects.toThrow(error);
+    expect(await previewTaskChanges(invalid)).toMatchObject({ canWrite: false, errors: [error], tasks: [] });
+    const valid = await previewTaskChanges(moves);
+    await expect(savePreview(invalid, valid)).rejects.toThrow(error);
+    expect(await snapshot()).toEqual(before);
+    expect(await groupRows()).toEqual([ops]);
+  });
+
+  it.each(["Allies", "OPS", null, "recreated"])("refuses a preview when the destination is changed to %s", async (newName) => {
+    await seed("tasks", "taskGroups", [ops]);
+    const shown = await previewTaskChanges(moves);
+    expect(shown.canWrite).toBe(true);
+    if (newName === null || newName === "recreated") {
+      await changeTaskGroup({ action: "delete", name: ops.name, taskCount: 0 });
+      if (newName === "recreated") await changeTaskGroup({ action: "create", name: ops.name });
+    } else {
+      await changeTaskGroup({ action: "rename", name: ops.name, newName, taskCount: 0 });
+    }
+    const before = await snapshot();
+    const groups = await listTaskGroups();
+    await expect(savePreview(moves, shown)).rejects.toThrow(/group.*Preview again; nothing was saved/i);
+    expect(await snapshot()).toEqual(before);
+    expect(await listTaskGroups()).toEqual(groups);
+  }, 15_000);
+
+  it.each(["Ops", "Other"])("rejects a concurrent move to %s even when it happens to match the request", async (taskGroup) => {
+    await seed("tasks", "taskGroups", [ops, other]);
+    const shown = await previewTaskChanges(moves);
+    await seed("tasks", "tasks", [{ ...child, taskGroup }]);
+    const before = await snapshot();
+    await expect(savePreview(moves, shown)).rejects.toThrow(`Tasks changed since the preview: ${child.id}`);
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it("handles concurrent identical saves as one group move and one receipt", async () => {
+    await seed("tasks", "taskGroups", [ops]);
+    const shown = await previewTaskChanges(moves);
+    const results = await Promise.all([savePreview(moves, shown), savePreview(moves, shown)]);
+    expect(results.map(({ alreadySaved }) => alreadySaved).sort()).toEqual([false, true]);
+    expect(results[1].tasks).toEqual(results[0].tasks);
+    expect(await readAll("tasks", "settings")).toHaveLength(1);
+  }, 15_000);
+
+  it("pages group results, combines filters and preserves nested subtask context", async () => {
+    const rows = Array.from({ length: 12 }, (_, index) => ({ ...parked, id: `ops-${String(index).padStart(2, "0")}`, task: "Same name", taskGroup: ops.name }));
+    await seed("tasks", "taskGroups", [ops, { ...ops, id: "duplicate" }, other]);
+    await seed("tasks", "tasks", [...rows, { ...done, taskGroup: ops.name },
+      { ...child, parentId: rows[0].id, taskGroup: other.name }, { ...parked, taskGroup: "  " }]);
+    const first = await findTasks({ group: "ops" });
+    const next = await findTasks({ group: "ops", offset: 10 });
+    expect([first.total, first.hasMore, next.total, next.hasMore]).toEqual([12, true, 12, false]);
+    expect([...first.tasks, ...next.tasks].map(({ id }) => id)).toEqual(rows.map(({ id }) => id));
+    expect(first.tasks[0]).toMatchObject({ parked: true, subtasks: [{ id: child.id, taskGroup: other.name }] });
+    expect((await findTasks({ group: "ops", query: "same", companyId: parent.linkedClientId, includeDone: true })).total).toBe(12);
+    expect((await findTasks({ group: "ops", parentId: parent.id, includeDone: true })).tasks.map(({ id }) => id)).toEqual([done.id]);
+    expect((await findTasks({ group: null })).tasks.map(({ id }) => id).sort()).toEqual([internal.id, parent.id, parked.id].sort());
+  });
+
+  it("keeps exact legacy case variants addressable and resolves a task-only group without creating a record", async () => {
+    await seed("tasks", "taskGroups", [ops]);
+    await seed("tasks", "tasks", [{ ...internal, taskGroup: "OPS" }, { ...child, taskGroup: "Legacy" }]);
+    await expect(findTasks({ group: "ops" })).rejects.toThrow("More than one group matches");
+    expect(await findTasks({ group: "Ops" })).toEqual({ tasks: [], total: 0, hasMore: false });
+    expect((await findTasks({ group: "OPS" })).tasks.map(({ id }) => id)).toEqual([internal.id]);
+    const changes = [{ taskId: parent.id, set: { taskGroup: "legacy" } }];
+    await savePreview(changes, await previewTaskChanges(changes));
+    expect((await findTasks({ group: "legacy" })).tasks.map(({ id }) => id)).toEqual([child.id, parent.id]);
+    expect(await groupRows()).toEqual([ops]);
+  });
+});
+
 describe("M1 bulk Responsible from the server", () => {
   it("pages 23 open company matches in stable name and ID order without counting nested details", async () => {
     const companyId = TASK_PLAN_PROSPECT.id + 1;
@@ -112,30 +262,19 @@ describe("M1 bulk Responsible from the server", () => {
   const addAudrey = [parent, child].map(({ id }) => ({ taskId: id, set: { addResponsible: ["audrey"] } }));
   const greg = { ...parent, responsible: ["Greg"] };
   const already = { ...child, responsible: ["Audrey"] };
-  const apply = (changes: TaskChange[], shown: Awaited<ReturnType<typeof previewTaskChanges>>) =>
-    applyTaskChanges(changes, shown.seen, shown.warnings.map(({ id }) => id), ORIGIN);
-
-  async function updateTimes() {
-    const response = await fetch(`http://${EMULATOR_HOST}/v1/projects/${PROJECTS.tasks}/databases/(default)/documents/tasks`,
-      { headers: { Authorization: "Bearer owner" } });
-    if (!response.ok) throw new Error(`Emulator read failed: ${response.status}`);
-    const { documents } = await response.json() as { documents: { name: string; updateTime: string }[] };
-    return Object.fromEntries(documents.map(({ name, updateTime }) => [name, updateTime]));
-  }
-
   it("saves only changed IDs and replays those exact IDs after a lost response without writing again", async () => {
     await seed("tasks", "tasks", [{ ...greg, calendar: {} }, already]);
     const beforeTimes = await updateTimes();
     const shown = await previewTaskChanges(addAudrey);
     expect(shown).toMatchObject({ canWrite: true, unchanged: [child.id], tasks: [{ taskId: parent.id, after: { responsible: ["Greg", "Audrey"] } }] });
     expect(Object.keys(shown.seen ?? {})).toEqual([parent.id, child.id]);
-    const first = await apply(addAudrey, shown);
+    const first = await savePreview(addAudrey, shown);
     expect(first).toMatchObject({ alreadySaved: false, tasks: [{ taskId: parent.id, saved: true, calendar: null }] });
     expect(await readFields("tasks", `tasks/${parent.id}`)).toMatchObject({ responsible: ["Greg", "Audrey"], calendar: {} });
     const times = await updateTimes();
     expect(Object.entries(times).filter(([path, time]) => time !== beforeTimes[path]).map(([path]) => path.split("/").at(-1))).toEqual([parent.id]);
     const after = await snapshot();
-    expect(await apply(addAudrey, shown)).toEqual({ ...first, alreadySaved: true });
+    expect(await savePreview(addAudrey, shown)).toEqual({ ...first, alreadySaved: true });
     expect(await snapshot()).toEqual(after);
     expect(await updateTimes()).toEqual(times);
     expect(await readAll("tasks", "testCalendarEvents")).toEqual([]);
@@ -156,35 +295,35 @@ describe("M1 bulk Responsible from the server", () => {
     await expect(applyTaskChanges(addAudrey, { [parent.id]: shown.seen?.[parent.id] }, [], ORIGIN)).rejects.toThrow("each task's seen stamp");
     await seed("tasks", "tasks", [{ ...already, responsible: ["Audrey", "Other owner"] }]);
     const before = await snapshot();
-    await expect(apply(addAudrey, shown)).rejects.toThrow(`Tasks changed since the preview: ${child.id}`);
+    await expect(savePreview(addAudrey, shown)).rejects.toThrow(`Tasks changed since the preview: ${child.id}`);
     expect(await snapshot()).toEqual(before);
 
     const next = await previewTaskChanges(addAudrey);
     await seed("tasks", "tasks", [{ ...greg, responsible: ["Greg", "Audrey"] }]);
     const updated = await snapshot();
-    await expect(apply(addAudrey, next)).rejects.toThrow(`Tasks changed since the preview: ${parent.id}`);
+    await expect(savePreview(addAudrey, next)).rejects.toThrow(`Tasks changed since the preview: ${parent.id}`);
     expect(await snapshot()).toEqual(updated);
   });
 
   it("handles overlapping saves, retries removals and allows a fresh re-add after undo", async () => {
     await seed("tasks", "tasks", [greg, already]);
     const original = await previewTaskChanges(addAudrey);
-    const results = await Promise.all([apply(addAudrey, original), apply(addAudrey, original)]);
+    const results = await Promise.all([savePreview(addAudrey, original), savePreview(addAudrey, original)]);
     expect(results.map(({ alreadySaved }) => alreadySaved).sort()).toEqual([false, true]);
     expect(results.map(({ tasks }) => tasks.map(({ taskId }) => taskId))).toEqual([[parent.id], [parent.id]]);
 
     const removal = [{ taskId: parent.id, set: { removeResponsible: ["AUDREY"] } }];
     const undo = await previewTaskChanges(removal);
-    expect((await apply(removal, undo)).tasks.map(({ taskId }) => taskId)).toEqual([parent.id]);
+    expect((await savePreview(removal, undo)).tasks.map(({ taskId }) => taskId)).toEqual([parent.id]);
     const times = await updateTimes();
-    expect((await apply(removal, undo)).alreadySaved).toBe(true);
-    expect((await apply(addAudrey, original)).alreadySaved).toBe(true);
+    expect((await savePreview(removal, undo)).alreadySaved).toBe(true);
+    expect((await savePreview(addAudrey, original)).alreadySaved).toBe(true);
     expect(await updateTimes()).toEqual(times);
     expect(await readFields("tasks", `tasks/${parent.id}`)).toEqual(expect.objectContaining({ responsible: ["Greg"] }));
     expect(await readFields("tasks", `tasks/${child.id}`)).toEqual(expect.objectContaining({ responsible: ["Audrey"] }));
 
     const fresh = await previewTaskChanges(addAudrey);
-    expect((await apply(addAudrey, fresh)).alreadySaved).toBe(false);
+    expect((await savePreview(addAudrey, fresh)).alreadySaved).toBe(false);
     expect(await readFields("tasks", `tasks/${parent.id}`)).toEqual(expect.objectContaining({ responsible: ["Greg", "Audrey"] }));
   }, 20_000);
 });
