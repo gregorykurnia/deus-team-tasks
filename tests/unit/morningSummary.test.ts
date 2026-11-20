@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMorningSummary } from "@/lib/morningSummary";
+import { buildMorningSummary, dueTodayMessage } from "@/lib/morningSummary";
 import { parsePlan } from "@/lib/planView";
 import type { Task } from "@/lib/types";
 
@@ -14,8 +14,9 @@ describe("pure morning summary", () => {
       task("Tomorrow", "2026-11-18", { parentId: "Today" }), task("Today"), task("Late", "2026-11-16"),
     ], "Audrey", TUESDAY)!;
     expect(summary.count).toBe(3);
-    expect(summary.title).toBe("1 late, 1 due today, 1 tomorrow");
-    expect(summary.body).toBe("Late: Late (1 day late)\nToday: Today\nTomorrow: Tomorrow");
+    expect(summary.roundup).toMatchObject({
+      title: "1 late, 1 tomorrow", body: "Late: Late (1 day late)\nTomorrow: Tomorrow",
+    });
     expect(summary.groups.late.map((t) => t.id)).toEqual(["Late"]);
     expect(summary.groups.today.map((t) => t.id)).toEqual(["Today"]);
     expect(summary.groups.tomorrow.map((t) => t.id)).toEqual(["Tomorrow"]);
@@ -27,8 +28,7 @@ describe("pure morning summary", () => {
       ["2027-12-31", "2028-01-01", "2028-01-02", "2028-01-03", "2028-01-04"],
     ]) {
       const summary = buildMorningSummary([task("Tuesday", tuesday), task("Monday", monday), task("Sunday", sunday), task("Saturday", saturday)], "Audrey", friday)!;
-      expect(summary.title).toBe("3 due by Monday");
-      expect(summary.body).toBe("By Monday: Saturday, Sunday, Monday");
+      expect(summary.roundup).toMatchObject({ title: "3 due by Monday", body: "By Monday: Saturday, Sunday, Monday" });
       expect(summary.groups.byMonday).toHaveLength(3); expect(summary.groups.tomorrow).toEqual([]);
     }
   });
@@ -40,16 +40,18 @@ describe("pure morning summary", () => {
       task("No deadline", ""), task("Later", "2026-11-19"),
       task("Back today", TUESDAY, { parkedAt: Date.UTC(2026, 10, 1), parkedUntil: TUESDAY }),
     ], "Audrey", TUESDAY)!;
-    expect(summary.title).toBe("1 due today"); expect(summary.body).toBe("Today: Back today");
+    expect(summary.groups.today.map((t) => t.id)).toEqual(["Back today"]);
+    expect(summary.roundup).toBeUndefined();
   });
-  it("limits names across all groups to three, appends +N more and never exceeds four lines", () => {
+  it("limits names in the overdue and upcoming roundup without hiding any task due today", () => {
     const summary = buildMorningSummary([
-      task("Late", "2026-11-15"), task("Today A"), task("Today B"), task("Tomorrow A", "2026-11-18"), task("Tomorrow B", "2026-11-18"),
+      task("Late", "2026-11-15"), task("Today A"), task("Today B"), task("Today C"), task("Today D"),
+      task("Tomorrow A", "2026-11-18"), task("Tomorrow B", "2026-11-18"), task("Tomorrow C", "2026-11-18"),
     ], "Audrey", TUESDAY)!;
-    expect(summary.title).toBe("1 late, 2 due today, 2 tomorrow");
-    expect(summary.body).toBe("Late: Late (2 days late)\nToday: Today A, Today B\n+2 more");
-    const full = buildMorningSummary([task("Late", "2026-11-15"), task("Today"), task("Tomorrow A", "2026-11-18"), task("Tomorrow B", "2026-11-18")], "Audrey", TUESDAY)!;
-    expect(full.body.split("\n")).toHaveLength(4); expect(full.body).toMatch(/\n\+1 more$/);
+    expect(summary.groups.today.map((t) => t.id)).toEqual(["Today A", "Today B", "Today C", "Today D"]);
+    expect(summary.roundup).toMatchObject({
+      title: "1 late, 3 tomorrow", body: "Late: Late (2 days late)\nTomorrow: Tomorrow A, Tomorrow B\n+1 more",
+    });
   });
   it("handles missing, blank, malformed and duplicate data without inventing deadlines or people", () => {
     const summary = buildMorningSummary([
@@ -60,13 +62,20 @@ describe("pure morning summary", () => {
       task("Blank", TUESDAY, { responsible: ["", "  ", null] } as unknown as Partial<Task>),
       task("Invalid date", "2026-11-31"), task("Empty name", TUESDAY, { task: " \n " }),
     ], " Audrey ", TUESDAY)!;
-    expect(summary.count).toBe(2); expect(summary.body).toBe("Today: Duplicate, Untitled task");
+    expect(summary.count).toBe(2);
+    expect(summary.groups.today.map((t) => dueTodayMessage(t).body)).toEqual(["Duplicate", "Untitled task"]);
     expect(buildMorningSummary([task("All", TUESDAY, { responsible: ["Full Team"] })], "Full Team", TUESDAY)).toBeNull();
   });
   it("shortens a 120-character name without splitting unicode and flattens embedded line breaks", () => {
     const summary = buildMorningSummary([task("Long", TUESDAY, { task: "😀".repeat(120) }), task("Lines", TUESDAY, { task: "First\nSecond\tThird" })], "Audrey", TUESDAY)!;
-    expect(summary.body).toBe(`Today: First Second Third, ${"😀".repeat(59)}…`);
-    expect(Array.from(summary.body.split(", ")[1])).toHaveLength(60);
+    expect(summary.groups.today.map((t) => dueTodayMessage(t).body)).toEqual(["First Second Third", `${"😀".repeat(59)}…`]);
+  });
+  it("makes each due-today push name the client in parentheses and link straight to the task", () => {
+    const subtask = task("visit & 1", TUESDAY, { task: "Confirm the visit", parentId: "parent", linkedClientId: 3 });
+    expect(dueTodayMessage(subtask, " Mayora Indah ")).toEqual({
+      title: "Due today", body: "Confirm the visit (Mayora Indah)", url: "/?task=visit%20%26%201",
+    });
+    expect(dueTodayMessage(subtask, " ")).toMatchObject({ body: "Confirm the visit" });
   });
   it("has no output on empty mornings, invalid days, weekends or blank names", () => {
     expect(buildMorningSummary([], "Audrey", TUESDAY)).toBeNull();
@@ -78,8 +87,9 @@ describe("pure morning summary", () => {
   it("sorts a copy and produces a link the existing Plan reader opens for the same person", () => {
     const tasks = Object.freeze([Object.freeze(task("B")), Object.freeze(task("A"))]);
     const summary = buildMorningSummary(tasks, "Audrey", TUESDAY)!;
-    expect(summary.body).toBe("Today: A, B"); expect(tasks.map((t) => t.id)).toEqual(["B", "A"]);
-    const named = buildMorningSummary([task("A", TUESDAY, { responsible: ["Audrey & Team"] })], "Audrey & Team", TUESDAY)!;
-    expect(parsePlan(new URL(named.url, "http://localhost").searchParams)).toMatchObject({ view: "people", person: "Audrey & Team" });
+    expect(summary.groups.today.map((t) => t.id)).toEqual(["A", "B"]);
+    expect(tasks.map((t) => t.id)).toEqual(["B", "A"]);
+    const named = buildMorningSummary([task("A", "2026-11-16", { responsible: ["Audrey & Team"] })], "Audrey & Team", TUESDAY)!;
+    expect(parsePlan(new URL(named.roundup!.url, "http://localhost").searchParams)).toMatchObject({ view: "people", person: "Audrey & Team" });
   });
 });

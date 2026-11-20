@@ -2,7 +2,17 @@ import { noticeName } from "./assignNotify";
 import { addDays, daysBetween, isIsoDay, isWeekend, parseIso, plural } from "./dates";
 import { isParked } from "./parking";
 import { hasTaskPerson, taskPersonKeys } from "./peopleInput";
+import type { PushMessage } from "./pushTransport.server";
 import type { Task } from "./types";
+
+export function dueTodayMessage(task: Pick<Task, "id" | "task">, company?: string): PushMessage {
+  const name = noticeName(task.task);
+  return {
+    title: "Due today",
+    body: company?.trim() ? `${name} (${noticeName(company)})` : name,
+    url: `/?task=${encodeURIComponent(task.id)}`,
+  };
+}
 
 export function buildMorningSummary(tasks: readonly Task[], name: string, today: string, email?: string) {
   const person = taskPersonKeys(name, email);
@@ -25,11 +35,14 @@ export function buildMorningSummary(tasks: readonly Task[], name: string, today:
   }
   const sections = [
     { tasks: groups.late, title: "late", label: "Late", late: true },
-    { tasks: groups.today, title: "due today", label: "Today" },
     { tasks: friday ? groups.byMonday : groups.tomorrow, title: friday ? "due by Monday" : "tomorrow", label: friday ? "By Monday" : "Tomorrow" },
   ];
-  const count = sections.reduce((sum, section) => sum + section.tasks.length, 0);
+  const roundupCount = sections.reduce((sum, section) => sum + section.tasks.length, 0);
+  const count = roundupCount + groups.today.length;
   if (!count) return null;
+  groups.today.sort((a, b) => a.id.localeCompare(b.id));
+  if (!roundupCount) return { groups, count, roundup: undefined };
+
   let shown = 0;
   const lines: string[] = [], titles: string[] = [];
   for (const section of sections) {
@@ -41,6 +54,7 @@ export function buildMorningSummary(tasks: readonly Task[], name: string, today:
     shown += names.length;
     if (names.length) lines.push(`${section.label}: ${names.join(", ")}`);
   }
-  if (count > shown) lines.push(`+${(count - shown).toLocaleString("en-US")} more`);
-  return { groups, count, title: titles.join(", "), body: lines.join("\n"), url: `/plan?view=people&person=${encodeURIComponent(name)}` };
+  if (roundupCount > shown) lines.push(`+${(roundupCount - shown).toLocaleString("en-US")} more`);
+  const roundup = { title: titles.join(", "), body: lines.join("\n"), url: `/plan?view=people&person=${encodeURIComponent(name)}` };
+  return { groups, count, roundup };
 }

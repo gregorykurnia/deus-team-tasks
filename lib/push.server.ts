@@ -93,12 +93,20 @@ export async function sendPushToDevice(email: string, id: string, message: PushM
   }
 }
 
-export async function sendPushToPerson(email: string, message: PushMessage): Promise<PushResult[]> {
+export async function sendPushToPerson(email: string, message: PushMessage | PushMessage[]): Promise<PushResult[]> {
   try {
     const person = personRef(email);
     if (!readPerson(await person.get())?.active) return [];
     const devices = await person.collection("devices").get();
-    return await Promise.all(devices.docs.map((device) => sendPushToDevice(email, device.id, message)));
+    const messages = Array.isArray(message) ? message : [message];
+    const results: PushResult[] = [];
+    // Bound concurrent sends while checking the current subscription on every delivery.
+    for (let i = 0; i < messages.length; i += 4) {
+      const batch = messages.slice(i, i + 4);
+      results.push(...await Promise.all(batch.flatMap((item) =>
+        devices.docs.map((device) => sendPushToDevice(email, device.id, item)))));
+    }
+    return results;
   } catch (error) {
     logFailure(error);
     return ["failed"];

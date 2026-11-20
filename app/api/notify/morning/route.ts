@@ -1,6 +1,7 @@
 import { isIsoDay, isWeekend } from "@/lib/dates";
 import { USE_EMULATOR } from "@/lib/emulator";
 import { signInEnabled } from "@/lib/flags";
+import { personEmail } from "@/lib/peopleInput";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -17,8 +18,12 @@ export async function GET(request: Request): Promise<Response> {
     const today = isIsoDay(testDay) ? testDay : wibToday();
     if (isWeekend(today)) return reply({ date: today, results: [] });
     // Keep Admin and production credentials behind the flag, bearer and weekday checks.
-    const { sendMorningSummaries } = await import("@/lib/morningSummary.server");
-    const results = await sendMorningSummaries(today);
+    const morning = await import("@/lib/morningSummary.server");
+    // An operator can configure one recipient, Jakarta date, and expiry for a manual invocation.
+    const [resendDate, expiration, recipient] = process.env.MORNING_DUE_TODAY_RESEND?.split("|") ?? [];
+    const expiresAt = Number(expiration);
+    const resend = resendDate === today && Number.isSafeInteger(expiresAt) && expiresAt > Date.now() && recipient;
+    const results = resend ? [await morning.sendDueTodayResend(personEmail(resend), today)] : await morning.sendMorningSummaries(today);
     return reply({ date: today, results }, results.some((result) => result.status === "failed") ? 503 : 200);
   } catch {
     return reply({ error: "Morning summaries could not be processed." }, 503);

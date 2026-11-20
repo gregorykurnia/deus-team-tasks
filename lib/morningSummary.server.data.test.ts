@@ -46,19 +46,60 @@ describe("weekday morning summaries with real emulator claims and fake delivery"
     vi.stubEnv("CRON_SECRET", "morning-test-secret"); expect((await ping()).status).toBe(404);
     expect(await pushes()).toEqual([]); expect((await person.get()).get("summaryClaimDate")).toBeUndefined();
   });
-  it("at 01:30 UTC builds from app-written tasks, sends once to Audrey and skips an empty person", async () => {
+  it("sends each due-today task with its client and makes one roundup for other deadlines", async () => {
     clock("2026-11-17T01:30:00Z"); expect(wibToday()).toBe(TUESDAY);
-    await seed("tasks", "tasks", [task, { ...task, id: "late", task: "Late quote", endDate: "2026-11-16" },
-      { ...task, id: "subtask", task: "Call back", endDate: WEDNESDAY, parentId: task.id, responsible: [EMAIL] }]);
+    await seed("clients", "pipeline", [{ id: 7, company: "Mayora Indah" }], { keepIdField: true });
+    await seed("tasks", "tasks", [
+      { ...task, linkedClientId: 7 },
+      { ...task, id: "subtask", task: "Call back", parentId: task.id, linkedClientId: 7, responsible: [EMAIL] },
+      { ...task, id: "internal", task: "Update the checklist" },
+      { ...task, id: "late", task: "Late quote", endDate: "2026-11-16" },
+      { ...task, id: "tomorrow", task: "Plan the visit", endDate: WEDNESDAY },
+    ]);
     const response = await ping(); expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ date: TUESDAY, results: [
-      { email: EMAIL, count: 3, status: "sent" }, { email: GREG, count: 0, status: "skipped" },
+      { email: EMAIL, count: 5, status: "sent" }, { email: GREG, count: 0, status: "skipped" },
     ] });
-    expect(await pushes()).toEqual([{ email: EMAIL, title: "1 late, 1 due today, 1 tomorrow",
-      body: "Late: Late quote (1 day late)\nToday: Send the quote\nTomorrow: Call back", url: "/plan?view=people&person=Audrey" }]);
+    const notices = await pushes();
+    expect(notices).toHaveLength(4);
+    expect(notices).toEqual(expect.arrayContaining([
+      { email: EMAIL, title: "Due today", body: "Send the quote (Mayora Indah)", url: "/?task=task" },
+      { email: EMAIL, title: "Due today", body: "Call back (Mayora Indah)", url: "/?task=subtask" },
+      { email: EMAIL, title: "Due today", body: "Update the checklist", url: "/?task=internal" },
+      { email: EMAIL, title: "1 late, 1 tomorrow", body: "Late: Late quote (1 day late)\nTomorrow: Plan the visit",
+        url: "/plan?view=people&person=Audrey" },
+    ]));
     expect((await person.get()).get("lastSummaryDate")).toBe(TUESDAY);
-    expect((await ping()).status).toBe(200); expect(await pushes()).toHaveLength(1);
+    expect((await ping()).status).toBe(200); expect(await pushes()).toHaveLength(4);
     expect((await adminDb.doc(`people/${GREG}`).get()).get("summaryClaimDate")).toBeUndefined();
+  });
+  it("resends only due-today tasks to the configured recipient once after the regular summary", async () => {
+    clock("2026-11-17T05:00:00Z");
+    await person.update({ lastSummaryDate: TUESDAY, summaryClaimDate: TUESDAY });
+    await seed("clients", "pipeline", [{ id: 7, company: "Mayora Indah" }], { keepIdField: true });
+    await storeTask({ linkedClientId: 7, responsible: [EMAIL] });
+    await storeTask({ id: "tomorrow", endDate: WEDNESDAY });
+    await storeTask({ id: "greg", responsible: ["Gregory"] });
+
+    vi.stubEnv("MORNING_DUE_TODAY_RESEND", `${TUESDAY}|${Date.now() + 60_000}|${EMAIL}`);
+    expect((await ping("Bearer wrong")).status).toBe(401);
+    expect(await pushes()).toEqual([]);
+    const sent = await ping();
+    expect(sent.status).toBe(200);
+    expect(await sent.json()).toEqual({ date: TUESDAY, results: [{ email: EMAIL, count: 1, status: "sent" }] });
+    expect(await pushes()).toEqual([{ email: EMAIL, title: "Due today", body: "Send the quote (Mayora Indah)", url: "/?task=task" }]);
+    const record = await person.get();
+    expect(record.get("lastSummaryDate")).toBe(TUESDAY);
+    expect(record.get("dueTodayResendResult")).toEqual({ date: TUESDAY, count: 1, accepted: 1, status: "sent" });
+
+    const repeated = await ping();
+    expect(await repeated.json()).toMatchObject({ results: [{ email: EMAIL, status: "skipped" }] });
+    expect(await pushes()).toHaveLength(1);
+    expect((await adminDb.doc(`people/${GREG}`).get()).get("summaryClaimDate")).toBeUndefined();
+
+    vi.stubEnv("MORNING_DUE_TODAY_RESEND", `${TUESDAY}|${Date.now() - 1}|${EMAIL}`);
+    const regular = await ping();
+    expect(await regular.json()).toMatchObject({ results: [{ email: EMAIL, status: "skipped" }, { email: GREG, status: "sent" }] });
   });
   it("uses Jakarta's date across UTC midnight and skips both Jakarta weekend days", async () => {
     await storeTask({ endDate: "2026-11-21" });
@@ -99,9 +140,24 @@ describe("weekday morning summaries with real emulator claims and fake delivery"
   });
   it("claims once under overlapping independent calls", async () => {
     await storeTask();
+    await storeTask({ id: "second" });
     const results = await Promise.all([sendMorningSummaries(TUESDAY), sendMorningSummaries(TUESDAY), sendMorningSummaries(TUESDAY)]);
-    expect(results.flat().filter((r) => r.status === "sent")).toHaveLength(1); expect(await pushes()).toHaveLength(1);
+    expect(results.flat().filter((r) => r.status === "sent")).toHaveLength(1);
+    expect((await pushes()).map((p) => p.url).sort()).toEqual(["/?task=second", "/?task=task"]);
   }, 20_000);
+  it("sends the other due-today notices when one fails and keeps a rerun from duplicating them", async () => {
+    await storeTask();
+    await storeTask({ id: "second" });
+    const deliver = transport.deliverPush; vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(transport, "deliverPush").mockImplementation(async (...args) => {
+      if (args[2].url === "/?task=task") throw new Error("provider unavailable");
+      await deliver(...args);
+    });
+    expect(await sendMorningSummaries(TUESDAY)).toContainEqual({ email: EMAIL, count: 2, status: "failed" });
+    expect((await person.get()).get("lastSummaryDate")).toBe(TUESDAY);
+    await sendMorningSummaries(TUESDAY);
+    expect((await pushes()).map((p) => p.url)).toEqual(["/?task=second"]);
+  });
   it("a failed claim remains retryable without any partial marker", async () => {
     await storeTask(); vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(adminDb, "runTransaction").mockRejectedValueOnce(new Error("unavailable"));

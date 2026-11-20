@@ -265,8 +265,9 @@ test("a pending test finishes after its sheet closes and sign-out wins without a
 test("email assignments appear in a morning push and Audrey’s task lists", { tag: "@phone" }, async ({ page }, info) => {
   test.setTimeout(180_000);
   page.setDefaultTimeout(20_000);
+  await seedCompanies([company(1, { company: "Mayora Indah" })]);
   await seedTasks([
-    task("email-owner", { task: "Review the trial report", responsible: [EMAIL], endDate: "2026-11-17" }),
+    task("email-owner", { task: "Review the trial report", responsible: [EMAIL], endDate: "2026-11-17", linkedClientId: 1 }),
     task("named-owner", { task: "Confirm the visit", responsible: ["Audrey", EMAIL], endDate: "2026-11-17" }),
   ]);
   await notificationBrowser(page, { apple: true, standalone: true });
@@ -279,9 +280,14 @@ test("email assignments appear in a morning push and Audrey’s task lists", { t
   const summary = await page.request.get("/api/notify/morning", { headers: { Authorization: "Bearer morning-smoke-emulator-only" } });
   expect(summary.status()).toBe(200);
   expect(await summary.json()).toMatchObject({ results: [{ email: EMAIL, count: 2, status: "sent" }] });
-  const [push] = await readAll("tasks", "_fakePush");
-  expect(push).toMatchObject({ title: "2 due today", url: "/plan?view=people&person=Audrey" });
-  await page.goto(String(push.url));
+  const notices = await readAll("tasks", "_fakePush");
+  expect(notices).toHaveLength(2);
+  const clientNotice = notices.find((notice) => notice.url === "/?task=email-owner");
+  expect(clientNotice).toMatchObject({ title: "Due today", body: "Review the trial report (Mayora Indah)" });
+  expect(notices).toContainEqual(expect.objectContaining({ title: "Due today", body: "Confirm the visit", url: "/?task=named-owner" }));
+  await page.goto(String(clientNotice!.url));
+  await expect(page.getByRole("dialog", { name: "Task", exact: true }).getByLabel("Description", { exact: true })).toHaveValue("Review the trial report");
+  await page.goto("/plan?view=people&person=Audrey");
   await expect(page.getByRole("heading", { name: "Audrey", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Review the trial report/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Confirm the visit/ })).toHaveCount(1);
@@ -414,22 +420,26 @@ test("E1: sign in, app and chat assignments, Tuesday summary, links, and sign ou
     expect(await pushes()).toHaveLength(3);
     const summary = await morning(); expect(summary.status()).toBe(200);
     expect(await summary.json()).toEqual({ date: "2026-11-17", results: [{ email: EMAIL, count: 3, status: "sent" }] });
-    expect(await pushes()).toHaveLength(4);
-    expect((await pushes()).find((row) => row.title !== "New task for you")).toMatchObject({
-      title: "1 late, 1 due today, 1 tomorrow", url: "/plan?view=people&person=Audrey",
-      body: "Late: Send the quote (1 day late)\nToday: Book the trial room\nTomorrow: Confirm the visit",
-    });
+    const notices = await pushes();
+    expect(notices).toHaveLength(5);
+    expect(notices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: "Due today", body: "Book the trial room (Halcyon Logistics)", url: "/?task=subtask" }),
+      expect.objectContaining({
+        title: "1 late, 1 tomorrow", url: "/plan?view=people&person=Audrey",
+        body: "Late: Send the quote (1 day late)\nTomorrow: Confirm the visit",
+      }),
+    ]));
     const repeated = await Promise.all([morning(), morning()]);
     for (const response of repeated) {
       expect(response.status()).toBe(200);
       expect(await response.json()).toMatchObject({ results: [{ email: EMAIL, status: "skipped" }] });
     }
-    expect(await pushes()).toHaveLength(4);
+    expect(await pushes()).toHaveLength(5);
 
     // Drive the exact payload URLs, on the recipient's restored session, and verify the loaded record.
     const titles = new Map([[added!.id, "Send the quote"], ["subtask", "Book the trial room"], ["chat", "Confirm the visit"]]);
-    for (const row of await pushes()) {
-      const url = new URL(String(row.url), baseURL);
+    for (const path of new Set(notices.map((notice) => String(notice.url)))) {
+      const url = new URL(path, baseURL);
       await page.goto(`${url.pathname}${url.search}`);
       const id = url.searchParams.get("task");
       if (id) {
@@ -454,7 +464,7 @@ test("E1: sign in, app and chat assignments, Tuesday summary, links, and sign ou
     await editor.goto("/tasks?task=after-sign-out"); await assign(editor); await save(editor);
     expect(await storedById("tasks", "tasks", "after-sign-out")).toMatchObject({ responsible: ["Audrey"] });
     expect(await storedById("tasks", "assignNotices", "after-sign-out")).toMatchObject({ notified: ["Audrey"] });
-    expect(await pushes()).toHaveLength(4);
+    expect(await pushes()).toHaveLength(notices.length);
     expect(editorErrors).toEqual([]);
   } finally {
     await chat.close();
