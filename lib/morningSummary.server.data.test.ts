@@ -49,7 +49,7 @@ describe("weekday morning summaries with real emulator claims and fake delivery"
   it("at 01:30 UTC builds from app-written tasks, sends once to Audrey and skips an empty person", async () => {
     clock("2026-11-17T01:30:00Z"); expect(wibToday()).toBe(TUESDAY);
     await seed("tasks", "tasks", [task, { ...task, id: "late", task: "Late quote", endDate: "2026-11-16" },
-      { ...task, id: "subtask", task: "Call back", endDate: WEDNESDAY, parentId: task.id }]);
+      { ...task, id: "subtask", task: "Call back", endDate: WEDNESDAY, parentId: task.id, responsible: [EMAIL] }]);
     const response = await ping(); expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ date: TUESDAY, results: [
       { email: EMAIL, count: 3, status: "sent" }, { email: GREG, count: 0, status: "skipped" },

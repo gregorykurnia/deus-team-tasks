@@ -17,6 +17,14 @@ describe("assignment notice decisions and words", () => {
     expect(assignmentRecipients([], ["Audrey"], [audrey])).toEqual({ owed: [], notified: [] });
     expect(assignmentRecipients(["Audrey"], [], [audrey]).owed).toEqual([audrey]);
   });
+  it("recognizes a linked email and name as the same assignment and notification", () => {
+    const misleadingName = { ...greg, name: audrey.email };
+    expect(assignmentRecipients([audrey.email], [], [misleadingName, audrey])).toEqual({ owed: [audrey], notified: ["Audrey"] });
+    expect(assignmentRecipients(["Audrey", audrey.email], [audrey.email], [audrey, greg]))
+      .toEqual({ owed: [], notified: ["Audrey"] });
+    expect(assignmentRecipients([audrey.email], ["Audrey"], [audrey, greg]))
+      .toEqual({ owed: [], notified: ["Audrey"] });
+  });
   it.each([undefined, null, "Audrey", {}, [null, 4, ""]])("accepts missing or malformed stored lists %#", (value) => {
     expect(assignmentRecipients(value, value, [audrey])).toEqual({ owed: [], notified: [] });
   });

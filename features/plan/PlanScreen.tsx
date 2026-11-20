@@ -27,11 +27,13 @@ import {
   TIMELINE_DAYS,
   type PlanState,
 } from "@/lib/planView";
-import { isPerson, namesInUse } from "@/lib/people";
+import { isPerson, namesInUse, showLinkedTaskPerson } from "@/lib/people";
+import { personNameKey, taskPersonKeys } from "@/lib/peopleInput";
 import { isOpen } from "@/lib/taskQueries";
 import { setTasksDone } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
+import { useSignedIn } from "@/lib/useSignedIn";
 import EmptyState from "@/ui/EmptyState";
 import Notice from "@/ui/Notice";
 import { useMediaQuery } from "@/ui/useMediaQuery";
@@ -58,6 +60,8 @@ export default function PlanScreen() {
   const groups = useTaskGroups();
   const companies = useCompanies();
   const byId = useCompaniesById();
+  const person = useSignedIn();
+  const displayTasks = useMemo(() => showLinkedTaskPerson(tasks.rows, person), [tasks.rows, person]);
 
   const parsed = useMemo(() => parsePlan(search), [search]);
   // A task group that's gone (deleted since the link was made) narrows to nothing, so it's let go once groups are known.
@@ -66,8 +70,11 @@ export default function PlanScreen() {
   const state: PlanState = useMemo(() => {
     let next = parsed.group && groupsKnown && !groups.rows.some((g) => g.name === parsed.group) ? { ...parsed, group: null } : parsed;
     if (next.view === "people" && next.person && !isPerson(next.person)) next = { ...next, person: null };
+    if (person && next.person && taskPersonKeys(person.name, person.email).has(personNameKey(next.person))) {
+      next = { ...next, person: person.name };
+    }
     return next;
-  }, [parsed, groupsKnown, groups.rows]);
+  }, [parsed, groupsKnown, groups.rows, person]);
   const from = today ? timelineFrom(state, today) : null;
 
   // The view is written to the address in place, so Back leaves the screen rather than stepping through filters.
@@ -99,9 +106,9 @@ export default function PlanScreen() {
     return () => live.forEach(clearTimeout);
   }, []);
   // Parked tasks are out of the plan until they come back (lib/parking).
-  const taskById = useMemo(() => new Map(tasks.rows.map((t) => [t.id, t])), [tasks.rows]);
-  const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
-  const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
+  const taskById = useMemo(() => new Map(displayTasks.map((t) => [t.id, t])), [displayTasks]);
+  const open = useMemo(() => displayTasks.filter((t) => isOpen(t, today ?? undefined)), [displayTasks, today]);
+  const listed = useMemo(() => displayTasks.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [displayTasks, leaving, today]);
   const narrowed = useMemo(() => (ready ? planTasks(listed, state, byId) : []), [ready, listed, state, byId]);
   // Month and Day leave out a task whose dated subtasks are shown, as the timeline does: the subtasks carry the work.
   const planned = useMemo(() => withoutParents(narrowed), [narrowed]);
@@ -157,7 +164,7 @@ export default function PlanScreen() {
     [open, today]
   );
   // People counts everyone named on a task, narrowed by Work only: a Person in the address is the page that opens.
-  const names = useMemo(() => namesInUse(tasks.rows), [tasks.rows]);
+  const names = useMemo(() => namesInUse(displayTasks), [displayTasks]);
   const peopleTasks = useMemo(
     () => (ready && state.view === "people" ? planTasks(listed, { ...state, person: null }, byId) : []),
     [ready, state, listed, byId]

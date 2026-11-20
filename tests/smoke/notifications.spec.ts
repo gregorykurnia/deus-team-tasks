@@ -262,6 +262,38 @@ test("a pending test finishes after its sheet closes and sign-out wins without a
   await expect(page.getByText(/^Test sent\./)).toHaveCount(0);
 });
 
+test("email assignments appear in a morning push and Audrey’s task lists", { tag: "@phone" }, async ({ page }, info) => {
+  test.setTimeout(180_000);
+  page.setDefaultTimeout(20_000);
+  await seedTasks([
+    task("email-owner", { task: "Review the trial report", responsible: [EMAIL], endDate: "2026-11-17" }),
+    task("named-owner", { task: "Confirm the visit", responsible: ["Audrey", EMAIL], endDate: "2026-11-17" }),
+  ]);
+  await notificationBrowser(page, { apple: true, standalone: true });
+  await signIn(page);
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).getByRole("button", { name: "Turn on notifications", exact: true }).click();
+  await expect(sheet(page).getByText(/^Notifications are on for this/)).toBeVisible();
+  await sheet(page).getByRole("button", { name: "Done", exact: true }).click();
+
+  const summary = await page.request.get("/api/notify/morning", { headers: { Authorization: "Bearer morning-smoke-emulator-only" } });
+  expect(summary.status()).toBe(200);
+  expect(await summary.json()).toMatchObject({ results: [{ email: EMAIL, count: 2, status: "sent" }] });
+  const [push] = await readAll("tasks", "_fakePush");
+  expect(push).toMatchObject({ title: "2 due today", url: "/plan?view=people&person=Audrey" });
+  await page.goto(String(push.url));
+  await expect(page.getByRole("heading", { name: "Audrey", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Review the trial report/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Confirm the visit/ })).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath("audrey-plan.png"), style: "nextjs-portal { display: none; }" });
+
+  await page.goto("/");
+  const yours = page.getByRole("region", { name: "Your tasks" });
+  await expect(yours.getByRole("link", { name: /Review the trial report/ })).toBeVisible();
+  await expect(yours.getByRole("link", { name: /Confirm the visit/ })).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath("audrey-today.png"), style: "nextjs-portal { display: none; }" });
+});
+
 test("E1: sign in, app and chat assignments, Tuesday summary, links, and sign out", async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000);
   page.setDefaultTimeout(20_000);

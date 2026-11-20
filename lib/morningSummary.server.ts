@@ -12,7 +12,7 @@ export interface MorningSummaryResult { email: string; count: number; status: "s
 async function notifyPerson(person: Person, tasks: readonly Task[], today: string): Promise<MorningSummaryResult> {
   let count = 0;
   try {
-    const summary = buildMorningSummary(tasks, person.name, today);
+    const summary = buildMorningSummary(tasks, person.name, today, person.email);
     if (!summary) return { email: person.email, count, status: "skipped" };
     count = summary.count;
     const ref = adminDb.collection("people").doc(person.email);

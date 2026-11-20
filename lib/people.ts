@@ -1,4 +1,5 @@
 // People named on tasks: the names already in use (W4), initials and a stable hue.
+import { personNameKey, taskPersonKeys } from "./peopleInput";
 import type { FlowRole, Task } from "./types";
 
 // "Full Team" is a placeholder some tasks carry, not a person.
@@ -6,6 +7,25 @@ const NOT_A_PERSON = new Set(["Full Team"]);
 
 export function isPerson(name: string): boolean {
   return !!name.trim() && !NOT_A_PERSON.has(name);
+}
+
+// Today and Plan use the signed-in person's display name for either stored spelling.
+export function showLinkedTaskPerson(tasks: Task[], person: { name: string; email: string } | null): Task[] {
+  if (!person) return tasks;
+  const keys = taskPersonKeys(person.name, person.email);
+  const displayName = (name: string) => typeof name === "string" && keys.has(personNameKey(name)) ? person.name : name;
+  return tasks.map((task) => {
+    const responsible = Array.isArray(task.responsible) ? task.responsible.map(displayName) : null;
+    const informed = Array.isArray(task.informed) ? task.informed.map((entry) => {
+      if (!entry) return entry;
+      const name = displayName(entry.name);
+      return name === entry.name ? entry : { ...entry, name };
+    }) : null;
+    return responsible?.some((name, index) => name !== task.responsible[index])
+      || informed?.some((entry, index) => entry !== task.informed[index])
+      ? { ...task, responsible: responsible ? [...new Set(responsible)] : task.responsible, informed: informed ?? task.informed }
+      : task;
+  });
 }
 
 // Every name in use, A to Z: on tasks (responsible and informed), flow roles,

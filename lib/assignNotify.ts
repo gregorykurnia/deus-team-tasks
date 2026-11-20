@@ -1,24 +1,22 @@
 import { isIsoDay } from "./dates";
 import type { Kind } from "./kinds";
-import { personNameKey } from "./peopleInput";
+import { hasTaskPerson, personNameKey, taskPersonKeys } from "./peopleInput";
 import type { Task } from "./types";
 
 export interface AssignmentPerson { email: string; name: string; active: boolean }
 
 export function assignmentRecipients(responsible: unknown, notified: unknown, people: readonly AssignmentPerson[], senderEmail?: string) {
-  const keys = (value: unknown) => new Set((Array.isArray(value) ? value : [])
-    .filter((name): name is string => typeof name === "string" && !!name.trim()).map(personNameKey));
-  const assigned = keys(responsible), told = keys(notified), seen = new Set<string>();
-  const linked = people.filter((person) => {
+  const seen = new Set<string>(), linked: string[] = [], owed: AssignmentPerson[] = [];
+  for (const person of people) {
     const key = personNameKey(person.name);
-    if (!person.active || !key || key === "full team" || !assigned.has(key) || seen.has(key)) return false;
+    if (!person.active || seen.has(key)) continue;
+    const keys = taskPersonKeys(person.name, person.email);
+    if (!hasTaskPerson(responsible, keys)) continue;
     seen.add(key);
-    return true;
-  });
-  return {
-    owed: linked.filter((person) => !told.has(personNameKey(person.name)) && person.email !== senderEmail),
-    notified: linked.map((person) => person.name),
-  };
+    linked.push(keys.has(key) ? person.name : person.email);
+    if (person.email !== senderEmail && !hasTaskPerson(notified, keys)) owed.push(person);
+  }
+  return { owed, notified: linked };
 }
 
 // Keep each name to 60 characters and one line, including the ellipsis.

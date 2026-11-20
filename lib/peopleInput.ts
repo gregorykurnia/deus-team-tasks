@@ -1,7 +1,9 @@
+const WORK_EMAIL = /^[a-z0-9.!#$%&'*+?=^_`{|}~-]+@deushcs\.com$/;
+
 // Firebase custom-token UIDs are the email and have a 128-character limit.
 export function personEmail(value: string): string {
   const email = value.trim().toLowerCase();
-  if (email.length > 128 || !/^[a-z0-9.!#$%&'*+?=^_`{|}~-]+@deushcs\.com$/.test(email)) {
+  if (email.length > 128 || !WORK_EMAIL.test(email)) {
     throw new Error("Use a deushcs.com email, at most 128 characters.");
   }
   return email;
@@ -17,6 +19,19 @@ export function personName(value: string): string {
 
 export function personNameKey(name: string): string {
   return name.trim().replace(/\s+/g, " ").normalize("NFKC").toLowerCase();
+}
+
+export function taskPersonKeys(name: string, email?: string): ReadonlySet<string> {
+  const key = personNameKey(name);
+  if (!key || key === "full team") return new Set();
+  const address = email?.trim().toLowerCase();
+  if (!address) return new Set([key]);
+  // A work email in Responsible identifies its linked account, even if someone else uses it as a label.
+  return new Set(WORK_EMAIL.test(key) ? [address] : [key, address]);
+}
+
+export function hasTaskPerson(people: unknown, keys: ReadonlySet<string>): boolean {
+  return Array.isArray(people) && people.some((value) => typeof value === "string" && keys.has(personNameKey(value)));
 }
 
 export function closestNames(name: string, names: Iterable<string>): string[] {

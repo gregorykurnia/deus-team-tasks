@@ -48,7 +48,7 @@ afterAll(async () => {
 
 describe("server assignment claims and real fake-push delivery", () => {
   it("sees app-written tasks and sends once despite duplicate pings and re-saves", async () => {
-    await seed("tasks", "tasks", [task]);
+    await seed("tasks", "tasks", [{ ...task, responsible: [EMAIL] }]);
     expect((await getDocFromServer(doc(db, "tasks", task.id))).data()?.task).toBe(task.task);
     expect((await ping([task.id, task.id])).status).toBe(200);
     await storeTask({ responsible: ["audrey", " AUDREY ", "Full Team", "Unlinked"] });
@@ -131,7 +131,7 @@ describe("server assignment claims and real fake-push delivery", () => {
     await ping(); expect((await pushes()).map((p) => p.email)).toEqual([GREG]); expect(await notice()).toEqual(["Audrey", "Gregory"]);
   });
   it("honors the people:add backfill even with case/spacing differences", async () => {
-    await adminDb.doc(`people/${EMAIL}`).delete(); await storeTask({ responsible: [" AUDREY "] });
+    await adminDb.doc(`people/${EMAIL}`).delete(); await storeTask({ responsible: [` ${EMAIL.toUpperCase()} `] });
     await addPerson(EMAIL, "Audrey"); await savePushDevice(EMAIL, subscription()); await ping();
     expect(await notice()).toEqual(["Audrey"]); expect(await pushes()).toEqual([]);
   });

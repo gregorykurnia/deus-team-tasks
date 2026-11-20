@@ -2,7 +2,7 @@ import "server-only";
 import { FieldValue, type DocumentSnapshot } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "./admin";
 import { isParked } from "./parking";
-import { closestNames, personEmail, personName, personNameKey } from "./peopleInput";
+import { closestNames, hasTaskPerson, personEmail, personName, personNameKey, taskPersonKeys } from "./peopleInput";
 
 export interface Person {
   email: string;
@@ -51,6 +51,7 @@ export async function getPersonByName(name: string): Promise<Person | null> {
 
 export async function previewPersonAddition(rawEmail: string, rawName: string) {
   const email = personEmail(rawEmail), name = personName(rawName);
+  const keys = taskPersonKeys(name, email);
   const [tasks, allPeople] = await Promise.all([
     adminDb.collection("tasks").select("responsible", "completed", "parkedAt", "parkedUntil").get(),
     people.get(),
@@ -63,7 +64,7 @@ export async function previewPersonAddition(rawEmail: string, rawName: string) {
     const task = doc.data();
     const responsible = Array.isArray(task.responsible) ? task.responsible.filter((n): n is string => typeof n === "string") : [];
     responsible.forEach((n) => names.add(n));
-    if (!responsible.some((value) => personNameKey(value) === personNameKey(name))) continue;
+    if (!hasTaskPerson(responsible, keys)) continue;
     total++;
     if (!task.completed && !isParked(task, today)) open++;
   }
@@ -73,6 +74,8 @@ export async function previewPersonAddition(rawEmail: string, rawName: string) {
 export async function addPerson(rawEmail: string, rawName: string): Promise<Person> {
   const email = personEmail(rawEmail), name = personName(rawName);
   const person: Person = { email, name, active: true };
+  const keys = taskPersonKeys(name, email);
+  const notifiedName = keys.has(personNameKey(name)) ? name : email;
   return adminDb.runTransaction(async (transaction) => {
     // The query also serializes two emails trying to claim the same task name.
     const allPeople = await transaction.get(people);
@@ -81,9 +84,8 @@ export async function addPerson(rawEmail: string, rawName: string): Promise<Pers
     if (existing?.active) return person;
     const tasks = await transaction.get(adminDb.collection("tasks").select("responsible"));
     for (const task of tasks.docs) {
-      const names: unknown = task.data().responsible;
-      if (!Array.isArray(names) || !names.some((value) => typeof value === "string" && personNameKey(value) === personNameKey(name))) continue;
-      transaction.set(adminDb.collection("assignNotices").doc(task.id), { notified: FieldValue.arrayUnion(name) }, { merge: true });
+      if (!hasTaskPerson(task.data().responsible, keys)) continue;
+      transaction.set(adminDb.collection("assignNotices").doc(task.id), { notified: FieldValue.arrayUnion(notifiedName) }, { merge: true });
     }
     // Backfill and activation commit together, leaving task documents untouched.
     transaction.set(people.doc(email), person, { merge: true });

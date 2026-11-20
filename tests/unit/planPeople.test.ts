@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { namesInUse, showLinkedTaskPerson } from "@/lib/people";
 import { byDeadline, nextDueLabel, personLine, personRows, rankLine, searchPeople, sparkHeight, widestLoad, workWords } from "@/lib/planPeople";
 import type { Task } from "@/lib/types";
 
@@ -48,6 +49,17 @@ describe("personRows", () => {
     const [maya, kevin] = personRows([MAYA, KEVIN], [task("x", { responsible: [MAYA], informed: [{ name: MAYA }, { name: KEVIN }] })], TODAY);
     expect([maya.name, maya.owned.length, maya.informed.length]).toEqual([MAYA, 1, 0]);
     expect([kevin.name, kevin.owned.length, kevin.informed.length]).toEqual([KEVIN, 0, 1]);
+  });
+
+  it("shows the signed-in teammate's name for both spellings without editing the tasks", () => {
+    const email = "maya.chen@deushcs.com";
+    const saved = task("linked", { responsible: [email, MAYA, KEVIN], informed: [{ name: email, note: "backup" }] });
+    const display = showLinkedTaskPerson([saved], { name: MAYA, email });
+    expect(display[0].responsible).toEqual([MAYA, KEVIN]);
+    expect(display[0].informed).toEqual([{ name: MAYA, note: "backup" }]);
+    expect(saved.responsible).toEqual([email, MAYA, KEVIN]);
+    expect(personRows(namesInUse(display), display, TODAY).find((r) => r.name === MAYA))
+      .toMatchObject({ owned: [display[0]], informed: [] });
   });
 
   it("dates the next deadline in full beyond two weeks", () => {

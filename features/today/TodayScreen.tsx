@@ -10,6 +10,7 @@ import { useCompanies, useCompaniesById, useTasks } from "@/desk/DeskData";
 import PageHeader from "@/desk/PageHeader";
 import { failureMessage, useConnection } from "@/lib/connection";
 import { longDayLabel } from "@/lib/dates";
+import { showLinkedTaskPerson } from "@/lib/people";
 import { newTaskFromDraft, emptyDraft } from "@/features/task-sheet/draft";
 import { isOpen } from "@/lib/taskQueries";
 import { addTask, setTasksDone } from "@/lib/taskWrites";
@@ -62,8 +63,9 @@ export default function TodayScreen() {
   const ready = !pending && !tasksFailed && !offlineEmpty && today !== null;
 
   // Open tasks (parked ones aren't), plus any just marked done that are still on their way out of the list.
-  const listed = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [tasks.rows, leaving, today]);
-  const open = useMemo(() => tasks.rows.filter((t) => isOpen(t, today ?? undefined)), [tasks.rows, today]);
+  const displayTasks = useMemo(() => showLinkedTaskPerson(tasks.rows, person), [tasks.rows, person]);
+  const listed = useMemo(() => displayTasks.filter((t) => isOpen(t, today ?? undefined) || leaving.has(t.id)), [displayTasks, leaving, today]);
+  const open = useMemo(() => displayTasks.filter((t) => isOpen(t, today ?? undefined)), [displayTasks, today]);
   const eventList = events.status === "ok" ? events.events : null;
 
   const model = useMemo(() => {
