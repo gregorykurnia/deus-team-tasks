@@ -4,50 +4,12 @@ import { addDoc, collection, doc, getDocs, query, updateDoc, where } from "fireb
 import { commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
+import { GroupNameError, groupNameProblem, TASK_GROUPS, type GroupRef } from "./taskGroupModel";
 import { PartlyChanged, TASKS, toTaskUpdate } from "./taskWrites";
 import type { Task } from "./types";
 
-export const TASK_GROUPS = "taskGroups";
-
-export interface TaskGroup {
-  id: string;
-  name: string;
-  starred: boolean;
-}
-
-// A group a task names but that has no record of its own (left by older data).
-export interface GroupRef {
-  id?: string;
-  name: string;
-}
-
-export type GroupNameProblem = "missing" | "taken";
-
-export class GroupNameError extends Error {
-  constructor(public problem: GroupNameProblem) {
-    super(problem === "missing" ? "Enter a name." : "A group with that name already exists.");
-  }
-}
-
-// A group's name is required and unique, ignoring case (guide 5.5).
-export function groupNameProblem(name: string, groups: GroupRef[], exceptId?: string): GroupNameProblem | null {
-  const clean = name.trim();
-  if (!clean) return "missing";
-  const key = clean.toLowerCase();
-  return groups.some((g) => g.id !== exceptId && g.name.trim().toLowerCase() === key) ? "taken" : null;
-}
-
-// Starred groups first, then in the order they were made.
-export function sortGroups<G extends TaskGroup>(groups: G[]): G[] {
-  return [...groups].sort((a, b) => (a.starred === b.starred ? 0 : a.starred ? -1 : 1));
-}
-
-// Group names to show: every group, plus names that only tasks still carry.
-export function groupNamesInUse(groups: GroupRef[], tasks: Pick<Task, "taskGroup">[]): string[] {
-  const names = groups.map((g) => g.name);
-  for (const t of tasks) if (t.taskGroup && !names.includes(t.taskGroup)) names.push(t.taskGroup);
-  return names;
-}
+export { GroupNameError, groupNameProblem, groupNamesInUse, sortGroups, TASK_GROUPS,
+  type GroupNameProblem, type GroupRef, type TaskGroup } from "./taskGroupModel";
 
 export async function createTaskGroup(name: string, groups: GroupRef[], starred = false): Promise<string> {
   const problem = groupNameProblem(name, groups);

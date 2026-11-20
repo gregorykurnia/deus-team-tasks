@@ -57,13 +57,17 @@ export function isTaskEditTool(name: unknown): name is keyof typeof taskEditTool
   return typeof name === "string" && Object.hasOwn(taskEditToolInputs, name);
 }
 
-async function runTool(work: () => Promise<object>, failure: string): Promise<CallToolResult> {
+export async function runTaskEditTool(
+  work: () => Promise<object>,
+  failure: string,
+  isPublicError: (error: unknown) => error is Error = (error) => error instanceof TaskEditError,
+): Promise<CallToolResult> {
   if (!taskEditsEnabled()) return { isError: true, content: [{ type: "text", text: "Tool not found." }] };
   try {
     const value = await work();
     return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: { ...value } };
   } catch (error) {
-    return { isError: true, content: [{ type: "text", text: error instanceof TaskEditError ? error.message : failure }] };
+    return { isError: true, content: [{ type: "text", text: isPublicError(error) ? error.message : failure }] };
   }
 }
 
@@ -73,15 +77,15 @@ export function registerTaskEditTools(server: McpServer, origin: string) {
   server.registerTool("find_tasks", {
     description: `Find up to 10 tasks or subtasks per page by name/Key points text, company ID and/or main-task ID. Use offset to page through the name-then-ID order. The total counts each matching task or subtask once. Nested subtasks are extra detail. Includes stored fields, main task, company, group, dates, status, parking, people, Key points, calendar mark and subtasks. Done tasks are omitted unless includeDone is true. Reads only. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.find_tasks, annotations,
-  }, (input) => runTool(() => findTasks(input), "Could not read tasks and companies. Try again shortly."));
+  }, (input) => runTaskEditTool(() => findTasks(input), "Could not read tasks and companies. Try again shortly."));
   server.registerTool("preview_task_changes", {
     description: `Preview 1–50 explicitly listed task edits, moves or deletes without saving. One change per task ID. Returns before/after records, seen stamps, errors and stable warning IDs, including subtasks freed by a main task's deletion. Responsible additions and removals return unchanged IDs and a complete seen map as well. Show the exact changes and warnings to the owner; a preview never saves or confirms consent. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.preview_task_changes, annotations,
-  }, ({ changes }) => runTool(() => previewTaskChanges(changes), "Could not preview task changes. Try again shortly."));
+  }, ({ changes }) => runTaskEditTool(() => previewTaskChanges(changes), "Could not preview task changes. Try again shortly."));
   server.registerTool("apply_task_changes", {
     description: `Save ONLY AFTER preview_task_changes and the owner's confirmation of the exact edits, every deleted task by name, and every warning. Pass the same changes, all preview seen stamps (including freed subtasks), and confirmed warning IDs. Saves the list atomically; a changed task refuses the whole list. Open company tasks' deadline changes update their company; a company failure restores the task changes. Calendar sync runs after saving and reports failures per task without undoing saved changes. Retrying the same saved list returns alreadySaved and retries calendar work. Never save an unlisted task or infer consent from a preview. ${TASK_EDIT_CHAT_GUIDANCE}`,
     inputSchema: taskEditToolInputs.apply_task_changes,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
-  }, ({ changes, seen, acknowledgedWarnings }) => runTool(() => applyTaskChanges(changes, seen, acknowledgedWarnings, origin),
+  }, ({ changes, seen, acknowledgedWarnings }) => runTaskEditTool(() => applyTaskChanges(changes, seen, acknowledgedWarnings, origin),
     "Could not confirm whether the task changes were saved. Find and preview the tasks before trying again."));
 }

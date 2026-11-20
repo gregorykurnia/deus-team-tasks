@@ -40,6 +40,7 @@ See the [example transcripts and exact tool inputs](../implementation/chat-task-
 |---|---|
 | `MCP_TASK_PLANS_ENABLED` unset (or anything except `1`) | `find_company`, `preview_followup_plan`, `add_followup_plan` |
 | `MCP_TASK_PLANS_ENABLED=1` | Those three plus `find_task_destinations`, `preview_task_plan`, `add_task_plan`, `find_free_times` (busy and free times on the connected calendars; reads only) |
+| `MCP_TASK_EDITS_ENABLED=1` | `find_tasks`, `preview_task_changes`, `apply_task_changes`. `list_task_groups` reads groups and counts. `change_task_group` creates, renames, marks or unmarks as important, and deletes groups after confirmation. |
 
 The generic workflow lives in the server instructions and general tool descriptions, not an uploaded skill.
 Registration: [`lib/taskPlanTools.ts`](../../lib/taskPlanTools.ts) and

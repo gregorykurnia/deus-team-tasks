@@ -7,6 +7,7 @@ import { findCompanies } from "@/lib/followupPlan";
 import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData } from "@/lib/followupServer";
 import { isTaskPlanTool, registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { isTaskEditTool, registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
+import { isTaskGroupTool, registerTaskGroupTools, taskGroupToolInputs } from "@/lib/taskGroupTools";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -98,9 +99,10 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
   const rpc = parsed.data;
   if ("method" in rpc && rpc.method === "tools/call" && rpc.params) {
     const name = rpc.params.name;
-    if (isTaskEditTool(name)) {
+    const editInput = isTaskEditTool(name) ? taskEditToolInputs[name] : isTaskGroupTool(name) ? taskGroupToolInputs[name] : undefined;
+    if (editInput) {
       if (!taskEditsEnabled()) return rpcError(-32602, "Tool not found.", "id" in rpc ? rpc.id : null);
-      const checked = taskEditToolInputs[name].safeParse(rpc.params.arguments);
+      const checked = editInput.safeParse(rpc.params.arguments);
       if (!checked.success) {
         const issues = checked.error.issues.map((issue) => `${issue.path.join(".") || "inputs"}: ${issue.message}`).join("; ");
         return rpcError(-32602, `Check the tool inputs. ${issues}`, "id" in rpc ? rpc.id : null);
@@ -133,6 +135,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
     registerTools(server, origin);
     registerTaskPlanTools(server, origin);
     registerTaskEditTools(server, origin);
+    registerTaskGroupTools(server);
   }, {
     serverInfo: { name: "Deus Team Tasks follow-up", version: "1.0.0" },
     ...(instructions && { instructions }),

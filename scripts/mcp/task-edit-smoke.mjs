@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { toolsFor } from "./protocol-smoke.mjs";
 
 const EDITS = ["find_tasks", "preview_task_changes", "apply_task_changes"];
+const GROUPS = ["list_task_groups", "change_task_group"];
 
 const editSaveArgs = (changes, shown) => ({
   changes, seen: shown.seen ?? Object.fromEntries(shown.tasks.map((row) => [row.taskId, row.seen])),
@@ -11,10 +12,11 @@ const editSaveArgs = (changes, shown) => ({
 
 export async function checkDisabledTaskEdits(context) {
   const { tools } = await context.client.listTools();
-  assert.ok(tools.every((tool) => !EDITS.includes(tool.name)), "Unset edit flag must hide every edit tool.");
-  assert.doesNotMatch(context.client.getInstructions() ?? "", /find_tasks|preview_task_changes|apply_task_changes/);
+  const disabled = [...EDITS, ...GROUPS];
+  assert.ok(tools.every((tool) => !disabled.includes(tool.name)), "Unset edit flag must hide the edit and group tools.");
+  assert.doesNotMatch(context.client.getInstructions() ?? "", new RegExp(disabled.join("|")));
   const { refuse } = toolsFor(context);
-  for (const name of EDITS) await refuse(`edit flag unset/${name}`, name, {}, /Tool not found/);
+  for (const name of disabled) await refuse(`edit flag unset/${name}`, name, {}, /Tool not found/);
 }
 
 export async function checkTaskEditProtocol(context) {
@@ -24,7 +26,7 @@ export async function checkTaskEditProtocol(context) {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
     "find_company", "preview_followup_plan", "add_followup_plan",
-    "find_free_times", "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS,
+    "find_free_times", "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS, ...GROUPS,
   ].sort());
   assert.match(client.getInstructions(), /category → company → main task → individual steps → preview → save/);
   for (const guidance of [client.getInstructions(), ...tools.filter((tool) => EDITS.includes(tool.name)).map((tool) => tool.description)]) {

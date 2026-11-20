@@ -8,6 +8,8 @@ import { TaskPlanTokenError } from "@/lib/taskPlanToken";
 import { registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditToolInputs } from "@/lib/taskEditTools";
 import { TaskEditError } from "@/lib/taskEditServer";
+import { taskGroupToolInputs } from "@/lib/taskGroupTools";
+import { TaskGroupError } from "@/lib/taskGroupServer";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
 import { SIX_STEP_FOLLOWUP_FIXTURE } from "../fixtures/followupPlan";
 
@@ -16,10 +18,14 @@ const io = vi.hoisted(() => ({
   find: vi.fn(), preview: vi.fn(), add: vi.fn(),
   legacyRead: vi.fn(), legacyPreview: vi.fn(), legacyAdd: vi.fn(),
   editFind: vi.fn(), editPreview: vi.fn(), editApply: vi.fn(), free: vi.fn(),
+  groupList: vi.fn(), groupChange: vi.fn(),
 }));
 vi.mock("@/lib/freeTimeServer", () => ({ findFreeTimes: io.free }));
 vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview, applyTaskChanges: io.editApply,
   TaskEditError: class extends Error {},
+}));
+vi.mock("@/lib/taskGroupServer", () => ({ listTaskGroups: io.groupList, changeTaskGroup: io.groupChange,
+  TaskGroupError: class extends Error {},
 }));
 vi.mock("@/lib/taskPlanServer", () => ({
   findTaskPlanDestinations: io.find, previewTaskPlan: io.preview, addTaskPlan: io.add,
@@ -77,6 +83,8 @@ beforeEach(() => {
   io.editFind.mockResolvedValue({ tasks: [], hasMore: false, total: 0 });
   io.editPreview.mockResolvedValue({ tasks: [], warnings: [], errors: [], canWrite: true });
   io.editApply.mockResolvedValue({ tasks: [], alreadySaved: false });
+  io.groupList.mockResolvedValue({ groups: [] });
+  io.groupChange.mockResolvedValue({ alreadyDone: true });
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 
@@ -149,6 +157,7 @@ describe("G06 activation and registration", () => {
 
 describe("T03–T05 task edit tools", () => {
   const editTools = Object.keys(taskEditToolInputs);
+  const groupTools = Object.keys(taskGroupToolInputs);
   const changes = [{ taskId: "fictional-task", set: { task: "Updated task" } }];
 
   it.each([undefined, "", "0", "true", "01", "1 "])("hides and refuses all edit tools for flag %s without changing existing lists", async (flag) => {
@@ -158,19 +167,21 @@ describe("T03–T05 task edit tools", () => {
       expect((await rpc("tools/list")).reply.result?.tools?.map((tool) => tool.name))
         .toEqual([...OLD_TOOLS, ...(enabled ? NEW_TOOLS : [])]);
       expect((await initialize()).reply.result?.instructions).toBe(enabled ? TASK_PLAN_CHAT_GUIDANCE : undefined);
-      for (const name of editTools) expect((await call(name, {})).reply.error)
+      for (const name of [...editTools, ...groupTools]) expect((await call(name, {})).reply.error)
         .toEqual({ code: -32602, message: "Tool not found." });
     }
     expect(io.editFind).not.toHaveBeenCalled();
     expect(io.editPreview).not.toHaveBeenCalled();
     expect(io.editApply).not.toHaveBeenCalled();
+    expect(io.groupList).not.toHaveBeenCalled();
+    expect(io.groupChange).not.toHaveBeenCalled();
   });
 
   it.each(["0", "1"])("registers edit schemas independently of the plan flag %s", async (planFlag) => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     vi.stubEnv("MCP_TASK_PLANS_ENABLED", planFlag);
     const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
-    expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools]);
+    expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools, ...groupTools]);
     expect((await initialize()).reply.result?.instructions)
       .toBe(planFlag === "1" ? `${TASK_PLAN_CHAT_GUIDANCE}\n\n${TASK_EDIT_CHAT_GUIDANCE}` : TASK_EDIT_CHAT_GUIDANCE);
     for (const tool of tools.filter((tool) => editTools.includes(tool.name))) {
@@ -312,6 +323,52 @@ describe("T03–T05 task edit tools", () => {
     const result = await call("apply_task_changes", { changes, seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [] });
     expect(result.reply.result?.isError).toBe(true);
     expect(result.body).toContain("Tasks changed since the preview: fictional-task");
+  });
+});
+
+describe("G1 task group tools", () => {
+  beforeEach(() => vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1"));
+
+  it("advertises important groups and explicit confirmation even from tools/list alone", async () => {
+    const { reply } = await rpc("tools/list");
+    const listed = reply.result?.tools?.filter((tool) => Object.hasOwn(taskGroupToolInputs, tool.name)) ?? [];
+    expect(listed.map((tool) => tool.name)).toEqual(["list_task_groups", "change_task_group"]);
+    for (const tool of listed) {
+      expect(tool.description).toMatch(/owner's explicit yes.*exact action and group name/);
+      expect(tool.description).toMatch(/both the open and total task counts/);
+      expect(tool.description).toMatch(/\bimportant\b/);
+      expect(tool.description).not.toMatch(/\bstarred\b/);
+    }
+    expect(listed.map((tool) => tool.annotations?.readOnlyHint)).toEqual([true, false]);
+    expect((await call("list_task_groups", undefined)).reply.result?.structuredContent).toEqual({ groups: [] });
+    expect(io.groupList).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { action: "create" }, { action: "create", name: " \t " }, { action: "toggle", name: "Ops" },
+    { action: "rename", name: "Ops", taskCount: 0 }, { action: "rename", name: "Ops", newName: " ", taskCount: 0 },
+    { action: "rename", name: "Ops", newName: "Allies" }, { action: "delete", name: "Ops" },
+    { action: "delete", name: "Ops", taskCount: -1 }, { action: "delete", name: "Ops", taskCount: 1.5 },
+  ])("refuses invalid group changes before calling the server: %j", async (input) => {
+    expect((await call("change_task_group", input)).reply.error?.code).toBe(-32602);
+    expect(io.groupChange).not.toHaveBeenCalled();
+  });
+
+  it("returns a confirmed save, reports a changed count and handles an uncertain backend reply", async () => {
+    const input = { action: "rename", name: "ops", newName: "Ops", taskCount: 0 };
+    const saved = { renamed: true, name: "Ops", tasksMoved: 0 };
+    io.groupChange.mockResolvedValueOnce(saved)
+      .mockRejectedValueOnce(new TaskGroupError("The task count changed from 0 to 1."))
+      .mockRejectedValueOnce(new Error("Private backend message"));
+    expect((await call("change_task_group", input)).reply.result?.structuredContent).toEqual(saved);
+    expect(io.groupChange).toHaveBeenCalledWith(input);
+    const stale = await call("change_task_group", input);
+    expect(stale.reply.result?.isError).toBe(true);
+    expect(stale.body).toContain("The task count changed from 0 to 1.");
+    const uncertain = await call("change_task_group", input);
+    expect(uncertain.reply.result?.isError).toBe(true);
+    expect(uncertain.body).toContain("Use list_task_groups to check its current state");
+    expect(uncertain.body).not.toContain("Private backend message");
   });
 });
 

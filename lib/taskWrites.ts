@@ -10,28 +10,19 @@ import { requestCalendarSync, taskCalendarChanged } from "./calendarRequests";
 import { assertOnline } from "./connection";
 import { db } from "./firebase";
 import { withCompletedAt } from "./taskStatus";
+import { TASKS, toTaskUpdate, type TaskPatch } from "./taskWriteFields";
 import type { NewTask, Task } from "./types";
 
 export { withCompletedAt } from "./taskStatus";
-
-export const TASKS = "tasks";
+export { TASKS, toTaskUpdate } from "./taskWriteFields";
 
 export type Undo = () => Promise<void>;
-
-type TaskPatch = Partial<NewTask> & { id?: unknown };
 
 // What a new task stores: no undefined values, no id.
 export function toNewTaskDoc(task: NewTask & { id?: unknown }): Record<string, unknown> {
   const { id: _id, ...rest } = task;
   void _id;
   return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
-}
-
-// What an update stores: undefined clears the field, the id is dropped.
-export function toTaskUpdate(patch: TaskPatch): Record<string, unknown> {
-  const { id: _id, ...rest } = patch;
-  void _id;
-  return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
 }
 
 export async function addTask(task: NewTask, notify = true): Promise<string> {
