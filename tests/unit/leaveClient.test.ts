@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { askLeave, cancelLeave, getMyLeave } from "@/lib/leaveClient";
+import {
+  addLeaveHoliday, adjustLeave, askLeave, cancelLeave, decideLeave, getLeaveTeam, getMyLeave, getPersonLeave,
+  removeLeaveHoliday, saveLeaveDetails,
+} from "@/lib/leaveClient";
 import type { LeaveInput } from "@/lib/leave";
 
 const auth = vi.hoisted(() => ({
@@ -44,6 +47,37 @@ describe("leave client", () => {
     auth.currentUser = { getIdToken: vi.fn().mockRejectedValue(new Error("Auth offline")) };
     await expect(askLeave(input, key)).rejects.toThrow("Auth offline");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses authenticated admin paths and forwards the request keys and versions from the caller", async () => {
+    auth.currentUser = { getIdToken: async () => "firebase-token" };
+    const fetch = vi.fn<(path: string, options: RequestInit) => Promise<Response>>()
+      .mockImplementation(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetch);
+    const email = "person+leave@deushcs.com";
+    const encoded = "person%2Bleave%40deushcs.com";
+    const date = "2027-03-10";
+    const days = { email, days: 1.5, reason: "Correction" };
+    const decision = { decision: "approve", pay: "paid" } as const;
+    await getLeaveTeam();
+    await getPersonLeave(email);
+    await askLeave({ ...input, email }, key);
+    await decideLeave("request id", decision);
+    await adjustLeave(days, key);
+    await saveLeaveDetails(email, { endDate: null }, 42);
+    await addLeaveHoliday({ date, name: "Idulfitri" }, 3);
+    await removeLeaveHoliday(date, 4);
+
+    expect(fetch.mock.calls.map(([path, options]) => [path, options.method ?? "GET", options.body && JSON.parse(String(options.body))])).toEqual([
+      ["/api/leave/team", "GET", undefined], [`/api/leave/people/${encoded}`, "GET", undefined],
+      ["/api/leave/requests", "POST", { ...input, email }], ["/api/leave/requests/request%20id/decide", "POST", decision],
+      ["/api/leave/adjustments", "POST", days], [`/api/leave/profiles/${encoded}`, "PUT", { endDate: null }],
+      [`/api/leave/holidays/${date}`, "POST", { name: "Idulfitri" }], [`/api/leave/holidays/${date}`, "DELETE", undefined],
+    ]);
+    const headers = fetch.mock.calls.map(([, options]) => new Headers(options.headers));
+    expect(headers.every((header) => header.get("Authorization") === "Bearer firebase-token")).toBe(true);
+    expect([headers[2], headers[4]].map((header) => header.get("Idempotency-Key"))).toEqual([key, key]);
+    expect(headers.slice(5).map((header) => header.get("If-Match"))).toEqual(['"42"', '"3"', '"4"']);
   });
 
   it("preserves the retry key after losing the answer and surfaces a refusal as an error", async () => {

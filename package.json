@@ -16,6 +16,7 @@
     "test:data": "firebase emulators:exec --only firestore,auth --project demo-deus --log-verbosity QUIET \"vitest run --project data\"",
     "people:add": "node scripts/people.mjs add",
     "people:remove": "node scripts/people.mjs remove",
+    "leave:setup": "node scripts/leave-setup.mjs",
     "notify:keys": "node scripts/notify-keys.mjs",
     "mcp:smoke": "node scripts/mcp/smoke.mjs"
   },

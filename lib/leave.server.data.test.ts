@@ -1,3 +1,8 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { deleteApp as deleteClientApp, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithCustomToken, signOut } from "firebase/auth";
 import { collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, setDoc, setLogLevel, terminate } from "firebase/firestore";
@@ -7,18 +12,27 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { GET } from "@/app/api/leave/me/route";
 import { POST as askRoute } from "@/app/api/leave/requests/route";
 import { POST as cancelRoute } from "@/app/api/leave/requests/[id]/cancel/route";
+import { GET as teamRoute } from "@/app/api/leave/team/route";
+import { GET as personRoute } from "@/app/api/leave/people/[email]/route";
+import { POST as decideRoute } from "@/app/api/leave/requests/[id]/decide/route";
+import { POST as adjustmentRoute } from "@/app/api/leave/adjustments/route";
+import { PUT as detailsRoute } from "@/app/api/leave/profiles/[email]/route";
+import { POST as addHolidayRoute, DELETE as removeHolidayRoute } from "@/app/api/leave/holidays/[date]/route";
 import { clearProject } from "@/tests/support/emulator";
 import { adminApp, adminAuth, adminDataApp, adminDb } from "./admin";
 import { addDays } from "./dates";
-import { isLeaveAdmin, leaveAdmins, leaveToday } from "./leave.server";
-import type { LeaveRequest } from "./leave";
+import { isLeaveAdmin, leaveAdmins, leaveToday, type PersonLeave, type TeamLeave } from "./leave.server";
+import type { LeaveProfile, LeaveRequest } from "./leave";
+import holidaySeed from "./leaveHolidays.json";
 
 const AUDREY = "leave.audrey@deushcs.com";
 const CALISTA = "leave.calista@deushcs.com";
 const GREGORY = "leave.gregory@deushcs.com";
 const TODAY = "2027-02-10";
 const KEY = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+const KEY_TWO = "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const ANNUAL = { type: "annual", start: "2027-02-11", end: "2027-02-11" };
+const NEW_PROFILE = { joinDate: "2026-01-01", accrualStart: "2026-01-01", openingDate: "2026-12-01", openingBalance: 6 };
 const client = initializeApp({ projectId: "demo-deus", apiKey: "fake-emulator-key" }, "leave-auth");
 const rulesClient = initializeApp({ projectId: "deus-team-tasks", apiKey: "fake-emulator-key" }, "leave-rules");
 const clientAuth = getAuth(client), rulesAuth = getAuth(rulesClient), clientDb = getFirestore(rulesClient);
@@ -52,6 +66,50 @@ async function withStatus(response: Response, status: number) {
   expect(response.status, JSON.stringify(body)).toBe(status);
   expect(response.headers.get("cache-control")).toBe("no-store");
   return body;
+}
+
+function apiRequest(path: string, token: string | undefined, method = "GET", body?: unknown, headers?: Record<string, string>) {
+  return new Request(`http://localhost/api/leave${path}`, {
+    method, ...(body !== undefined && { body: JSON.stringify(body) }),
+    headers: { ...(token && { Authorization: `Bearer ${token}` }), ...headers },
+  });
+}
+
+function team(token?: string) {
+  return teamRoute(apiRequest("/team", token));
+}
+
+function person(token: string | undefined, email: string) {
+  return personRoute(apiRequest(`/people/${encodeURIComponent(email)}`, token), { params: Promise.resolve({ email }) });
+}
+
+function decide(token: string | undefined, id: string, input: unknown) {
+  return decideRoute(apiRequest(`/requests/${id}/decide`, token, "POST", input), { params: Promise.resolve({ id }) });
+}
+
+function adjust(token: string | undefined, input: unknown, key = KEY) {
+  return adjustmentRoute(apiRequest("/adjustments", token, "POST", input, { "Idempotency-Key": key }));
+}
+
+function details(token: string | undefined, email: string, input: unknown, version = 0) {
+  return detailsRoute(apiRequest(`/profiles/${encodeURIComponent(email)}`, token, "PUT", input, { "If-Match": `"${version}"` }), { params: Promise.resolve({ email }) });
+}
+
+function holiday(token: string | undefined, date: string, name: string | null, version = 0) {
+  const context = { params: Promise.resolve({ date }) };
+  const path = `/holidays/${date}`;
+  const headers = { "If-Match": `"${version}"` };
+  return name === null
+    ? removeHolidayRoute(apiRequest(path, token, "DELETE", undefined, headers), context)
+    : addHolidayRoute(apiRequest(path, token, "POST", { name }, headers), context);
+}
+
+function readPersonLeave(email: string): Promise<PersonLeave> {
+  return person(gregory, email).then((response) => withStatus(response, 200));
+}
+
+function readTeamLeave(): Promise<TeamLeave> {
+  return team(gregory).then((response) => withStatus(response, 200));
 }
 
 async function seedRequest(id: string, email: string, fields: Partial<LeaveRequest> = {}) {
@@ -165,7 +223,6 @@ describe("leave privacy", () => {
     expect(hidden).toEqual(await withStatus(await cancel(audrey, "missing"), 404));
     expect(hidden).toEqual(await withStatus(await cancel(audrey, "other/path"), 404));
     await withStatus(await ask(audrey, { ...ANNUAL, email: CALISTA }), 403);
-    await withStatus(await ask(gregory, { ...ANNUAL, email: CALISTA }), 403);
     expect((await requests().doc("private").get()).get("status")).toBe("approved");
     expect((await requests().get()).size).toBe(1);
   });
@@ -309,4 +366,360 @@ describe("asking and cancelling", () => {
       status: "cancelled", cancelledBy: GREGORY, decidedBy: GREGORY, decidedAt: 2, pay: "deduct",
     });
   });
+});
+
+describe("admin leave routes", () => {
+  it("gates every admin route and lets an active admin without a leave profile use them", async () => {
+    await adminDb.doc(`leaveProfiles/${GREGORY}`).delete();
+    await seedRequest("waiting", AUDREY, { status: "waiting", pay: null, decidedBy: null, decidedAt: null });
+    const actions = [
+      team,
+      (token?: string) => person(token, AUDREY),
+      (token?: string) => decide(token, "waiting", { decision: "approve" }),
+      (token?: string) => ask(token, { ...ANNUAL, email: CALISTA }, KEY),
+      (token?: string) => adjust(token, { email: AUDREY, days: 1, reason: "Correction" }),
+      (token?: string) => details(token, AUDREY, { openingBalance: 6 }, 1),
+      (token?: string) => holiday(token, "2027-02-15", "Office holiday"),
+      (token?: string) => holiday(token, "2027-02-15", null, 1),
+    ];
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "0");
+    for (const action of actions) await withStatus(await action(gregory), 404);
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    for (const action of actions) {
+      await withStatus(await action(), 401);
+      await withStatus(await action(audrey), 403);
+    }
+    await adminDb.doc(`people/${GREGORY}`).update({ active: false });
+    for (const action of actions) await withStatus(await action(gregory), 403);
+    await adminDb.doc(`people/${GREGORY}`).update({ active: true });
+
+    for (const action of actions) await withStatus(await action(gregory), 200);
+    expect(await readTeamLeave()).toMatchObject({
+      waiting: [], holidays: [], people: expect.arrayContaining([{ email: GREGORY, name: "Gregory", active: true,
+        endDate: null, summary: null, counts: { annual: 0, sick: 0, other: 0 } }]),
+    });
+    expect(await readPersonLeave(GREGORY)).toMatchObject({ profile: null, summary: null, requests: [] });
+    expect(await readPersonLeave(AUDREY)).toMatchObject({ summary: { balance: 7, upcoming: 1, available: 6 } });
+    await withStatus(await person(gregory, "missing@deushcs.com"), 404);
+    await withStatus(await person(gregory, "x".repeat(129) + "@deushcs.com"), 400);
+    expect((await readPersonLeave(CALISTA)).requests).toMatchObject([{ email: CALISTA, createdBy: GREGORY, status: "approved" }]);
+  });
+
+  it("reproduces all three worked balances through the profile, request, decision and adjustment routes", async () => {
+    vi.stubEnv("LEAVE_TEST_DATE", "2026-12-01");
+    await Promise.all([CALISTA, AUDREY, GREGORY].map((email) => adminDb.doc(`leaveProfiles/${email}`).delete()));
+    for (const [email, profile] of [
+      [CALISTA, { ...NEW_PROFILE, accrualStart: "2027-02-01", openingBalance: 0 }],
+      [AUDREY, NEW_PROFILE],
+      [GREGORY, { ...NEW_PROFILE, joinDate: "2020-01-01", accrualStart: "2020-01-01", openingBalance: 10 }],
+    ] as const) await withStatus(await details(gregory, email, profile), 200);
+    for (const [version, entry] of holidaySeed.holidays.slice(0, 3).entries()) {
+      await withStatus(await holiday(gregory, entry.date, entry.name, version), 200);
+    }
+
+    const { request } = await withStatus(await ask(calista, { ...ANNUAL, start: "2027-01-12", end: "2027-01-14" }), 200);
+    await withStatus(await decide(gregory, request.id, { decision: "approve" }), 200);
+    for (const [index, input] of [
+      { start: "2026-12-24", end: "2026-12-24" },
+      { start: "2027-01-04", end: "2027-01-06" },
+      { start: "2027-02-05", end: "2027-02-05", half: "morning" },
+    ].entries()) {
+      await withStatus(await ask(gregory, { ...ANNUAL, ...input, email: AUDREY }, `${index}${KEY.slice(1)}`), 200);
+    }
+    await withStatus(await ask(gregory, { ...ANNUAL, start: "2027-02-25", end: "2027-03-02" }), 200);
+    await withStatus(await adjust(gregory, { email: GREGORY, days: -5, reason: "Correction", date: "2027-01-20" }), 200);
+
+    for (const [date, expected] of [
+      ["2026-12-31", [[AUDREY, 5]]],
+      ["2027-01-06", [[AUDREY, 4]]],
+      ["2027-01-31", [[CALISTA, -3]]],
+      ["2027-02-01", [[CALISTA, -2]]],
+      ["2027-02-10", [[AUDREY, 4.5]]],
+      ["2027-02-28", [[AUDREY, 4.5], [GREGORY, 5]]],
+      ["2027-03-01", [[CALISTA, -1], [AUDREY, 3], [GREGORY, 1]]],
+    ] as const) {
+      vi.stubEnv("LEAVE_TEST_DATE", date);
+      for (const [email, balance] of expected) {
+        const result = await readPersonLeave(email);
+        expect(result.summary?.balance, `${email} on ${date}`).toBe(balance);
+        if (date === "2027-02-10") expect(result.summary?.lapseWarning).toBe(2.5);
+        if (date === "2027-03-01") {
+          const expectedLapses = email === AUDREY ? [-2.5] : email === GREGORY ? [-3] : [];
+          expect(result.ledger.filter(({ kind }) => kind === "lapse").map(({ days }) => days)).toEqual(expectedLapses);
+          if (email === GREGORY) expect(result.ledger.filter(({ kind }) => kind === "request")).toMatchObject([
+            { date: "2027-02-25", days: -2 }, { date: "2027-03-01", days: -2 },
+          ]);
+          if (email === AUDREY) {
+            expect(result.requests.map(({ days }) => days)).toEqual([0.5, 2, 1]);
+            expect(await withStatus(await me(audrey), 200)).toMatchObject({ summary: result.summary, ledger: result.ledger, requests: result.requests });
+          }
+        }
+      }
+    }
+    expect((await readTeamLeave()).people.find(({ email }) => email === AUDREY)?.counts).toEqual({ annual: 2.5, sick: 0, other: 0 });
+  }, 15_000);
+
+  it("requires a reason to reject and a pay choice for Something else, and applies only one decision", async () => {
+    const other = { ...ANNUAL, type: "other", reason: "else", note: "Personal appointment" };
+    const { request } = await withStatus(await ask(audrey, other), 200);
+    const { request: toReject } = await withStatus(await ask(calista), 200);
+    for (const reason of [undefined, "   ", "r".repeat(301)]) {
+      expect(await withStatus(await decide(gregory, toReject.id, { decision: "reject", reason }), 400))
+        .toMatchObject({ issues: [{ field: "reason" }] });
+    }
+    expect(await withStatus(await decide(gregory, request.id, { decision: "approve" }), 400)).toMatchObject({ issues: [{ field: "pay" }] });
+    expect((await readTeamLeave()).waiting).toHaveLength(2);
+    const answers = await Promise.all([
+      decide(gregory, request.id, { decision: "approve", pay: "deduct" }),
+      decide(gregory, request.id, { decision: "approve", pay: "deduct" }),
+    ]);
+    expect(answers.map(({ status }) => status).sort()).toEqual([200, 409]);
+    expect(await readPersonLeave(AUDREY)).toMatchObject({
+      summary: { upcoming: 1, waiting: 0, available: 4 }, requests: [{ status: "approved", pay: "deduct", decidedBy: GREGORY }],
+    });
+    const reason = "r".repeat(300);
+    expect(await withStatus(await decide(gregory, toReject.id, { decision: "reject", reason }), 200))
+      .toMatchObject({ request: { status: "rejected", pay: null, rejectReason: reason } });
+    expect(await withStatus(await me(calista), 200)).toMatchObject({ summary: { balance: 5, available: 5 }, requests: [{ rejectReason: reason }] });
+    await withStatus(await cancel(gregory, request.id), 200);
+    await withStatus(await decide(gregory, request.id, { decision: "approve", pay: "deduct" }), 409);
+    expect((await readPersonLeave(AUDREY)).requests[0].status).toBe("cancelled");
+  });
+
+  it("adds for the normalized target and keeps a late retry from recreating leave after cancellation", async () => {
+    const input = { ...ANNUAL, email: ` ${CALISTA.toUpperCase()} `, name: "Forged name" };
+    await withStatus(await ask(audrey, input, "invalid key"), 403);
+    await withStatus(await ask(gregory, input), 400);
+    const { request } = await withStatus(await ask(gregory, input, KEY), 200);
+    expect(request).toMatchObject({ email: CALISTA, name: "Calista", createdBy: GREGORY, status: "approved", pay: "deduct" });
+    await withStatus(await ask(calista), 400);
+    await withStatus(await cancel(gregory, request.id), 200);
+    await withStatus(await ask(gregory, input, KEY.toUpperCase()), 409);
+    await withStatus(await ask(gregory, input, KEY_TWO), 200);
+    expect((await readPersonLeave(CALISTA)).requests.map(({ status }) => status).sort()).toEqual(["approved", "cancelled"]);
+    expect((await readPersonLeave(GREGORY)).requests).toEqual([]);
+  });
+
+  it("validates adjustments and applies each key once across a failed transaction, a lost reply and concurrent submits", async () => {
+    const input = { email: AUDREY, days: 1.5, reason: "  Correction  " };
+    for (const [fields, field] of [
+      [{ days: 0 }, "days"], [{ days: 0.3 }, "days"], [{ days: -30.5 }, "days"], [{ days: 1e30 }, "days"],
+      [{ reason: "  " }, "reason"], [{ reason: "r".repeat(301) }, "reason"], [{ date: "2027-02-29" }, "date"],
+    ] as const) {
+      expect(await withStatus(await adjust(gregory, { ...input, ...fields }), 400)).toMatchObject({ issues: [{ field }] });
+    }
+    const run = adminDb.runTransaction.bind(adminDb);
+    vi.spyOn(adminDb, "runTransaction").mockImplementationOnce((work) => run(async (tx) => {
+      await work(tx);
+      throw new Error("Connection lost before commit");
+    }));
+    await withStatus(await adjust(gregory, input), 503);
+    expect((await readPersonLeave(AUDREY)).summary?.balance).toBe(5);
+    vi.mocked(adminDb.runTransaction).mockImplementationOnce(async (work) => {
+      await run(work);
+      throw new Error("Response lost after commit");
+    });
+    await withStatus(await adjust(gregory, input), 503);
+    vi.stubEnv("LEAVE_TEST_DATE", "2027-02-11");
+    await withStatus(await adjust(gregory, input, KEY.toUpperCase()), 409);
+    const answers = await Promise.all([adjust(gregory, input, KEY_TWO), adjust(gregory, input, KEY_TWO)]);
+    expect(answers.map(({ status }) => status).sort()).toEqual([200, 409]);
+    const result = await readPersonLeave(AUDREY);
+    expect(result.summary?.balance).toBe(8);
+    expect(result.ledger.filter(({ kind }) => kind === "adjustment")).toMatchObject([
+      { date: TODAY, days: 1.5, label: "Correction" }, { date: "2027-02-11", days: 1.5, label: "Correction" },
+    ]);
+    expect((await adminDb.collection("leaveAdjustments").get()).size).toBe(2);
+  });
+});
+
+describe("leave details and holidays", () => {
+  it("validates details and saves exactly one audit row per field, atomically and without overwriting newer edits", async () => {
+    for (const [fields, field] of [
+      [{}, "joinDate"], [{ joinDate: "" }, "joinDate"], [{ accrualStart: "2027-01-02" }, "accrualStart"],
+      [{ openingDate: "2026-01-31" }, "openingDate"], [{ endDate: "2026-01-31" }, "endDate"],
+      [{ openingBalance: 1e30 }, "openingBalance"], [{ openingCarried: 6 }, "openingCarried"],
+    ] as const) {
+      expect(await withStatus(await details(gregory, AUDREY, fields, 1), 400)).toMatchObject({ issues: [{ field }] });
+    }
+    const change = { openingBalance: 6.5, accrualStart: "2027-03-01" };
+    const run = adminDb.runTransaction.bind(adminDb);
+    vi.spyOn(adminDb, "runTransaction").mockImplementationOnce((work) => run(async (tx) => {
+      await work(tx);
+      throw new Error("Connection lost before the audit and details commit");
+    }));
+    await withStatus(await details(gregory, AUDREY, change, 1), 503);
+    expect(await readPersonLeave(AUDREY)).toMatchObject({ profile: { updatedAt: 1, openingBalance: 5 }, audit: [] });
+
+    const { profile }: { profile: LeaveProfile } = await withStatus(await details(gregory, AUDREY.toUpperCase(), change, 1), 200);
+    expect(profile).toMatchObject({ ...change, name: "Audrey", email: AUDREY });
+    expect(await readPersonLeave(AUDREY)).toMatchObject({
+      profile, summary: { balance: 6.5 }, audit: [
+        { field: "accrualStart", from: "2027-02-01", to: "2027-03-01", by: GREGORY, byName: "Gregory", at: profile.updatedAt },
+        { field: "openingBalance", from: 5, to: 6.5, by: GREGORY, byName: "Gregory", at: profile.updatedAt },
+      ],
+    });
+    expect(await withStatus(await details(gregory, AUDREY, change, 1), 200)).toEqual({ profile });
+    const [a, b] = await Promise.all([
+      details(gregory, AUDREY, { openingBalance: 7 }, profile.updatedAt),
+      details(gregory, AUDREY, { openingBalance: 8 }, profile.updatedAt),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    const { profile: current } = await withStatus(a.ok ? a : b, 200);
+    await withStatus(await details(gregory, AUDREY, change, 1), 409);
+    expect(await readPersonLeave(AUDREY)).toMatchObject({ profile: current, audit: expect.arrayContaining([{ field: "openingBalance", from: 6.5, to: current.openingBalance, id: expect.any(String), by: GREGORY, byName: "Gregory", at: current.updatedAt, email: AUDREY }]) });
+    expect((await adminDb.collection("leaveAudit").get()).size).toBe(3);
+    const mine = await withStatus(await me(audrey), 200);
+    expect(mine.summary.balance).toBe(current.openingBalance);
+    expect(mine).not.toHaveProperty("audit");
+  });
+
+  it("reports one or two requests past the last day and allows saving after they are cancelled", async () => {
+    await seedRequest("approved", AUDREY);
+    const end = { endDate: TODAY };
+    const blocked = (count: string) => ({ issues: [{ field: "endDate", message: `Cancel Audrey's ${count} after Wed 10 Feb first.` }] });
+    expect(await withStatus(await details(gregory, AUDREY, end, 1), 409)).toMatchObject(blocked("request"));
+    const { request } = await withStatus(await ask(audrey, { ...ANNUAL, start: "2027-02-12", end: "2027-02-12" }), 200);
+    expect(await withStatus(await details(gregory, AUDREY, end, 1), 409)).toMatchObject(blocked("2 requests"));
+    expect((await readPersonLeave(AUDREY)).audit).toEqual([]);
+    await withStatus(await cancel(gregory, "approved"), 200);
+    await withStatus(await cancel(gregory, request.id), 200);
+    expect(await withStatus(await details(gregory, AUDREY, end, 1), 200)).toMatchObject({ profile: end });
+    expect(await withStatus(await ask(gregory, { ...ANNUAL, email: AUDREY }, KEY), 400)).toMatchObject({ issues: [{ field: "end" }] });
+  });
+
+  it("keeps a concurrent last-day change and add from leaving approved dates past the last day", async () => {
+    const [save, askFor] = await Promise.all([
+      details(gregory, AUDREY, { endDate: TODAY }, 1),
+      ask(gregory, { ...ANNUAL, email: AUDREY }, KEY),
+    ]);
+    expect(Number(save.ok) + Number(askFor.ok)).toBe(1);
+    await withStatus(save, save.ok ? 200 : 409);
+    await withStatus(askFor, askFor.ok ? 200 : 400);
+    const { profile, requests, audit } = await readPersonLeave(AUDREY);
+    expect(profile?.endDate).toBe(save.ok ? TODAY : null);
+    expect(requests).toHaveLength(save.ok ? 0 : 1);
+    expect(audit).toHaveLength(save.ok ? 1 : 0);
+  });
+
+  it("clips Team totals to this year through today, shows who is also away and puts people who left last", async () => {
+    await setHoliday("2027-01-01");
+    await seedRequest("year", AUDREY, { start: "2026-12-31", end: "2027-01-04" });
+    await seedRequest("sick", AUDREY, { name: "Audrey", type: "sick", pay: "paid", start: "2027-02-09", end: "2027-02-12" });
+    await seedRequest("other", AUDREY, { type: "other", reason: "law", pay: "paid", start: "2027-01-20", end: "2027-01-22" });
+    await seedRequest("future", AUDREY, { type: "other", reason: "else", pay: "paid", start: "2027-02-18", end: "2027-02-18" });
+    const { request } = await withStatus(await ask(calista), 200);
+    await withStatus(await details(gregory, GREGORY, { endDate: "2027-02-09" }, 1), 200);
+    await adminDb.doc(`people/${GREGORY}`).update({ active: false, name: "Aaron" });
+    vi.stubEnv("LEAVE_ADMINS", AUDREY);
+    const { people, waiting }: TeamLeave = await withStatus(await team(audrey), 200);
+    expect(people.map(({ name }) => name)).toEqual(["Audrey", "Calista", "Aaron"]);
+    expect(people[0].counts).toEqual({ annual: 1, sick: 2, other: 1 });
+    expect(people[2]).toMatchObject({ active: false, endDate: "2027-02-09", summary: { nextPlusOne: null } });
+    expect(waiting).toMatchObject([{ id: request.id, days: 1, availableAfter: 4, alsoAway: [{ name: "Audrey", dates: [ANNUAL.start] }] }]);
+    expect(await withStatus(await person(audrey, GREGORY), 200)).toMatchObject({ person: { active: false }, profile: { endDate: "2027-02-09" } });
+  });
+
+  it("recounts requests, balances, Team totals and the next-year notice when holidays change", async () => {
+    vi.stubEnv("LEAVE_TEST_DATE", "2027-09-30");
+    await seedRequest("taken", AUDREY);
+    expect((await readTeamLeave()).nextMissingHolidayYear).toBeNull();
+    vi.stubEnv("LEAVE_TEST_DATE", "2027-10-01");
+    const before = await readPersonLeave(AUDREY);
+    expect(before.requests[0].days).toBe(1);
+    expect(await readTeamLeave()).toMatchObject({ nextMissingHolidayYear: "2028", holidayVersion: 0, people: [{ counts: { annual: 1 } }, {}, {}] });
+    for (const [date, name, field] of [["2028-02-30", "Holiday", "date"], [ANNUAL.start, " ", "name"], [ANNUAL.start, "a".repeat(61), "name"]]) {
+      expect(await withStatus(await holiday(gregory, date, name), 400)).toMatchObject({ issues: [{ field }] });
+    }
+    await withStatus(await holiday(gregory, "2028-01-01", "New Year"), 200);
+    expect((await readTeamLeave()).nextMissingHolidayYear).toBeNull();
+    await withStatus(await holiday(gregory, ANNUAL.start, "  Office holiday  ", 1), 200);
+    const after = await readPersonLeave(AUDREY);
+    expect(after).toMatchObject({ summary: { balance: before.summary!.balance + 1 }, requests: [{ id: "taken", days: 0, status: "approved" }] });
+    expect(after.holidays).toContainEqual({ date: ANNUAL.start, name: "Office holiday" });
+    expect(await withStatus(await me(audrey), 200)).toMatchObject({ summary: after.summary, requests: after.requests });
+    expect((await readTeamLeave()).people[0].counts.annual).toBe(0);
+    await withStatus(await holiday(gregory, ANNUAL.start, null, 2), 200);
+    expect(await readPersonLeave(AUDREY)).toMatchObject({ summary: before.summary, requests: before.requests });
+    await withStatus(await holiday(gregory, "2028-01-01", null, 3), 200);
+    expect(await readTeamLeave()).toMatchObject({ nextMissingHolidayYear: "2028", holidayVersion: 4, holidays: [] });
+  });
+
+  it("prevents a lost holiday reply or stale concurrent edit from restoring or deleting a newer holiday", async () => {
+    const date = "2027-02-15";
+    const run = adminDb.runTransaction.bind(adminDb);
+    vi.spyOn(adminDb, "runTransaction").mockImplementationOnce(async (work) => {
+      await run(work);
+      throw new Error("Response lost after commit");
+    });
+    await withStatus(await holiday(gregory, date, "First"), 503);
+    expect(await readTeamLeave()).toMatchObject({ holidays: [{ date, name: "First" }], holidayVersion: 1 });
+    await withStatus(await holiday(gregory, date, null, 1), 200);
+    await withStatus(await holiday(gregory, date, "First", 0), 409);
+    expect((await readTeamLeave()).holidays).toEqual([]);
+
+    const results = await Promise.all([holiday(gregory, date, "New", 2), holiday(gregory, date, "Replacement", 2)]);
+    expect(results.map(({ status }) => status).sort()).toEqual([200, 409]);
+    const saved = await withStatus(results.find(({ ok }) => ok)!, 200);
+    await withStatus(await holiday(gregory, date, null, 1), 409);
+    await withStatus(await holiday(gregory, date, saved.holiday.name.toUpperCase(), 3), 409);
+    expect(await readTeamLeave()).toMatchObject({ holidays: [saved.holiday], holidayVersion: 3 });
+  });
+});
+
+describe("leave setup command", () => {
+  const run = (...args: string[]) => promisify(execFile)(process.execPath, ["scripts/leave-setup.mjs", ...args], {
+    timeout: 15_000, env: { ...process.env, FIREBASE_ADMIN_KEY: "" },
+  });
+
+  it("previews profiles without writes, refuses unusable people and applies each new profile once", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "leave-setup-test-"));
+    try {
+      const file = join(dir, "leave-setup.json");
+      const input = { ...NEW_PROFILE, email: ` ${AUDREY.toUpperCase()} `, openingBalance: 6.5 };
+      const profile = adminDb.doc(`leaveProfiles/${AUDREY}`);
+      const audit = adminDb.collection("leaveAudit");
+      await profile.delete();
+      await writeFile(file, JSON.stringify([input]));
+      expect((await run(file)).stdout).toMatch(/— → 6\.5[\s\S]+DRY RUN\. Nothing written/);
+      expect((await profile.get()).exists).toBe(false);
+      expect((await audit.get()).size).toBe(0);
+
+      await writeFile(file, JSON.stringify([input, { ...input, email: "missing@deushcs.com" }]));
+      await expect(run(file, "--apply")).rejects.toMatchObject({ stderr: expect.stringContaining("No active people record for missing@deushcs.com.") });
+      expect((await profile.get()).exists).toBe(false);
+      await writeFile(file, JSON.stringify([input, { ...input, email: AUDREY }]));
+      await expect(run(file, "--apply")).rejects.toMatchObject({ stderr: expect.stringContaining("more than once") });
+      expect((await audit.get()).size).toBe(0);
+
+      await writeFile(file, JSON.stringify([input]));
+      expect((await run(file, "--apply")).stdout).toContain("Apply confirmed.");
+      const applied = (await readPersonLeave(AUDREY)).profile!;
+      expect(applied).toMatchObject({ email: AUDREY, name: "Audrey", openingBalance: 6.5, openingCarried: 0, endDate: null });
+      expect((await run(file, "--apply")).stdout).toContain("6.5 → 6.5");
+      expect((await audit.get()).size).toBe(5);
+      await withStatus(await details(gregory, AUDREY, { openingBalance: 7 }, applied.updatedAt), 200);
+      await expect(run(file, "--apply")).rejects.toMatchObject({ stderr: expect.stringContaining("already set up") });
+      expect((await readPersonLeave(AUDREY)).profile?.openingBalance).toBe(7);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 40_000);
+
+  it("previews and applies the national holiday seed without replacing custom rows or undoing a later deletion", async () => {
+    await withStatus(await holiday(gregory, "2026-12-25", "Custom Christmas"), 200);
+    const preview = (await run("--holidays")).stdout;
+    expect(preview).toContain(holidaySeed.source);
+    expect(preview).toContain("DRY RUN. Nothing written");
+    expect((await readTeamLeave()).holidays).toEqual([{ date: "2026-12-25", name: "Custom Christmas" }]);
+    expect((await run("--holidays", "--apply")).stdout).toContain("Apply confirmed.");
+    const seeded = await readTeamLeave();
+    expect(seeded.holidays).toEqual([{ date: "2026-12-25", name: "Custom Christmas" }, ...holidaySeed.holidays.slice(1)]);
+    expect(seeded.holidays.some(({ date }) => date === "2026-12-24")).toBe(false);
+    await withStatus(await holiday(gregory, "2027-01-05", null, seeded.holidayVersion), 200);
+    await run("--holidays", "--apply");
+    expect(await readTeamLeave()).toMatchObject({
+      holidays: seeded.holidays.filter(({ date }) => date !== "2027-01-05"), holidayVersion: seeded.holidayVersion + 1,
+    });
+  }, 25_000);
 });

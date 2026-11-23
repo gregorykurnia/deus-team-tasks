@@ -1,5 +1,5 @@
-import type { LeaveInput, LeaveIssue, LeavePay, LeaveRequest } from "./leave";
-import type { MyLeave } from "./leave.server";
+import type { LeaveAdjustment, LeaveAdjustmentInput, LeaveDecision, LeaveHoliday, LeaveInput, LeaveIssue, LeavePay, LeaveProfile, LeaveProfileDetails, LeaveRequest } from "./leave";
+import type { MyLeave, PersonLeave, TeamLeave } from "./leave.server";
 
 export class LeaveApiError extends Error {
   constructor(public readonly status: number, message: string, public readonly issues: LeaveIssue[] = []) {
@@ -26,13 +26,47 @@ export function getMyLeave(): Promise<MyLeave> {
   return fetchLeave("/me");
 }
 
+export function getLeaveTeam(): Promise<TeamLeave> {
+  return fetchLeave("/team");
+}
+
+export function getPersonLeave(email: string): Promise<PersonLeave> {
+  return fetchLeave(`/people/${encodeURIComponent(email)}`);
+}
+
+function writeLeave<T>(path: string, method: "POST" | "PUT", input: object, headers: Record<string, string> = {}) {
+  return fetchLeave<T>(path, { method, headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(input) });
+}
+
 // Generate a UUID for each new submission and reuse it if the response is lost.
-export function askLeave(input: LeaveInput & { pay?: LeavePay }, key: string): Promise<{ request: LeaveRequest }> {
-  return fetchLeave("/requests", {
-    method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(input),
-  });
+export function askLeave(input: LeaveInput & { pay?: LeavePay; email?: string }, key: string) {
+  return writeLeave<{ request: LeaveRequest }>("/requests", "POST", input, { "Idempotency-Key": key });
 }
 
 export function cancelLeave(id: string): Promise<{ request: LeaveRequest }> {
   return fetchLeave(`/requests/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+}
+
+export function decideLeave(id: string, input: LeaveDecision) {
+  return writeLeave<{ request: LeaveRequest }>(`/requests/${encodeURIComponent(id)}/decide`, "POST", input);
+}
+
+// Reuse this key when retrying the same adjustment.
+export function adjustLeave(input: LeaveAdjustmentInput, key: string) {
+  return writeLeave<{ adjustment: LeaveAdjustment }>("/adjustments", "POST", input, { "Idempotency-Key": key });
+}
+
+// Use the profile's updatedAt (0 if missing) or the Team response's holidayVersion from the edit's initial read.
+export function saveLeaveDetails(email: string, input: Partial<LeaveProfileDetails>, version: number) {
+  return writeLeave<{ profile: LeaveProfile }>(`/profiles/${encodeURIComponent(email)}`, "PUT", input, { "If-Match": `"${version}"` });
+}
+
+type HolidayChange = { holiday: LeaveHoliday | null; holidayVersion: number };
+
+export function addLeaveHoliday(holiday: LeaveHoliday, version: number) {
+  return writeLeave<HolidayChange>(`/holidays/${encodeURIComponent(holiday.date)}`, "POST", { name: holiday.name }, { "If-Match": `"${version}"` });
+}
+
+export function removeLeaveHoliday(date: string, version: number): Promise<HolidayChange> {
+  return fetchLeave(`/holidays/${encodeURIComponent(date)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } });
 }

@@ -69,6 +69,20 @@ export interface LeaveProfile {
   updatedAt: number;
 }
 
+export type LeaveProfileDetails = Pick<LeaveProfile,
+  "joinDate" | "accrualStart" | "openingBalance" | "openingDate" | "openingCarried" | "endDate">;
+export type LeaveProfileField = keyof LeaveProfileDetails;
+
+export interface LeaveAudit {
+  id: string;
+  email: string;
+  by: string;
+  at: number;
+  field: LeaveProfileField;
+  from: string | number | null;
+  to: string | number | null;
+}
+
 export interface LeaveRequest extends LeaveInput {
   id: string;
   email: string;
@@ -93,6 +107,9 @@ export interface LeaveAdjustment {
   by: string;
   at: number;
 }
+
+export type LeaveAdjustmentInput = Pick<LeaveAdjustment, "email" | "days" | "reason"> & { date?: string };
+export type LeaveDecision = { decision: "approve"; pay?: LeavePay } | { decision: "reject"; reason: string };
 
 export interface LeaveHoliday {
   date: string;
@@ -167,7 +184,10 @@ function holidayWarnings(start: string, end: string, holidays: Holidays): string
 }
 
 type RequestField = keyof LeaveInput | "hours.from" | "hours.to";
-export interface LeaveIssue { field: RequestField; message: string }
+export interface LeaveIssue {
+  field: RequestField | LeaveProfileField | "email" | "pay" | "days" | "date" | "name" | "decision";
+  message: string;
+}
 type Refuse = (field: RequestField, message: string) => void;
 type ExistingRequest = Pick<LeaveRequest, "start" | "end" | "status">;
 

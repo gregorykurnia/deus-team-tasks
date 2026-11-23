@@ -55,3 +55,4 @@ firebase-debug.log
 
 # launch data step backups (task 4.8): they hold client data, so never committed
 /launch-data/
+/leave-setup.json

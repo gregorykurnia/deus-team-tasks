@@ -16,3 +16,14 @@ The signed-in employee sees only their own profile, requests, ledger and balance
 - `npm run test:unit -- --maxWorkers=2` passed 1,771 of 1,773 tests. A focused rerun passed both failures after the Leave client fixture was corrected to return a fresh response for each call. The existing task-plan non-JSON input test passed without changes.
 - `npm run test:data` passed 391 tests in 19 files, including all 17 Leave cases, on the local Firestore and Auth emulators.
 - `npm run build` passed with Leave and sign-in disabled and no Firebase Admin credential. All three Leave routes appear in the build.
+
+## L3 — Admin leave server
+
+Admins can read the Team and person views, decide requests, add leave for someone, adjust balances, edit details with an audit row for each changed field, and add or remove holidays. The three worked balances match across the routes, including both March lapses. Holiday changes recount requests in Mine, Team and person history.
+
+Add-for-someone and adjustments use a UUID in `Idempotency-Key`. The client sends the version observed at load in `If-Match` for details and holiday changes, using `profile.updatedAt` and `holidayVersion` from the admin reads. The setup command previews by default, initializes missing profiles and seeds missing national holidays once. O2 covers production setup.
+
+- `npx next typegen`, `npx tsc --noEmit`, and ESLint on the 13 changed JS and TS files passed.
+- `npm run test:unit -- --maxWorkers=2` passed 1,773 of 1,774 tests. The existing task-plan non-JSON test hit `Test timed out in 5000ms` and passed on a focused rerun with a 15-second limit.
+- `npm run test:data` passed 402 of 404 tests on local Firestore and Auth, including all 30 Leave cases. The existing company option rename and calendar 50-ID cases hit `Test timed out in 5000ms`. Both passed on focused reruns. The calendar case took about 21 seconds with a 60-second limit.
+- `npm run build` passed with Leave and sign-in disabled and the Firebase Admin key empty. All six new routes appear in the build. All 19 holidays match the brief, including the 5 January holiday used in the ledger example.

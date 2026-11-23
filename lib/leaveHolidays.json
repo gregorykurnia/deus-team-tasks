@@ -1,0 +1,24 @@
+{
+  "source": "SKB 3 Menteri 2026 (No. 1497/2/5 Tahun 2025) and 2027 (No. 1205/3/2 Tahun 2026, signed 15 Sep 2026), via setneg.go.id and aceh.kemenag.go.id, checked 2026-11-23",
+  "holidays": [
+    { "date": "2026-12-25", "name": "Christmas Day" },
+    { "date": "2027-01-01", "name": "New Year's Day" },
+    { "date": "2027-01-05", "name": "Isra Mikraj" },
+    { "date": "2027-02-06", "name": "Chinese New Year" },
+    { "date": "2027-03-08", "name": "Nyepi" },
+    { "date": "2027-03-10", "name": "Idulfitri (day 1)" },
+    { "date": "2027-03-11", "name": "Idulfitri (day 2)" },
+    { "date": "2027-03-26", "name": "Good Friday" },
+    { "date": "2027-03-28", "name": "Easter" },
+    { "date": "2027-05-01", "name": "Labour Day" },
+    { "date": "2027-05-06", "name": "Ascension of Jesus Christ" },
+    { "date": "2027-05-17", "name": "Iduladha" },
+    { "date": "2027-05-20", "name": "Waisak" },
+    { "date": "2027-06-01", "name": "Pancasila Day" },
+    { "date": "2027-06-06", "name": "Islamic New Year" },
+    { "date": "2027-08-15", "name": "Maulid Nabi" },
+    { "date": "2027-08-17", "name": "Independence Day" },
+    { "date": "2027-12-25", "name": "Christmas Day" },
+    { "date": "2027-12-26", "name": "Isra Mikraj" }
+  ]
+}
