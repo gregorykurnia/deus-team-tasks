@@ -1,7 +1,7 @@
 # Leave (Cuti) — Product Plan
 
-**Status:** draft, 2026-11-23, red-teamed once (Fable 5.2 High; what changed is the last section). Nothing is built
-until the owner answers **Decisions for the owner** and an implementation plan is written from this file. Legal points
+**Status:** decided 2026-11-23 (owner decisions below), red-teamed once (Fable 5.2 High; last section). Built by the
+implementation plan `docs/IMPLEMENTATION_PLAN.md`; where the two differ, the plan's brief wins. Legal points
 are marked *(verify)*: check them with whoever handles HR/contracts before go-live.
 
 ## What the owner asked
@@ -131,21 +131,26 @@ out, Plan shows no leave. No new calendar.
 **Not planned** (follow-ups to pick): CSV export for payroll, a second or stand-in approver, chat tools ("who's off
 next week"), approved leave on the team Google Calendar, doctor's note upload, WFH and overtime tracking.
 
-## Decisions for the owner
+## Owner decisions (2026-11-23)
 
-| # | Question | Suggested default |
+| # | Question | Answer |
 |---|---|---|
-| D1 | Team list: emails, join dates, contract type, probation end, and each person's cuti balance today | Owner sends it |
-| D2 | Does Gregory accrue and take cuti in the system too? | Yes, auto-approved |
-| D3 | Debt limit; and (b) does booking ahead count future +1s? | −3 for everyone; yes, projected to the leave's first day |
-| D4 | Can Calista take cuti (as debt) before 2027-02-01? | Only if the admin adds it |
-| D5 | Carry-over into a new year (unused days that lapse aren't paid out, so this is a money rule) | Carry up to 12 days; the rest lapses on 31 Dec. Must match the contract or company rules *(verify)* |
-| D6 | Are cuti bersama days deducted? | Yes; each one marked "deducts" in the holiday list |
-| D7 | Sick without a doctor's note: how many days are still paid sick? | 1 day; from the 2nd day a note is needed, otherwise the admin decides |
-| D8 | Half days allowed? | Yes (cuti and sick) |
-| D9 | Everyone works Monday–Friday? | Yes |
-| D10 | Can the team see the type (cuti/sick/izin) when Phase 2 shows who's away? | No, "Away" only |
-| D11 | Past records: import old cuti/izin history, or start from opening balances? | Start from opening balances |
+| D1 | Team | Gregory (admin), Audrey (has a sign-in), Calista, `sovie.magdalena@`, `thania.ferdinanto@`, `william.ang@deushcs.com`. Calista's email, join dates and today's balances come later (an owner step at go-live) |
+| D2 | Gregory accrues and takes leave in the system | Yes, his own requests are approved at once |
+| D3 | Debt limit | **None.** Any balance can go below zero; whatever is below zero when someone leaves is deducted from their final pay *(verify the contract allows it)* |
+| D4 | Calista asks for leave before 2027-02-01 | Yes, like anyone (it goes below zero) |
+| D5 | Carry-over | Unused days of a year can be used until the end of February; what's left of them lapses (hangus) on 1 March |
+| D6 | Cuti bersama | Optional: a normal working day. Whoever takes it asks for annual leave. Not in the holiday list |
+| D7 | Sick without a doctor's note | Later. Until then sick days never touch the balance |
+| D8 | Half days | Annual leave only |
+| D9 | Work week | Monday–Friday |
+| D10 | What the team sees | "Away" only |
+| D11 | Past records | Start from opening balances |
+
+**What the answers change above:** no debt limit and no limit check (the form still shows the balance after); the
+year-end line becomes a 1 March lapse of last year's unused days; cuti bersama are not deducted automatically; sick has
+no paid/unpaid choice yet; half days only for annual leave. The implementation plan (`docs/IMPLEMENTATION_PLAN.md`
+and its brief `docs/implementation/leave.md`) is the detailed, current version of these rules.
 
 ## Red-team findings and what changed
 
