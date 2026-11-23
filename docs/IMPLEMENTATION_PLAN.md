@@ -17,7 +17,8 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 
 ## Before the run
 
-- [ ] The owner approved the screens page (frames 1–10).
+- [x] Screens (owner, 2026-11-23): no separate approval; every screen follows the design guide as it is, and the
+  screens page (built from the guide's parts only) is the reference the look checks compare against.
 
 ## Run rules
 

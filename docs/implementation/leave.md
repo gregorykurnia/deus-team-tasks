@@ -188,8 +188,8 @@ A failed push never fails the save.
 
 ## Screens
 
-The screens page `docs/implementation/leave-screens.html` (published as an Artifact; the plan's **Before the run**
-line holds its approval) shows every frame below at 390 and 1280 wide, built only from parts in
+The screens page `docs/implementation/leave-screens.html` (built only from the guide's parts; the owner
+chose no separate approval, 2026-11-23) shows every frame below at 390 and 1280 wide, built only from parts in
 `redesign/design/design-guide.md`. Where it and this list differ, the page wins on looks and this brief on rules.
 
 1. **Entry:** `Leave` in the side bar (after Flows) and in More with the blurb `Your balance and leave requests`,
