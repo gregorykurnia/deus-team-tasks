@@ -5,6 +5,7 @@ import { wibToday } from "./followupServer";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { terminate } from "firebase/firestore";
+import * as leave from "./leave.server";
 import { sendMorningSummaries } from "./morningSummary.server";
 import { savePushDevice } from "./push.server";
 import * as transport from "./pushTransport.server";
@@ -29,6 +30,7 @@ beforeAll(() => {
 });
 beforeEach(async () => {
   vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "1"); vi.stubEnv("CRON_SECRET", "morning-test-secret");
+  vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "0");
   await clearAll();
   await person.set({ email: EMAIL, name: "Audrey", active: true });
   await adminDb.doc(`people/${GREG}`).set({ email: GREG, name: "Gregory", active: true });
@@ -73,8 +75,75 @@ describe("weekday morning summaries with real emulator claims and fake delivery"
     expect((await ping()).status).toBe(200); expect(await pushes()).toHaveLength(4);
     expect((await adminDb.doc(`people/${GREG}`).get()).get("summaryClaimDate")).toBeUndefined();
   });
+  it.each([2, 1])("sends only one summary to the admin with %i waiting and nothing due", async (count) => {
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    vi.stubEnv("LEAVE_ADMINS", `${GREG.toUpperCase()}, ${GREG}`);
+    vi.stubEnv("LEAVE_TEST_DATE", TUESDAY);
+    vi.stubEnv("MORNING_TEST_DATE", TUESDAY);
+    await seed("tasks", "leaveRequests", [
+      ...Array.from({ length: count }, (_, i) => ({ id: `waiting-${i}`, status: "waiting", email: EMAIL })),
+      ...["approved", "rejected", "cancelled", "", "Waiting"].map((status, i) => ({ id: `other-${i}`, status, email: EMAIL })),
+      { id: "missing-status", email: EMAIL },
+    ]);
+    const responses = await Promise.all([ping(), ping()]);
+    expect(responses.map(({ status }) => status)).toEqual([200, 200]);
+    const results = await Promise.all(responses.map(async (response) => (await response.json()).results));
+    expect(results.flat().filter(({ status }) => status === "sent")).toEqual([{ email: GREG, count, status: "sent" }]);
+    expect(await pushes()).toEqual([{
+      email: GREG, title: count === 2 ? "2 leave requests waiting" : "1 leave request waiting",
+      body: `Leave: ${count} waiting for you`, url: "/leave?view=team",
+    }]);
+    expect((await person.get()).get("summaryClaimDate")).toBeUndefined();
+  }, 15_000);
+  it("adds the waiting line to the admin's task roundup only when Leave is enabled", async () => {
+    vi.stubEnv("LEAVE_ADMINS", GREG);
+    vi.stubEnv("LEAVE_TEST_DATE", TUESDAY);
+    await adminDb.doc("leaveRequests/waiting").set({ email: EMAIL, status: "waiting" });
+    await storeTask({ endDate: "2026-11-16", responsible: ["Audrey", "Gregory"] });
+    const count = vi.spyOn(leave, "countWaitingLeaveRequests");
+
+    await sendMorningSummaries(TUESDAY);
+    expect(count).not.toHaveBeenCalled();
+    expect((await pushes()).sort((a, b) => a.email.localeCompare(b.email))).toEqual([
+      { email: EMAIL, title: "1 late", body: "Late: Send the quote (1 day late)", url: "/plan?view=people&person=Audrey" },
+      { email: GREG, title: "1 late", body: "Late: Send the quote (1 day late)", url: "/plan?view=people&person=Gregory" },
+    ]);
+
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    await sendMorningSummaries(WEDNESDAY);
+    expect(count).toHaveBeenCalledOnce();
+    const latest = (await pushes()).filter(({ body }) => body.includes("2 days late"));
+    expect(latest.sort((a, b) => a.email.localeCompare(b.email))).toEqual([
+      { email: EMAIL, title: "1 late", body: "Late: Send the quote (2 days late)", url: "/plan?view=people&person=Audrey" },
+      { email: GREG, title: "1 late", body: "Late: Send the quote (2 days late)\nLeave: 1 waiting for you", url: "/leave?view=team" },
+    ]);
+  });
+  it("keeps existing task summaries when the waiting count is unavailable and can retry unclaimed leave", async () => {
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    vi.stubEnv("LEAVE_ADMINS", GREG);
+    vi.stubEnv("LEAVE_TEST_DATE", TUESDAY);
+    await adminDb.doc("leaveRequests/waiting").set({ email: EMAIL, status: "waiting" });
+    await storeTask();
+    vi.spyOn(leave, "countWaitingLeaveRequests").mockRejectedValueOnce(new Error("Count unavailable"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await sendMorningSummaries(TUESDAY);
+    expect(log).toHaveBeenCalledWith("Waiting leave could not be counted for the morning summary.");
+    expect(await pushes()).toEqual([{ email: EMAIL, title: "Due today", body: "Send the quote", url: "/?task=task" }]);
+    expect((await adminDb.doc(`people/${GREG}`).get()).get("summaryClaimDate")).toBeUndefined();
+
+    await sendMorningSummaries(TUESDAY);
+    expect((await pushes()).filter(({ email }) => email === GREG)).toEqual([
+      { email: GREG, title: "1 leave request waiting", body: "Leave: 1 waiting for you", url: "/leave?view=team" },
+    ]);
+    expect((await pushes()).filter(({ email }) => email === EMAIL)).toHaveLength(1);
+  });
   it("resends only due-today tasks to the configured recipient once after the regular summary", async () => {
     clock("2026-11-17T05:00:00Z");
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    vi.stubEnv("LEAVE_ADMINS", EMAIL);
+    vi.stubEnv("LEAVE_TEST_DATE", TUESDAY);
+    await adminDb.doc("leaveRequests/waiting").set({ email: GREG, status: "waiting" });
     await person.update({ lastSummaryDate: TUESDAY, summaryClaimDate: TUESDAY });
     await seed("clients", "pipeline", [{ id: 7, company: "Mayora Indah" }], { keepIdField: true });
     await storeTask({ linkedClientId: 7, responsible: [EMAIL] });

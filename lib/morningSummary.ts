@@ -1,5 +1,6 @@
 import { noticeName } from "./assignNotify";
 import { addDays, daysBetween, isIsoDay, isWeekend, parseIso, plural } from "./dates";
+import { leaveWaitingMessage } from "./leaveMessages";
 import { isParked } from "./parking";
 import { hasTaskPerson, taskPersonKeys } from "./peopleInput";
 import type { PushMessage } from "./pushTransport.server";
@@ -14,7 +15,7 @@ export function dueTodayMessage(task: Pick<Task, "id" | "task">, company?: strin
   };
 }
 
-export function buildMorningSummary(tasks: readonly Task[], name: string, today: string, email?: string) {
+export function buildMorningSummary(tasks: readonly Task[], name: string, today: string, email?: string, waitingLeave = 0) {
   const person = taskPersonKeys(name, email);
   if (!person.size || !isIsoDay(today) || isWeekend(today)) return null;
   const friday = parseIso(today).getDay() === 5;
@@ -38,10 +39,11 @@ export function buildMorningSummary(tasks: readonly Task[], name: string, today:
     { tasks: friday ? groups.byMonday : groups.tomorrow, title: friday ? "due by Monday" : "tomorrow", label: friday ? "By Monday" : "Tomorrow" },
   ];
   const roundupCount = sections.reduce((sum, section) => sum + section.tasks.length, 0);
-  const count = roundupCount + groups.today.length;
+  const leave = leaveWaitingMessage(waitingLeave);
+  const count = roundupCount + groups.today.length + (leave ? waitingLeave : 0);
   if (!count) return null;
   groups.today.sort((a, b) => a.id.localeCompare(b.id));
-  if (!roundupCount) return { groups, count, roundup: undefined };
+  if (!roundupCount) return { groups, count, roundup: leave };
 
   let shown = 0;
   const lines: string[] = [], titles: string[] = [];
@@ -55,6 +57,11 @@ export function buildMorningSummary(tasks: readonly Task[], name: string, today:
     if (names.length) lines.push(`${section.label}: ${names.join(", ")}`);
   }
   if (roundupCount > shown) lines.push(`+${(roundupCount - shown).toLocaleString("en-US")} more`);
-  const roundup = { title: titles.join(", "), body: lines.join("\n"), url: `/plan?view=people&person=${encodeURIComponent(name)}` };
+  if (leave) lines.push(leave.body);
+  const roundup = {
+    title: titles.join(", "),
+    body: lines.join("\n"),
+    url: leave?.url ?? `/plan?view=people&person=${encodeURIComponent(name)}`,
+  };
   return { groups, count, roundup };
 }

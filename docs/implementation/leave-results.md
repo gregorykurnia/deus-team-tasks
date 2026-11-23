@@ -27,3 +27,11 @@ Add-for-someone and adjustments use a UUID in `Idempotency-Key`. The client send
 - `npm run test:unit -- --maxWorkers=2` passed 1,773 of 1,774 tests. The existing task-plan non-JSON test hit `Test timed out in 5000ms` and passed on a focused rerun with a 15-second limit.
 - `npm run test:data` passed 402 of 404 tests on local Firestore and Auth, including all 30 Leave cases. The existing company option rename and calendar 50-ID cases hit `Test timed out in 5000ms`. Both passed on focused reruns. The calendar case took about 21 seconds with a 60-second limit.
 - `npm run build` passed with Leave and sign-in disabled and the Firebase Admin key empty. All six new routes appear in the build. All 19 holidays match the brief, including the 5 January holiday used in the ledger example.
+
+## L4 — Leave pushes and the morning summary
+
+Leave requests, decisions, cancellations, additions for someone and balance adjustments queue Web Push after a confirmed save. Delivery uses the existing active-person and device checks and excludes the actor. The 09:00 summary counts waiting requests for active leave admins and links to Team. It can send that line on its own.
+
+- `npx tsc --noEmit` and ESLint passed on the nine TypeScript files. `npm run test:unit -- --maxWorkers=2 --testTimeout=15000` passed 1,786 of 1,787 tests. The existing key-generation test hit `spawnSync … EPERM` and passed on a focused rerun with local process access.
+- `npm run test:data` passed all 414 tests in 19 files after local socket access resolved `listen EPERM` at emulator startup. The fake push cases covered each action and recipient, overlapping submissions, failed and delayed delivery, and the enabled, disabled and unavailable waiting count.
+- `npm run build` passed with Leave and sign-in disabled and the Firebase Admin key empty.

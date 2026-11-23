@@ -3,7 +3,8 @@ import { doc, getDocFromServer } from "firebase/firestore";
 import { adminDb } from "./admin";
 import { isIsoDay, isWeekend } from "./dates";
 import { clientsDb } from "./firebaseClients";
-import { signInEnabled } from "./flags";
+import { leaveEnabled, signInEnabled } from "./flags";
+import { countWaitingLeaveRequests, leaveAdmins } from "./leave.server";
 import { buildMorningSummary, dueTodayMessage } from "./morningSummary";
 import { getActivePerson, listActivePeople, readPerson, type Person } from "./people.server";
 import { sendPushToPerson } from "./push.server";
@@ -30,10 +31,13 @@ function companyNamesForRun() {
   };
 }
 
-async function notifyPerson(person: Person, tasks: readonly Task[], today: string, companyName: ReturnType<typeof companyNamesForRun>, dueTodayOnly = false): Promise<MorningSummaryResult> {
+async function notifyPerson(
+  person: Person, tasks: readonly Task[], today: string, companyName: ReturnType<typeof companyNamesForRun>,
+  { waitingLeave = 0, dueTodayOnly = false }: { waitingLeave?: number; dueTodayOnly?: boolean } = {},
+): Promise<MorningSummaryResult> {
   let count = 0;
   try {
-    const summary = buildMorningSummary(tasks, person.name, today, person.email);
+    const summary = buildMorningSummary(tasks, person.name, today, person.email, waitingLeave);
     if (!summary) return { email: person.email, count, status: "skipped" };
     count = dueTodayOnly ? summary.groups.today.length : summary.count;
     if (!count) return { email: person.email, count, status: "skipped" };
@@ -88,18 +92,26 @@ async function readMorningTasks(): Promise<Task[]> {
 export async function sendDueTodayResend(email: string, today: string): Promise<MorningSummaryResult> {
   const person = await getActivePerson(email);
   if (!person) return { email, count: 0, status: "skipped" };
-  return notifyPerson(person, await readMorningTasks(), today, companyNamesForRun(), true);
+  return notifyPerson(person, await readMorningTasks(), today, companyNamesForRun(), { dueTodayOnly: true });
 }
 
 export async function sendMorningSummaries(today: string): Promise<MorningSummaryResult[]> {
   if (!signInEnabled() || !isIsoDay(today) || isWeekend(today)) return [];
   const people = await listActivePeople();
   if (!people.length) return [];
-  const tasks = await readMorningTasks();
+  const admins = new Set(leaveEnabled() ? leaveAdmins() : []);
+  const [tasks, waitingLeave] = await Promise.all([
+    readMorningTasks(),
+    people.some((person) => admins.has(person.email)) ? countWaitingLeaveRequests().catch(() => {
+      console.error("Waiting leave could not be counted for the morning summary.");
+      return 0;
+    }) : 0,
+  ]);
   const companyName = companyNamesForRun();
   const results: MorningSummaryResult[] = [];
   for (let i = 0; i < people.length; i += 10) {
-    results.push(...await Promise.all(people.slice(i, i + 10).map((person) => notifyPerson(person, tasks, today, companyName))));
+    results.push(...await Promise.all(people.slice(i, i + 10).map((person) =>
+      notifyPerson(person, tasks, today, companyName, { waitingLeave: admins.has(person.email) ? waitingLeave : 0 }))));
   }
   return results;
 }

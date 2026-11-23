@@ -19,11 +19,25 @@ import { POST as adjustmentRoute } from "@/app/api/leave/adjustments/route";
 import { PUT as detailsRoute } from "@/app/api/leave/profiles/[email]/route";
 import { POST as addHolidayRoute, DELETE as removeHolidayRoute } from "@/app/api/leave/holidays/[date]/route";
 import { clearProject } from "@/tests/support/emulator";
+import { subscription } from "@/tests/support/push";
 import { adminApp, adminAuth, adminDataApp, adminDb } from "./admin";
 import { addDays } from "./dates";
 import { isLeaveAdmin, leaveAdmins, leaveToday, type PersonLeave, type TeamLeave } from "./leave.server";
 import type { LeaveProfile, LeaveRequest } from "./leave";
 import holidaySeed from "./leaveHolidays.json";
+import { savePushDevice } from "./push.server";
+import * as transport from "./pushTransport.server";
+
+const { afterResponse } = vi.hoisted(() => ({ afterResponse: [] as (() => Promise<void>)[] }));
+vi.mock("next/server", () => ({ after: (work: () => Promise<void>) => { afterResponse.push(work); } }));
+
+function deliverQueuedPushes() {
+  return Promise.all(afterResponse.splice(0).map((work) => work()));
+}
+
+async function pushes() {
+  return (await adminDb.collection("_fakePush").get()).docs.map((doc) => doc.data());
+}
 
 const AUDREY = "leave.audrey@deushcs.com";
 const CALISTA = "leave.calista@deushcs.com";
@@ -47,11 +61,11 @@ function me(token?: string, search = "") {
   return GET(new Request(`http://localhost/api/leave/me${search}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }));
 }
 
-function ask(token?: string, input: unknown = ANNUAL, key?: string) {
+function ask(token?: string, input: unknown = ANNUAL, key?: string, signal?: AbortSignal) {
   return askRoute(new Request("http://localhost/api/leave/requests", {
     method: "POST", body: JSON.stringify(input), headers: {
       ...(token && { Authorization: `Bearer ${token}` }), ...(key && { "Idempotency-Key": key }),
-    },
+    }, signal,
   }));
 }
 
@@ -153,7 +167,10 @@ beforeEach(async () => {
   await batch.commit();
 });
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
+afterEach(async () => {
+  try { await deliverQueuedPushes(); }
+  finally { vi.restoreAllMocks(); vi.unstubAllEnvs(); }
+});
 
 afterAll(async () => {
   await terminate(clientDb);
@@ -324,6 +341,7 @@ describe("asking and cancelling", () => {
     }));
     await withStatus(await ask(audrey, ANNUAL, KEY), 503);
     expect((await requests().get()).size).toBe(0);
+    expect(afterResponse).toHaveLength(0);
     await withStatus(await ask(audrey, ANNUAL, KEY), 200);
     expect((await requests().get()).size).toBe(1);
   });
@@ -335,6 +353,7 @@ describe("asking and cancelling", () => {
       throw new Error("Response lost after commit");
     });
     await withStatus(await ask(audrey, ANNUAL, KEY), 503);
+    expect(afterResponse).toHaveLength(0);
     const { requests: [saved] } = await withStatus(await me(audrey), 200);
     await withStatus(await cancel(audrey, saved.id), 200);
     const cancelled = (await requests().doc(saved.id).get()).data();
@@ -530,6 +549,154 @@ describe("admin leave routes", () => {
       { date: TODAY, days: 1.5, label: "Correction" }, { date: "2027-02-11", days: 1.5, label: "Correction" },
     ]);
     expect((await adminDb.collection("leaveAdjustments").get()).size).toBe(2);
+  });
+});
+
+describe("post-commit leave pushes", () => {
+  beforeEach(async () => {
+    await Promise.all([AUDREY, CALISTA, GREGORY].map((email) => savePushDevice(email, subscription(email))));
+  });
+
+  it("sends once per active admin for a request and sends nothing for its owner's waiting cancellation", async () => {
+    const inactive = "leave.inactive@deushcs.com";
+    const record = adminDb.doc(`people/${inactive}`);
+    await record.set({ email: inactive, name: "Inactive admin", active: true });
+    await savePushDevice(inactive, subscription("inactive"));
+    await record.update({ active: false });
+    vi.stubEnv("LEAVE_ADMINS", ` , ${GREGORY.toUpperCase()}, ${GREGORY}, ${CALISTA}, ${inactive}, invalid`);
+    await setHoliday("2027-02-12");
+    const input = { ...ANNUAL, end: "2027-02-12" };
+
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "0");
+    await withStatus(await ask(audrey, input, KEY), 404);
+    expect(afterResponse).toHaveLength(0);
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    const replies = await Promise.all([ask(audrey, input, KEY), ask(audrey, input, KEY)]);
+    expect(replies.map(({ status }) => status).sort()).toEqual([200, 409]);
+    const { request } = await withStatus(replies.find(({ status }) => status === 200)!, 200);
+    expect(await pushes()).toEqual([]);
+    expect(afterResponse).toHaveLength(1);
+    expect((await requests().doc(request.id).get()).get("status")).toBe("waiting");
+    await deliverQueuedPushes();
+    const expected = [CALISTA, GREGORY].map((email) => ({
+      email, title: "Leave request", body: "Audrey: Annual leave, Thu 11 – Fri 12 Feb (1 day)",
+      url: `/leave?view=team&request=${request.id}`,
+    }));
+    expect((await pushes()).sort((a, b) => a.email.localeCompare(b.email))).toEqual(expected);
+
+    await withStatus(await cancel(audrey, request.id), 200);
+    await withStatus(await ask(audrey, input, KEY.toUpperCase()), 409);
+    expect(afterResponse).toHaveLength(0);
+    expect((await requests().doc(request.id).get()).get("status")).toBe("cancelled");
+  }, 15_000);
+
+  it("sends each decision only to the requester even when two admins decide concurrently", async () => {
+    vi.stubEnv("LEAVE_ADMINS", `${GREGORY}, ${CALISTA}`);
+    await Promise.all([
+      seedRequest("approve", AUDREY, { status: "waiting", pay: null }),
+      seedRequest("reject", CALISTA, { type: "sick", status: "waiting", pay: null }),
+      seedRequest("self", GREGORY, { status: "waiting", pay: null }),
+    ]);
+    const approve = { decision: "approve" };
+    const replies = await Promise.all([decide(gregory, "approve", approve), decide(calista, "approve", approve)]);
+    expect(replies.map(({ status }) => status).sort()).toEqual([200, 409]);
+    await withStatus(await decide(gregory, "reject", { decision: "reject", reason: " Pick another day\nfor coverage. " }), 200);
+    await withStatus(await decide(gregory, "self", approve), 200);
+    await deliverQueuedPushes();
+    expect((await pushes()).sort((a, b) => a.email.localeCompare(b.email))).toEqual([
+      { email: AUDREY, title: "Annual leave approved", body: "Thu 11 Feb", url: "/leave?request=approve" },
+      { email: CALISTA, title: "Sick not approved", body: "Thu 11 Feb\nPick another day for coverage.", url: "/leave?request=reject" },
+    ]);
+    expect((await requests().doc("approve").get()).get("status")).toBe("approved");
+    expect((await requests().doc("reject").get()).get("rejectReason")).toBe("Pick another day\nfor coverage.");
+  }, 15_000);
+
+  it("tells admins about an owner's approved cancellation and tells the person about an admin's cancellation", async () => {
+    vi.stubEnv("LEAVE_ADMINS", `${GREGORY}, ${CALISTA}`);
+    await Promise.all([
+      seedRequest("owner", AUDREY),
+      seedRequest("admin-own", GREGORY),
+      seedRequest("admin-waiting", AUDREY, { status: "waiting" }),
+      seedRequest("admin-approved", CALISTA),
+      seedRequest("admin-rejected", AUDREY, { status: "rejected" }),
+    ]);
+    for (const [token, id] of [
+      [audrey, "owner"], [gregory, "admin-own"], [gregory, "admin-waiting"], [gregory, "admin-approved"], [gregory, "admin-rejected"],
+    ]) await withStatus(await cancel(token, id), 200);
+    await withStatus(await cancel(audrey, "owner"), 409);
+    await deliverQueuedPushes();
+    const sent = await pushes();
+    expect(sent).toHaveLength(5);
+    expect(sent).toEqual(expect.arrayContaining([
+      ...[CALISTA, GREGORY].map((email) => ({
+        email, title: "Audrey cancelled leave", body: "Annual leave, Thu 11 Feb",
+        url: `/leave?view=team&person=${encodeURIComponent(AUDREY)}`,
+      })),
+      { email: CALISTA, title: "Gregory cancelled leave", body: "Annual leave, Thu 11 Feb", url: `/leave?view=team&person=${encodeURIComponent(GREGORY)}` },
+      { email: AUDREY, title: "Gregory cancelled your leave", body: "Annual leave, Thu 11 Feb", url: "/leave?request=admin-waiting" },
+      { email: CALISTA, title: "Gregory cancelled your leave", body: "Annual leave, Thu 11 Feb", url: "/leave?request=admin-approved" },
+    ]));
+  }, 15_000);
+
+  it("tells the target once for added leave and a balance adjustment, excluding admin self-service", async () => {
+    const input = { ...ANNUAL, email: ` ${CALISTA.toUpperCase()} ` };
+    const { request } = await withStatus(await ask(gregory, input, KEY), 200);
+    await withStatus(await ask(gregory, input, KEY.toUpperCase()), 409);
+    await withStatus(await ask(gregory), 200);
+    const adjustment = { days: 1.5, reason: "Opening balance correction" };
+    await withStatus(await adjust(gregory, { ...adjustment, email: CALISTA }), 200);
+    await withStatus(await adjust(gregory, { ...adjustment, email: CALISTA }, KEY.toUpperCase()), 409);
+    await withStatus(await adjust(gregory, { ...adjustment, email: GREGORY }, KEY_TWO), 200);
+    await deliverQueuedPushes();
+    expect((await pushes()).sort((a, b) => a.title.localeCompare(b.title))).toEqual([
+      { email: CALISTA, title: "Gregory added leave for you", body: "Annual leave, Thu 11 Feb", url: `/leave?request=${request.id}` },
+      { email: CALISTA, title: "Your leave balance changed", body: "+1.5 days: Opening balance correction", url: "/leave?view=history" },
+    ]);
+  }, 15_000);
+
+  it("logs a lost provider reply, delivers to the other admin and never repeats the committed push", async () => {
+    vi.stubEnv("LEAVE_ADMINS", `${GREGORY}, ${CALISTA}`);
+    const deliver = transport.deliverPush;
+    const provider = vi.spyOn(transport, "deliverPush").mockImplementation(async (...args) => {
+      await deliver(...args);
+      if (args[0] === GREGORY) throw new Error("Reply lost after delivery");
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { request } = await withStatus(await ask(audrey, ANNUAL, KEY), 200);
+    await deliverQueuedPushes();
+    expect(log).toHaveBeenCalledWith("Push delivery failed.", "unavailable");
+    expect((await pushes()).map(({ email }) => email).sort()).toEqual([CALISTA, GREGORY]);
+    await withStatus(await ask(audrey, ANNUAL, KEY), 409);
+    await deliverQueuedPushes();
+    expect(provider).toHaveBeenCalledTimes(2);
+    expect((await requests().doc(request.id).get()).get("status")).toBe("waiting");
+  });
+
+  it("confirms the save before a slow push and keeps a later cancellation when the caller closes", async () => {
+    const deliver = transport.deliverPush;
+    const started = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+    vi.spyOn(transport, "deliverPush").mockImplementationOnce(async (...args) => {
+      started.resolve();
+      await release.promise;
+      await deliver(...args);
+    });
+    const controller = new AbortController();
+    const { request } = await withStatus(await ask(audrey, ANNUAL, KEY, controller.signal), 200);
+    controller.abort();
+    const delivery = deliverQueuedPushes();
+    try {
+      await started.promise;
+      expect(await pushes()).toEqual([]);
+      await withStatus(await cancel(audrey, request.id), 200);
+    } finally {
+      release.resolve();
+      await delivery;
+    }
+    expect(await pushes()).toEqual([{
+      email: GREGORY, title: "Leave request", body: "Audrey: Annual leave, Thu 11 Feb (1 day)",
+      url: `/leave?view=team&request=${request.id}`,
+    }]);
+    expect((await readPersonLeave(AUDREY)).requests).toMatchObject([{ id: request.id, status: "cancelled" }]);
   });
 });
 

@@ -69,6 +69,16 @@ describe("push service worker handlers", () => {
     expect(client.navigate).toHaveBeenCalledWith("https://deus.invalid/plan?view=people&person=Audrey%20Wijaya");
     expect(client.focus).toHaveBeenCalledOnce(); expect(w.openWindow).not.toHaveBeenCalled();
   });
+  it("keeps the full Leave Team link from receiving the push to opening it", async () => {
+    const client = windowClient("/"), w = worker([client]);
+    await w.fire("push", { data: { json: () => ({
+      title: "Audrey cancelled leave", body: "Annual leave, Thu 11 Feb", url: "/leave?view=team&person=audrey%2Btime%40deushcs.com",
+    }) } });
+    const { data } = w.showNotification.mock.calls[0][1];
+    await w.fire("notificationclick", { notification: { data, close: vi.fn() } });
+    expect(client.navigate).toHaveBeenCalledExactlyOnceWith("https://deus.invalid/leave?view=team&person=audrey%2Btime%40deushcs.com");
+    expect(client.focus).toHaveBeenCalledOnce();
+  });
   it("opens the task when there is no app window", async () => {
     const w = worker();
     await w.fire("notificationclick", { notification: notification("/?task=abc") });

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { DocumentSnapshot, QueryDocumentSnapshot, Transaction } from "firebase-admin/firestore";
+import { after } from "next/server";
 import { adminDb } from "./admin";
 import { addDays, isIsoDay, weekdayDate } from "./dates";
 import { USE_EMULATOR } from "./emulator";
@@ -11,8 +12,10 @@ import {
   type LeaveProfileDetails, type LeaveProfileField, type LeaveRequest,
 } from "./leave";
 import { buildLedger, type LeaveLedgerLine, type LeaveSummary } from "./leaveLedger";
+import { leaveAddedMessage, leaveAdjustedMessage, leaveCancelledMessage, leaveDecidedMessage, leaveRequestedMessage } from "./leaveMessages";
 import { readPerson, type Person } from "./people.server";
 import { personEmail } from "./peopleInput";
+import { sendPushToPerson, type PushMessage } from "./push.server";
 
 interface LeaveHistory {
   profile: LeaveProfile | null;
@@ -76,6 +79,7 @@ export function leaveToday(now: Date = new Date()): string {
 const people = () => adminDb.collection("people");
 const profiles = () => adminDb.collection("leaveProfiles");
 const requests = () => adminDb.collection("leaveRequests");
+const waitingCountQuery = () => requests().where("status", "==", "waiting").count();
 const adjustments = () => adminDb.collection("leaveAdjustments");
 const auditRows = () => adminDb.collection("leaveAudit");
 const holidayCollection = () => adminDb.collection("leaveHolidays");
@@ -83,6 +87,28 @@ const holidayCollection = () => adminDb.collection("leaveHolidays");
 const holidaySettings = () => holidayCollection().doc("_settings");
 const holidays = () => holidayCollection().orderBy("date");
 const setupActor = "Setup";
+
+export async function countWaitingLeaveRequests(): Promise<number> {
+  return (await waitingCountQuery().get()).data().count;
+}
+
+function queueLeavePush(actor: string, recipients: readonly string[], buildMessage: () => PushMessage): void {
+  const others = recipients.filter((email) => email !== actor);
+  if (!others.length) return;
+  // Only a confirmed transaction queues a push. A slow delivery must not delay the saved response.
+  try {
+    after(async () => {
+      try {
+        const message = buildMessage();
+        await Promise.all(others.map((email) => sendPushToPerson(email, message)));
+      } catch {
+        console.error("Leave notification could not be processed.");
+      }
+    });
+  } catch {
+    console.error("Leave notification could not be scheduled.");
+  }
+}
 
 function requireActivePerson(snapshot: DocumentSnapshot) {
   const person = readPerson(snapshot);
@@ -142,7 +168,7 @@ export function readMyLeave(email: string): Promise<MyLeave> {
     const profile = readProfile(profileDoc);
     const [holidayRows, waiting] = await Promise.all([
       tx.get(holidays()),
-      isAdmin ? tx.get(requests().where("status", "==", "waiting").count()) : null,
+      isAdmin ? tx.get(waitingCountQuery()) : null,
     ]);
     const allHolidays = readHolidayRows(holidayRows.docs);
     const through = addDays(today, 400);
@@ -186,12 +212,12 @@ function payChoice(value: unknown) {
   return invalid("pay", "Choose how this absence is paid.");
 }
 
-export function createLeaveRequest(email: string, input: unknown, key: string | null): Promise<LeaveRequest> {
+export async function createLeaveRequest(email: string, input: unknown, key: string | null): Promise<LeaveRequest> {
   const autoRef = requests().doc();
   const raw = inputRecord(input);
   const isAdmin = isLeaveAdmin(email);
 
-  return adminDb.runTransaction(async (tx) => {
+  const { request, actorName, count, today } = await adminDb.runTransaction(async (tx) => {
     const actor = requireActivePerson(await tx.get(people().doc(email)));
     if (raw.email != null && !isAdmin && raw.email !== email) throw new LeaveError(403, "You can only ask for your own leave here.");
     const target = raw.email == null ? email : targetEmail(raw.email);
@@ -227,8 +253,14 @@ export function createLeaveRequest(email: string, input: unknown, key: string | 
       rejectReason: null, cancelledBy: null, cancelledAt: null,
     };
     tx.create(ref, data);
-    return { ...data, id: ref.id };
+    return { request: { ...data, id: ref.id }, actorName: actor.name, count: checked.days, today };
   });
+  if (request.status === "waiting") {
+    queueLeavePush(email, leaveAdmins(), () => leaveRequestedMessage(request, count, today));
+  } else {
+    queueLeavePush(email, [request.email], () => leaveAddedMessage(request, actorName, today));
+  }
+  return request;
 }
 
 function requestRef(id: string) {
@@ -238,22 +270,29 @@ function requestRef(id: string) {
   return requests().doc(id);
 }
 
-export function cancelLeaveRequest(email: string, id: string): Promise<LeaveRequest> {
+export async function cancelLeaveRequest(email: string, id: string): Promise<LeaveRequest> {
   const ref = requestRef(id);
   const isAdmin = isLeaveAdmin(email);
-  return adminDb.runTransaction(async (tx) => {
+  const { cancelled, previousStatus, actorName, today } = await adminDb.runTransaction(async (tx) => {
     const [person, stored] = await tx.getAll(people().doc(email), ref);
-    requireActivePerson(person);
+    const actor = requireActivePerson(person);
     const request = stored.data() as Omit<LeaveRequest, "id"> | undefined;
     if (!request || (!isAdmin && request.email !== email)) throw new LeaveError(404, "Not found");
     if (request.status === "cancelled") throw new LeaveError(409, "This request is already cancelled.");
-    const canCancel = request.status === "waiting" || (request.status === "approved" && request.start > leaveToday());
+    const today = leaveToday();
+    const canCancel = request.status === "waiting" || (request.status === "approved" && request.start > today);
     if (!isAdmin && !canCancel) throw new LeaveError(409, "This request can no longer be cancelled.");
 
     const change = { status: "cancelled", cancelledBy: email, cancelledAt: Date.now() } as const;
     tx.update(ref, change);
-    return { ...request, ...change, id };
+    return { cancelled: { ...request, ...change, id }, previousStatus: request.status, actorName: actor.name, today };
   });
+  const ownRequest = cancelled.email === email;
+  if (previousStatus === "approved" || (previousStatus === "waiting" && !ownRequest)) {
+    queueLeavePush(email, ownRequest ? leaveAdmins() : [cancelled.email],
+      () => leaveCancelledMessage(cancelled, actorName, ownRequest, today));
+  }
+  return cancelled;
 }
 
 export function readPersonLeave(email: string, target: string): Promise<PersonLeave> {
@@ -363,8 +402,9 @@ function requiredText(value: unknown, field: "reason" | "name", label: string, m
   return invalid(field, `Enter ${label} from 1 to ${max} characters.`);
 }
 
-export function decideLeaveRequest(email: string, id: string, input: unknown): Promise<LeaveRequest> {
-  return activeAdminTransaction(email, async (tx) => {
+export async function decideLeaveRequest(email: string, id: string, input: unknown): Promise<LeaveRequest> {
+  const today = leaveToday();
+  const decided = await activeAdminTransaction(email, async (tx) => {
     const ref = requestRef(id);
     const request = (await tx.get(ref)).data() as Omit<LeaveRequest, "id"> | undefined;
     if (!request) throw new LeaveError(404, "Not found");
@@ -381,14 +421,16 @@ export function decideLeaveRequest(email: string, id: string, input: unknown): P
     tx.update(ref, change);
     return { ...request, ...change, id };
   });
+  queueLeavePush(email, [decided.email], () => leaveDecidedMessage(decided, today));
+  return decided;
 }
 
 function halfSteps(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value * 2);
 }
 
-export function adjustLeaveBalance(email: string, input: unknown, key: string | null): Promise<LeaveAdjustment> {
-  return activeAdminTransaction(email, async (tx) => {
+export async function adjustLeaveBalance(email: string, input: unknown, key: string | null): Promise<LeaveAdjustment> {
+  const adjustment = await activeAdminTransaction(email, async (tx) => {
     const id = operationId(email, key);
     if (!id) throw new LeaveError(400, "Use a request key when adjusting a balance.");
     const raw = inputRecord(input);
@@ -406,6 +448,8 @@ export function adjustLeaveBalance(email: string, input: unknown, key: string | 
     tx.create(ref, data);
     return { ...data, id };
   });
+  queueLeavePush(email, [adjustment.email], () => leaveAdjustedMessage(adjustment));
+  return adjustment;
 }
 
 const detailFields = ["joinDate", "accrualStart", "openingBalance", "openingDate", "openingCarried", "endDate"] as const;

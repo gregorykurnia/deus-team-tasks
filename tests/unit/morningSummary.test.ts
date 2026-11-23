@@ -53,6 +53,27 @@ describe("pure morning summary", () => {
       title: "1 late, 3 tomorrow", body: "Late: Late (2 days late)\nTomorrow: Tomorrow A, Tomorrow B\n+1 more",
     });
   });
+  it("adds the leave line as the fourth roundup line and leaves individual task alerts intact", () => {
+    const summary = buildMorningSummary([
+      task("Today"), task("Late", "2026-11-15"),
+      task("Tomorrow A", "2026-11-18"), task("Tomorrow B", "2026-11-18"), task("Tomorrow C", "2026-11-18"),
+    ], "Audrey", TUESDAY, undefined, 2)!;
+    expect(summary.count).toBe(7);
+    expect(summary.groups.today.map((t) => dueTodayMessage(t).url)).toEqual(["/?task=Today"]);
+    expect(summary.roundup).toEqual({
+      title: "1 late, 3 tomorrow",
+      body: "Late: Late (2 days late)\nTomorrow: Tomorrow A, Tomorrow B\n+1 more\nLeave: 2 waiting for you",
+      url: "/leave?view=team",
+    });
+  });
+  it("builds a standalone leave roundup even if there are individual tasks due today", () => {
+    const roundup = {
+      title: "1 leave request waiting", body: "Leave: 1 waiting for you", url: "/leave?view=team",
+    };
+    expect(buildMorningSummary([], "Audrey", TUESDAY, undefined, 1)).toMatchObject({ count: 1, roundup });
+    expect(buildMorningSummary([task("Today")], "Audrey", TUESDAY, undefined, 1)).toMatchObject({ count: 2, roundup });
+    expect(buildMorningSummary([], "Audrey", "2026-11-21", undefined, 1)).toBeNull();
+  });
   it("handles missing, blank, malformed and duplicate data without inventing deadlines or people", () => {
     const summary = buildMorningSummary([
       task("Duplicate", TUESDAY, { responsible: ["audrey", " AUDREY ", "Ａｕｄｒｅｙ"] }), task("Duplicate"),
