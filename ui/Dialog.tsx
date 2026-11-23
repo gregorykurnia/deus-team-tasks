@@ -41,7 +41,7 @@ function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions
 
   return (
     <>
-      <Scrim onClick={close} over={overSheet} />
+      <Scrim onClick={close} dialog over={overSheet} />
       <div
         ref={panel}
         className={classes}

@@ -66,3 +66,11 @@ The reference screens HTML is absent from the checkout. N40 records the frame 7 
 - `tests/smoke/leave-admin.spec.ts` passed four desktop and five phone cases. `tests/smoke/leave.spec.ts` passed 14 per project across the scoped runs. The first desktop badge check hit `expect(page).not.toHaveURL(expected) failed` on `/sign-in`. Its isolated rerun passed. Early attached phone runs exited with SIGTERM and the logged background run completed.
 - The decision tests cover whitespace and missing pay, late or lost replies, a retry after commit, two actions in flight, a competing decision, returning to Team while a decision is pending, and seeing the decision in Mine. They also check employee access, people with the same name in different case, and the missing-profile row.
 - The look check moved the single desktop card’s actions close to its text, cleared the phone navigation bar from the People heading, and moved available leave above the long note. At 320 px, the pay actions fit side by side and the People rows give long names more room. The final frames and crops show the repairs.
+
+### Look recheck
+
+During the Reject and Pay openings, the previous screen’s text and action labels showed through the new dialog. The dialog scrim now blurs the screen underneath from its first frame while its tint fades in. The updated 30 fps sequences and full-size crops show the incoming labels clearly at 1280, 390, and 320 px. The runner’s audit recognized 54 opened paths in the L7 gallery.
+
+- Team smoke passed four desktop and five phone cases across the reruns. Six affected Mine cancellation cases passed on desktop and phone. The motion checks verify the backdrop halfway through Reject and Pay and check that cancelling the nested dialog returns focus to Approve.
+- Early sign-in attempts exceeded the browser deadline. The Leave test helper now requires fake-mail delivery before retrying through the UI. The capture sampler now pauses both animations when the dialog mounts. The first desktop retake then exceeded the 90-second test limit and passed with a longer capture-only limit.
+- TypeScript, ESLint, and 1,795 unit tests passed. The feature-disabled production build compiled, checked types, and generated all 25 static pages. A full disk prevented the shell from recording its exit code.

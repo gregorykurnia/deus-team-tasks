@@ -72,30 +72,41 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${gallery}/${page.viewportSize()!.width}-${name}.png`, animations: "disabled" });
 }
 
-async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>) {
-  if (capture) {
-    await readyForPicture(page);
+async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkDialogScrim = false) {
+  if (capture) await readyForPicture(page);
+  if (capture || checkDialogScrim) {
     await page.evaluate((title) => {
-      document.addEventListener("animationstart", function pause(event) {
-        const layer = event.target;
-        if (!(layer instanceof HTMLElement) || layer.getAttribute("aria-modal") !== "true" || layer.querySelector("h2")?.textContent !== title) return;
+      const opening = new MutationObserver(() => {
+        const layer = Array.from(document.querySelectorAll('[aria-modal="true"]'))
+          .find((element) => element.querySelector("h2")?.textContent === title);
+        if (!layer) return;
         for (const element of [layer.previousElementSibling, layer]) {
-          for (const animation of element?.getAnimations() ?? []) {
-            animation.pause();
-            animation.currentTime = 0;
-          }
+          if (element instanceof HTMLElement) element.style.animationPlayState = "paused";
         }
-        document.removeEventListener("animationstart", pause);
+        opening.disconnect();
       });
+      opening.observe(document.body, { childList: true });
     }, title);
   }
   await open();
   const overlay = dialog(page, title);
   await expect(overlay).toBeVisible();
-  if (!capture) return;
+  if (!capture && !checkDialogScrim) return;
   const duration = await overlay.evaluate((layer) => Number(layer.getAnimations()[0]?.effect?.getTiming().duration ?? 0));
   expect(duration).toBeGreaterThan(0);
-  for (let frameIndex = 0; frameIndex <= Math.ceil(duration * 30 / 1000); frameIndex++) {
+  if (checkDialogScrim) {
+    const backdrop = await overlay.evaluate((layer) => {
+      const scrim = layer.previousElementSibling!;
+      const animation = scrim.getAnimations()[0];
+      if (!animation?.effect) throw new Error("Dialog backdrop animation did not start");
+      animation.currentTime = Number(animation.effect.getTiming().duration) / 2;
+      const { opacity, backdropFilter } = getComputedStyle(scrim);
+      return { opacity, backdropFilter };
+    });
+    expect(backdrop.opacity, "The backdrop should stay blurred throughout the tint fade").toBe("1");
+    expect(backdrop.backdropFilter).toBe("blur(8px)");
+  }
+  for (let frameIndex = 0; capture && frameIndex <= Math.ceil(duration * 30 / 1000); frameIndex++) {
     const time = Math.min(frameIndex * 1000 / 30, duration);
     await overlay.evaluate((layer, at) => {
       for (const element of [layer.previousElementSibling, layer]) {
@@ -109,6 +120,7 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
   await overlay.evaluate((layer) => {
     for (const element of [layer.previousElementSibling, layer]) {
       for (const animation of element?.getAnimations() ?? []) animation.finish();
+      if (element instanceof HTMLElement) element.style.removeProperty("animation-play-state");
     }
   });
 }
@@ -125,7 +137,7 @@ async function navCount(page: Page, isMobile: boolean, count: number) {
 
 test.describe("Leave Team", { tag: "@phone" }, () => {
   test("opens waiting cards from links and saves decisions visible to the employee", async ({ page, isMobile, browser, baseURL }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(capture ? 180_000 : 90_000);
     if (capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
     await setup([
       request("first", "2027-02-16", { half: "morning", note: "A morning appointment.", createdAt: createdAt - 2 * 86_400_000 }),
@@ -169,7 +181,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(last).toBeFocused();
 
     const second = card(page, "Thu 18 Feb");
-    await openOverlay(page, "Reject this request?", "reject", () => second.getByRole("button", { name: "Reject", exact: true }).click());
+    await openOverlay(page, "Reject this request?", "reject", () => second.getByRole("button", { name: "Reject", exact: true }).click(), true);
     const reject = dialog(page, "Reject this request?");
     const reason = reject.getByRole("textbox", { name: "Reason", exact: true });
     const rejectButton = reject.getByRole("button", { name: "Reject request", exact: true });
@@ -195,7 +207,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     }
     await shot(page, "one-waiting");
 
-    await openOverlay(page, "Choose pay", "pay", () => card(page, "Tue 23 Feb").getByRole("button", { name: "Approve", exact: true }).click());
+    await openOverlay(page, "Choose pay", "pay", () => card(page, "Tue 23 Feb").getByRole("button", { name: "Approve", exact: true }).click(), true);
     const pay = dialog(page, "Choose pay");
     const approveButton = pay.getByRole("button", { name: "Approve request", exact: true });
     await expect(pay.getByRole("radio")).toHaveCount(3);
@@ -378,6 +390,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
 
   test("fits long and missing data at 320px and keeps lookalike names distinct", async ({ page, isMobile }) => {
     test.skip(!isMobile, "The narrow layout is narrower than the phone project.");
+    test.setTimeout(90_000);
     const name = "Ameliasuperlongstaffnamewithoutanyspaces";
     const note = "W".repeat(500);
     expect(name).toHaveLength(40);
@@ -400,13 +413,15 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(dialog(page, name).getByText("Available after −100.5 days")).toBeInViewport();
     await expect(dialog(page, name).getByRole("button", { name: "Approve", exact: true })).toBeInViewport();
     await shot(page, "stress-request");
-    await openOverlay(page, "Choose pay", "stress-pay", () => dialog(page, name).getByRole("button", { name: "Approve", exact: true }).click());
+    const payOpener = dialog(page, name).getByRole("button", { name: "Approve", exact: true });
+    await openOverlay(page, "Choose pay", "stress-pay", () => payOpener.click(), true);
     const pay = dialog(page, "Choose pay");
     const cancelBox = (await pay.getByRole("button", { name: "Cancel", exact: true }).boundingBox())!;
     const approveBox = (await pay.getByRole("button", { name: "Approve request", exact: true }).boundingBox())!;
     expect(Math.abs(cancelBox.y - approveBox.y)).toBeLessThan(4);
     await shot(page, "stress-pay");
     await dialog(page, "Choose pay").getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(payOpener).toBeFocused();
     await dialog(page, name).getByRole("button", { name: "Close", exact: true }).click();
     await people(page).getByRole("row").last().scrollIntoViewIfNeeded();
     await shot(page, "stress-people");

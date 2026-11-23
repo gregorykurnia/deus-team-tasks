@@ -3,11 +3,12 @@ import styles from "./Scrim.module.css";
 
 interface ScrimProps {
   onClick: () => void;
+  dialog?: boolean;
   over?: boolean; // behind a dialog that sits over a sheet
   phoneOnly?: boolean; // gone above 900px, for the More sheet
 }
 
-export default function Scrim({ onClick, over = false, phoneOnly = false }: ScrimProps) {
-  const classes = [styles.scrim, over && styles.over, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
+export default function Scrim({ onClick, dialog = false, over = false, phoneOnly = false }: ScrimProps) {
+  const classes = [styles.scrim, dialog && styles.dialog, over && styles.over, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
   return <div className={classes} onClick={onClick} aria-hidden="true" />;
 }

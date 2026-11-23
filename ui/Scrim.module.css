@@ -8,6 +8,13 @@
   animation: fade var(--dur-fade) ease-out;
 }
 
+/* Keep the underlying text blurred throughout the dialog fade. */
+.dialog {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation-name: tint;
+}
+
 /* Behind a confirmation that sits over a sheet. */
 .over {
   z-index: var(--z-dialog);
@@ -22,5 +29,11 @@
 @keyframes fade {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes tint {
+  from {
+    background-color: transparent;
   }
 }
