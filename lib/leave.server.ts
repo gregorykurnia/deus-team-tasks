@@ -7,7 +7,7 @@ import { addDays, isIsoDay, weekdayDate } from "./dates";
 import { USE_EMULATOR } from "./emulator";
 import { wibToday } from "./followupServer";
 import {
-  checkRequest, defaultLeavePay, nextMissingHolidayYear, requestDays, workingDates,
+  canCancelLeave, checkRequest, defaultLeavePay, nextMissingHolidayYear, requestDays, workingDates,
   type LeaveAdjustment, type LeaveAudit, type LeaveHoliday, type LeaveIssue, type LeaveProfile,
   type LeaveProfileDetails, type LeaveProfileField, type LeaveRequest,
 } from "./leave";
@@ -24,17 +24,23 @@ interface LeaveHistory {
   requests: (LeaveRequest & { days: number })[];
 }
 
+type NamedLeaveAudit = LeaveAudit & { byName: string };
+type LeaveHistoryChange = Pick<NamedLeaveAudit, "id" | "at" | "field" | "from" | "to" | "byName">;
+
 export interface MyLeave extends LeaveHistory {
   today: string;
   isAdmin: boolean;
   waitingForMe: number;
   holidays: LeaveHoliday[];
+  setupContact: string | null;
+  actorNames: Record<string, string>;
+  changes: LeaveHistoryChange[];
 }
 
 export interface PersonLeave extends LeaveHistory {
   today: string;
   person: Person;
-  audit: (LeaveAudit & { byName: string })[];
+  audit: NamedLeaveAudit[];
   holidays: LeaveHoliday[];
 }
 
@@ -92,6 +98,14 @@ export async function countWaitingLeaveRequests(): Promise<number> {
   return (await waitingCountQuery().get()).data().count;
 }
 
+export function readLeaveBadge(email: string): Promise<{ waitingForMe: number | null }> {
+  return adminDb.runTransaction(async (tx) => {
+    requireActivePerson(await tx.get(people().doc(email)));
+    const waiting = isLeaveAdmin(email) ? await tx.get(waitingCountQuery()) : null;
+    return { waitingForMe: waiting?.data().count ?? null };
+  }, { readOnly: true });
+}
+
 function queueLeavePush(actor: string, recipients: readonly string[], buildMessage: () => PushMessage): void {
   const others = recipients.filter((email) => email !== actor);
   if (!others.length) return;
@@ -147,6 +161,24 @@ function readHolidayRows(docs: QueryDocumentSnapshot[]): LeaveHoliday[] {
   return docs.map((doc) => ({ date: doc.get("date"), name: doc.get("name") }));
 }
 
+function readAuditRows(docs: QueryDocumentSnapshot[]): LeaveAudit[] {
+  return docs.map((doc) => ({ ...doc.data(), id: doc.id }) as LeaveAudit)
+    .sort((a, b) => b.at - a.at || a.field.localeCompare(b.field));
+}
+
+async function readActorNames(tx: Transaction, addresses: (string | null)[]): Promise<Record<string, string>> {
+  const actors = [...new Set(addresses.filter((by): by is string => !!by && by !== setupActor))];
+  const snapshots = actors.length ? await tx.getAll(...actors.map((by) => people().doc(by))) : [];
+  return Object.fromEntries(snapshots.flatMap((doc) => {
+    const person = readPerson(doc);
+    return person ? [[doc.id, person.name]] : [];
+  }));
+}
+
+function nameAudit(rows: LeaveAudit[], names: Record<string, string>): NamedLeaveAudit[] {
+  return rows.map((row) => ({ ...row, byName: names[row.by] ?? row.by }));
+}
+
 function requireAdmin(email: string): void {
   if (!isLeaveAdmin(email)) throw new LeaveError(403, "Only a Leave admin can do this.");
 }
@@ -164,7 +196,7 @@ export function readMyLeave(email: string): Promise<MyLeave> {
   const isAdmin = isLeaveAdmin(email);
   return adminDb.runTransaction(async (tx) => {
     const [person, profileDoc] = await tx.getAll(people().doc(email), profiles().doc(email));
-    requireActivePerson(person);
+    const current = requireActivePerson(person);
     const profile = readProfile(profileDoc);
     const [holidayRows, waiting] = await Promise.all([
       tx.get(holidays()),
@@ -176,13 +208,30 @@ export function readMyLeave(email: string): Promise<MyLeave> {
       today, isAdmin, waitingForMe: waiting?.data().count ?? 0,
       holidays: allHolidays.filter(({ date }) => date >= today && date <= through),
     };
-    if (!profile) return { ...common, profile: null, summary: null, ledger: [], requests: [] };
+    if (!profile) {
+      const firstAdmin = leaveAdmins()[0];
+      const contact = firstAdmin === email ? current : firstAdmin && readPerson(await tx.get(people().doc(firstAdmin)));
+      return {
+        ...common, ...buildHistory(null, [], [], allHolidays, today),
+        setupContact: contact ? contact.name.split(/\s+/, 1)[0] : null, actorNames: {}, changes: [],
+      };
+    }
 
-    const [requestRows, adjustmentRows] = await Promise.all([
+    const [requestRows, adjustmentRows, detailsRows] = await Promise.all([
       tx.get(requests().where("email", "==", email)),
       tx.get(adjustments().where("email", "==", email)),
+      tx.get(auditRows().where("email", "==", email)),
     ]);
-    return { ...common, ...buildHistory(profile, requestRows.docs.map(readRequest), adjustmentRows.docs.map(readAdjustment), allHolidays, today) };
+    const history = buildHistory(profile, requestRows.docs.map(readRequest), adjustmentRows.docs.map(readAdjustment), allHolidays, today);
+    const details = readAuditRows(detailsRows.docs);
+    const actors = history.requests.flatMap((row) => [row.createdBy, row.decidedBy, row.cancelledBy]);
+    const names = await readActorNames(tx, [...actors, ...details.map(({ by }) => by)].filter((by) => by !== email));
+    names[email] = current.name;
+    const actorNames = Object.fromEntries([...new Set([email, ...actors])].flatMap((by) => by && names[by] ? [[by, names[by]]] : []));
+    const changes = details.map(({ id, at, field, from, to, by }) => ({
+      id, at, field, from, to, byName: names[by] ?? (by === setupActor ? setupActor : "a Leave admin"),
+    }));
+    return { ...common, ...history, setupContact: null, actorNames, changes };
   }, { readOnly: true });
 }
 
@@ -280,8 +329,7 @@ export async function cancelLeaveRequest(email: string, id: string): Promise<Lea
     if (!request || (!isAdmin && request.email !== email)) throw new LeaveError(404, "Not found");
     if (request.status === "cancelled") throw new LeaveError(409, "This request is already cancelled.");
     const today = leaveToday();
-    const canCancel = request.status === "waiting" || (request.status === "approved" && request.start > today);
-    if (!isAdmin && !canCancel) throw new LeaveError(409, "This request can no longer be cancelled.");
+    if (!canCancelLeave(request, today, isAdmin)) throw new LeaveError(409, "This request can no longer be cancelled.");
 
     const change = { status: "cancelled", cancelledBy: email, cancelledAt: Date.now() } as const;
     tx.update(ref, change);
@@ -314,15 +362,12 @@ export function readPersonLeave(email: string, target: string): Promise<PersonLe
       tx.get(adjustments().where("email", "==", address)),
       tx.get(auditRows().where("email", "==", address)),
     ]);
-    const details = detailsRows.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as LeaveAudit)
-      .sort((a, b) => b.at - a.at || a.field.localeCompare(b.field));
-    const actors = [...new Set(details.map(({ by }) => by).filter((by) => by !== setupActor))];
-    const actorRows = actors.length ? await tx.getAll(...actors.map((by) => people().doc(by))) : [];
-    const names = new Map(actorRows.map((doc) => [doc.id, readPerson(doc)?.name]));
+    const details = readAuditRows(detailsRows.docs);
+    const names = await readActorNames(tx, details.map(({ by }) => by));
     return {
       ...common,
       ...buildHistory(profile, requestRows.docs.map(readRequest), adjustmentRows.docs.map(readAdjustment), daysOff, today),
-      audit: details.map((row) => ({ ...row, byName: names.get(row.by) ?? row.by })),
+      audit: nameAudit(details, names),
     };
   }, true);
 }

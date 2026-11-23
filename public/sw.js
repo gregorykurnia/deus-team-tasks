@@ -3,7 +3,7 @@
 const BUILD = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = `deus-shell-${BUILD}`;
 // One page per area. The areas are client screens under one layout, so each page is the same shell.
-const PAGES = ["/", "/tasks", "/plan", "/companies", "/notes", "/past", "/flows", "/sign-in"];
+const PAGES = ["/", "/tasks", "/plan", "/companies", "/notes", "/past", "/flows", "/sign-in", "/leave"];
 const FILES = ["/manifest.webmanifest", "/icon-192x192.png", "/icon-512x512.png", "/apple-touch-icon.png", "/brand/deus-mark.png"];
 const ASSET = /\/_next\/static\/[^"'\\\s)]+/g;
 
@@ -17,8 +17,8 @@ async function precache() {
   await Promise.all(
     PAGES.map(async (page) => {
       const response = await fetch(page, { cache: "reload" });
-      // Sign-in is optional until the owner enables it. Its 404 mustn't break the working offline shell.
-      if (page === "/sign-in" && response.status === 404) return;
+      // Sign-in and Leave can be disabled in this build.
+      if ((page === "/sign-in" || page === "/leave") && response.status === 404) return;
       if (!response.ok || response.redirected) throw new Error(`${page}: ${response.status}`);
       const html = await response.clone().text();
       for (const match of html.match(ASSET) || []) assets.add(match);

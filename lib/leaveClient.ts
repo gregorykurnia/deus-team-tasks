@@ -7,14 +7,19 @@ export class LeaveApiError extends Error {
   }
 }
 
-async function fetchLeave<T>(path: string, init: RequestInit = {}): Promise<T> {
+type LeaveSession = { email: string; signal: AbortSignal };
+
+async function fetchLeave<T>(path: string, init: RequestInit = {}, session?: LeaveSession): Promise<T> {
   const { clientAuth } = await import("./authClient");
   await clientAuth.authStateReady();
   const user = clientAuth.currentUser;
-  if (!user) throw new LeaveApiError(401, "Sign in again.");
+  if (!user || (session && (user.email || user.uid).toLowerCase() !== session.email)) {
+    throw new LeaveApiError(401, "Sign in again.");
+  }
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${await user.getIdToken()}`);
-  const response = await fetch(`/api/leave${path}`, { ...init, headers, cache: "no-store" });
+  if (clientAuth.currentUser !== user) throw new LeaveApiError(401, "Sign in again.");
+  const response = await fetch(`/api/leave${path}`, { ...init, headers, cache: "no-store", signal: session?.signal });
   const body = await response.json().catch(() => null);
   if (!response.ok || !body) {
     throw new LeaveApiError(response.ok ? 503 : response.status, body?.error ?? "Leave needs a connection. Try again.", body?.issues);
@@ -22,8 +27,12 @@ async function fetchLeave<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T;
 }
 
-export function getMyLeave(): Promise<MyLeave> {
-  return fetchLeave("/me");
+export function getMyLeave(session?: LeaveSession): Promise<MyLeave> {
+  return fetchLeave("/me", {}, session);
+}
+
+export function getLeaveBadge(session: LeaveSession): Promise<{ waitingForMe: number | null }> {
+  return fetchLeave("/me?view=badge", {}, session);
 }
 
 export function getLeaveTeam(): Promise<TeamLeave> {
@@ -43,8 +52,8 @@ export function askLeave(input: LeaveInput & { pay?: LeavePay; email?: string },
   return writeLeave<{ request: LeaveRequest }>("/requests", "POST", input, { "Idempotency-Key": key });
 }
 
-export function cancelLeave(id: string): Promise<{ request: LeaveRequest }> {
-  return fetchLeave(`/requests/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+export function cancelLeave(id: string, session?: LeaveSession): Promise<{ request: LeaveRequest }> {
+  return fetchLeave(`/requests/${encodeURIComponent(id)}/cancel`, { method: "POST" }, session);
 }
 
 export function decideLeave(id: string, input: LeaveDecision) {

@@ -43,6 +43,7 @@
   font-weight: var(--w-bold);
   color: var(--muted);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .tab[aria-current] {

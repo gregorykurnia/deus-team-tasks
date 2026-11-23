@@ -15,6 +15,7 @@ import OverLink from "./OverLink";
 import { useInstalled } from "./useInstalled";
 import styles from "./SideNav.module.css";
 import AccountEntry from "@/features/sign-in/AccountEntry";
+import { useLeaveData } from "@/features/leave/LeaveData";
 
 const num = (n: number) => n.toLocaleString("en-GB");
 
@@ -24,6 +25,7 @@ export default function SideNav() {
   const groups = useTaskGroups();
   const companies = useCompaniesById();
   const installed = useInstalled();
+  const leaveCount = useLeaveData().count;
   const groupsHeading = useId();
 
   // Counts wait for the tasks, and stay hidden if they couldn't load: "0" would be a wrong answer.
@@ -32,7 +34,7 @@ export default function SideNav() {
   const groupItems = useMemo(() => groupNavItems(groups.rows, tasks.rows, companies), [groups.rows, tasks.rows, companies]);
   // All tasks is current only outside a task group, which has its own entry.
   const isCurrent = (id: AreaId) => (id === "tasks" ? pathname === "/tasks" : areaOf(pathname) === id);
-  const countOf = (id: AreaId) => (id === "today" ? counts?.today : id === "tasks" ? counts?.tasks : undefined);
+  const countOf = (id: AreaId) => (id === "today" ? counts?.today : id === "tasks" ? counts?.tasks : id === "leave" ? leaveCount : undefined);
 
   return (
     <nav className={styles.side} aria-label="Main navigation">
@@ -49,7 +51,7 @@ export default function SideNav() {
               <Link className={styles.area} href={area.href} aria-current={isCurrent(area.id) ? "page" : undefined}>
                 <Icon name={area.icon} size={19} />
                 {area.label}
-                {count !== undefined && <span className={styles.count}>{num(count)}</span>}
+                {count !== undefined && <span className={styles.count}>{num(count)}{area.id === "leave" && <span className="sr-only"> waiting</span>}</span>}
               </Link>
             </li>
           );

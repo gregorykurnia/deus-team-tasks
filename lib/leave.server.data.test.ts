@@ -275,9 +275,24 @@ describe("reading leave", () => {
     expect(leaveAdmins()).toEqual([GREGORY]);
     expect(isLeaveAdmin(` ${GREGORY.toUpperCase()} `)).toBe(true);
     expect(await withStatus(await me(gregory), 200)).toMatchObject({
-      isAdmin: true, waitingForMe: 1, profile: null, summary: null, ledger: [], requests: [],
+      isAdmin: true, waitingForMe: 1, profile: null, summary: null, ledger: [], requests: [], setupContact: "Gregory",
     });
     await withStatus(await ask(gregory), 409);
+  });
+
+  it("returns only the badge count to active admins and does not share other people's history", async () => {
+    await seedRequest("waiting", AUDREY, { status: "waiting", createdBy: GREGORY });
+    await adminDb.doc("leaveAudit/alex").set({ email: AUDREY, by: GREGORY, at: 90, field: "accrualStart", from: "2027-02-01", to: "2027-03-01" });
+    await adminDb.doc("leaveAudit/private").set({ email: CALISTA, by: GREGORY, at: 91, field: "openingBalance", from: 0, to: 1 });
+    expect(await withStatus(await me(gregory, "?view=badge"), 200)).toEqual({ waitingForMe: 1 });
+    expect(await withStatus(await me(audrey, "?view=badge"), 200)).toEqual({ waitingForMe: null });
+    await withStatus(await me(undefined, "?view=badge"), 401);
+    const mine = await withStatus(await me(audrey), 200);
+    expect(mine.actorNames).toEqual({ [AUDREY]: "Audrey", [GREGORY]: "Gregory" });
+    expect(mine.changes).toEqual([{ id: "alex", at: 90, field: "accrualStart", from: "2027-02-01", to: "2027-03-01", byName: "Gregory" }]);
+    expect(mine).not.toHaveProperty("audit");
+    await adminDb.doc(`people/${GREGORY}`).update({ active: false });
+    await withStatus(await me(gregory, "?view=badge"), 403);
   });
 
   it("falls back to the Jakarta day when the emulator pin is invalid", () => {

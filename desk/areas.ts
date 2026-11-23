@@ -1,7 +1,8 @@
 // The app's areas, in the side bar's order (guide 3), and which one a path belongs to.
 import type { IconName } from "@/ui/Icon";
+import { leaveEnabled } from "@/lib/flags";
 
-export type AreaId = "today" | "tasks" | "plan" | "companies" | "notes" | "past" | "flows";
+export type AreaId = "today" | "tasks" | "plan" | "companies" | "notes" | "past" | "flows" | "leave";
 
 export interface Area {
   id: AreaId;
@@ -11,7 +12,7 @@ export interface Area {
   blurb?: string; // the one line under it in More, for the areas that live there on phones
 }
 
-export const AREAS: Area[] = [
+export const AREAS = ([
   { id: "today", label: "Today", icon: "sun", href: "/" },
   { id: "tasks", label: "All tasks", icon: "list", href: "/tasks" },
   { id: "plan", label: "Plan", icon: "cal", href: "/plan", blurb: "Deadlines, events and who carries what" },
@@ -19,7 +20,8 @@ export const AREAS: Area[] = [
   { id: "notes", label: "Qualification notes", icon: "note", href: "/notes", blurb: "Qualify prospects" },
   { id: "past", label: "Past clients", icon: "archive", href: "/past", blurb: "Every company we have served" },
   { id: "flows", label: "Flows", icon: "flow", href: "/flows", blurb: "How work moves between people" },
-];
+  { id: "leave", label: "Leave", icon: "pause", href: "/leave", blurb: "Your balance and leave requests" },
+] satisfies Area[]).filter(({ id }) => id !== "leave" || leaveEnabled());
 
 // On phones these sit behind More, which counts as current while one is open.
 export const MORE_AREAS = AREAS.filter((a) => a.blurb);

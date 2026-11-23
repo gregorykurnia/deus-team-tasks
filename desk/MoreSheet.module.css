@@ -27,6 +27,18 @@
 
 .link > svg {
   color: var(--blue);
+  flex: none;
+}
+
+.count {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: var(--t-label);
+  font-variant-numeric: var(--num);
 }
 
 .link small,

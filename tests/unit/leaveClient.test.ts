@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  addLeaveHoliday, adjustLeave, askLeave, cancelLeave, decideLeave, getLeaveTeam, getMyLeave, getPersonLeave,
+  addLeaveHoliday, adjustLeave, askLeave, cancelLeave, decideLeave, getLeaveBadge, getLeaveTeam, getMyLeave, getPersonLeave,
   removeLeaveHoliday, saveLeaveDetails,
 } from "@/lib/leaveClient";
 import type { LeaveInput } from "@/lib/leave";
+import { withLeaveDeadline } from "@/features/leave/LeaveData";
 
 const auth = vi.hoisted(() => ({
   authStateReady: vi.fn(async () => {}),
-  currentUser: null as { getIdToken: () => Promise<string> } | null,
+  currentUser: null as { email?: string; uid?: string; getIdToken: () => Promise<string> } | null,
 }));
 vi.mock("@/lib/authClient", () => ({ clientAuth: auth }));
 
@@ -47,6 +48,41 @@ describe("leave client", () => {
     auth.currentUser = { getIdToken: vi.fn().mockRejectedValue(new Error("Auth offline")) };
     await expect(askLeave(input, key)).rejects.toThrow("Auth offline");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not send an older Leave action with a replacement account's token", async () => {
+    const controller = new AbortController();
+    const email = "audrey@deushcs.com";
+    const session = { email, signal: controller.signal };
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    auth.currentUser = { uid: "other@deushcs.com", getIdToken: async () => "other-token" };
+    await expect(getLeaveBadge(session)).rejects.toMatchObject({ status: 401 });
+
+    const token = Promise.withResolvers<string>();
+    const reading = Promise.withResolvers<void>();
+    auth.currentUser = { uid: email, getIdToken: () => { reading.resolve(); return token.promise; } };
+    const reply = cancelLeave("old-request", session);
+    await reading.promise;
+    auth.currentUser = { uid: "other@deushcs.com", getIdToken: async () => "other-token" };
+    token.resolve("old-token");
+    await expect(reply).rejects.toMatchObject({ status: 401 });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("releases the caller after a request never replies and lets it retry", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { setTimeout, clearTimeout });
+    try {
+      const controller = new AbortController();
+      const deadline = expect(withLeaveDeadline(() => new Promise(() => {}), controller)).rejects.toThrow("Leave request timed out.");
+      await vi.advanceTimersByTimeAsync(12_000);
+      await deadline;
+      expect(controller.signal.aborted).toBe(true);
+      await expect(withLeaveDeadline(async () => "saved")).resolves.toBe("saved");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("uses authenticated admin paths and forwards the request keys and versions from the caller", async () => {

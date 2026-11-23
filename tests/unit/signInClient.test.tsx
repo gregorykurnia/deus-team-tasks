@@ -62,4 +62,16 @@ describe("sign-in navigation and account identity", () => {
     expect(renderToStaticMarkup(<MoreSheet />)).toContain("Sign in");
     expect(renderToStaticMarkup(<SideNav />)).toContain("Sign in");
   });
+
+  it.each([["1", "0"], ["0", "1"]])("hides Leave in both places and calls notFound without flags %s/%s", async (signIn, leave) => {
+    vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", signIn);
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", leave);
+    vi.resetModules();
+    const [{ default: Sidebar }, { default: More }, { default: LeavePage }] = await Promise.all([
+      import("@/desk/SideNav"), import("@/desk/MoreSheet"), import("../../app/(desk)/leave/page"),
+    ]);
+    expect(renderToStaticMarkup(<Sidebar />)).not.toContain('href="/leave"');
+    expect(renderToStaticMarkup(<More />)).not.toContain('href="/leave"');
+    expect(() => LeavePage()).toThrow("404");
+  });
 });

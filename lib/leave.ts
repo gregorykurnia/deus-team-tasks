@@ -108,6 +108,10 @@ export interface LeaveAdjustment {
   at: number;
 }
 
+export function canCancelLeave(request: Pick<LeaveRequest, "status" | "start">, today: string, isAdmin: boolean): boolean {
+  return request.status !== "cancelled" && (isAdmin || request.status === "waiting" || (request.status === "approved" && request.start > today));
+}
+
 export type LeaveAdjustmentInput = Pick<LeaveAdjustment, "email" | "days" | "reason"> & { date?: string };
 export type LeaveDecision = { decision: "approve"; pay?: LeavePay } | { decision: "reject"; reason: string };
 

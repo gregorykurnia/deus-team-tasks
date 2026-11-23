@@ -23,9 +23,10 @@ interface PageHeaderProps {
   lead?: ReactNode; // before the title: a task group's badge
   tools?: ReactNode; // between the search and the action: a task group's star and menu
   action?: PageAction;
+  connectionBanner?: boolean;
 }
 
-export default function PageHeader({ title, subtitle, search, phoneSearchHref, lead, tools, action }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, search, phoneSearchHref, lead, tools, action, connectionBanner = true }: PageHeaderProps) {
   return (
     <header>
       <div className={styles.bar}>
@@ -56,7 +57,7 @@ export default function PageHeader({ title, subtitle, search, phoneSearchHref, l
           </>
         )}
       </div>
-      <ConnectionBanner />
+      {connectionBanner && <ConnectionBanner />}
     </header>
   );
 }

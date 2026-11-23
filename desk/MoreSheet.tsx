@@ -1,7 +1,7 @@
 "use client";
 
-// More on phones (guide 3): a short bottom sheet with Plan, Qualification notes, Past clients and Flows, installing,
-// and the live status. It opens with ?more=1, so the phone's back gesture closes it.
+// More on phones (guide 3): the other areas, the account and install entries, and live status.
+// It opens with ?more=1, so the phone's back gesture closes it.
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect } from "react";
@@ -12,6 +12,7 @@ import LiveDot from "./LiveDot";
 import { useInstalled } from "./useInstalled";
 import styles from "./MoreSheet.module.css";
 import AccountEntry from "@/features/sign-in/AccountEntry";
+import { useLeaveData } from "@/features/leave/LeaveData";
 
 // Set when the tab bar pushed ?more=1, so closing can step back instead of
 // leaving an entry that opens More again.
@@ -27,6 +28,7 @@ export default function MoreSheet() {
   const router = useRouter();
   const installed = useInstalled();
   const area = areaOf(pathname);
+  const leaveCount = useLeaveData().count;
 
   // Closed some other way (the back gesture, a link): the next close mustn't step back.
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function MoreSheet() {
                 {a.label}
                 <small>{a.blurb}</small>
               </span>
+              {a.id === "leave" && leaveCount !== undefined && <span className={styles.count}>{leaveCount.toLocaleString("en-GB")}<span className="sr-only"> waiting</span></span>}
             </Link>
           </li>
         ))}

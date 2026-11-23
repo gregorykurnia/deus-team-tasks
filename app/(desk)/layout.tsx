@@ -5,6 +5,7 @@ import ManyChangesToast from "@/desk/ManyChangesToast";
 import MoreSheet from "@/desk/MoreSheet";
 import SideNav from "@/desk/SideNav";
 import AccountHost from "@/features/sign-in/AccountHost";
+import { LeaveData } from "@/features/leave/LeaveData";
 import NotificationsHost from "@/features/sign-in/NotificationsHost";
 import TabBar from "@/desk/TabBar";
 import InstallHost from "@/features/install/InstallHost";
@@ -15,7 +16,7 @@ import styles from "@/desk/DeskShell.module.css";
 export default function DeskLayout({ children }: LayoutProps<"/">) {
   return (
     <DeskData>
-      <>
+      <LeaveData>
         <div className={styles.app}>
           <SideNav />
           <main className={styles.main}>{children}</main>
@@ -37,7 +38,7 @@ export default function DeskLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <BackOnlineToast />
         <ManyChangesToast />
-      </>
+      </LeaveData>
     </DeskData>
   );
 }
