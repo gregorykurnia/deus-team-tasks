@@ -562,6 +562,10 @@ describe("admin leave routes", () => {
     ] as const) {
       expect(await withStatus(await adjust(gregory, { ...input, ...fields }), 400)).toMatchObject({ issues: [{ field }] });
     }
+    // R1: the ledger ignores lines before the opening date, so such an adjustment is refused, not lost.
+    expect(await withStatus(await adjust(gregory, { ...input, date: "2026-11-30" }), 400)).toMatchObject({
+      error: expect.stringContaining("Change the opening balance instead."),
+    });
     const run = adminDb.runTransaction.bind(adminDb);
     vi.spyOn(adminDb, "runTransaction").mockImplementationOnce((work) => run(async (tx) => {
       await work(tx);
@@ -656,9 +660,11 @@ describe("post-commit leave pushes", () => {
       seedRequest("admin-rejected", AUDREY, { status: "rejected" }),
     ]);
     for (const [token, id] of [
-      [audrey, "owner"], [gregory, "admin-own"], [gregory, "admin-waiting"], [gregory, "admin-approved"], [gregory, "admin-rejected"],
+      [audrey, "owner"], [gregory, "admin-own"], [gregory, "admin-waiting"], [gregory, "admin-approved"],
     ]) await withStatus(await cancel(token, id), 200);
     await withStatus(await cancel(audrey, "owner"), 409);
+    // R1: a rejected request stays "Not approved"; there is nothing left to cancel.
+    await withStatus(await cancel(gregory, "admin-rejected"), 409);
     await deliverQueuedPushes();
     const sent = await pushes();
     expect(sent).toHaveLength(5);

@@ -114,7 +114,9 @@ export interface LeaveAdjustment {
 }
 
 export function canCancelLeave(request: Pick<LeaveRequest, "status" | "start">, today: string, isAdmin: boolean): boolean {
-  return request.status !== "cancelled" && (isAdmin || request.status === "waiting" || (request.status === "approved" && request.start > today));
+  // A rejected request stays "Not approved"; only waiting or approved leave can be cancelled.
+  if (request.status !== "waiting" && request.status !== "approved") return false;
+  return isAdmin || request.status === "waiting" || request.start > today;
 }
 
 export type LeaveAdjustmentInput = Pick<LeaveAdjustment, "email" | "days" | "reason"> & { date?: string };

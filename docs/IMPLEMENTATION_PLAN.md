@@ -45,7 +45,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 | E1 | End to end on the emulators: two people and an admin across pinned days, through 1 February and the 1 March lapse. [E1](implementation/leave.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-23 — desktop replay verified |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/leave.md#r1a--full-check-run) [no look] | Sol High | 2026-11-23 — checks run, 8 failures logged |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/leave.md#r1b--fix-recorded-failures) [look] | Sol Max | 2026-11-23 — eight scoped replays and look checked |
-| R1 | Phase review: hunt for faults in balances, permissions, privacy and pushes, quick fixes, owner handoff. [R1](implementation/leave.md#r1--phase-review) [no look] | Opus 5.5 High | |
+| R1 | Phase review: hunt for faults in balances, permissions, privacy and pushes, quick fixes, owner handoff. [R1](implementation/leave.md#r1--phase-review) [no look] | Opus 5.5 High | 2026-11-23 — 3 quick fixes, no fix rows |
 
 ## Phase 2: Who's away in Plan
 
@@ -65,7 +65,10 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 - [ ] O2 *owner*: write `leave-setup.json` (kept out of git): for each of the six people `email`, `joinDate`,
   `accrualStart` (the 1st their +1s start; Calista `2027-02-01`), `openingBalance` (their balance on the go-live day,
   that day's +1 included) and `openingDate` (the go-live day). Run `npm run leave:setup -- leave-setup.json`, check the
-  printed table, then add `--apply`. Then `npm run leave:setup -- --holidays`, then with `--apply`.
+  printed table, then add `--apply`. Then `npm run leave:setup -- --holidays`, then with `--apply`. If the go-live day
+  falls in January or February, also give each person `openingCarried` (how many of the opening days are last
+  year's, which the 1 March lapse may take); otherwise leave it out. Pick a go-live day that is today or earlier:
+  a balance adjustment can't be dated before it.
 - [ ] O3 *owner*: check with whoever handles HR/contracts the points marked *(verify)* in the brief: the special-leave
   days, that unused days lapse on 1 March without pay, and that a below-zero balance may be deducted from final pay.
 - [ ] O4 *owner*: in Vercel Production add `LEAVE_ADMINS=gregory.kurnia@deushcs.com`.
@@ -74,6 +77,9 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 - [ ] O6 *owner*: each teammate signs in (on iPhone, from the app on the Home Screen) and turns on notifications.
 - [ ] O7 *owner*: live try: a teammate asks a half day of annual leave; you get the push, approve it, and their balance
   goes down by 0.5. Then they cancel it and it comes back.
+- [ ] O8 *owner*: the screens page source `docs/implementation/leave-screens.html` isn't in the repo. If you have it,
+  add it, so the Leave look comparisons waiting on it (N38, N40 in `redesign/ui-implementation-plan.md`) can run.
+  Leave works without it.
 
 ## Model rationale
 

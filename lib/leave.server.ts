@@ -512,6 +512,11 @@ export async function adjustLeaveBalance(email: string, input: unknown, key: str
     const reason = requiredText(raw.reason, "reason", "a reason", 300);
     const date = raw.date === undefined ? leaveToday() : raw.date;
     if (!isIsoDay(date)) invalid("date", "Enter a valid adjustment date.");
+    const openingDate = readProfile(profileDoc)?.openingDate;
+    // The ledger starts at the opening date, so an earlier adjustment would be saved but never counted.
+    if (openingDate && date < openingDate) {
+      throw new LeaveError(400, `This balance starts on ${weekdayDate(openingDate, leaveToday())}. Change the opening balance instead.`);
+    }
     const data = { email: address, days, reason, date, by: email, at: Date.now() };
     tx.create(ref, data);
     return { ...data, id };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  checkRequest, dateRange, days, defaultLeavePay, LAW_LEAVE_EVENTS, LEAVE_REASON_LABELS, LEAVE_STATUS_LABELS,
+  canCancelLeave, checkRequest, dateRange, days, defaultLeavePay, LAW_LEAVE_EVENTS, LEAVE_REASON_LABELS, LEAVE_STATUS_LABELS,
   LEAVE_TYPE_LABELS, nextMissingHolidayYear, requestDays, requestDaysLabel, SPECIAL_LEAVE_EVENTS, workingDays,
 } from "@/lib/leave";
 import type { LeaveInput } from "@/lib/leave";
@@ -213,6 +213,24 @@ describe("request checks", () => {
       { field: "note", message: "Use 500 characters or fewer." },
     ]);
     expect(checkRequest({ ...annual, note: 42 }, options).errors.map(({ field }) => field)).toEqual(["note"]);
+  });
+});
+
+describe("who may cancel", () => {
+  it("lets an admin cancel waiting or approved leave at any time, but never a rejected or cancelled one", () => {
+    for (const status of ["waiting", "approved"] as const) {
+      expect(canCancelLeave({ status, start: "2027-01-01" }, today, true)).toBe(true);
+    }
+    for (const status of ["rejected", "cancelled"] as const) {
+      expect(canCancelLeave({ status, start: "2027-02-01" }, today, true)).toBe(false);
+      expect(canCancelLeave({ status, start: "2027-02-01" }, today, false)).toBe(false);
+    }
+  });
+
+  it("lets a person cancel while waiting, or approved leave that starts after today", () => {
+    expect(canCancelLeave({ status: "waiting", start: "2027-01-01" }, today, false)).toBe(true);
+    expect(canCancelLeave({ status: "approved", start: "2027-01-13" }, today, false)).toBe(true);
+    expect(canCancelLeave({ status: "approved", start: today }, today, false)).toBe(false);
   });
 });
 

@@ -182,7 +182,9 @@
 }
 
 .groupCount {
+  flex: none;
   margin-left: auto;
+  white-space: nowrap;
   font-size: var(--t-label);
   color: var(--muted);
 }

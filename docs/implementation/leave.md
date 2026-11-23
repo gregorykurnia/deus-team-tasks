@@ -150,13 +150,13 @@ All three have `openingDate` 2026-12-01; the opening includes that day's +1.
 - **Ask:** checks dates, overlap and the type table on the server (the same pure checks the form uses). An admin's
   own request, or an admin asking for someone, is saved `approved` with `pay` from the table ("something else": the
   admin picks in the same form). Others are `waiting`.
-- **Cancel:** the person, while `waiting`, or while `approved` and its start is after today. An admin: any request,
-  any time. Sets `cancelled`, `cancelledBy`, `cancelledAt`. Every state change runs in a transaction that checks
+- **Cancel:** the person, while `waiting`, or while `approved` and its start is after today. An admin: any waiting or
+  approved request, any time (a rejected one stays "Not approved", R1). Sets `cancelled`, `cancelledBy`, `cancelledAt`. Every state change runs in a transaction that checks
   the current status, so a double tap or two admins can't apply twice.
 - **Decide:** admin only, `waiting` only. Approve sets `pay` (asks for it on "something else"); reject needs a
   reason (1–300 characters).
 - **Adjust:** admin only; days non-zero in steps of 0.5 between −30 and 30; reason 1–300 characters; date defaults
-  to today.
+  to today and can't be before the person's `openingDate` (the ledger starts there; R1).
 - **Leave details:** admin only. `accrualStart` must be a 1st; `openingDate` ≥ `joinDate`; `endDate` ≥ `joinDate`.
   Setting `endDate` is refused while the person has waiting or approved requests with days after it: "Cancel
   Audrey's 2 requests after Fri 29 Jan first." Every changed field writes a `leaveAudit` row. History shows

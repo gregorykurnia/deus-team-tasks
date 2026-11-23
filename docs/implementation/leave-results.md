@@ -179,3 +179,36 @@ The gallery is in `test-results/r1b-look/` and `test-results/leave-look/L7/`. Na
 
 - Exact Leave reference comparison is carried in N38 and N40 because the referenced screens HTML is missing. The gallery uses the design guide and the existing L7 frames.
 - At 1280 pixels, the sidebar wraps the two digits of an open-task count vertically beside a long starred group. The crop is `test-results/r1b-look/crops/1280-sidebar-count-wrap.png`. This is in `desk/SideNav.module.css:184`, separate from the Tasks toolbar overflow.
+
+## R1 — Phase review
+
+Read the ledger, rules, server, routes, pushes, morning line, Firestore rules, setup script and client fetches before
+the builders' notes. Hunted: balances by hand, every route as a non-admin and as a removed person, the device SDK and
+the page before sign-in, pushes to the wrong person, retries and lost replies.
+
+- **Balances:** hand-worked Calista, Audrey and Gregory on 2026-12-15, 2027-01-02/10/13, 2027-02-24, 2027-03-02 and
+  2027-04-01 (balance, upcoming, available, lapse warning, next +1); all match `buildLedger`. Kept as the
+  "R1 hand-worked balances" cases in `tests/unit/leaveLedger.test.ts`.
+- **Permissions:** every `/api/leave/*` route checks the flag, the ID token (revoked → 401) and an active `people`
+  record inside its transaction; admin routes check `LEAVE_ADMINS` on the server. A non-admin sending `email` gets 403,
+  sending `pay` is ignored; cancelling someone else's request is 404. No fault found.
+- **Privacy:** `firestore.rules` names no leave collection (default deny); the client only calls `/api/leave/*` with a
+  token; `/leave` renders no leave data on the server; responses are `no-store`; the test clock only works when
+  `NODE_ENV` isn't production. No fault found.
+- **Pushes:** recipients are the request's own person or `LEAVE_ADMINS` minus the actor; delivery skips inactive
+  people; retries and double decisions get 409 and push nothing. No fault found.
+
+FINDING: L5 · bug · an admin could cancel a rejected request, so the person saw "Cancelled" instead of "Not approved"
+and the reason dropped from view. Fixed: `canCancelLeave` allows only waiting or approved; unit cases and the L4 push
+data test now expect 409.
+FINDING: L3 · bug · a balance adjustment dated before the person's opening date (also the default "today" before
+go-live) was saved but never counted. Fixed: refused with "This balance starts on … Change the opening balance
+instead."; data case added.
+FINDING: - · minor · at 1280 px the side bar's open-task count wrapped its digits beside a long starred group (R1b
+item). Fixed: the count no longer shrinks or wraps (`desk/SideNav.module.css`).
+FINDING: - · minor · the screens page source named in the plan is missing; already carried as N38/N40, now owner step
+O8.
+
+Checks: `npx tsc --noEmit`, ESLint on the changed TypeScript, `npm run test:unit` (1,811 passed), and the data tests
+for `lib/leave.server.data.test.ts` and `lib/morningSummary.server.data.test.ts` on the emulators (57 passed).
+No browser spec was rerun (no flow changed). Open items: none left for a fix row; owner steps O1–O8.

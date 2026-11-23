@@ -89,6 +89,41 @@ describe("the ledger’s worked example", () => {
   });
 });
 
+describe("R1 hand-worked balances, December 2026 to April 2027", () => {
+  const calista = profile(0, { accrualStart: "2027-02-01" });
+  const calistaLeave = [annual("jan", "2027-01-12", "2027-01-14")];
+  const audreyLeave = [
+    annual("christmas-eve", "2026-12-24"),
+    annual("jan", "2027-01-04", "2027-01-06"),
+    annual("feb", "2027-02-05", "2027-02-05", { half: "morning" }),
+  ];
+  const gregory = profile(10, { accrualStart: "2020-01-01" });
+  const gregoryLeave = [annual("feb-mar", "2027-02-25", "2027-03-02")];
+  const gregoryAdjustments = [adjustment("2027-01-20", -5)];
+
+  it("matches Calista on each checked day", () => {
+    const at = (today: string) => buildLedger(calista, calistaLeave, [], holidays, today).summary;
+    expect(at("2026-12-15")).toEqual({ balance: 0, upcoming: 3, waiting: 0, available: -3, nextPlusOne: "2027-02-01", lapseWarning: null });
+    expect(at("2027-01-13")).toMatchObject({ balance: -3, upcoming: 0, available: -3 });
+    expect(at("2027-04-01")).toMatchObject({ balance: 0, available: 0, nextPlusOne: "2027-05-01", lapseWarning: null });
+  });
+
+  it("matches Audrey on each checked day", () => {
+    const at = (today: string) => buildLedger(profile(6), audreyLeave, [], holidays, today).summary;
+    expect(at("2026-12-15")).toEqual({ balance: 6, upcoming: 3.5, waiting: 0, available: 2.5, nextPlusOne: "2027-01-01", lapseWarning: null });
+    expect(at("2027-01-02")).toMatchObject({ balance: 6, upcoming: 2.5, lapseWarning: 2.5 });
+    expect(at("2027-04-01")).toMatchObject({ balance: 4, upcoming: 0, nextPlusOne: "2027-05-01", lapseWarning: null });
+  });
+
+  it("matches Gregory on each checked day", () => {
+    const at = (today: string) => buildLedger(gregory, gregoryLeave, gregoryAdjustments, holidays, today).summary;
+    expect(at("2027-01-10")).toMatchObject({ balance: 11, upcoming: 4, available: 7, lapseWarning: 8 });
+    expect(at("2027-02-24")).toMatchObject({ balance: 7, upcoming: 4, available: 3, lapseWarning: 3 });
+    expect(at("2027-03-02")).toMatchObject({ balance: 1, upcoming: 0, lapseWarning: null });
+    expect(at("2027-04-01")).toMatchObject({ balance: 2, nextPlusOne: "2027-05-01" });
+  });
+});
+
 describe("ledger boundaries and lapse", () => {
   it("does not add a +1 to a first-of-month opening and waits for the first eligible 1st", () => {
     const start = profile(7, { accrualStart: "2027-01-12" });
