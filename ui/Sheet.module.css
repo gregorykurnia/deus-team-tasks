@@ -30,6 +30,14 @@
   max-height: calc(100vh - 32px);
 }
 
+.sheet.slideOnly {
+  animation-name: slide;
+}
+
+.slideOnly .title {
+  word-spacing: 0.08em;
+}
+
 .grab {
   display: none;
 }
@@ -125,6 +133,10 @@
     height: auto;
   }
 
+  .sheet.slideOnly {
+    animation-name: lift;
+  }
+
   .grab {
     display: block;
     width: 40px;
@@ -174,4 +186,12 @@
     transform: translateY(40px);
     opacity: 0;
   }
+}
+
+@keyframes slide {
+  from { transform: translateX(40px); }
+}
+
+@keyframes lift {
+  from { transform: translateY(40px); }
 }

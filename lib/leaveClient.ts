@@ -61,21 +61,21 @@ export function decideLeave(id: string, input: LeaveDecision, session?: LeaveSes
 }
 
 // Reuse this key when retrying the same adjustment.
-export function adjustLeave(input: LeaveAdjustmentInput, key: string) {
-  return writeLeave<{ adjustment: LeaveAdjustment }>("/adjustments", "POST", input, { "Idempotency-Key": key });
+export function adjustLeave(input: LeaveAdjustmentInput, key: string, session?: LeaveSession) {
+  return writeLeave<{ adjustment: LeaveAdjustment }>("/adjustments", "POST", input, { "Idempotency-Key": key }, session);
 }
 
 // Use the profile's updatedAt (0 if missing) or the Team response's holidayVersion from the edit's initial read.
-export function saveLeaveDetails(email: string, input: Partial<LeaveProfileDetails>, version: number) {
-  return writeLeave<{ profile: LeaveProfile }>(`/profiles/${encodeURIComponent(email)}`, "PUT", input, { "If-Match": `"${version}"` });
+export function saveLeaveDetails(email: string, input: Partial<LeaveProfileDetails>, version: number, session?: LeaveSession) {
+  return writeLeave<{ profile: LeaveProfile }>(`/profiles/${encodeURIComponent(email)}`, "PUT", input, { "If-Match": `"${version}"` }, session);
 }
 
 type HolidayChange = { holiday: LeaveHoliday | null; holidayVersion: number };
 
-export function addLeaveHoliday(holiday: LeaveHoliday, version: number) {
-  return writeLeave<HolidayChange>(`/holidays/${encodeURIComponent(holiday.date)}`, "POST", { name: holiday.name }, { "If-Match": `"${version}"` });
+export function addLeaveHoliday(holiday: LeaveHoliday, version: number, session?: LeaveSession) {
+  return writeLeave<HolidayChange>(`/holidays/${encodeURIComponent(holiday.date)}`, "POST", { name: holiday.name }, { "If-Match": `"${version}"` }, session);
 }
 
-export function removeLeaveHoliday(date: string, version: number): Promise<HolidayChange> {
-  return fetchLeave(`/holidays/${encodeURIComponent(date)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } });
+export function removeLeaveHoliday(date: string, version: number, session?: LeaveSession): Promise<HolidayChange> {
+  return fetchLeave(`/holidays/${encodeURIComponent(date)}`, { method: "DELETE", headers: { "If-Match": `"${version}"` } }, session);
 }

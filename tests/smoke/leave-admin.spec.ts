@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import type { LeaveProfile, LeaveRequest } from "@/lib/leave";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
-import { readDoc, seed } from "../support/emulator";
+import { readAll, readDoc, seed } from "../support/emulator";
 import { test, expect } from "./fixtures";
 import { signInLeave } from "./leaveSession";
 
@@ -13,7 +13,8 @@ const createdAt = Date.parse("2027-02-09T10:00:00Z");
 const teamUrl = "/leave?view=team";
 const teamApi = "**/api/leave/team";
 const capture = process.env.LEAVE_SHOTS === "team";
-const gallery = "test-results/leave-look/L7";
+const teamLook = { capture, gallery: "test-results/leave-look/L7" };
+const personLook = { capture: process.env.LEAVE_SHOTS === "person", gallery: "test-results/leave-look/L8" };
 const waiting = (page: Page) => page.getByRole("region", { name: "Waiting for you" });
 const people = (page: Page) => page.getByRole("region", { name: "People" });
 const card = (page: Page, date: string) => waiting(page).getByRole("article").filter({ hasText: date });
@@ -60,7 +61,7 @@ async function readyForPicture(page: Page) {
   });
 }
 
-async function shot(page: Page, name: string) {
+async function shot(page: Page, name: string, { capture, gallery } = teamLook) {
   if (!capture) return;
   await readyForPicture(page);
   await page.mouse.move(1, 1);
@@ -72,9 +73,10 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${gallery}/${page.viewportSize()!.width}-${name}.png`, animations: "disabled" });
 }
 
-async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkDecisionOpening = false) {
+async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkReadableOpening = false,
+  { capture, gallery } = teamLook, role: "dialog" | "alertdialog" = "dialog") {
   if (capture) await readyForPicture(page);
-  if (capture || checkDecisionOpening) {
+  if (capture || checkReadableOpening) {
     await page.evaluate((title) => {
       const opening = new MutationObserver(() => {
         const layer = Array.from(document.querySelectorAll('[aria-modal="true"]'))
@@ -89,20 +91,20 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
     }, title);
   }
   await open();
-  const overlay = dialog(page, title);
+  const overlay = page.getByRole(role, { name: title, exact: true });
   await expect(overlay).toBeVisible();
-  if (!capture && !checkDecisionOpening) return;
+  if (!capture && !checkReadableOpening) return;
   const duration = await overlay.evaluate((layer) => Math.max(
     ...[layer, layer.previousElementSibling].flatMap((element) =>
       (element?.getAnimations() ?? []).map(({ effect }) => Number(effect?.getTiming().duration ?? 0))),
   ));
   expect(duration).toBeGreaterThan(0);
-  if (checkDecisionOpening) {
+  if (checkReadableOpening) {
     const frames = await overlay.evaluate((layer) => {
       const scrim = layer.previousElementSibling!;
       const panelMotion = layer.getAnimations()[0];
       const scrimMotion = scrim.getAnimations()[0];
-      if (!panelMotion?.effect || !scrimMotion?.effect) throw new Error("Decision opening animations did not start");
+      if (!panelMotion?.effect || !scrimMotion?.effect) throw new Error("Overlay opening animations did not start");
       const panelTime = Number(panelMotion.effect.getTiming().duration);
       const scrimTime = Number(scrimMotion.effect.getTiming().duration);
       return [0, 0.5].map((progress) => {
@@ -113,7 +115,7 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
       });
     });
     for (const frame of frames) {
-      expect(frame, "The decision stays readable while its shadow and the scrim tint fade in")
+      expect(frame, "The overlay stays readable while its backdrop tint fades in")
         .toEqual({ panel: "1", scrim: "1", blur: "blur(8px)" });
     }
   }
@@ -459,5 +461,412 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await dialog(page, name).getByRole("button", { name: "Close", exact: true }).click();
     await people(page).getByRole("row").last().scrollIntoViewIfNeeded();
     await shot(page, "stress-people");
+  });
+});
+
+const personUrl = (email = staff) => `${teamUrl}&person=${encodeURIComponent(email)}`;
+const exactButton = (name: string) => ({ name, exact: true });
+
+async function personShot(page: Page, name: string) {
+  await shot(page, name, personLook);
+}
+
+async function personFrame(page: Page, title: string, frame: string, open: () => Promise<void>, role?: "alertdialog") {
+  await openOverlay(page, title, frame, open, true, personLook, role);
+}
+
+test.describe("L8 person and holidays", { tag: "@phone" }, () => {
+  test.beforeAll(async ({ request }) => {
+    test.setTimeout(120_000);
+    // Compile each route before an interactive save can hit its deadline. Every Leave call here is unauthenticated.
+    const responses = await Promise.all([
+      request.post("/api/auth/code", { data: { email: "invalid" } }),
+      request.get("/api/leave/team"),
+      request.get(`/api/leave/people/${encodeURIComponent(staff)}`),
+      request.post("/api/leave/adjustments", { data: {} }),
+      request.put(`/api/leave/profiles/${encodeURIComponent(staff)}`, { data: {} }),
+      request.post("/api/leave/requests", { data: {} }),
+      request.post("/api/leave/holidays/2027-02-16", { data: {} }),
+    ]);
+    expect(responses.map((response) => response.status())).toEqual([200, 401, 401, 401, 401, 401, 401]);
+  });
+
+  test("deep-links into a person, adjusts their balance, audits details and adds sick leave", async ({ page, isMobile, browser, baseURL }) => {
+    test.setTimeout(personLook.capture ? 180_000 : 100_000);
+    if (personLook.capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
+    await setup([
+      request("first", "2027-02-16", { note: "Cover a client visit." }),
+      request("cancelled", "2027-02-08", { type: "other", reason: "unpaid", status: "cancelled", cancelledBy: staff, cancelledAt: createdAt }),
+      request("last", "2027-02-02", { status: "rejected", decidedBy: admin, decidedAt: createdAt, rejectReason: "Coverage is needed." }),
+    ]);
+    await signInLeave(page, personUrl(), admin);
+    const audrey = dialog(page, "Audrey");
+    const balance = audrey.getByRole("region", { name: "Leave balance" });
+    await expect(balance.getByText("9 days", { exact: true })).toBeVisible({ timeout: 25_000 });
+    await page.reload();
+    await expect(page).toHaveURL(personUrl());
+    await expect(balance.getByText("9 days", { exact: true })).toBeVisible({ timeout: 25_000 });
+    await personShot(page, "person-reload");
+    await audrey.getByRole("button", exactButton("Close")).click();
+    await expect(page).toHaveURL(teamUrl);
+    const opener = people(page).getByRole("link", { name: /Audrey/ });
+    await personFrame(page, "Audrey", "person", () => opener.click());
+
+    await personFrame(page, "Adjust balance", "adjust", () => audrey.getByRole("button", exactButton("Adjust balance")).click());
+    const adjust = dialog(page, "Adjust balance");
+    await adjust.getByRole("spinbutton", { name: "Days" }).fill("1.5");
+    const reason = adjust.getByRole("textbox", { name: "Reason" });
+    await reason.fill("  ");
+    await adjust.getByRole("button", exactButton("Save adjustment")).click();
+    await expect(reason).toBeFocused();
+    await expect(reason).toHaveAttribute("aria-invalid", "true");
+    await reason.fill("Opening balance correction");
+    await personShot(page, "adjust");
+    await adjust.getByRole("button", exactButton("Save adjustment")).click();
+    await expect(balance.getByText("10.5 days", { exact: true })).toBeVisible();
+    await expect(audrey.getByRole("region", { name: "History" }).getByText("Opening balance correction")).toBeVisible();
+    await expect(audrey.getByRole("button", exactButton("Adjust balance"))).toBeFocused();
+
+    await personFrame(page, "Leave details", "details", () => audrey.getByRole("button", exactButton("Leave details")).click());
+    const details = dialog(page, "Leave details");
+    const accrual = details.getByLabel("+1 from", { exact: true });
+    await accrual.fill("2027-03-01");
+    await personShot(page, "details");
+    await details.getByRole("button", exactButton("Save details")).click();
+    const audit = audrey.getByText("Details changed by Gregory: +1 from 1 Feb 2027 → 1 Mar 2027", { exact: true });
+    await expect(audit).toBeVisible({ timeout: 25_000 });
+    await expect(balance.getByText("9.5 days", { exact: true })).toBeVisible();
+    if (personLook.capture) await audit.scrollIntoViewIfNeeded();
+    await personShot(page, "history-audit");
+
+    await audrey.getByRole("button", exactButton("Leave details")).click();
+    await expect(accrual).toHaveValue("2027-03-01");
+    const lastDay = details.getByLabel(/^Last day/);
+    await lastDay.fill("2027-02-15");
+    await details.getByRole("button", exactButton("Save details")).click();
+    const refusal = details.getByText("Cancel Audrey's request after Mon 15 Feb first.", { exact: true });
+    await expect(refusal).toBeInViewport({ ratio: 1 });
+    await expect(lastDay).toBeFocused();
+    expect(await readDoc("tasks", `leaveProfiles/${staff}`)).toMatchObject({ endDate: null, accrualStart: "2027-03-01" });
+    await personShot(page, "details-refused");
+    await details.getByRole("button", exactButton("Cancel")).click();
+
+    await personFrame(page, "Add leave", "add", () => audrey.getByRole("button", exactButton("Add leave")).click());
+    const add = dialog(page, "Add leave");
+    await add.getByRole("button", exactButton("Sick")).click();
+    await add.getByLabel("From", { exact: true }).fill("2027-02-05");
+    await add.getByLabel(/^Note/).fill("Recorded by the admin.");
+    await expect(add.getByRole("status")).toContainText("1 working day");
+    await personShot(page, "add-sick");
+    await add.getByRole("button", exactButton("Add leave")).click();
+    const records = audrey.getByRole("region", { name: "Requests" });
+    const rows = records.getByRole("listitem");
+    await expect(rows).toHaveCount(4);
+    await expect(rows.filter({ hasText: "Sick" })).toContainText("Approved");
+    await expect.poll(() => readAll("tasks", "leaveRequests")).toContainEqual(
+      expect.objectContaining({ email: staff, type: "sick", status: "approved", pay: "paid", createdBy: admin }),
+    );
+
+    for (const [index, title, status] of [
+      [0, "Annual leave", "Waiting"], [1, "Other absence", "Cancelled"], [2, "Sick", "Approved"], [3, "Annual leave", "Not approved"],
+    ] as const) {
+      const open = () => rows.nth(index).getByRole("button").click();
+      if (index === 0) await personFrame(page, title, "request", open);
+      else await open();
+      const record = dialog(page, title);
+      await expect(record.getByText(status, { exact: true })).toBeVisible();
+      if (title === "Sick") await expect(record.getByText(/^Approved by Gregory on /)).toBeVisible();
+      await personShot(page, `request-${index + 1}-${status.toLowerCase().replaceAll(" ", "-")}`);
+      await record.getByRole("button", exactButton("Close")).click();
+    }
+    await audrey.getByRole("button", exactButton("Close")).click();
+    await expect(opener).toBeFocused();
+    await expect(people(page).getByRole("row", { name: /^Audrey/ }).getByRole("cell").first()).toHaveText("9.5 days");
+
+    const employeeContext = await browser.newContext({ baseURL });
+    try {
+      const employee = await employeeContext.newPage();
+      let personReads = 0;
+      await employee.route("**/api/leave/people/**", (route) => { personReads++; return route.continue(); });
+      await signInLeave(employee, personUrl(), staff);
+      await expect(employee).toHaveURL("/leave");
+      await expect(employee.getByText("9.5 days", { exact: true })).toBeVisible();
+      await expect(employee.getByText("Sick", { exact: true })).toBeVisible();
+      await employee.getByRole("button", exactButton("History")).click();
+      await expect(employee.getByText("Opening balance correction")).toBeVisible();
+      await expect(employee.getByText("Details changed by Gregory: +1 from 1 Feb 2027 → 1 Mar 2027")).toBeVisible();
+      expect(personReads).toBe(0);
+    } finally {
+      await employeeContext.close();
+    }
+  });
+
+  test("recounts waiting leave on holiday add and remove, and refuses duplicate dates", async ({ page, isMobile }) => {
+    test.setTimeout(personLook.capture ? 125_000 : 80_000);
+    if (personLook.capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
+    await setup([request("range", "2027-02-15", { end: "2027-02-17" })]);
+    await seed("tasks", "leaveHolidays", [
+      { id: "2027-01-01", date: "2027-01-01", name: "New Year’s Day" },
+      { id: "2028-01-01", date: "2028-01-01", name: "New Year’s Day" },
+    ]);
+    await signInLeave(page, `${teamUrl}&holidays=1`, admin);
+    const holidays = dialog(page, "Holidays");
+    await expect(holidays.getByRole("region", { name: "2027" }).getByText("New Year’s Day")).toBeVisible();
+    await expect(holidays.getByRole("region", { name: "2028" }).getByText("New Year’s Day")).toBeVisible();
+    await personShot(page, "holidays");
+    await holidays.getByRole("button", exactButton("Close")).click();
+    const waitingRange = card(page, "Mon 15");
+    await expect(waitingRange.getByText(/· 3 days$/)).toBeVisible();
+    const holidaysLink = people(page).getByRole("link", { name: "Holidays", exact: true });
+    if (personLook.capture) {
+      await holidaysLink.scrollIntoViewIfNeeded();
+      await personShot(page, "team-holidays-entry");
+    }
+    await personFrame(page, "Holidays", "holidays", () => holidaysLink.click());
+    await expect(holidays.getByText("Changing a holiday recounts every request on that day.")).toBeVisible();
+    const date = holidays.getByLabel("Date", { exact: true });
+    const name = holidays.getByRole("textbox", { name: "Holiday name" });
+    await holidays.getByRole("button", exactButton("Add holiday")).click();
+    await expect(date).toBeFocused();
+    await expect(holidays.getByText("Enter a valid holiday date.")).toBeVisible();
+    await date.fill("2027-02-16");
+    await name.fill("  ");
+    await holidays.getByRole("button", exactButton("Add holiday")).click();
+    await expect(name).toBeFocused();
+    await name.fill("Team holiday");
+    await holidays.getByRole("button", exactButton("Add holiday")).click();
+    const remove = holidays.getByRole("button", { name: /^Remove Team holiday,/ });
+    await expect(remove).toBeEnabled();
+    await expect(waitingRange.getByText(/· 2 days$/)).toBeAttached();
+    await expect(people(page).getByRole("row", { name: /^Audrey/ }).getByRole("cell").nth(1)).toHaveText("7 days");
+    await date.fill("2027-02-16");
+    await name.fill("TEAM HOLIDAY");
+    await holidays.getByRole("button", exactButton("Add holiday")).click();
+    await expect(holidays.getByText("There is already a holiday on this date.")).toBeVisible();
+    await expect(holidays.getByText("Team holiday", { exact: true })).toHaveCount(1);
+    await name.fill(" ");
+    await holidays.getByRole("button", exactButton("Add holiday")).click();
+    const nameError = holidays.getByText("Enter a holiday name from 1 to 60 characters.");
+    await expect(nameError).toBeVisible();
+
+    await personFrame(page, "Remove this holiday?", "holidays-remove", () => remove.click(), "alertdialog");
+    const confirmation = page.getByRole("alertdialog", { name: "Remove this holiday?" });
+    await expect(confirmation.getByText("Team holiday")).toBeVisible();
+    await personShot(page, "holidays-remove");
+    await confirmation.getByRole("button", exactButton("Remove holiday")).click();
+    await expect(remove).toHaveCount(0);
+    await expect(confirmation).toHaveCount(0);
+    await expect(nameError).toBeVisible();
+    await holidays.getByRole("button", exactButton("Close")).click();
+    await expect(holidaysLink).toBeFocused();
+    await expect(waitingRange.getByText(/· 3 days$/)).toBeVisible();
+    await expect(people(page).getByRole("row", { name: /^Audrey/ }).getByRole("cell").nth(1)).toHaveText("6 days");
+    await expect.poll(() => readDoc("tasks", "leaveHolidays/2027-02-16")).toBeNull();
+  });
+
+  test("recovers one adjustment after a failed send and a lost reply, and ignores an add reply after leaving", async ({ page }) => {
+    test.setTimeout(80_000);
+    await setup([]);
+    await signInLeave(page, personUrl(), admin);
+    const audrey = dialog(page, "Audrey");
+    await audrey.getByRole("button", exactButton("Adjust balance")).click();
+    const adjust = dialog(page, "Adjust balance");
+    const save = adjust.getByRole("button", exactButton("Save adjustment"));
+    await adjust.getByRole("spinbutton", { name: "Days" }).fill("-0.5");
+    const reason = adjust.getByRole("textbox", { name: "Reason" });
+    await reason.fill("Half day correction");
+    const sent = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const keys: string[] = [];
+    await page.route("**/api/leave/adjustments", async (route) => {
+      keys.push(route.request().headers()["idempotency-key"]);
+      if (keys.length === 1) {
+        sent.resolve();
+        await release.promise;
+        await route.abort();
+      } else if (keys.length === 2) {
+        expect((await route.fetch()).ok()).toBe(true);
+        await page.route("**/api/leave/people/**", (read) => read.abort(), { times: 1 });
+        await route.abort();
+      } else await route.continue();
+    });
+    await save.click();
+    await sent.promise;
+    const busy = adjust.getByRole("button", exactButton("Saving…"));
+    await expect(busy).toBeDisabled();
+    await busy.dispatchEvent("click");
+    expect(keys).toHaveLength(1);
+    release.resolve();
+    await expect(adjust.getByRole("alert")).toHaveText(/Couldn’t confirm the adjustment/);
+    expect(await readAll("tasks", "leaveAdjustments")).toHaveLength(0);
+    await save.click();
+    await expect(adjust.getByRole("alert")).toHaveText(/Couldn’t confirm the adjustment/);
+    await expect(reason).toHaveValue("Half day correction");
+    expect(await readAll("tasks", "leaveAdjustments")).toHaveLength(1);
+    await save.click();
+    await expect(audrey.getByText("Half day correction")).toBeVisible();
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(1);
+    expect(await readAll("tasks", "leaveAdjustments")).toHaveLength(1);
+
+    const committed = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<void>();
+    await page.route("**/api/leave/requests", async (route) => {
+      const entry = await route.fetch();
+      expect(entry.ok()).toBe(true);
+      committed.resolve();
+      await reply.promise;
+      await route.fulfill({ response: entry });
+    });
+    await audrey.getByRole("button", exactButton("Add leave")).click();
+    const add = dialog(page, "Add leave");
+    await add.getByRole("button", exactButton("Sick")).click();
+    await add.getByLabel("From", { exact: true }).fill("2027-02-05");
+    await add.getByRole("button", exactButton("Add leave")).click();
+    await committed.promise;
+    await add.getByRole("button", exactButton("Cancel")).click();
+    await audrey.getByRole("button", exactButton("Close")).click();
+    await people(page).getByRole("link", { name: /Sovie/ }).click();
+    const other = dialog(page, "Sovie");
+    await expect(other.getByText("No requests yet")).toBeVisible();
+    const refreshed = page.waitForResponse((response) => response.url().endsWith("/api/leave/team") && response.ok());
+    reply.resolve();
+    await refreshed;
+    await expect(other.getByText("No requests yet")).toBeVisible();
+    await expect(page.getByText("Added", { exact: true })).toHaveCount(0);
+    expect(await readAll("tasks", "leaveRequests")).toEqual([expect.objectContaining({ email: staff, type: "sick" })]);
+  });
+
+  test("requires a reload before retrying stale leave details or a stale holiday removal", async ({ page }) => {
+    test.setTimeout(80_000);
+    await setup([]);
+    await seed("tasks", "leaveHolidays", [{ id: "2027-02-16", date: "2027-02-16", name: "Original holiday" }]);
+    await signInLeave(page, personUrl(), admin);
+    const audrey = dialog(page, "Audrey");
+    await audrey.getByRole("button", exactButton("Leave details")).click();
+    const details = dialog(page, "Leave details");
+    const accrual = details.getByLabel("+1 from", { exact: true });
+    const detailsApi = "**/api/leave/profiles/**";
+    await page.route(detailsApi, async (route) => {
+      const first = await route.fetch();
+      expect(first.ok()).toBe(true);
+      const { profile } = await first.json();
+      const winner = await route.fetch({
+        headers: { ...route.request().headers(), "if-match": `"${profile.updatedAt}"` },
+        postData: { accrualStart: "2027-04-01" },
+      });
+      expect(winner.ok()).toBe(true);
+      await route.abort();
+    }, { times: 1 });
+    await accrual.fill("2027-03-01");
+    const save = details.getByRole("button", exactButton("Save details"));
+    await save.click();
+    await expect(details.getByRole("alert")).toHaveText(/Couldn’t confirm the leave details/);
+    await save.click();
+    const reloadDetails = details.getByRole("button", exactButton("Reload details"));
+    await expect(reloadDetails).toBeFocused();
+    await expect(save).toBeDisabled();
+    await reloadDetails.click();
+    await expect(accrual).toHaveValue("2027-04-01");
+    expect(await readAll("tasks", "leaveAudit")).toHaveLength(2);
+    await details.getByRole("button", exactButton("Cancel")).click();
+    await audrey.getByRole("button", exactButton("Close")).click();
+
+    await people(page).getByRole("link", { name: "Holidays", exact: true }).click();
+    const holidays = dialog(page, "Holidays");
+    await holidays.getByRole("button", { name: /^Remove Original holiday,/ }).click();
+    const confirm = page.getByRole("alertdialog", { name: "Remove this holiday?" });
+    await page.route("**/api/leave/holidays/2027-02-16", async (route) => {
+      const first = await route.fetch();
+      expect(first.ok()).toBe(true);
+      const { holidayVersion } = await first.json();
+      const winner = await route.fetch({
+        method: "POST",
+        headers: { ...route.request().headers(), "content-type": "application/json", "if-match": `"${holidayVersion}"` },
+        postData: { name: "Updated holiday" },
+      });
+      expect(winner.ok()).toBe(true);
+      await route.abort();
+    }, { times: 1 });
+    const remove = confirm.getByRole("button", exactButton("Remove holiday"));
+    await remove.click();
+    await expect(confirm.getByRole("alert")).toHaveText(/Couldn’t confirm the holiday was removed/);
+    await remove.click();
+    const reloadHolidays = confirm.getByRole("button", exactButton("Reload holidays"));
+    await expect(reloadHolidays).toBeVisible();
+    await reloadHolidays.click();
+    await expect(confirm).toHaveCount(0);
+    await expect(holidays.getByText("Updated holiday", { exact: true })).toBeVisible();
+    expect((await readAll("tasks", "leaveHolidays")).filter(({ id }) => id !== "_settings")).toHaveLength(1);
+  });
+
+  test("fits long names and refusal text at 320 px and loads an empty or unavailable person", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "This case changes the phone viewport.");
+    test.setTimeout(personLook.capture ? 110_000 : 80_000);
+    const name = "Alexandria Cassandra Maximiliana Winters";
+    const holiday = "International Education and Community Service Observance Day";
+    expect(name).toHaveLength(40);
+    expect(holiday).toHaveLength(60);
+    await setup([request("one", "2027-02-16", { name }), request("two", "2027-02-18", { name })], name, -100.5);
+    await seed("tasks", "leaveHolidays", [{ id: "2027-02-17", date: "2027-02-17", name: holiday }]);
+    await seed("tasks", "people", [{ id: "new.leave@deushcs.com", email: "new.leave@deushcs.com", name: "New teammate", active: true }]);
+    await signInLeave(page, teamUrl, admin);
+    await expect(people(page)).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 740 });
+    await people(page).getByRole("link", { name }).click();
+    const person = dialog(page, name);
+    await expect(person.getByText("−99.5 days", { exact: true })).toBeInViewport();
+    await expect(person.getByRole("button", exactButton("Adjust balance"))).toBeInViewport();
+    await personShot(page, "stress-person");
+    await person.getByRole("button", exactButton("Adjust balance")).click();
+    const adjust = dialog(page, "Adjust balance");
+    const reason = "Correction after matching the attendance record. ".repeat(5) + "The difference comes from a missed check-in on day one.";
+    expect(reason).toHaveLength(300);
+    await adjust.getByRole("textbox", { name: "Reason" }).fill(reason);
+    await adjust.getByRole("spinbutton", { name: "Days" }).fill("1.5");
+    await personShot(page, "stress-adjust");
+    await adjust.getByRole("button", exactButton("Save adjustment")).click();
+    const adjustment = person.getByRole("listitem").filter({ hasText: reason });
+    await expect(adjustment).toContainText("+1.5 days");
+    await adjustment.scrollIntoViewIfNeeded();
+    await expect(adjustment).toBeInViewport({ ratio: 1 });
+    await personShot(page, "stress-history");
+    await person.getByRole("button", exactButton("Leave details")).click();
+    const details = dialog(page, "Leave details");
+    const lastDay = details.getByLabel(/^Last day/);
+    await lastDay.fill("2027-02-15");
+    await details.getByRole("button", exactButton("Save details")).click();
+    const error = details.getByText(`Cancel ${name}'s 2 requests after Mon 15 Feb first.`, { exact: true });
+    await expect(error).toBeInViewport({ ratio: 1 });
+    await expect(lastDay).toBeFocused();
+    await personShot(page, "stress-details-refused");
+    await details.getByRole("button", exactButton("Cancel")).click();
+    await person.getByRole("button", exactButton("Close")).click();
+
+    await people(page).getByRole("link", { name: "New teammate", exact: true }).click();
+    const newPerson = dialog(page, "New teammate");
+    await expect(newPerson.getByText("Leave isn’t set up for this person.")).toBeVisible();
+    await expect(newPerson.getByRole("button", exactButton("Leave details"))).toBeInViewport();
+    await personShot(page, "stress-no-profile");
+    await newPerson.getByRole("button", exactButton("Close")).click();
+
+    await people(page).getByRole("link", { name: "Holidays", exact: true }).click();
+    const holidays = dialog(page, "Holidays");
+    await expect(holidays.getByText(holiday, { exact: true })).toBeInViewport();
+    await personShot(page, "stress-holidays");
+    await holidays.getByRole("button", { name: new RegExp(`^Remove ${holiday},`) }).click();
+    const confirm = page.getByRole("alertdialog", { name: "Remove this holiday?" });
+    await expect(confirm.getByText(holiday, { exact: true })).toBeInViewport({ ratio: 1 });
+    await personShot(page, "stress-holidays-remove");
+    await confirm.getByRole("button", exactButton("Cancel")).click();
+    await page.context().setOffline(true);
+    await expect(holidays.getByText("Leave needs a connection.")).toBeVisible();
+    await personShot(page, "stress-holidays-offline");
+    await page.context().setOffline(false);
+
+    await page.goto(personUrl("not-set-up@deushcs.com"));
+    const missing = dialog(page, "Person leave");
+    await expect(missing.getByText("This person isn’t available.")).toBeVisible();
+    await personShot(page, "stress-person-unavailable");
   });
 });

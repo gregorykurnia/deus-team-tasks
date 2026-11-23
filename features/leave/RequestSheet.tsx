@@ -55,8 +55,16 @@ function statusDetails(request: RequestRow) {
   }
 }
 
-export default function RequestSheet({ data, request, email, onClose }: { data: MyLeave; request: RequestRow; email: string; onClose: () => void }) {
-  const { refresh } = useLeaveData();
+export default function RequestSheet({ data, request, email, onClose, onRefresh, compact }: {
+  data: Pick<MyLeave, "today" | "isAdmin" | "actorNames">;
+  request: RequestRow;
+  email: string;
+  onClose: () => void;
+  onRefresh?: () => Promise<(Pick<MyLeave, "requests" | "today"> & Partial<Pick<MyLeave, "isAdmin">>) | undefined>;
+  compact?: boolean;
+}) {
+  const { refresh: refreshMine } = useLeaveData();
+  const refresh = onRefresh ?? refreshMine;
   const toast = useToast();
   const large = useMediaQuery(LARGE_SCREEN);
   const [confirm, setConfirm] = useState(false);
@@ -113,7 +121,7 @@ export default function RequestSheet({ data, request, email, onClose }: { data: 
         finishCancellation();
       } else {
         const message = error instanceof LeaveApiError && error.status === 409 ? error.message : "Couldn’t confirm the cancellation. Try again.";
-        if (fresh && (!row || !canCancelLeave(row, fresh.today, fresh.isAdmin))) {
+        if (fresh && (!row || !canCancelLeave(row, fresh.today, fresh.isAdmin ?? data.isAdmin))) {
           toast(message, { error: true });
           finishCancellation();
         } else {
@@ -128,14 +136,14 @@ export default function RequestSheet({ data, request, email, onClose }: { data: 
 
   return (
     <>
-      <Sheet open onClose={onClose} short={!large} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
+      <Sheet open onClose={onClose} short={compact || !large} visibleOnOpen={compact} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
         footer={canCancel && <Button variant="quietRed" onClick={() => { setError(""); setConfirm(true); }}>Cancel request</Button>}>
         <div className={styles.details} ref={details}>
           <RequestDetails request={request} today={data.today} />
           <p className={styles.statusDetails}>{status.verb}{actor && ` by ${actor}`}{typeof status.at === "number" && ` on ${weekdayDate(leaveDay(status.at), data.today)}`}</p>
         </div>
       </Sheet>
-      <Confirm open={confirm} onClose={() => setConfirm(false)} onConfirm={() => void cancel()} title="Cancel this request?"
+      <Confirm open={confirm} visibleOnOpen={compact} onClose={() => setConfirm(false)} onConfirm={() => void cancel()} title="Cancel this request?"
         confirmLabel="Cancel request" busy={busy} busyLabel="Cancelling…">
         <p className={styles.confirmCopy}>The request will be marked cancelled and stop counting against your available leave.</p>
         {error && <Notice tone="error">{error}</Notice>}

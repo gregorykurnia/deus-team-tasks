@@ -8,8 +8,8 @@
   animation: fade var(--dur-fade) ease-out;
 }
 
-/* Keep the underlying text blurred throughout the dialog fade. */
-.dialog {
+/* Keep the underlying text blurred while the tint fades in. */
+.blurred {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   animation-name: tint;

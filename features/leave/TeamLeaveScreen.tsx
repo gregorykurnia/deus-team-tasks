@@ -9,18 +9,21 @@ import { days } from "@/lib/leave";
 import { getLeaveTeam, LeaveApiError } from "@/lib/leaveClient";
 import type { TeamLeave } from "@/lib/leave.server";
 import Avatar from "@/ui/Avatar";
-import Button from "@/ui/Button";
+import Button, { buttonClass } from "@/ui/Button";
 import EmptyState from "@/ui/EmptyState";
 import Icon from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import Panel from "@/ui/Panel";
 import { LoadingLine, Skeleton } from "@/ui/Skeleton";
+import HolidaysSheet from "./HolidaysSheet";
 import { useLeaveData, withLeaveDeadline } from "./LeaveData";
+import PersonLeaveSheet from "./PersonLeaveSheet";
 import WaitingLeaveCard from "./WaitingLeaveCard";
 import styles from "./TeamLeave.module.css";
 
 const path = "/leave";
 const pageSize = 100;
+const overlayKeys = ["request", "person", "holidays"];
 type TeamResult = { data?: TeamLeave; error?: unknown };
 
 export default function TeamLeaveScreen({ email }: { email: string }) {
@@ -34,7 +37,11 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
   const pending = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const openedHere = useRef<string | null>(null);
-  const requestId = search.get("request");
+  const openedAdmin = useRef<string | null>(null);
+  const adminOpener = useRef<HTMLAnchorElement | null>(null);
+  const address = search.get("person")?.trim().toLowerCase();
+  const holidaysOpen = search.get("holidays") === "1" && !address;
+  const requestId = address || holidaysOpen ? null : search.get("request");
   const team = result.data;
 
   const refreshTeam = useCallback(async () => {
@@ -44,7 +51,10 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
     pending.current = controller;
     try {
       const data = await withLeaveDeadline((signal) => getLeaveTeam({ email, signal }), controller);
-      if (pending.current === controller) setResult({ data });
+      if (pending.current === controller) {
+        setResult({ data });
+        return data;
+      }
     } catch (error) {
       if (pending.current !== controller) return;
       const denied = error instanceof LeaveApiError && (error.status === 401 || error.status === 403);
@@ -66,11 +76,26 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
     };
   }, [mine, refreshTeam]);
 
+  useEffect(() => {
+    if (!address && !holidaysOpen) {
+      const opener = adminOpener.current;
+      adminOpener.current = null;
+      opener?.focus({ preventScroll: true });
+    }
+  }, [address, holidaysOpen]);
+
   function closeRequest() {
     const opened = openedHere.current;
     openedHere.current = null;
     if (opened === requestId) router.back();
     else router.replace(without(path, search, ["request"]), { scroll: false });
+  }
+
+  function closeAdminOverlay() {
+    const opened = openedAdmin.current;
+    openedAdmin.current = null;
+    if (opened === (address ? `person:${address}` : "holidays")) router.back();
+    else router.replace(without(path, search, overlayKeys), { scroll: false });
   }
 
   async function refreshViews() {
@@ -123,7 +148,7 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
               {team.waiting.slice(0, waitingLimit).map((request) => (
                 <WaitingLeaveCard key={request.id} request={request} today={team.today} email={email}
                   distinguishName={sameName(request.name)}
-                  href={over(path, search, new URLSearchParams({ request: request.id }).toString(), ["person"])}
+                  href={over(path, search, new URLSearchParams({ request: request.id }).toString(), overlayKeys)}
                   onOpen={() => { openedHere.current = request.id; }} detailOpen={request.id === requestId}
                   onClose={closeRequest} onResolved={resolved} onAccessError={refreshViews} />
               ))}
@@ -136,7 +161,11 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
         {team.nextMissingHolidayYear && <Notice tone="warning" title={`Add holidays for ${team.nextMissingHolidayYear}.`}>
           Until then, working-day counts exclude weekends and the holidays already listed.
         </Notice>}
-        <Panel title="People"
+        <Panel title="People" tools={<Link className={buttonClass("secondary", true)} scroll={false}
+          href={over(path, search, "holidays=1", overlayKeys)} onNavigate={() => { openedAdmin.current = "holidays"; }}
+          onClick={(event) => { adminOpener.current = event.currentTarget; }}>
+          <Icon name="cal" size={16} />Holidays
+        </Link>}
           foot={team.people.length > peopleLimit && <MoreRows limit={peopleLimit} total={team.people.length} onMore={() => setPeopleLimit(peopleLimit + pageSize)} />}>
           <table className={styles.people}>
             <thead><tr>
@@ -150,7 +179,9 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
                 const left = endDate && endDate < team.today;
                 return <tr key={email} className={left ? styles.left : undefined}>
                   <th scope="row"><Link className={styles.person} scroll={false}
-                    href={over(path, search, new URLSearchParams({ person: email }).toString(), ["request"])}>
+                    href={over(path, search, new URLSearchParams({ person: email }).toString(), overlayKeys)}
+                    onNavigate={() => { openedAdmin.current = `person:${email}`; }}
+                    onClick={(event) => { adminOpener.current = event.currentTarget; }}>
                     <Avatar name={name} />
                     <span><b>{name}</b>{sameName(name) && <small>{email}</small>}
                       {left && <small>Left {weekdayDate(endDate, team.today)}</small>}</span>
@@ -166,6 +197,9 @@ export default function TeamLeaveScreen({ email }: { email: string }) {
             </tbody>
           </table>
         </Panel>
+        {address && <PersonLeaveSheet key={address} address={address} email={email} team={team}
+          onClose={closeAdminOverlay} onChanged={() => void refreshViews()} />}
+        {holidaysOpen && <HolidaysSheet team={team} email={email} onClose={closeAdminOverlay} onReload={refreshTeam} />}
       </>}
     </>
   );

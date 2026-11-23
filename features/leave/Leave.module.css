@@ -129,6 +129,14 @@
   color: var(--muted);
 }
 
+.requestButton {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .rowCopy {
   flex: 1;
   min-width: 0;
@@ -145,6 +153,10 @@
 .amount {
   text-align: right;
   font-variant-numeric: var(--num);
+}
+
+.auditValue {
+  white-space: nowrap;
 }
 
 .details {
@@ -275,4 +287,6 @@
   .balanceTop { flex-wrap: wrap; }
   .askFields { gap: 10px; }
   .askPair { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .adjustmentHistory { display: grid; gap: 6px; }
+  .adjustmentHistory .amount { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; text-align: left; }
 }

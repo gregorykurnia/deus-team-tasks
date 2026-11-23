@@ -25,6 +25,7 @@ interface SheetProps {
   bar?: ReactNode; // a row of actions under the head that stays put while the body scrolls
   size?: SheetSize;
   short?: boolean; // fits its content: quick capture, More, Install
+  visibleOnOpen?: boolean; // slides in with its contents fully visible
   phoneOnly?: boolean; // only exists at 900px and under
   footer?: ReactNode;
   initialFocus?: string | string[]; // selectors for what gets focus; the first control by default
@@ -54,15 +55,15 @@ export function SheetSpacer() {
   return <span className={styles.spacer} />;
 }
 
-function SheetPanel({ onClose, title, tag, lead, meta, tools, bar, size = "default", short, phoneOnly, footer, initialFocus, children }: SheetProps) {
+function SheetPanel({ onClose, title, tag, lead, meta, tools, bar, size = "default", short, visibleOnOpen, phoneOnly, footer, initialFocus, children }: SheetProps) {
   const panel = useRef<HTMLElement>(null);
   const titleId = useId();
   useOverlay({ kind: "sheet", onClose, panel, initialFocus });
-  const classes = [styles.sheet, styles[size], short && styles.short, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
+  const classes = [styles.sheet, styles[size], short && styles.short, visibleOnOpen && styles.slideOnly, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
 
   return (
     <>
-      <Scrim onClick={onClose} phoneOnly={phoneOnly} />
+      <Scrim onClick={onClose} phoneOnly={phoneOnly} visibleOnOpen={visibleOnOpen} />
       <section ref={panel} className={classes} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <span className={styles.grab} aria-hidden="true" />
         <div className={lead ? `${styles.head} ${styles.withLead}` : styles.head}>

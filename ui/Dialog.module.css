@@ -24,6 +24,11 @@
   z-index: var(--z-dialog-over-sheet);
 }
 
+.fadeShadow {
+  animation-name: fadeShadow;
+  word-spacing: 0.08em;
+}
+
 /* 900px and under: 14px above the bottom edge. */
 @media (max-width: 900px) {
   .dialog {
@@ -56,6 +61,7 @@
   margin: 14px 0 0;
   padding: 12px 14px;
   overflow: hidden;
+  overflow-wrap: anywhere;
   border-radius: var(--r-field);
   background: var(--fill);
   font-weight: var(--w-bold);
@@ -75,4 +81,8 @@
   from {
     opacity: 0;
   }
+}
+
+@keyframes fadeShadow {
+  from { box-shadow: none; }
 }

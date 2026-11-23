@@ -6,9 +6,10 @@ interface ScrimProps {
   dialog?: boolean;
   over?: boolean; // behind a dialog that sits over a sheet
   phoneOnly?: boolean; // gone above 900px, for the More sheet
+  visibleOnOpen?: boolean; // blur the background from the first frame
 }
 
-export default function Scrim({ onClick, dialog = false, over = false, phoneOnly = false }: ScrimProps) {
-  const classes = [styles.scrim, dialog && styles.dialog, over && styles.over, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
+export default function Scrim({ onClick, dialog = false, over = false, phoneOnly = false, visibleOnOpen = false }: ScrimProps) {
+  const classes = [styles.scrim, (dialog || visibleOnOpen) && styles.blurred, over && styles.over, phoneOnly && styles.phoneOnly].filter(Boolean).join(" ");
   return <div className={classes} onClick={onClick} aria-hidden="true" />;
 }

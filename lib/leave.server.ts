@@ -40,6 +40,7 @@ export interface MyLeave extends LeaveHistory {
 export interface PersonLeave extends LeaveHistory {
   today: string;
   person: Person;
+  actorNames: Record<string, string>;
   audit: NamedLeaveAudit[];
   holidays: LeaveHoliday[];
 }
@@ -355,7 +356,7 @@ export function readPersonLeave(email: string, target: string): Promise<PersonLe
     const holidayRows = await tx.get(holidays());
     const daysOff = readHolidayRows(holidayRows.docs);
     const common = { today, person, holidays: daysOff };
-    if (!profile) return { ...common, audit: [], ...buildHistory(null, [], [], daysOff, today) };
+    if (!profile) return { ...common, audit: [], actorNames: {}, ...buildHistory(null, [], [], daysOff, today) };
 
     const [requestRows, adjustmentRows, detailsRows] = await Promise.all([
       tx.get(requests().where("email", "==", address)),
@@ -363,10 +364,14 @@ export function readPersonLeave(email: string, target: string): Promise<PersonLe
       tx.get(auditRows().where("email", "==", address)),
     ]);
     const details = readAuditRows(detailsRows.docs);
-    const names = await readActorNames(tx, details.map(({ by }) => by));
+    const history = buildHistory(profile, requestRows.docs.map(readRequest), adjustmentRows.docs.map(readAdjustment), daysOff, today);
+    const actors = history.requests.flatMap(({ createdBy, decidedBy, cancelledBy }) => [createdBy, decidedBy, cancelledBy]);
+    const names = await readActorNames(tx, [...actors, ...details.map(({ by }) => by)].filter((by) => by !== address));
+    names[address] = person.name;
     return {
       ...common,
-      ...buildHistory(profile, requestRows.docs.map(readRequest), adjustmentRows.docs.map(readAdjustment), daysOff, today),
+      ...history,
+      actorNames: names,
       audit: nameAudit(details, names),
     };
   }, true);

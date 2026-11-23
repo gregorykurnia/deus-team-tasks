@@ -20,6 +20,7 @@ interface DialogProps {
   initialFocus?: string | string[];
   actions?: ReactNode; // right-aligned
   busy?: boolean; // while its action runs, Esc and the scrim don't close it
+  visibleOnOpen?: boolean;
   children?: ReactNode;
 }
 
@@ -29,7 +30,7 @@ export default function Dialog(props: DialogProps) {
   return createPortal(<DialogPanel {...props} />, document.body);
 }
 
-function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions, busy, children }: DialogProps) {
+function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions, busy, visibleOnOpen, children }: DialogProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const textId = useId();
@@ -37,7 +38,7 @@ function DialogPanel({ onClose, title, wide, alert, quote, initialFocus, actions
     if (!busy) onClose();
   };
   const { overSheet } = useOverlay({ kind: "dialog", onClose: close, panel, initialFocus });
-  const classes = [styles.dialog, wide && styles.wide, overSheet && styles.overSheet].filter(Boolean).join(" ");
+  const classes = [styles.dialog, wide && styles.wide, overSheet && styles.overSheet, visibleOnOpen && styles.fadeShadow].filter(Boolean).join(" ");
 
   return (
     <>
@@ -74,11 +75,12 @@ interface ConfirmProps {
   confirmLabel: string; // named for the action: "Delete task"
   busyLabel?: string;
   busy?: boolean;
+  visibleOnOpen?: boolean;
   quote?: string;
   children?: ReactNode; // what happens
 }
 
-export function Confirm({ open, onClose, onConfirm, title, confirmLabel, busyLabel, busy, quote, children }: ConfirmProps) {
+export function Confirm({ open, onClose, onConfirm, title, confirmLabel, busyLabel, busy, visibleOnOpen, quote, children }: ConfirmProps) {
   return (
     <Dialog
       open={open}
@@ -87,6 +89,7 @@ export function Confirm({ open, onClose, onConfirm, title, confirmLabel, busyLab
       quote={quote}
       alert
       busy={busy}
+      visibleOnOpen={visibleOnOpen}
       initialFocus="[data-cancel]"
       actions={
         <>

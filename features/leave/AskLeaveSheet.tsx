@@ -16,6 +16,7 @@ import Notice from "@/ui/Notice";
 import Segmented from "@/ui/Segmented";
 import Sheet from "@/ui/Sheet";
 import { useLeaveData, withLeaveDeadline } from "./LeaveData";
+import adminStyles from "./AdminLeave.module.css";
 import styles from "./Leave.module.css";
 
 type Draft = LeaveInput & { pay: LeavePay | null };
@@ -30,7 +31,10 @@ const connectionError = "Not sent. Check your connection and try again.";
 const specialEvents = Object.entries(SPECIAL_LEAVE_EVENTS).map(([value, { label }]) => [value, label] as const);
 const lawEvents = Object.entries(LAW_LEAVE_EVENTS);
 
-function availableAfter(data: MyLeave, draft: Draft, holidays: MyLeave["requestHolidays"]) {
+type AskData = Pick<MyLeave, "today" | "isAdmin" | "holidays" | "profile" | "summary" | "requests" | "ledger">
+  & Partial<Pick<MyLeave, "requestHolidays" | "setupContact">>;
+
+function availableAfter(data: AskData, draft: Draft, holidays: MyLeave["requestHolidays"]) {
   const pay = defaultLeavePay(draft) ?? draft.pay;
   if (data.isAdmin && !pay) return null;
   if (!data.profile || (pay && pay !== "deduct")) return data.summary?.available ?? null;
@@ -49,8 +53,12 @@ function entered(draft: Draft, field: LeaveIssue["field"]): boolean {
   return field === "note" && draft.note.length > 500;
 }
 
-export default function AskLeaveSheet({ data, email, onClose, onSent }: {
-  data: MyLeave; email: string; onClose: () => void; onSent: (message: string) => void;
+export default function AskLeaveSheet({ data, email, recipient, onClose, onSent }: {
+  data: AskData;
+  email: string;
+  recipient?: { email: string; name: string; refresh: () => Promise<Pick<MyLeave, "requests"> | undefined> };
+  onClose: () => void;
+  onSent: (message: string) => void;
 }) {
   const formId = useId();
   const form = useRef<HTMLFormElement>(null);
@@ -62,7 +70,8 @@ export default function AskLeaveSheet({ data, email, onClose, onSent }: {
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState("");
   const [serverIssues, setServerIssues] = useState<LeaveIssue[]>([]);
-  const { online, refresh } = useLeaveData();
+  const { online, refresh: refreshMine } = useLeaveData();
+  const refresh = recipient?.refresh ?? refreshMine;
 
   useEffect(() => {
     active.current = true;
@@ -133,9 +142,9 @@ export default function AskLeaveSheet({ data, email, onClose, onSent }: {
       const current = attempt.current ?? { key: crypto.randomUUID() };
       attempt.current = current;
       current.id ??= await leaveOperationId(email, current.key);
-      const input = { ...checked.request, ...(draft.pay ? { pay: draft.pay } : {}) };
+      const input = { ...checked.request, ...(draft.pay ? { pay: draft.pay } : {}), ...(recipient ? { email: recipient.email } : {}) };
       const { request } = await withLeaveDeadline((signal) => askLeave(input, current.key, { email, signal }));
-      if (request?.id !== current.id || request.email !== email) throw new Error("Unconfirmed leave request");
+      if (request?.id !== current.id || request.email !== (recipient?.email ?? email)) throw new Error("Unconfirmed leave request");
       const stillOpen = active.current;
       finish(request);
       void refresh(!stillOpen);
@@ -174,14 +183,17 @@ export default function AskLeaveSheet({ data, email, onClose, onSent }: {
   const startError = errorFor("start") ?? (hours ? errorFor("end") : undefined);
 
   return (
-    <Sheet open title="Ask for leave" short onClose={close} footer={<div className={styles.askFooter}>
+    <Sheet open title={recipient ? "Add leave" : "Ask for leave"} meta={recipient && <span className={adminStyles.personMeta}>{recipient.name}</span>}
+      short visibleOnOpen={!!recipient} onClose={close} footer={<div className={styles.askFooter}>
       {sendError && <Notice tone="error">{sendError}</Notice>}
       {datesValid && <p className={styles.askTotal} role="status">
         {days(checked.days).replace(" day", " working day")}{after !== null && <>{" · Available after: "}<b>{days(after)}</b>{after < 0 && ", taken in advance"}</>}
       </p>}
       <div className={styles.askActions}>
         <Button variant="quiet" onClick={close}>Cancel</Button>
-        <Button variant="main" type="submit" form={formId} busy={busy} busyLabel="Sending…">Send request</Button>
+        <Button variant="main" type="submit" form={formId} busy={busy} busyLabel={recipient ? "Adding…" : "Sending…"}>
+          {recipient ? "Add leave" : "Send request"}
+        </Button>
       </div>
     </div>}>
       <form id={formId} ref={form} data-toasts-behind-sheet noValidate onSubmit={(event) => void send(event)}>
