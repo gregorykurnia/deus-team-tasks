@@ -42,7 +42,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 | L6 | Ask for leave sheet: every type and reason, half day, hours, live day count and balance after, refusals on their fields. [L6](implementation/leave.md#l6--ask-for-leave) [look] | Sol Max | 2026-11-23 — request sheet and look checked |
 | L7 | Admin Team view: waiting cards with approve, reject and pay choice, the count, the People table; `leave-admin.spec.ts`. [L7](implementation/leave.md#l7--admin-the-team-view) [look] | Sol Max | 2026-11-23 — Team decisions and look verified |
 | L8 | Admin person sheet (add leave, adjust, leave details, history with audit) and the Holidays sheet. [L8](implementation/leave.md#l8--admin-a-person-and-the-holidays) [look] | Sol Max | 2026-11-23 — admin sheets and look verified |
-| E1 | End to end on the emulators: two people and an admin across pinned days, through 1 February and the 1 March lapse. [E1](implementation/leave.md#e1--end-to-end) [no look] | Sol xHigh | |
+| E1 | End to end on the emulators: two people and an admin across pinned days, through 1 February and the 1 March lapse. [E1](implementation/leave.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-23 — desktop replay verified |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/leave.md#r1a--full-check-run) [no look] | Sol High | |
 | R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/leave.md#r1b--fix-recorded-failures) [look] | Sol Max | |
 | R1 | Phase review: hunt for faults in balances, permissions, privacy and pushes, quick fixes, owner handoff. [R1](implementation/leave.md#r1--phase-review) [no look] | Opus 5.5 High | |

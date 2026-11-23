@@ -296,6 +296,25 @@ describe("reading leave", () => {
     await withStatus(await me(gregory, "?view=badge"), 403);
   });
 
+  it("uses only valid dates from the emulator clock and falls back when the file is removed", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "leave-clock-"));
+    const clockFile = join(folder, "day");
+    vi.stubEnv("LEAVE_TEST_DATE_FILE", clockFile);
+    try {
+      expect(leaveToday()).toBe(TODAY);
+      await writeFile(clockFile, "2027-02-01");
+      expect(leaveToday()).toBe("2027-02-01");
+      await writeFile(clockFile, "");
+      expect(() => leaveToday()).toThrow("The Leave emulator clock needs an ISO date.");
+      await writeFile(clockFile, "2027-02-30");
+      expect(() => leaveToday()).toThrow("The Leave emulator clock needs an ISO date.");
+      await rm(clockFile);
+      expect(leaveToday()).toBe(TODAY);
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to the Jakarta day when the emulator pin is invalid", () => {
     const beforeMidnight = new Date("2027-02-10T16:59:59Z");
     const midnight = new Date("2027-02-10T17:00:00Z");

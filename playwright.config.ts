@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { leaveClockFile } from "./tests/support/leaveClock";
 
 // Smoke tests run against the Firestore emulator, never live data.
 // Playwright starts the emulator and one dev server, and stops both afterwards. Not a production build: lib/emulator.ts
@@ -51,6 +52,7 @@ export default defineConfig({
         MCP_SECRET: "mcp-smoke-emulator-only", MCP_TASK_EDITS_ENABLED: "1",
         CRON_SECRET: "morning-smoke-emulator-only", MORNING_TEST_DATE: "2026-11-17",
         LEAVE_TEST_DATE: process.env.LEAVE_TEST_DATE ?? "2027-02-10",
+        LEAVE_TEST_DATE_FILE: leaveClockFile,
         NEXT_PUBLIC_LEAVE_ENABLED: process.env.LEAVE_SMOKE_OFF === "1" ? "0" : "1", LEAVE_ADMINS: "gregory.leave@deushcs.com",
         NEXT_PUBLIC_SIGN_IN_ENABLED: process.env.SIGN_IN_SMOKE_OFF === "1" ? "0" : "1", CODE_SECRET: "sign-in-smoke-emulator-only-secret-32-characters",
         // Public placeholder used only with the browser push stub; no real push service is contacted.

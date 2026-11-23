@@ -102,3 +102,26 @@ The UI uses the shipped guide’s sheets, form fields and request rows. N41 reco
 - Review captures are in `test-results/leave-look/L8/review/`. Shared Mine captures cover Annual leave, Sick, a few hours, waiting, approved and declined requests, and three audit changes at 1280, 390 and 320 px.
 - TypeScript, scoped ESLint, 1,806 unit tests and the feature-disabled build passed. The browser run passed 18 cases and skipped the 320 px case on desktop. The remaining desktop retry passed after its test held all person readbacks until the manual retry. Three focused phone retakes passed.
 - The emulator data run passed 414 of 415 tests. The adjustment concurrency case hit `Test timed out in 5000ms` and passed its isolated rerun in 2.87 seconds with a 15-second limit. The gallery contains 78 screenshots and 11 crops.
+
+## E1 — End to end
+
+The desktop spec signs Calista, Audrey and Gregory in through the Auth emulator in separate browser sessions. It seeds opening profiles and national holidays, then submits all five requests, approves the four employee requests and saves Gregory’s adjustment through Leave. One Firestore emulator keeps those records across the pinned days.
+
+| Pinned day | Balance and History checks |
+|---|---|
+| 31 Dec 2026 | Audrey 5, including 1 day used on 24 Dec. |
+| 6 Jan 2027 | Audrey 4, including 2 days used over 4–6 Jan. The 5 Jan holiday is excluded. |
+| 20 Jan | Gregory 6 after the −5 adjustment. |
+| 31 Jan | Calista −3 before her first monthly +1. Audrey 4 and Gregory 6. |
+| 1 Feb | Calista −2 after her first monthly +1. Audrey 5 and Gregory 7. |
+| 10 Feb | Calista −2, Audrey 4.5 after her morning half day, and Gregory 7. Audrey’s warning shows 2.5 days due to lapse. |
+| 28 Feb | Calista −2, Audrey 4.5 and Gregory 5 after the first 2 days of his 4-day request. |
+| 1 Mar | Calista −1 with no lapse. Audrey lapses 2.5, earns 1 and ends at 3. Gregory lapses 3, earns 1, uses the remaining 2 days and ends at 1. |
+| After cancellation, 1 Mar | Gregory cancels Calista’s approved January leave. Calista sees Cancelled and a balance of 2. The three-day debit disappears from History. |
+
+The Team badge went from four waiting to zero. The fake transport recorded exactly four request pushes to Gregory, four approval pushes to the employees and the cancellation push to Calista. Gregory’s own leave and adjustment generated no push.
+
+- Desktop Playwright passed E1 and all 15 existing Leave tests. The first E1 run expected the empty badge’s accessible name to be `Leave`. The focused rerun passed with `Leave 0 waiting`.
+- TypeScript and scoped ESLint passed. The unit run passed 1,804 of 1,806 tests. The two failures (`spawnSync /opt/node-v26.10.0-linux-arm64/bin/node EPERM` and `Test timed out in 5000ms`) both passed on the focused rerun.
+- `npm run test:data` passed all 416 tests across 19 files. The emulator clock test covers an advanced date, blank and invalid dates, and fallback after file removal.
+- The Next.js build passed with Leave and sign-in disabled and an empty Firebase Admin key. `git diff --check` passed.

@@ -1,4 +1,5 @@
 import "server-only";
+import { readFileSync } from "node:fs";
 import type { DocumentSnapshot, QueryDocumentSnapshot, Transaction } from "firebase-admin/firestore";
 import { after } from "next/server";
 import { adminDb } from "./admin";
@@ -79,8 +80,25 @@ export function isLeaveAdmin(email: string): boolean {
 }
 
 export function leaveToday(now: Date = new Date()): string {
-  const testDay = USE_EMULATOR ? process.env.LEAVE_TEST_DATE : undefined;
-  return isIsoDay(testDay) ? testDay : wibToday(now);
+  if (USE_EMULATOR) {
+    // Browser tests can advance a shared day without restarting Next or clearing Firestore.
+    const clockFile = process.env.LEAVE_TEST_DATE_FILE;
+    if (clockFile) {
+      let day: string | undefined;
+      try {
+        day = readFileSync(clockFile, "utf8").trim();
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      if (day !== undefined) {
+        if (!isIsoDay(day)) throw new Error("The Leave emulator clock needs an ISO date.");
+        return day;
+      }
+    }
+    const testDay = process.env.LEAVE_TEST_DATE;
+    if (isIsoDay(testDay)) return testDay;
+  }
+  return wibToday(now);
 }
 
 const people = () => adminDb.collection("people");
