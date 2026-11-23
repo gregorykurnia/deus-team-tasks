@@ -155,3 +155,27 @@ The Team badge went from four waiting to zero. The fake transport recorded exact
 ### Light checks
 
 `npx tsc --noEmit`, `npm run test:unit` (1,806 passed across 74 files) and `git diff --check` passed. ESLint has no matching configuration for the two Markdown files. R1b owns the seven smoke failures and the audit setup timeout listed above.
+
+## R1b — Fix recorded failures
+
+Each of the seven R1a smoke failures passed a scoped Playwright replay on the local Firestore and Auth emulators.
+
+| Case | Repair and evidence |
+|---|---|
+| Leave Team deep link | Enter each code digit in its own input. The first replay reached the next stale assertion. After rejecting Audrey’s one-day request, Available moves from 7 to 8 days. The corrected case passed on desktop and phone, including reload, the admin decisions and the employee’s view. |
+| Leave ledger | Check the three people concurrently within each pinned date and give the scenario four minutes. The desktop case passed in 2.1 minutes through accrual, the March lapse and restoration of all three days after cancellation. |
+| Two notification cases | Warm the guarded routes and let the UI assertions cover the client’s deadline. Both cases passed on desktop and enable/test/sign-out also passed on phone. The forced lost reply and retry kept one device, the forced 503 showed an error, and access removal returned 403. |
+| Two Task layout cases | Give the full fixture time to seed and take the synthetic HTML audit out of the Firestore reset fixture. Both cases passed on phone and desktop. The stress fixture kept 2,408 tasks, 48 groups and all 179 linked companies. |
+| More on the smallest phone | Wait for the sheet’s entrance to finish and assert that the whole live status is in the viewport. The shared navigation case passed on both projects, including direct `/companies?more=1` at 320 and 390 pixels. |
+| Remove a company option | Wait for Remove inside the named options dialog and require the confirmation before scanning. `npm run a11y -- --only '^173-fields-and-options-remove-an-option$'` passed both states with zero setup errors or violations. The same state compared against its prototype at 1280 and 390 with zero capture, runtime or layout errors. |
+
+The required narrow stress shot exposed a separate real overflow in the Tasks toolbar. At 320 pixels, the four work labels with their counts widened the document to 362 pixels and made the browser shrink the Task sheet. The counts now stack below their labels on narrow phones. The final stress case passed at 320, 390, 1280 and 1440. The long description and pinned Save changes fit in the task opened from `/tasks?task=s1`.
+
+The gallery is in `test-results/r1b-look/` and `test-results/leave-look/L7/`. Native frames and 100% crops show the Task sheet before and after, the work filters with the sheet closed, More, notification states, the first request after reload, the last waiting request, the refreshed Team balance, and the option confirmation. The comparison uses the existing design guide for Leave and the prototype for Companies.
+
+`npx tsc --noEmit`, ESLint on the touched TypeScript and comparison recipe, `npm run test:unit -- --maxWorkers=2 --testTimeout=15000` (1,806 tests), and `npm run build` passed. ESLint reported three existing unused-variable warnings in `scripts/compare/recipes.mjs`. The initial attached browser probe exited with SIGTERM, and the completed replays ran in logged processes.
+
+### R1 items
+
+- Exact Leave reference comparison is carried in N38 and N40 because the referenced screens HTML is missing. The gallery uses the design guide and the existing L7 frames.
+- At 1280 pixels, the sidebar wraps the two digits of an open-task count vertically beside a long starred group. The crop is `test-results/r1b-look/crops/1280-sidebar-count-wrap.png`. This is in `desk/SideNav.module.css:184`, separate from the Tasks toolbar overflow.

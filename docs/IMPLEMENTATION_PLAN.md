@@ -44,7 +44,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 | L8 | Admin person sheet (add leave, adjust, leave details, history with audit) and the Holidays sheet. [L8](implementation/leave.md#l8--admin-a-person-and-the-holidays) [look] | Sol Max | 2026-11-23 — admin sheets and look verified |
 | E1 | End to end on the emulators: two people and an admin across pinned days, through 1 February and the 1 March lapse. [E1](implementation/leave.md#e1--end-to-end) [no look] | Sol xHigh | 2026-11-23 — desktop replay verified |
 | R1a | Full suite, a11y and scoped compare once; list every failure, fix nothing. [R1a](implementation/leave.md#r1a--full-check-run) [no look] | Sol High | 2026-11-23 — checks run, 8 failures logged |
-| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/leave.md#r1b--fix-recorded-failures) [look] | Sol Max | |
+| R1b | Fix the failures R1a listed, rerunning only what each fix touched. [R1b](implementation/leave.md#r1b--fix-recorded-failures) [look] | Sol Max | 2026-11-23 — eight scoped replays and look checked |
 | R1 | Phase review: hunt for faults in balances, permissions, privacy and pushes, quick fixes, owner handoff. [R1](implementation/leave.md#r1--phase-review) [no look] | Opus 5.5 High | |
 
 ## Phase 2: Who's away in Plan

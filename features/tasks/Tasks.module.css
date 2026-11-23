@@ -302,6 +302,12 @@
 }
 
 @media (max-width: 640px) {
+  .tbar > [role="group"]:has(> button:nth-child(4)) > button {
+    flex-basis: auto;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
   .chips {
     margin-right: -14px;
     margin-left: -14px;
@@ -311,6 +317,14 @@
 
   .panel {
     padding: 6px 4px 8px;
+  }
+}
+
+/* Keep all four work counts aligned when there is too little room beside their labels. */
+@media (max-width: 380px) {
+  .tbar > [role="group"]:has(> button:nth-child(4)) > button {
+    flex-direction: column;
+    gap: 2px;
   }
 }
 

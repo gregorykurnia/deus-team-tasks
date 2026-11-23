@@ -1,5 +1,5 @@
 // E1: real MCP HTTP saves; R1b: task-sheet comparison and visible people suggestions.
-import type { Page } from "@playwright/test";
+import { test as browserTest, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -64,9 +64,9 @@ async function save(client: Client, changes: TaskChange[]) {
   return { preview, saved };
 }
 
-async function openTask(page: Page, id: string, title = "Task") {
+async function openTask(page: Page, id: string, title = "Task", liveTimeout = 10_000) {
   await page.goto(`/tasks?task=${id}`);
-  await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+  await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached({ timeout: liveTimeout });
   const sheet = page.getByRole("dialog", { name: title, exact: true });
   await expect(sheet).toBeVisible();
   return sheet;
@@ -101,8 +101,8 @@ base("R1b.F2: long group and task text keep the task sheet inside the capture", 
   }
 });
 
-base("R1b.F2: capture 065 with all stress tasks and their companies", { tag: "@phone" }, async ({ page }, testInfo) => {
-  base.setTimeout(120_000);
+base("R1b.F2: capture 065 with all stress tasks and their companies", { tag: "@phone" }, async ({ page, isMobile }, testInfo) => {
+  base.setTimeout(240_000); // The full fixture also runs after hours of emulator use in the smoke suite.
   // Run the existing ESM converter in Node: Playwright's CJS transform cannot load its import.meta paths.
   const stress = JSON.parse(execFileSync(process.execPath, ["--input-type=module", "-e",
     'import {convert,protoData} from "./scripts/compare/seed.mjs"; console.log(JSON.stringify(convert(protoData(true))));',
@@ -111,14 +111,15 @@ base("R1b.F2: capture 065 with all stress tasks and their companies", { tag: "@p
   // The emulator's documented 3,200-company Listen limit is independent of sheet layout. Keep every company
   // referenced by the complete stress task list, so no task changes kind or loses its company in this capture.
   const companies = stress.pipeline.filter((c: { id: number }) => linked.has(c.id));
-  await seedCompanies(companies);
-  await seedGroups(stress.taskGroups);
-  for (let i = 0; i < stress.tasks.length; i += 400) await seedTasks(stress.tasks.slice(i, i + 400));
+  await base.step("seed the stress tasks, groups and linked companies", async () => {
+    await Promise.all([seedCompanies(companies), seedGroups(stress.taskGroups)]);
+    for (let i = 0; i < stress.tasks.length; i += 400) await seedTasks(stress.tasks.slice(i, i + 400));
+  });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(String(error)));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.clock.install({ time: new Date("2026-10-20T09:00:00+07:00") });
-  const sheet = await openTask(page, "s1");
+  const sheet = await openTask(page, "s1", "Task", 45_000);
   const title = sheet.getByRole("textbox", { name: "Description", exact: true });
   await expect(title).toHaveValue(stress.tasks[0].task, { timeout: 90_000 });
   const companyName = "PT Sinar Nusantara Agribusiness and Food Processing International Holdings Group Tbk";
@@ -136,9 +137,25 @@ base("R1b.F2: capture 065 with all stress tasks and their companies", { tag: "@p
     expectedCompany: companyName, expectedKind: "Prospect work", layout, errors,
   }, null, 2));
   expect(errors).toEqual([]);
+  const narrower = isMobile ? { width: 320, height: 740 } : { width: 1280, height: 900 };
+  await page.setViewportSize(narrower);
+  await page.screenshot({ path: testInfo.outputPath(`065-task-details-stress-${narrower.width}.png`), animations: "disabled" });
+  expect((await auditLayout(page, { requireTaskSheet: true })).errors).toEqual([]);
+  await sheet.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(sheet).toBeHidden();
+  const kinds = page.getByRole("group", { name: "Kind of work" }).getByRole("button");
+  await expect(kinds).toHaveCount(4);
+  for (const option of await kinds.all()) {
+    await expect(option).toBeInViewport({ ratio: 1 });
+  }
+  await page.screenshot({ path: testInfo.outputPath(`${narrower.width}-task-kind-counts.png`), animations: "disabled" });
+  if (isMobile) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: testInfo.outputPath("390-task-kind-counts.png"), animations: "disabled" });
+  }
 });
 
-base("R1b.F2: layout audit rejects missing and offscreen sheets", { tag: "@phone" }, async ({ page }) => {
+browserTest("R1b.F2: layout audit rejects missing and offscreen sheets", { tag: "@phone" }, async ({ page }) => {
   await page.setContent('<meta name="viewport" content="width=device-width, initial-scale=1">');
   expect((await auditLayout(page, { requireTaskSheet: true })).errors).toContain("Missing task sheet control: Save changes");
   await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1">

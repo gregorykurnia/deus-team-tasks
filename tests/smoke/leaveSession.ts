@@ -22,7 +22,9 @@ export async function enterLeaveCode(page: Page, email: string) {
   await expect(enterCode).toBeVisible({ timeout: 20_000 });
   const code = await readCode();
   expect(code).toMatch(/^\d{6}$/);
-  await page.getByRole("textbox", { name: "Digit 1", exact: true }).pressSequentially(String(code));
+  for (const [index, digit] of Array.from(String(code)).entries()) {
+    await page.getByRole("textbox", { name: `Digit ${index + 1}`, exact: true }).pressSequentially(digit);
+  }
   await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 30_000 });
   const notifications = page.getByRole("dialog", { name: "Notifications", exact: true });
   if (new URL(page.url()).searchParams.has("notifications")) {

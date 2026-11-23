@@ -226,7 +226,12 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect.poll(() => readDoc("tasks", "leaveRequests/second")).toMatchObject({ status: "rejected", rejectReason: "Coverage is needed that day." });
 
     const approval = card(page, "Tue 16 Feb");
-    await expect(approval.getByText("Available leave after requests: 7 days", { exact: true })).toBeVisible();
+    await expect(approval.getByText("Available leave after requests: 8 days", { exact: true })).toBeVisible();
+    if (capture) {
+      await expect(page.getByText("Request rejected", { exact: true })).toHaveCount(0);
+      await page.evaluate(() => scrollTo(0, 0));
+      await shot(page, "after-reject");
+    }
     await approval.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(waiting(page).getByRole("article")).toHaveCount(1);
     await expect.poll(() => readDoc("tasks", "leaveRequests/first")).toMatchObject({ status: "approved", pay: "deduct" });

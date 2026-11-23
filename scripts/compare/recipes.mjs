@@ -125,7 +125,14 @@ export function recipe(p, ctx = {}) {
     case "companies:field-new": P("fields", "active"); S(click(/Add a field/)); break;
     case "companies:field-remove": P("fields", "active"); S(click(/Remove field|^Remove/, { nth: "last" })); break;
     case "companies:options": P("fields", "active"); S(click(/Options/)); break;
-    case "companies:option-remove": P("fields", "active"); S(click(/Options/), click(/^Remove /, { role: "button", within: '[role="dialog"]' })); break;
+    case "companies:option-remove":
+      P("fields", "active");
+      S(click(/Options/), async (page) => {
+        const options = page.getByRole("dialog", { name: / options$/ });
+        await options.getByRole("button", { name: /^Remove / }).first().click({ timeout: 10_000 });
+        await page.getByRole("alertdialog", { name: /^Remove “/ }).waitFor({ timeout: 10_000 });
+      });
+      break;
     case "companies:export": S(tool(/Export/)); break;
 
     case "notes:remarks": { // the first prospect with long remarks, as the prototype opens; the normal data has none, so it opens the first prospect and there is nothing to unfold

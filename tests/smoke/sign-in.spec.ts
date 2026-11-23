@@ -59,7 +59,9 @@ async function sameLeft(first: Locator, second: Locator) {
 async function entryLayout(page: Page, phone: boolean, personName?: string) {
   const entry = page.getByRole("link", { name: personName ? new RegExp(personName) : /^Sign in/ });
   if (phone) {
-    const plan = page.getByRole("dialog", { name: "More" }).getByRole("link", { name: /^Plan/ });
+    const more = page.getByRole("dialog", { name: "More", exact: true });
+    await more.evaluate((sheet) => Promise.all(sheet.getAnimations().map((animation) => animation.finished)));
+    const plan = more.getByRole("link", { name: /^Plan/ });
     await sameLeft(entry.locator("b"), plan.locator("span").first());
     await expect(entry).toHaveCSS("background-color", "rgba(255, 255, 255, 0.75)");
     if (!personName) {
@@ -67,11 +69,8 @@ async function entryLayout(page: Page, phone: boolean, personName?: string) {
         .toBe(await plan.locator("svg").evaluate((el) => getComputedStyle(el).color));
       await readableSpaces(entry.locator("small"));
     }
-    const liveStatus = page.getByRole("dialog", { name: "More" }).getByText("Live, everyone's up to date", { exact: true });
-    await expect(liveStatus).toBeVisible();
-    const live = await liveStatus.boundingBox();
-    expect(live).not.toBeNull();
-    expect(live!.y + live!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    const liveStatus = more.getByText("Live, everyone's up to date", { exact: true });
+    await expect(liveStatus).toBeInViewport({ ratio: 1 });
   } else {
     const install = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Install the app" });
     await sameLeft(entry.locator("b"), install.locator("span"));

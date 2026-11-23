@@ -66,6 +66,13 @@ async function shot(page: Page, name: string) {
   await expectWordGaps(page.getByRole("link", { name: /Audrey (Turn on notifications|Notifications on|Notifications off)/ }).locator("small"));
 }
 
+test.beforeAll(async ({ request }) => {
+  // Compile the local routes before testing the browser's own request deadline.
+  for (const path of ["/api/push/devices", "/api/push/test"]) {
+    expect((await request.post(path)).status()).toBe(401);
+  }
+});
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   pageErrors.set(page, errors);
@@ -119,7 +126,7 @@ test("turn on, test, resave a lost device, and sign out remove this device", { t
   await shot(page, `${isMobile ? "390" : "1280"}-account-off`);
   await page.getByRole("link", { name: "Turn on notifications", exact: true }).click();
   await sheet(page).getByRole("button", { name: "Turn on notifications", exact: true }).click();
-  await expect(sheet(page).getByText(/^Notifications are on for this/)).toBeVisible();
+  await expect(sheet(page).getByText(/^Notifications are on for this/)).toBeVisible({ timeout: 20_000 });
   expect(await page.evaluate(() => window.notificationMock.askedFromTap)).toBe(true);
   expect((await documents(`people/${EMAIL}/devices`)).length).toBe(1);
   await shot(page, `${isMobile ? "390" : "1280"}-on`);
@@ -219,7 +226,7 @@ test("a failed registration retries the existing subscription; test errors never
   expect((await documents("_fakePush")).length).toBe(0);
   await page.unroute("**/api/push/test");
   await sheet(page).getByRole("button", { name: "Send a test" }).click();
-  await expect(page.getByText(/^Test sent\./)).toBeVisible();
+  await expect(page.getByText(/^Test sent\./)).toBeVisible({ timeout: 20_000 });
   expect((await documents("_fakePush")).length).toBe(1);
   // Real removed-person 403, rather than stubbing away the access check.
   expect((await fetch(`${DEMO}/people/${EMAIL}?updateMask.fieldPaths=active`, { method: "PATCH", headers: OWNER, body: JSON.stringify({ fields: { active: encodeValue(false) } }) })).ok).toBe(true);

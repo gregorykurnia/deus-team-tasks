@@ -70,7 +70,7 @@ async function expectLine(page: Page, label: string, date: string, debit: string
 
 async function historyOn(day: string, ...checks: [Page, string][]) {
   await pinLeaveDate(day);
-  for (const [page, amount] of checks) {
+  await Promise.all(checks.map(async ([page, amount]) => {
     const read = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/leave/me"
       && !new URL(response.url()).search && response.request().method() === "GET");
     await page.goto("/leave?view=history");
@@ -79,7 +79,7 @@ async function historyOn(day: string, ...checks: [Page, string][]) {
     expect(await response.json()).toMatchObject({ today: day });
     await expectBalance(page, amount);
     await expect(history(page)).toBeVisible();
-  }
+  }));
 }
 
 function openPerson(page: Page, name: string) {
@@ -91,7 +91,7 @@ test.describe("Leave ledger across pinned days", () => {
   test.afterEach(resetLeaveDate);
 
   test("replays the three worked balances through February, March lapse and approved cancellation", async ({ page: calistaPage, browser, baseURL }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(240_000);
     await seedWorkedExample();
     await pinLeaveDate(openingDate);
     const audreyContext = await browser.newContext({ baseURL });
