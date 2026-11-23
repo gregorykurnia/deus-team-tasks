@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { isIsoDay } from "@/lib/dates";
 import {
   checkRequest, days, defaultLeavePay, LAW_LEAVE_EVENTS, LEAVE_PAY_OPTIONS, LEAVE_REASON_LABELS, LEAVE_TYPE_LABELS,
   leaveOperationId, SPECIAL_LEAVE_EVENTS, type LeaveEvent, type LeaveInput, type LeaveIssue,
@@ -11,11 +12,12 @@ import { askLeave, LeaveApiError } from "@/lib/leaveClient";
 import { buildLedger } from "@/lib/leaveLedger";
 import Button from "@/ui/Button";
 import Field from "@/ui/Field";
-import { DateInput, SelectInput, TextArea, TimeInput } from "@/ui/Inputs";
+import { SelectInput, TextArea, TimeInput } from "@/ui/Inputs";
 import Notice from "@/ui/Notice";
 import Segmented from "@/ui/Segmented";
 import Sheet from "@/ui/Sheet";
 import { useLeaveData, withLeaveDeadline } from "./LeaveData";
+import LeaveDateInput from "./LeaveDateInput";
 import adminStyles from "./AdminLeave.module.css";
 import styles from "./Leave.module.css";
 
@@ -47,7 +49,7 @@ function availableAfter(data: AskData, draft: Draft, holidays: MyLeave["requestH
 }
 
 function entered(draft: Draft, field: LeaveIssue["field"]): boolean {
-  if (field === "start" || field === "end") return !!draft[field];
+  if (field === "start" || field === "end") return isIsoDay(draft[field]);
   if (field === "hours.from") return !!draft.hours?.from;
   if (field === "hours.to") return !!draft.hours?.to;
   return field === "note" && draft.note.length > 500;
@@ -179,7 +181,7 @@ export default function AskLeaveSheet({ data, email, recipient, onClose, onSent 
   const events = special ? specialEvents : lawEvents;
   const eventLabel = events.find(([value]) => value === draft.event)?.[1];
   const specialLimit = special && draft.event && SPECIAL_LEAVE_EVENTS[draft.event as keyof typeof SPECIAL_LEAVE_EVENTS]?.days;
-  const showHalf = draft.type === "annual" && draft.start && draft.start === draft.end;
+  const showHalf = draft.type === "annual" && isIsoDay(draft.start) && draft.start === draft.end;
   const startError = errorFor("start") ?? (hours ? errorFor("end") : undefined);
 
   return (
@@ -190,7 +192,7 @@ export default function AskLeaveSheet({ data, email, recipient, onClose, onSent 
         {days(checked.days).replace(" day", " working day")}{after !== null && <>{" · Available after: "}<b>{days(after)}</b>{after < 0 && ", taken in advance"}</>}
       </p>}
       <div className={styles.askActions}>
-        <Button variant="quiet" onClick={close}>Cancel</Button>
+        <Button onClick={close}>Cancel</Button>
         <Button variant="main" type="submit" form={formId} busy={busy} busyLabel={recipient ? "Adding…" : "Sending…"}>
           {recipient ? "Add leave" : "Send request"}
         </Button>
@@ -227,12 +229,12 @@ export default function AskLeaveSheet({ data, email, recipient, onClose, onSent 
             )}</Field>}
           <div className={hours ? undefined : styles.askPair}>
             <Field label={hours ? "Date" : "From"} error={startError}>{(control) => (
-              <DateInput {...control} required value={draft.start} onChange={(start) => change({
+              <LeaveDateInput {...control} label={hours ? "Date" : "From date"} required value={draft.start} onChange={(start) => change({
                 start, end: hours || !draft.end || draft.end === draft.start ? start : draft.end,
               })} />
             )}</Field>
             {!hours && <Field label="To" error={errorFor("end")}>{(control) => (
-              <DateInput {...control} required value={draft.end} onChange={(end) => change({ end })} />
+              <LeaveDateInput {...control} label="To date" required value={draft.end} onChange={(end) => change({ end })} />
             )}</Field>}
           </div>
           {showHalf && <Field group label="Length" error={errorFor("half")}>{(control) => <div {...control}>

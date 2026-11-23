@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import type { LeaveProfile, LeaveRequest } from "@/lib/leave";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
 import { readAll, readDoc, seed } from "../support/emulator";
@@ -14,7 +14,11 @@ const teamUrl = "/leave?view=team";
 const teamApi = "**/api/leave/team";
 const capture = process.env.LEAVE_SHOTS === "team";
 const teamLook = { capture, gallery: "test-results/leave-look/L7" };
-const personLook = { capture: process.env.LEAVE_SHOTS === "person", gallery: "test-results/leave-look/L8" };
+const review = process.env.LEAVE_SHOTS === "l8-review";
+const personLook = {
+  capture: review || process.env.LEAVE_SHOTS === "person",
+  gallery: review ? "test-results/leave-look/L8/review" : "test-results/leave-look/L8",
+};
 const waiting = (page: Page) => page.getByRole("region", { name: "Waiting for you" });
 const people = (page: Page) => page.getByRole("region", { name: "People" });
 const card = (page: Page, date: string) => waiting(page).getByRole("article").filter({ hasText: date });
@@ -467,12 +471,23 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
 const personUrl = (email = staff) => `${teamUrl}&person=${encodeURIComponent(email)}`;
 const exactButton = (name: string) => ({ name, exact: true });
 
-async function personShot(page: Page, name: string) {
+async function personShot(page: Page, name: string, row?: Locator) {
+  if (personLook.capture) await row?.scrollIntoViewIfNeeded();
   await shot(page, name, personLook);
+  const viewport = page.viewportSize()!;
+  if (review && viewport.width === 390) {
+    await page.setViewportSize({ width: 320, height: 740 });
+    try {
+      await row?.evaluate((element) => element.scrollIntoView({ block: "center" }));
+      await shot(page, name, personLook);
+    } finally {
+      await page.setViewportSize(viewport);
+    }
+  }
 }
 
 async function personFrame(page: Page, title: string, frame: string, open: () => Promise<void>, role?: "alertdialog") {
-  await openOverlay(page, title, frame, open, true, personLook, role);
+  await openOverlay(page, title, frame, open, true, { ...personLook, capture: personLook.capture && !review }, role);
 }
 
 test.describe("L8 person and holidays", { tag: "@phone" }, () => {
@@ -481,14 +496,16 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     // Compile each route before an interactive save can hit its deadline. Every Leave call here is unauthenticated.
     const responses = await Promise.all([
       request.post("/api/auth/code", { data: { email: "invalid" } }),
+      request.get("/api/leave/me"),
       request.get("/api/leave/team"),
       request.get(`/api/leave/people/${encodeURIComponent(staff)}`),
       request.post("/api/leave/adjustments", { data: {} }),
       request.put(`/api/leave/profiles/${encodeURIComponent(staff)}`, { data: {} }),
       request.post("/api/leave/requests", { data: {} }),
+      request.post("/api/leave/requests/last/cancel"),
       request.post("/api/leave/holidays/2027-02-16", { data: {} }),
     ]);
-    expect(responses.map((response) => response.status())).toEqual([200, 401, 401, 401, 401, 401, 401]);
+    expect(responses.map((response) => response.status())).toEqual([200, ...Array(responses.length - 1).fill(401)]);
   });
 
   test("deep-links into a person, adjusts their balance, audits details and adds sick leave", async ({ page, isMobile, browser, baseURL }) => {
@@ -497,6 +514,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await setup([
       request("first", "2027-02-16", { note: "Cover a client visit." }),
       request("cancelled", "2027-02-08", { type: "other", reason: "unpaid", status: "cancelled", cancelledBy: staff, cancelledAt: createdAt }),
+      request("prior-sick", "2027-02-04", { type: "sick", status: "approved", pay: "paid", note: "Recorded after returning.", decidedBy: admin, decidedAt: createdAt }),
       request("last", "2027-02-02", { status: "rejected", decidedBy: admin, decidedAt: createdAt, rejectReason: "Coverage is needed." }),
     ]);
     await signInLeave(page, personUrl(), admin);
@@ -529,20 +547,26 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
 
     await personFrame(page, "Leave details", "details", () => audrey.getByRole("button", exactButton("Leave details")).click());
     const details = dialog(page, "Leave details");
-    const accrual = details.getByLabel("+1 from", { exact: true });
-    await accrual.fill("2027-03-01");
+    const accrual = details.getByLabel("Monthly +1 day starts", { exact: true });
+    await expect(details.getByLabel("Join date", { exact: true })).toHaveValue("1 Dec 2026");
+    await accrual.fill("1 Mar 2027");
     await personShot(page, "details");
     await details.getByRole("button", exactButton("Save details")).click();
-    const audit = audrey.getByText("Details changed by Gregory: +1 from 1 Feb 2027 → 1 Mar 2027", { exact: true });
+    const auditChange = "Monthly +1 starts 1 Feb 2027 → 1 Mar 2027";
+    const audit = audrey.getByRole("listitem").filter({ hasText: auditChange });
     await expect(audit).toBeVisible({ timeout: 25_000 });
+    await expect(audit.getByText("Details changed by Gregory", { exact: true })).toBeVisible();
     await expect(balance.getByText("9.5 days", { exact: true })).toBeVisible();
-    if (personLook.capture) await audit.scrollIntoViewIfNeeded();
-    await personShot(page, "history-audit");
+    await personShot(page, "history-audit", audit);
 
     await audrey.getByRole("button", exactButton("Leave details")).click();
-    await expect(accrual).toHaveValue("2027-03-01");
+    await expect(accrual).toHaveValue("1 Mar 2027");
     const lastDay = details.getByLabel(/^Last day/);
-    await lastDay.fill("2027-02-15");
+    await lastDay.fill("31 Feb 2027");
+    await details.getByRole("button", exactButton("Save details")).click();
+    await expect(lastDay).toHaveAccessibleDescription("Choose a last day on or after the join date.");
+    await expect(lastDay).toHaveValue("31 Feb 2027");
+    await lastDay.fill("15 Feb 2027");
     await details.getByRole("button", exactButton("Save details")).click();
     const refusal = details.getByText("Cancel Audrey's request after Mon 15 Feb first.", { exact: true });
     await expect(refusal).toBeInViewport({ ratio: 1 });
@@ -554,29 +578,42 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await personFrame(page, "Add leave", "add", () => audrey.getByRole("button", exactButton("Add leave")).click());
     const add = dialog(page, "Add leave");
     await add.getByRole("button", exactButton("Sick")).click();
-    await add.getByLabel("From", { exact: true }).fill("2027-02-05");
+    await add.getByLabel("From", { exact: true }).fill("5/2/2027");
     await add.getByLabel(/^Note/).fill("Recorded by the admin.");
+    await expect(add.getByLabel("From", { exact: true })).toHaveValue("5 Feb 2027");
+    await expect(add.getByLabel("To", { exact: true })).toHaveValue("5 Feb 2027");
     await expect(add.getByRole("status")).toContainText("1 working day");
     await personShot(page, "add-sick");
     await add.getByRole("button", exactButton("Add leave")).click();
     const records = audrey.getByRole("region", { name: "Requests" });
     const rows = records.getByRole("listitem");
-    await expect(rows).toHaveCount(4);
-    await expect(rows.filter({ hasText: "Sick" })).toContainText("Approved");
+    await expect(rows).toHaveCount(5);
+    await expect(rows.filter({ hasText: "Fri 5 Feb" })).toContainText("Approved");
     await expect.poll(() => readAll("tasks", "leaveRequests")).toContainEqual(
-      expect.objectContaining({ email: staff, type: "sick", status: "approved", pay: "paid", createdBy: admin }),
+      expect.objectContaining({ email: staff, start: "2027-02-05", type: "sick", status: "approved", pay: "paid", createdBy: admin }),
     );
 
-    for (const [index, title, status] of [
-      [0, "Annual leave", "Waiting"], [1, "Other absence", "Cancelled"], [2, "Sick", "Approved"], [3, "Annual leave", "Not approved"],
-    ] as const) {
-      const open = () => rows.nth(index).getByRole("button").click();
+    const picturedRequests = [
+      [0, "Annual leave", "Waiting"], [1, "Other absence", "Cancelled"], [3, "Sick", "Approved"], [4, "Annual leave", "Not approved"],
+    ] as const;
+    for (const [index, [row, title, status]] of picturedRequests.entries()) {
+      const open = () => rows.nth(row).getByRole("button").click();
       if (index === 0) await personFrame(page, title, "request", open);
       else await open();
       const record = dialog(page, title);
       await expect(record.getByText(status, { exact: true })).toBeVisible();
-      if (title === "Sick") await expect(record.getByText(/^Approved by Gregory on /)).toBeVisible();
+      if (title === "Sick") await expect(record.getByText("Approved by Gregory on Tue 9 Feb", { exact: true })).toBeVisible();
       await personShot(page, `request-${index + 1}-${status.toLowerCase().replaceAll(" ", "-")}`);
+      if (status === "Not approved") {
+        await record.getByRole("button", exactButton("Mark as cancelled")).click();
+        const mark = page.getByRole("alertdialog", { name: "Mark this request as cancelled?" });
+        await expect(mark.getByText("The request will appear as Cancelled in Requests.")).toBeVisible();
+        await personShot(page, "request-mark-cancelled");
+        await mark.getByRole("button", exactButton("Mark as cancelled")).click();
+        await expect(record.getByText("Cancelled", { exact: true })).toBeVisible();
+        await expect(mark).toBeHidden();
+        expect(await readDoc("tasks", "leaveRequests/last")).toMatchObject({ status: "cancelled", rejectReason: "Coverage is needed." });
+      }
       await record.getByRole("button", exactButton("Close")).click();
     }
     await audrey.getByRole("button", exactButton("Close")).click();
@@ -591,10 +628,10 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
       await signInLeave(employee, personUrl(), staff);
       await expect(employee).toHaveURL("/leave");
       await expect(employee.getByText("9.5 days", { exact: true })).toBeVisible();
-      await expect(employee.getByText("Sick", { exact: true })).toBeVisible();
+      await expect(employee.getByRole("link", { name: /Sick Fri 5 Feb/ })).toBeVisible();
       await employee.getByRole("button", exactButton("History")).click();
       await expect(employee.getByText("Opening balance correction")).toBeVisible();
-      await expect(employee.getByText("Details changed by Gregory: +1 from 1 Feb 2027 → 1 Mar 2027")).toBeVisible();
+      await expect(employee.getByRole("listitem").filter({ hasText: auditChange })).toContainText("Details changed by Gregory");
       expect(personReads).toBe(0);
     } finally {
       await employeeContext.close();
@@ -611,8 +648,8 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     ]);
     await signInLeave(page, `${teamUrl}&holidays=1`, admin);
     const holidays = dialog(page, "Holidays");
-    await expect(holidays.getByRole("region", { name: "2027" }).getByText("New Year’s Day")).toBeVisible();
-    await expect(holidays.getByRole("region", { name: "2028" }).getByText("New Year’s Day")).toBeVisible();
+    await expect(holidays.getByRole("region", { name: "2027" }).getByText("Fri 1 Jan", { exact: true })).toBeVisible();
+    await expect(holidays.getByRole("region", { name: "2028" }).getByText("Sat 1 Jan", { exact: true })).toBeVisible();
     await personShot(page, "holidays");
     await holidays.getByRole("button", exactButton("Close")).click();
     const waitingRange = card(page, "Mon 15");
@@ -629,7 +666,8 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await holidays.getByRole("button", exactButton("Add holiday")).click();
     await expect(date).toBeFocused();
     await expect(holidays.getByText("Enter a valid holiday date.")).toBeVisible();
-    await date.fill("2027-02-16");
+    await holidays.getByLabel("Choose holiday date", { exact: true }).fill("2027-02-16");
+    await expect(date).toHaveValue("16 Feb 2027");
     await name.fill("  ");
     await holidays.getByRole("button", exactButton("Add holiday")).click();
     await expect(name).toBeFocused();
@@ -639,7 +677,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await expect(remove).toBeEnabled();
     await expect(waitingRange.getByText(/· 2 days$/)).toBeAttached();
     await expect(people(page).getByRole("row", { name: /^Audrey/ }).getByRole("cell").nth(1)).toHaveText("7 days");
-    await date.fill("2027-02-16");
+    await date.fill("16 Feb 2027");
     await name.fill("TEAM HOLIDAY");
     await holidays.getByRole("button", exactButton("Add holiday")).click();
     await expect(holidays.getByText("There is already a holiday on this date.")).toBeVisible();
@@ -652,6 +690,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await personFrame(page, "Remove this holiday?", "holidays-remove", () => remove.click(), "alertdialog");
     const confirmation = page.getByRole("alertdialog", { name: "Remove this holiday?" });
     await expect(confirmation.getByText("Team holiday")).toBeVisible();
+    await expect(nameError).toBeHidden();
     await personShot(page, "holidays-remove");
     await confirmation.getByRole("button", exactButton("Remove holiday")).click();
     await expect(remove).toHaveCount(0);
@@ -678,6 +717,9 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     const sent = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
     const keys: string[] = [];
+    let readbackUnavailable = false;
+    // A Team refresh can also read the open person, so hold all readbacks until the manual retry.
+    await page.route("**/api/leave/people/**", (route) => readbackUnavailable ? route.abort() : route.continue());
     await page.route("**/api/leave/adjustments", async (route) => {
       keys.push(route.request().headers()["idempotency-key"]);
       if (keys.length === 1) {
@@ -686,7 +728,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
         await route.abort();
       } else if (keys.length === 2) {
         expect((await route.fetch()).ok()).toBe(true);
-        await page.route("**/api/leave/people/**", (read) => read.abort(), { times: 1 });
+        readbackUnavailable = true;
         await route.abort();
       } else await route.continue();
     });
@@ -703,6 +745,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await expect(adjust.getByRole("alert")).toHaveText(/Couldn’t confirm the adjustment/);
     await expect(reason).toHaveValue("Half day correction");
     expect(await readAll("tasks", "leaveAdjustments")).toHaveLength(1);
+    readbackUnavailable = false;
     await save.click();
     await expect(audrey.getByText("Half day correction")).toBeVisible();
     expect(keys).toHaveLength(3);
@@ -745,7 +788,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     const audrey = dialog(page, "Audrey");
     await audrey.getByRole("button", exactButton("Leave details")).click();
     const details = dialog(page, "Leave details");
-    const accrual = details.getByLabel("+1 from", { exact: true });
+    const accrual = details.getByLabel("Monthly +1 day starts", { exact: true });
     const detailsApi = "**/api/leave/profiles/**";
     await page.route(detailsApi, async (route) => {
       const first = await route.fetch();
@@ -767,7 +810,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await expect(reloadDetails).toBeFocused();
     await expect(save).toBeDisabled();
     await reloadDetails.click();
-    await expect(accrual).toHaveValue("2027-04-01");
+    await expect(accrual).toHaveValue("1 Apr 2027");
     expect(await readAll("tasks", "leaveAudit")).toHaveLength(2);
     await details.getByRole("button", exactButton("Cancel")).click();
     await audrey.getByRole("button", exactButton("Close")).click();
@@ -834,7 +877,7 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
     await person.getByRole("button", exactButton("Leave details")).click();
     const details = dialog(page, "Leave details");
     const lastDay = details.getByLabel(/^Last day/);
-    await lastDay.fill("2027-02-15");
+    await lastDay.fill("15 Feb 2027");
     await details.getByRole("button", exactButton("Save details")).click();
     const error = details.getByText(`Cancel ${name}'s 2 requests after Mon 15 Feb first.`, { exact: true });
     await expect(error).toBeInViewport({ ratio: 1 });

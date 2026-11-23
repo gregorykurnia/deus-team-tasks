@@ -159,8 +159,8 @@ All three have `openingDate` 2026-12-01; the opening includes that day's +1.
   to today.
 - **Leave details:** admin only. `accrualStart` must be a 1st; `openingDate` ≥ `joinDate`; `endDate` ≥ `joinDate`.
   Setting `endDate` is refused while the person has waiting or approved requests with days after it: "Cancel
-  Audrey's 2 requests after Fri 29 Jan first." Every changed field writes a `leaveAudit` row, shown in the person's
-  history as "Details changed by Gregory: +1 from 1 Feb 2027 → 1 Jan 2027".
+  Audrey's 2 requests after Fri 29 Jan first." Every changed field writes a `leaveAudit` row. History shows
+  "Details changed by Gregory" above the change, for example "Monthly +1 starts 1 Feb 2027 → 1 Jan 2027".
 - **Holidays:** admin only; add (date, name 1–60 characters) or remove. The sheet says "Changing a holiday recounts
   every request on that day."
 - **Setup script** `npm run leave:setup -- <file.json> [--apply]` (pattern of `scripts/people.mjs`, dry run by
@@ -221,7 +221,7 @@ chose no separate approval, 2026-11-23) shows every frame below at 390 and 1280 
    with a past last day at the bottom, muted, `Left Fri 29 Jan`. Phones show each person as a row with balance and
    available, the rest on their page.
 8. **Person sheet** (`?person=<email>`): their balance card, **Add leave** (the ask sheet with this person),
-   **Adjust balance** (days ± in halves, reason), **Leave details** (join date, +1 from, last day, opening balance and
+   **Adjust balance** (days ± in halves, reason), **Leave details** (join date, monthly +1 day starts, last day, opening balance and
    date), their requests and history (audit lines included).
 9. **Holidays sheet** (from the Team view): the list by year, add date and name, remove.
 10. **Phase 2, Plan:** Month cells list `Away: Audrey, Sovie ½, Thania 13:00–15:00`, at most as many names as fit on

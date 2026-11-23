@@ -22,6 +22,21 @@ export function isIsoDay(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && isoOf(parseIso(value)) === value;
 }
 
+// The Leave fields accept a day-first date or an ISO date pasted from elsewhere.
+export function parseDayFirstDate(text: string): string | null {
+  const value = text.trim();
+  if (isIsoDay(value)) return value;
+  const numeric = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+  const parts = numeric ?? /^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/i.exec(value);
+  if (!parts) return null;
+  const [, day, monthText, year] = parts;
+  const name = monthText.toLowerCase();
+  const month = numeric ? Number(monthText) : 1 + MONTHS_LONG.findIndex((full, index) =>
+    name === full.toLowerCase() || name === MONTHS_SHORT[index].toLowerCase());
+  const iso = `${year}-${String(month).padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return isIsoDay(iso) ? iso : null;
+}
+
 export function parseIso(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d);

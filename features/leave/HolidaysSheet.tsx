@@ -9,11 +9,12 @@ import Button from "@/ui/Button";
 import Dialog from "@/ui/Dialog";
 import EmptyState from "@/ui/EmptyState";
 import Field from "@/ui/Field";
-import { DateInput, TextInput } from "@/ui/Inputs";
+import { TextInput } from "@/ui/Inputs";
 import Notice from "@/ui/Notice";
 import Sheet from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
 import { useLeaveData, withLeaveDeadline } from "./LeaveData";
+import LeaveDateInput from "./LeaveDateInput";
 import { useAdminLeaveAction } from "./useAdminLeaveAction";
 import styles from "./AdminLeave.module.css";
 import leaveStyles from "./Leave.module.css";
@@ -150,14 +151,15 @@ export default function HolidaysSheet({ team, email, onClose, onReload }: {
         {syncing && !add.busy && !remove.busy && <Notice tone="error" action={
           <Button small busy={reloading} onClick={() => void reloadList()}>Try again</Button>
         }>Couldn’t refresh the holiday list.</Notice>}
-        <form className={styles.adminForm} ref={form} onSubmit={submit} noValidate>
+        <form className={target ? `${styles.adminForm} ${styles.behindConfirmation}` : styles.adminForm} inert={!!target}
+          ref={form} onSubmit={submit} noValidate>
           {add.message && <Notice tone="error" action={add.conflict && <Button small data-leave-reload busy={add.busy} onClick={reloadAddition}>Reload holidays</Button>}>
             {add.message}
           </Notice>}
           <fieldset className={styles.fields} disabled={blocked || add.conflict}>
             <div className={styles.holidayFields}>
               <Field label="Date" error={add.fieldError("date")}>{(control) => (
-                <DateInput {...control} required value={draft.date} onChange={(date) => edit({ date })} />
+                <LeaveDateInput {...control} label="Holiday date" required value={draft.date} onChange={(date) => edit({ date })} />
               )}</Field>
               <Field label="Holiday name" error={add.fieldError("name")}>{(control) => (
                 <TextInput {...control} required maxLength={60} value={draft.name} onChange={(event) => edit({ name: event.target.value })} />
@@ -172,8 +174,8 @@ export default function HolidaysSheet({ team, email, onClose, onReload }: {
           {[...byYear(team.holidays)].map(([year, holidays]) => <section key={year} aria-label={year}>
             <h3>{year}</h3>
             <ul className={leaveStyles.rows}>{holidays.map((holiday) => <li className={leaveStyles.row} key={holiday.date}>
-              <span className={leaveStyles.rowCopy}><b>{holiday.name}</b><small>{weekdayDate(holiday.date, team.today)}</small></span>
-              <Button small variant="quietRed" aria-label={`Remove ${holiday.name}, ${weekdayDate(holiday.date, team.today)}`}
+              <span className={leaveStyles.rowCopy}><b>{holiday.name}</b><small>{weekdayDate(holiday.date, holiday.date)}</small></span>
+              <Button small variant="quietRed" aria-label={`Remove ${holiday.name}, ${weekdayDate(holiday.date, "")}`}
                 disabled={blocked} onClick={() => {
                   if (lastToast.current !== null) toast.dismiss(lastToast.current);
                   lastToast.current = null;

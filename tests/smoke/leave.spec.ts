@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { readAll, readDoc, seed } from "../support/emulator";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
@@ -26,6 +26,7 @@ const askField = (page: Page, name: string) => askSheet(page).getByLabel(name, {
 const preview = (page: Page) => askSheet(page).getByRole("status");
 const failedSend = "Not sent. Check your connection and try again.";
 const captureAsk = process.env.LEAVE_SHOTS === "1" || process.env.LEAVE_SHOTS === "ask";
+const captureReview = process.env.LEAVE_SHOTS === "l8-review";
 
 async function people(name = "Audrey", adminName = "Gregory") {
   await seed("tasks", "people", [{ id: staff, email: staff, name, active: true }, { id: admin, email: admin, name: adminName, active: true }]);
@@ -51,7 +52,8 @@ function request(id: string, changes: Partial<LeaveRequest> = {}) {
 const signIn = (page: Page, next: string, email = staff) => signInLeave(page, next, email);
 
 async function shot(page: Page, frame: string) {
-  const capture = frame.startsWith("ask-") ? captureAsk : process.env.LEAVE_SHOTS === "1";
+  const reviewFrame = captureReview && frame.startsWith("mine-");
+  const capture = reviewFrame || (frame.startsWith("ask-") ? captureAsk : process.env.LEAVE_SHOTS === "1");
   if (capture) {
     await expect(page.getByText(/^Signed in as /)).toHaveCount(0);
     if (frame === "signed-out" || frame.startsWith("admin-nav")) await expect(page.getByText("Connecting…", { exact: true })).toHaveCount(0);
@@ -81,7 +83,7 @@ async function shot(page: Page, frame: string) {
   });
   expect(clipped, frame).toEqual([]);
   if (capture) {
-    const folder = frame.startsWith("ask-") ? "leave-look/L6" : "leave-look";
+    const folder = reviewFrame ? "leave-look/L8/review" : frame.startsWith("ask-") ? "leave-look/L6" : "leave-look";
     await page.screenshot({ path: `test-results/${folder}/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
   }
 }
@@ -151,6 +153,22 @@ async function askDates(page: Page, from: string, to = from) {
   await askField(page, "To").fill(to);
 }
 
+async function mineReviewShot(page: Page, frame: string, row?: Locator) {
+  if (!captureReview) return;
+  await row?.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  await shot(page, frame);
+  const viewport = page.viewportSize()!;
+  if (viewport.width === 390) {
+    await page.setViewportSize({ width: 320, height: 740 });
+    try {
+      await row?.evaluate((element) => element.scrollIntoView({ block: "center" }));
+      await shot(page, frame);
+    } finally {
+      await page.setViewportSize(viewport);
+    }
+  }
+}
+
 test.describe("Leave", { tag: "@phone" }, () => {
   test.skip(() => process.env.LEAVE_SMOKE_OFF === "1" || process.env.SIGN_IN_SMOKE_OFF === "1", "Leave needs both flags.");
   test.use({ actionTimeout: 12_000, navigationTimeout: 35_000 });
@@ -162,6 +180,61 @@ test.describe("Leave", { tag: "@phone" }, () => {
     page.on("pageerror", (error) => errors.push(error));
   });
   test.afterEach(({ page }) => { expect(pageErrors.get(page)).toEqual([]); });
+
+  test("keeps the shared Leave forms, requests and audit rows readable in Mine", async ({ page }) => {
+    test.setTimeout(captureReview ? 180_000 : 80_000);
+    await askProfile({ email: admin, name: "Gregory" });
+    await seed("tasks", "leaveRequests", [
+      request("mine-waiting", { email: admin, name: "Gregory", createdBy: admin }),
+      request("mine-approved", { email: admin, name: "Gregory", start: "2027-02-15", end: "2027-02-15", status: "approved",
+        pay: "deduct", decidedBy: admin, decidedAt: at }),
+      request("mine-refused", { email: admin, name: "Gregory", start: "2027-02-04", end: "2027-02-04", status: "rejected",
+        decidedBy: admin, decidedAt: at, rejectReason: "Coverage is needed." }),
+    ]);
+    await signIn(page, "/leave", admin);
+    await askLink(page).click();
+    const ask = askSheet(page);
+    await askDates(page, "17/2/2027", "18 Feb 2027");
+    await expect(askField(page, "From")).toHaveValue("17 Feb 2027");
+    await expect(preview(page)).toContainText("2 working days");
+    await mineReviewShot(page, "mine-annual");
+    await ask.getByRole("button", { name: "Sick", exact: true }).click();
+    await expect(askField(page, "To")).toHaveValue("18 Feb 2027");
+    await mineReviewShot(page, "mine-sick");
+    await ask.getByRole("button", { name: "Other absence", exact: true }).click();
+    await askField(page, "Reason").selectOption("hours");
+    await askField(page, "From time").fill("09:30");
+    await askField(page, "To time").fill("11:00");
+    await expect(askField(page, "Date")).toHaveValue("17 Feb 2027");
+    await mineReviewShot(page, "mine-hours");
+    await ask.getByRole("button", { name: "Close", exact: true }).click();
+
+    for (const [label, frame] of [
+      ["Waiting", "mine-request-waiting"], ["Approved", "mine-request-approved"], ["Not approved", "mine-request-declined"],
+    ]) {
+      await requests(page).getByRole("link", { name: new RegExp(`Annual leave.*${label}$`) }).click();
+      const record = sheet(page);
+      await expect(record.getByText(label, { exact: true })).toBeVisible();
+      if (label === "Not approved") await expect(record.getByRole("button", { name: "Mark as cancelled" })).toBeVisible();
+      await mineReviewShot(page, frame);
+      await record.getByRole("button", { name: "Close", exact: true }).click();
+    }
+
+    const changes = [
+      { field: "accrualStart", from: "2027-02-01", to: "2027-04-01", text: "Monthly +1 starts 1 Feb 2027 → 1 Apr 2027" },
+      { field: "openingBalance", from: 7, to: 8, text: "Opening balance 7 days → 8 days" },
+      { field: "endDate", from: "2027-02-26", to: null, text: "Last day 26 Feb 2027 → None" },
+    ] as const;
+    for (const [index, { field, from, to, text }] of changes.entries()) {
+      const row = { id: field, email: admin, by: admin, at: at + index, field, from, to } satisfies LeaveAudit;
+      await seed("tasks", "leaveAudit", [row]);
+      if (index === 0) await page.goto("/leave?view=history");
+      else await page.reload();
+      const change = main(page).getByRole("listitem").filter({ hasText: text });
+      await expect(change).toContainText("Details changed by Gregory", { timeout: 25_000 });
+      await mineReviewShot(page, `mine-audit-${field}`, change);
+    }
+  });
 
   test("a signed-out deep link comes back to the request; Mine shows balances, statuses and history after cancellation", async ({ page }) => {
     test.setTimeout(100_000); // The first visit compiles both Leave and sign-in on the isolated dev server.
@@ -208,7 +281,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
     await expect(sheet(page)).toBeHidden();
     await requests(page).getByRole("link", { name: /Not approved/ }).click();
     await expect(sheet(page, "Other absence").getByText("We need cover that morning.")).toBeVisible();
-    await expect(sheet(page, "Other absence").getByRole("button", { name: "Cancel request" })).toHaveCount(0);
+    await expect(sheet(page, "Other absence").getByRole("button", { name: /Cancel request|Mark as cancelled/ })).toHaveCount(0);
     await shot(page, "request-rejected");
     await sheet(page, "Other absence").getByRole("button", { name: "Close" }).click();
     await expect(page).toHaveURL("/leave?ref=push");
@@ -335,7 +408,8 @@ test.describe("Leave", { tag: "@phone" }, () => {
     await page.goto("/leave?view=history");
     await expect(balance(page).getByText("−99.5 days", { exact: true })).toBeVisible();
     await expect(balance(page).getByText(/2 days from 2026 lapse/)).toBeVisible();
-    await expect(main(page).getByText(`Details changed by ${name}: +1 from 1 Feb 2027 → 1 Apr 2027`)).toBeVisible();
+    const auditRow = main(page).getByRole("listitem").filter({ hasText: "Monthly +1 starts 1 Feb 2027 → 1 Apr 2027" });
+    await expect(auditRow).toContainText(`Details changed by ${name}`);
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
     const prospectLines = await navigation.getByRole("link", { name: "Prospects" }).evaluate((link) => {
       const label = [...link.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
@@ -620,7 +694,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
     release.resolve();
     await expect(askSheet(page).getByRole("alert")).toHaveText(failedSend);
     await expect(note).toHaveValue("Family plans");
-    await expect(askField(page, "From")).toHaveValue("2027-02-12");
+    await expect(askField(page, "From")).toHaveValue("12 Feb 2027");
     expect(await readAll("tasks", "leaveRequests")).toHaveLength(0);
     await shot(page, "ask-failed-send");
 
@@ -675,7 +749,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
     await askDates(page, "2027-02-15");
     reply.resolve();
     await expect(preview(page)).toHaveText("1 working day · Available after: 6 days");
-    await expect(askField(page, "From")).toHaveValue("2027-02-15");
+    await expect(askField(page, "From")).toHaveValue("15 Feb 2027");
     await expect(page.getByText("Sent to Gregory", { exact: true })).toHaveCount(0);
     await askSheet(page).getByRole("button", { name: "Close", exact: true }).click();
     await expect(page).toHaveURL("/leave");

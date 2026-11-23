@@ -1,15 +1,17 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
+import { isIsoDay } from "@/lib/dates";
 import { leaveOperationId, type LeaveProfile, type LeaveProfileDetails } from "@/lib/leave";
 import type { PersonLeave } from "@/lib/leave.server";
 import { adjustLeave, LeaveApiError, saveLeaveDetails } from "@/lib/leaveClient";
 import Button from "@/ui/Button";
 import Field from "@/ui/Field";
-import { DateInput, NumberInput, TextArea } from "@/ui/Inputs";
+import { NumberInput, TextArea } from "@/ui/Inputs";
 import Notice from "@/ui/Notice";
 import Sheet from "@/ui/Sheet";
 import { withLeaveDeadline } from "./LeaveData";
+import LeaveDateInput from "./LeaveDateInput";
 import { useAdminLeaveAction } from "./useAdminLeaveAction";
 import styles from "./AdminLeave.module.css";
 
@@ -25,7 +27,7 @@ function FormActions({ formId, busy, disabled, label, busyLabel, close }: {
   formId: string; busy: boolean; disabled?: boolean; label: string; busyLabel: string; close: () => void;
 }) {
   return <div className={styles.formActions}>
-    <Button variant="quiet" onClick={close}>Cancel</Button>
+    <Button onClick={close}>Cancel</Button>
     <Button variant="main" form={formId} type="submit" disabled={disabled} busy={busy} busyLabel={busyLabel}>{label}</Button>
   </div>;
 }
@@ -100,7 +102,7 @@ export function LeaveDetailsSheet({ data, email, onClose, onRefresh, onSaved }: 
   const form = useRef<HTMLFormElement>(null);
   const action = useAdminLeaveAction("Couldn’t confirm the leave details. Check your connection and try again.", form);
   const [draft, setDraft] = useState(() => detailsDraft(data.profile));
-  const canCarry = /^\d{4}-0[12]-/.test(draft.openingDate);
+  const canCarry = isIsoDay(draft.openingDate) && /^\d{4}-0[12]-/.test(draft.openingDate);
 
   function edit(field: Exclude<keyof typeof draft, "version">, value: string) {
     if (!action.conflict) action.clearError();
@@ -147,10 +149,10 @@ export function LeaveDetailsSheet({ data, email, onClose, onRefresh, onSaved }: 
       <fieldset className={styles.fields} disabled={action.busy || action.conflict}>
         <div className={styles.formPair}>
           <Field label="Join date" error={action.fieldError("joinDate")}>{(control) => (
-            <DateInput {...control} required value={draft.joinDate} onChange={(value) => edit("joinDate", value)} />
+            <LeaveDateInput {...control} label="Join date" required value={draft.joinDate} onChange={(value) => edit("joinDate", value)} />
           )}</Field>
-          <Field label="+1 from" hint="Choose the first day of a month." error={action.fieldError("accrualStart")}>{(control) => (
-            <DateInput {...control} required value={draft.accrualStart} onChange={(value) => edit("accrualStart", value)} />
+          <Field label="Monthly +1 day starts" hint="Choose the first day of a month." error={action.fieldError("accrualStart")}>{(control) => (
+            <LeaveDateInput {...control} label="Monthly +1 start date" required value={draft.accrualStart} onChange={(value) => edit("accrualStart", value)} />
           )}</Field>
         </div>
         <div className={`${styles.formPair} ${styles.openingFields}`}>
@@ -159,7 +161,7 @@ export function LeaveDetailsSheet({ data, email, onClose, onRefresh, onSaved }: 
               onChange={(event) => edit("openingBalance", event.target.value)} />
           )}</Field>
           <Field label="Opening date" error={action.fieldError("openingDate")}>{(control) => (
-            <DateInput {...control} required value={draft.openingDate} onChange={(value) => edit("openingDate", value)} />
+            <LeaveDateInput {...control} label="Opening date" required value={draft.openingDate} onChange={(value) => edit("openingDate", value)} />
           )}</Field>
         </div>
         {canCarry && <Field label="Days carried over" error={action.fieldError("openingCarried")}>{(control) => (
@@ -167,7 +169,7 @@ export function LeaveDetailsSheet({ data, email, onClose, onRefresh, onSaved }: 
             onChange={(event) => edit("openingCarried", event.target.value)} />
         )}</Field>}
         <Field label="Last day" optional error={action.fieldError("endDate")}>{(control) => (
-          <DateInput {...control} value={draft.endDate} onChange={(value) => edit("endDate", value)} />
+          <LeaveDateInput {...control} label="Last day" value={draft.endDate} onChange={(value) => edit("endDate", value)} />
         )}</Field>
       </fieldset>
     </form>

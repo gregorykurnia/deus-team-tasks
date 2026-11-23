@@ -85,27 +85,33 @@ export function LeaveBalance({ summary, today, action }: { summary: LeaveSummary
 }
 
 const auditField = {
-  joinDate: "Joined", accrualStart: "+1 from", openingBalance: "Opening balance", openingDate: "Opening date",
+  joinDate: "Joined", accrualStart: "Monthly +1 starts", openingBalance: "Opening balance", openingDate: "Opening date",
   openingCarried: "Days carried over", endDate: "Last day",
 };
 
 export function LeaveHistory({ data }: { data: Pick<MyLeave, "today" | "ledger" | "changes"> }) {
   const value = (entry: string | number | null) => typeof entry === "number" ? days(entry) : entry ? shortDate(entry, "") : "None";
   const rows = [
-    ...[...data.ledger].reverse().map((line) => ({ key: `${line.date}:${line.kind}:${line.sourceId ?? ""}`, date: line.date, label: line.label, line })),
-    ...data.changes.map((line) => ({
-      key: `audit:${line.id}`, date: leaveDay(line.at),
-      label: <>Details changed by {line.byName}: {auditField[line.field]}{" "}
-        <span className={styles.auditValue}>{value(line.from)}</span>{" → "}
-        <span className={styles.auditValue}>{value(line.to)}</span></>, line: null,
+    ...[...data.ledger].reverse().map((line) => ({ key: `${line.date}:${line.kind}:${line.sourceId ?? ""}`, date: line.date, label: line.label, line, change: null })),
+    ...data.changes.map((change) => ({
+      key: `audit:${change.id}`, date: leaveDay(change.at),
+      label: `Details changed by ${change.byName}`, line: null, change,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <ul className={styles.rows}>
-      {rows.map(({ key, date, label, line }) => (
+      {rows.map(({ key, date, label, line, change }) => (
         <li key={key} className={line?.kind === "adjustment" ? `${styles.row} ${styles.adjustmentHistory}` : styles.row}>
-          <span className={styles.rowCopy}><b>{label}</b><small>{shortDate(date, data.today)}</small></span>
+          <span className={styles.rowCopy}>
+            <b>{label}</b>
+            {change && <span className={styles.auditChange}>
+              {auditField[change.field]}{" "}
+              <span className={styles.auditValue}>{value(change.from)}</span>{" "}
+              <span className={styles.auditValue}>→ {value(change.to)}</span>
+            </span>}
+            <small>{shortDate(date, data.today)}</small>
+          </span>
           {line && <span className={styles.amount}><b>{line.days > 0 ? "+" : ""}{days(line.days)}</b><small>Balance {days(line.balance)}</small></span>}
         </li>
       ))}

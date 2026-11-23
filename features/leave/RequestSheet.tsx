@@ -67,7 +67,7 @@ export default function RequestSheet({ data, request, email, onClose, onRefresh,
   const refresh = onRefresh ?? refreshMine;
   const toast = useToast();
   const large = useMediaQuery(LARGE_SCREEN);
-  const [confirm, setConfirm] = useState(false);
+  const [confirm, setConfirm] = useState<"cancel" | "mark" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
@@ -77,6 +77,7 @@ export default function RequestSheet({ data, request, email, onClose, onRefresh,
   const status = statusDetails(request);
   const actor = status.by && (data.actorNames[status.by] ?? (status.by === request.email ? request.name : status.by));
   const canCancel = canCancelLeave(request, data.today, data.isAdmin);
+  const rejected = request.status === "rejected";
 
   useEffect(() => {
     mounted.current = true;
@@ -92,7 +93,7 @@ export default function RequestSheet({ data, request, email, onClose, onRefresh,
 
   function finishCancellation() {
     restoreFocus.current = true;
-    setConfirm(false);
+    setConfirm(null);
   }
 
   async function cancel() {
@@ -137,15 +138,19 @@ export default function RequestSheet({ data, request, email, onClose, onRefresh,
   return (
     <>
       <Sheet open onClose={onClose} short={compact || !large} visibleOnOpen={compact} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
-        footer={canCancel && <Button variant="quietRed" onClick={() => { setError(""); setConfirm(true); }}>Cancel request</Button>}>
+        footer={canCancel && <Button variant="quietRed" onClick={() => { setError(""); setConfirm(rejected ? "mark" : "cancel"); }}>
+          {rejected ? "Mark as cancelled" : "Cancel request"}
+        </Button>}>
         <div className={styles.details} ref={details}>
           <RequestDetails request={request} today={data.today} />
           <p className={styles.statusDetails}>{status.verb}{actor && ` by ${actor}`}{typeof status.at === "number" && ` on ${weekdayDate(leaveDay(status.at), data.today)}`}</p>
         </div>
       </Sheet>
-      <Confirm open={confirm} visibleOnOpen={compact} onClose={() => setConfirm(false)} onConfirm={() => void cancel()} title="Cancel this request?"
-        confirmLabel="Cancel request" busy={busy} busyLabel="Cancelling…">
-        <p className={styles.confirmCopy}>The request will be marked cancelled and stop counting against your available leave.</p>
+      <Confirm open={!!confirm} visibleOnOpen={compact} onClose={() => setConfirm(null)} onConfirm={() => void cancel()}
+        title={confirm === "mark" ? "Mark this request as cancelled?" : "Cancel this request?"}
+        confirmLabel={confirm === "mark" ? "Mark as cancelled" : "Cancel request"} busy={busy} busyLabel="Cancelling…">
+        <p className={styles.confirmCopy}>{confirm === "mark" ? "The request will appear as Cancelled in Requests."
+          : "The request will be marked cancelled and stop counting against your available leave."}</p>
         {error && <Notice tone="error">{error}</Notice>}
       </Confirm>
     </>

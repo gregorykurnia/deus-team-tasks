@@ -159,6 +159,71 @@
   white-space: nowrap;
 }
 
+.auditChange {
+  display: block;
+  margin-top: 2px;
+}
+
+.dateField {
+  position: relative;
+  min-width: 0;
+}
+
+.dateField .dateText {
+  padding-inline: 10px 28px;
+  font-variant-numeric: var(--num);
+}
+
+.dateField:has(.dateClear) .dateText {
+  padding-inline-end: 52px;
+}
+
+.dateCalendar,
+.dateClear {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 3px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 26px;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+}
+
+.dateField:has(.dateClear) .dateCalendar {
+  inset-inline-end: 27px;
+}
+
+.dateClear:hover,
+.dateCalendar:hover {
+  background: var(--fill);
+}
+
+.dateCalendar:focus-within {
+  box-shadow: var(--focus-field);
+}
+
+.dateCalendar input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dateCalendar input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
 .details {
   padding: 4px 0;
 }

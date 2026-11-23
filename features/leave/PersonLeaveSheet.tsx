@@ -91,7 +91,9 @@ export default function PersonLeaveSheet({ email, address, team, onClose, onChan
   const { data, error } = result;
   const name = data?.person.name ?? team.people.find((person) => person.email === address)?.name;
   const endDate = data?.profile?.endDate;
-  const meta = data && (endDate && endDate < data.today ? `Left ${weekdayDate(endDate, data.today)}` : data.person.email);
+  const [mailbox, domain] = data?.person.email.split("@") ?? [];
+  const meta = data && (endDate && endDate < data.today ? `Left ${weekdayDate(endDate, data.today)}`
+    : <>{mailbox}@<wbr />{domain}</>);
   const formProps = { email, onClose: closePanel, onRefresh: refreshAfterAction, onSaved: (message: string) => saved(message, "history") };
 
   if (panel && data) {
