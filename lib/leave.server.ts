@@ -1,5 +1,4 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import type { DocumentSnapshot, QueryDocumentSnapshot, Transaction } from "firebase-admin/firestore";
 import { after } from "next/server";
 import { adminDb } from "./admin";
@@ -7,7 +6,7 @@ import { addDays, isIsoDay, weekdayDate } from "./dates";
 import { USE_EMULATOR } from "./emulator";
 import { wibToday } from "./followupServer";
 import {
-  canCancelLeave, checkRequest, defaultLeavePay, nextMissingHolidayYear, requestDays, workingDates,
+  canCancelLeave, checkRequest, defaultLeavePay, leaveOperationId, nextMissingHolidayYear, requestDays, workingDates,
   type LeaveAdjustment, type LeaveAudit, type LeaveHoliday, type LeaveIssue, type LeaveProfile,
   type LeaveProfileDetails, type LeaveProfileField, type LeaveRequest,
 } from "./leave";
@@ -32,6 +31,7 @@ export interface MyLeave extends LeaveHistory {
   isAdmin: boolean;
   waitingForMe: number;
   holidays: LeaveHoliday[];
+  requestHolidays: Pick<LeaveHoliday, "date">[];
   setupContact: string | null;
   actorNames: Record<string, string>;
   changes: LeaveHistoryChange[];
@@ -194,26 +194,29 @@ function activeAdminTransaction<T>(email: string, action: (tx: Transaction) => P
 export function readMyLeave(email: string): Promise<MyLeave> {
   const today = leaveToday();
   const isAdmin = isLeaveAdmin(email);
+  const firstAdmin = leaveAdmins()[0];
   return adminDb.runTransaction(async (tx) => {
     const [person, profileDoc] = await tx.getAll(people().doc(email), profiles().doc(email));
     const current = requireActivePerson(person);
     const profile = readProfile(profileDoc);
-    const [holidayRows, waiting] = await Promise.all([
+    const [holidayRows, waiting, contactDoc] = await Promise.all([
       tx.get(holidays()),
       isAdmin ? tx.get(waitingCountQuery()) : null,
+      firstAdmin && firstAdmin !== email ? tx.get(people().doc(firstAdmin)) : null,
     ]);
+    const contact = contactDoc ? readPerson(contactDoc) : firstAdmin === email ? current : null;
     const allHolidays = readHolidayRows(holidayRows.docs);
     const through = addDays(today, 400);
     const common = {
       today, isAdmin, waitingForMe: waiting?.data().count ?? 0,
       holidays: allHolidays.filter(({ date }) => date >= today && date <= through),
+      requestHolidays: allHolidays.map(({ date }) => ({ date })),
+      setupContact: contact?.name.trim().split(/\s+/, 1)[0] || null,
     };
     if (!profile) {
-      const firstAdmin = leaveAdmins()[0];
-      const contact = firstAdmin === email ? current : firstAdmin && readPerson(await tx.get(people().doc(firstAdmin)));
       return {
         ...common, ...buildHistory(null, [], [], allHolidays, today),
-        setupContact: contact ? contact.name.split(/\s+/, 1)[0] : null, actorNames: {}, changes: [],
+        actorNames: {}, changes: [],
       };
     }
 
@@ -231,7 +234,7 @@ export function readMyLeave(email: string): Promise<MyLeave> {
     const changes = details.map(({ id, at, field, from, to, by }) => ({
       id, at, field, from, to, byName: names[by] ?? (by === setupActor ? setupActor : "a Leave admin"),
     }));
-    return { ...common, ...history, setupContact: null, actorNames, changes };
+    return { ...common, ...history, actorNames, changes };
   }, { readOnly: true });
 }
 
@@ -250,10 +253,10 @@ function targetEmail(input: unknown): string {
   return invalid("email", "Use a deushcs.com email, at most 128 characters.");
 }
 
-function operationId(email: string, key: string | null): string | undefined {
+async function operationId(email: string, key: string | null): Promise<string | undefined> {
   if (key === null) return undefined;
   if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(key)) throw new LeaveError(400, "Use a valid request key.");
-  return createHash("sha256").update(`${email}\0${key.toLowerCase()}`).digest("hex");
+  return leaveOperationId(email, key);
 }
 
 function payChoice(value: unknown) {
@@ -270,7 +273,7 @@ export async function createLeaveRequest(email: string, input: unknown, key: str
     const actor = requireActivePerson(await tx.get(people().doc(email)));
     if (raw.email != null && !isAdmin && raw.email !== email) throw new LeaveError(403, "You can only ask for your own leave here.");
     const target = raw.email == null ? email : targetEmail(raw.email);
-    const requestId = operationId(email, key);
+    const requestId = await operationId(email, key);
     if (target !== email && !requestId) throw new LeaveError(400, "Use a request key when adding leave for someone.");
     const ref = requestId ? requests().doc(requestId) : autoRef;
     const [profileDoc, previous] = await tx.getAll(profiles().doc(target), ref);
@@ -287,12 +290,9 @@ export async function createLeaveRequest(email: string, input: unknown, key: str
     ]);
     const today = leaveToday();
     const checked = checkRequest(input, {
-      today, isAdmin, existing: existing.docs.map(readRequest), holidays: readHolidayRows(holidayRows.docs),
+      today, isAdmin, existing: existing.docs.map(readRequest), holidays: readHolidayRows(holidayRows.docs), lastDay: profile.endDate,
     });
     if (!checked.request) throw new LeaveError(400, checked.errors[0].message, checked.errors);
-    if (profile.endDate && checked.request.end > profile.endDate) {
-      invalid("end", `Choose an end date on or before the last day (${weekdayDate(profile.endDate, today)}).`);
-    }
 
     const pay = isAdmin ? defaultLeavePay(checked.request) ?? payChoice(raw.pay) : null;
     const now = Date.now();
@@ -476,7 +476,7 @@ function halfSteps(value: unknown): value is number {
 
 export async function adjustLeaveBalance(email: string, input: unknown, key: string | null): Promise<LeaveAdjustment> {
   const adjustment = await activeAdminTransaction(email, async (tx) => {
-    const id = operationId(email, key);
+    const id = await operationId(email, key);
     if (!id) throw new LeaveError(400, "Use a request key when adjusting a balance.");
     const raw = inputRecord(input);
     const address = targetEmail(raw.email);

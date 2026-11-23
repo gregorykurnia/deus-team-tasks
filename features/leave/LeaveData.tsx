@@ -55,7 +55,7 @@ function EnabledLeaveData({ children }: { children: ReactNode }) {
   const email = person?.email;
   const mine = usePathname() === "/leave";
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
-  const scope = useMemo(() => email && online ? { email, mine } : null, [email, mine, online]);
+  const scope = useMemo(() => email ? { email, mine } : null, [email, mine]);
   const [result, setResult] = useState<Result>();
   const activeScope = useRef<Scope | null>(null);
   const pending = useRef<AbortController | null>(null);
@@ -85,7 +85,7 @@ function EnabledLeaveData({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    activeScope.current = scope;
+    activeScope.current = online ? scope : null;
     void refresh();
     const focus = () => { void refresh(true); };
     window.addEventListener("focus", focus);
@@ -94,8 +94,8 @@ function EnabledLeaveData({ children }: { children: ReactNode }) {
       pending.current?.abort();
       window.removeEventListener("focus", focus);
     };
-  }, [scope, refresh]);
+  }, [scope, online, refresh]);
 
   const visible = result?.scope === scope ? result : undefined;
-  return <LeaveContext.Provider value={{ online, data: visible?.data, count: visible?.count, error: visible?.error, refresh }}>{children}</LeaveContext.Provider>;
+  return <LeaveContext.Provider value={{ online, data: visible?.data, count: online ? visible?.count : undefined, error: visible?.error, refresh }}>{children}</LeaveContext.Provider>;
 }

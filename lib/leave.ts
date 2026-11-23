@@ -200,6 +200,7 @@ interface RequestOptions {
   holidays: Holidays;
   existing: readonly ExistingRequest[]; // The person's own requests.
   isAdmin: boolean;
+  lastDay?: string | null;
 }
 
 export interface LeaveRequestCheck {
@@ -234,7 +235,7 @@ function checkHours(value: unknown, refuse: Refuse): LeaveHours | null {
 
 function checkDateLimits(
   type: LeaveType | null, reason: LeaveReason | null, start: string | null, end: string | null,
-  { today, isAdmin }: RequestOptions, refuse: Refuse,
+  { today, isAdmin, lastDay }: RequestOptions, refuse: Refuse,
 ): void {
   if (start) {
     const offset = daysBetween(today, start);
@@ -248,6 +249,9 @@ function checkDateLimits(
   }
   if (end && type === "sick" && !isAdmin && daysBetween(today, end) > 30) {
     refuse("end", "Choose an end date no more than 30 days ahead.");
+  }
+  if (end && lastDay && end > lastDay) {
+    refuse("end", `Choose an end date on or before the last day (${weekdayDate(lastDay, today)}).`);
   }
 }
 
@@ -327,4 +331,11 @@ export function checkRequest(input: unknown, options: RequestOptions): LeaveRequ
     warnings,
     days: count,
   };
+}
+
+// The personal request list lets the form reconcile a send whose reply was lost.
+export async function leaveOperationId(email: string, key: string): Promise<string> {
+  const data = new TextEncoder().encode(`${email}\0${key.toLowerCase()}`);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

@@ -13,6 +13,11 @@
   pointer-events: none;
 }
 
+/* A form can keep its own messages and actions clear of background toasts. */
+:global(body:has([data-toasts-behind-sheet])) .toasts {
+  z-index: var(--z-tabbar);
+}
+
 /* Above the tab bar on phones. */
 @media (max-width: 900px) {
   .toasts {

@@ -43,13 +43,13 @@ export function getPersonLeave(email: string): Promise<PersonLeave> {
   return fetchLeave(`/people/${encodeURIComponent(email)}`);
 }
 
-function writeLeave<T>(path: string, method: "POST" | "PUT", input: object, headers: Record<string, string> = {}) {
-  return fetchLeave<T>(path, { method, headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(input) });
+function writeLeave<T>(path: string, method: "POST" | "PUT", input: object, headers: Record<string, string> = {}, session?: LeaveSession) {
+  return fetchLeave<T>(path, { method, headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(input) }, session);
 }
 
 // Generate a UUID for each new submission and reuse it if the response is lost.
-export function askLeave(input: LeaveInput & { pay?: LeavePay; email?: string }, key: string) {
-  return writeLeave<{ request: LeaveRequest }>("/requests", "POST", input, { "Idempotency-Key": key });
+export function askLeave(input: LeaveInput & { pay?: LeavePay; email?: string }, key: string, session?: LeaveSession) {
+  return writeLeave<{ request: LeaveRequest }>("/requests", "POST", input, { "Idempotency-Key": key }, session);
 }
 
 export function cancelLeave(id: string, session?: LeaveSession): Promise<{ request: LeaveRequest }> {

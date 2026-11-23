@@ -9,6 +9,7 @@ const admin = "gregory.leave@deushcs.com";
 const at = Date.parse("2027-02-09T10:00:00Z");
 const myLeave = "**/api/leave/me";
 const cancelUrl = "**/api/leave/requests/waiting/cancel";
+const askUrl = "**/api/leave/requests";
 
 const main = (page: Page) => page.getByRole("main");
 const balance = (page: Page) => page.getByRole("region", { name: "Leave balance" });
@@ -17,6 +18,13 @@ const confirm = (page: Page) => page.getByRole("alertdialog", { name: "Cancel th
 const sheet = (page: Page, name = "Annual leave") => page.getByRole("dialog", { name, exact: true });
 const chooseCancel = (page: Page) => sheet(page).getByRole("button", { name: "Cancel request" }).click();
 const cancel = (page: Page) => confirm(page).getByRole("button", { name: "Cancel request", exact: true });
+const askSheet = (page: Page) => sheet(page, "Ask for leave");
+const askLink = (page: Page) => balance(page).getByRole("link", { name: "Ask for leave" });
+const send = (page: Page) => askSheet(page).getByRole("button", { name: "Send request", exact: true });
+const askField = (page: Page, name: string) => askSheet(page).getByLabel(name, { exact: true });
+const preview = (page: Page) => askSheet(page).getByRole("status");
+const failedSend = "Not sent. Check your connection and try again.";
+const captureAsk = process.env.LEAVE_SHOTS === "1" || process.env.LEAVE_SHOTS === "ask";
 
 async function people(name = "Audrey", adminName = "Gregory") {
   await seed("tasks", "people", [{ id: staff, email: staff, name, active: true }, { id: admin, email: admin, name: adminName, active: true }]);
@@ -59,7 +67,8 @@ async function enterCode(page: Page, email: string) {
 }
 
 async function shot(page: Page, frame: string) {
-  if (process.env.LEAVE_SHOTS === "1") {
+  const capture = frame.startsWith("ask-") ? captureAsk : process.env.LEAVE_SHOTS === "1";
+  if (capture) {
     await expect(page.getByText(/^Signed in as /)).toHaveCount(0);
     if (frame === "signed-out" || frame.startsWith("admin-nav")) await expect(page.getByText("Connecting…", { exact: true })).toHaveCount(0);
     if (frame.startsWith("admin-nav")) {
@@ -87,9 +96,51 @@ async function shot(page: Page, frame: string) {
     }).map((el) => el.textContent?.slice(0, 65));
   });
   expect(clipped, frame).toEqual([]);
-  if (process.env.LEAVE_SHOTS === "1") {
-    await page.screenshot({ path: `test-results/leave-look/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
+  if (capture) {
+    const folder = frame.startsWith("ask-") ? "leave-look/L6" : "leave-look";
+    await page.screenshot({ path: `test-results/${folder}/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
   }
+}
+
+async function pauseAskOpening(page: Page) {
+  if (!captureAsk) return;
+  await page.evaluate(() => {
+    document.addEventListener("animationstart", function pause(event) {
+      const sheet = event.target;
+      if (!(sheet instanceof HTMLElement) || sheet.getAttribute("role") !== "dialog" || sheet.querySelector("h2")?.textContent !== "Ask for leave") return;
+      for (const layer of [sheet.previousElementSibling, sheet]) {
+        for (const animation of layer?.getAnimations() ?? []) {
+          animation.pause();
+          animation.currentTime = 0;
+        }
+      }
+      document.removeEventListener("animationstart", pause);
+    });
+  });
+}
+
+async function shootAskOpening(page: Page) {
+  if (!captureAsk) return;
+  const drawer = askSheet(page);
+  const duration = await drawer.evaluate((sheet) => Number(sheet.getAnimations()[0]?.effect?.getTiming().duration ?? 0));
+  expect(duration).toBeGreaterThan(0);
+  const folder = `test-results/leave-look/L6/motion/${page.viewportSize()!.width}-ask-open`;
+  for (let tick = 0; tick <= Math.ceil(duration * 30 / 1000); tick++) {
+    const time = Math.min(tick * 1000 / 30, duration);
+    await drawer.evaluate((sheet, at) => {
+      for (const layer of [sheet.previousElementSibling, sheet]) {
+        for (const animation of layer?.getAnimations() ?? []) {
+          animation.currentTime = Math.min(at, Number(animation.effect?.getTiming().duration));
+        }
+      }
+    }, time);
+    await page.screenshot({ path: `${folder}-${String(Math.round(time)).padStart(3, "0")}.png` });
+  }
+  await drawer.evaluate((sheet) => {
+    for (const layer of [sheet.previousElementSibling, sheet]) {
+      for (const animation of layer?.getAnimations() ?? []) animation.finish();
+    }
+  });
 }
 
 async function openLeaveNav(page: Page, phone: boolean) {
@@ -103,6 +154,17 @@ async function waitingRequest() {
   await people();
   await seed("tasks", "leaveProfiles", [profile()]);
   await seed("tasks", "leaveRequests", [request("waiting")]);
+}
+
+async function askProfile(overrides?: Partial<LeaveProfile>) {
+  await people();
+  await seed("tasks", "leaveProfiles", [profile(overrides)]);
+  await seed("tasks", "leaveHolidays", [{ id: "2027-02-08", date: "2027-02-08", name: "Test holiday" }]);
+}
+
+async function askDates(page: Page, from: string, to = from) {
+  await askField(page, "From").fill(from);
+  await askField(page, "To").fill(to);
 }
 
 test.describe("Leave", { tag: "@phone" }, () => {
@@ -354,5 +416,309 @@ test.describe("Leave", { tag: "@phone" }, () => {
     await expect(requests(page).getByRole("link", { name: /Cancelled/ })).toBeVisible();
     await expect(confirm(page)).toBeHidden();
     await expect(page.getByText("Request cancelled", { exact: true })).toHaveCount(0);
+  });
+
+  test("asks for three days across a weekend and reads the confirmed request and balance back", async ({ page }) => {
+    test.setTimeout(115_000);
+    await askProfile();
+    await signIn(page, "/leave?view=history&ref=ask-test");
+    await expect(askLink(page)).toBeInViewport();
+    await shot(page, "ask-entry");
+    await pauseAskOpening(page);
+    await askLink(page).click();
+    await expect(page).toHaveURL(/view=history&ref=ask-test&ask=1$/);
+    await expect(askSheet(page)).toBeVisible();
+    await shootAskOpening(page);
+    await shot(page, "ask-annual-empty");
+    await askDates(page, "2027-02-12", "2027-02-16");
+    await expect(preview(page)).toHaveText("3 working days · Available after: 5 days");
+    await expect(askSheet(page).getByRole("group", { name: "Length" })).toHaveCount(0);
+    await expect(send(page)).toBeInViewport();
+    await shot(page, "ask-annual-three-days");
+    await send(page).click();
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toBeVisible();
+    await expect(page).toHaveURL("/leave?ref=ask-test");
+    const row = requests(page).getByRole("link", { name: /Annual leave.*3 days.*Waiting/ });
+    await expect(row).toBeVisible();
+    await expect(balance(page).getByText("5 days", { exact: true })).toBeVisible();
+    await shot(page, "ask-sent");
+    await row.click();
+    await expect(sheet(page).getByText("3 days", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(sheet(page).getByText(/Requested by Audrey/)).toBeVisible();
+    expect(await readAll("tasks", "leaveRequests")).toEqual([expect.objectContaining({ type: "annual", status: "waiting", half: null })]);
+  });
+
+  test("reserves a half day below zero and counts a backdated sick range with a past holiday", async ({ page }) => {
+    await askProfile({ openingBalance: 0 });
+    await signIn(page, "/leave?ask=1");
+    await expect(askSheet(page)).toBeVisible();
+    await page.reload();
+    await expect(askSheet(page)).toBeVisible();
+    await expect(askField(page, "From")).toHaveValue("");
+    await shot(page, "ask-direct-link");
+    await askDates(page, "2027-02-12");
+    const length = askSheet(page).getByRole("group", { name: "Length" });
+    await length.getByRole("button", { name: "Morning" }).click();
+    await expect(preview(page)).toHaveText("0.5 working day · Available after: −0.5 day, taken in advance");
+    await askField(page, "To").fill("2027-02-15");
+    await expect(length).toHaveCount(0);
+    await askField(page, "To").fill("2027-02-12");
+    await expect(length.getByRole("button", { name: "Full day" })).toHaveAttribute("aria-pressed", "true");
+    await length.getByRole("button", { name: "Afternoon" }).click();
+    await shot(page, "ask-half-day-below-zero");
+    await send(page).click();
+    await expect(requests(page).getByRole("link", { name: /Annual leave.*0.5 day.*Waiting/ })).toBeVisible();
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toBeVisible();
+
+    await askLink(page).click();
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toHaveCount(0);
+    await askSheet(page).getByRole("button", { name: "Sick", exact: true }).click();
+    await askDates(page, "2027-02-08", "2027-02-09");
+    await expect(preview(page)).toHaveText("1 working day · Available after: −0.5 day, taken in advance");
+    await shot(page, "ask-sick-yesterday");
+    await send(page).click();
+    await expect(requests(page).getByRole("link", { name: /Sick.*1 day.*Waiting/ })).toBeVisible();
+    expect(await readAll("tasks", "leaveRequests")).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "annual", half: "afternoon" }),
+      expect.objectContaining({ type: "sick", start: "2027-02-08", end: "2027-02-09", half: null }),
+    ]));
+  });
+
+  test("shows all other absence reasons and keeps cap, overlap and note refusals on their fields", async ({ page, isMobile }) => {
+    await askProfile();
+    await seed("tasks", "leaveRequests", [request("waiting")]);
+    await signIn(page, "/leave?ask=1");
+    await askSheet(page).getByRole("button", { name: "Other absence" }).click();
+    const reason = askField(page, "Reason");
+    await expect(reason.locator("option")).toHaveText(["Choose a reason", "Special leave", "Leave by law", "A few hours", "Unpaid", "Something else"]);
+    await send(page).click();
+    await expect(reason).toBeFocused();
+    await expect(reason).toHaveAccessibleDescription("Choose an absence reason.");
+    await reason.selectOption("special");
+    const event = askField(page, "Event");
+    await expect(event.locator("option")).toHaveCount(8);
+    await event.selectOption("marriage");
+    await expect(event).toHaveAccessibleDescription("Up to 3 days");
+    await askDates(page, "2027-02-15", "2027-02-19");
+    await send(page).click();
+    await expect(askField(page, "To")).toBeFocused();
+    await expect(askField(page, "To")).toHaveAccessibleDescription("This special leave allows up to 3 days.");
+    await shot(page, "ask-refused-special-cap");
+    await askField(page, "To").fill("2027-02-17");
+    await expect(preview(page)).toHaveText("3 working days · Available after: 7.5 days");
+    await shot(page, "ask-special");
+    await askDates(page, "2027-02-15");
+    await event.selectOption("householdDeath");
+    await expect(event).toHaveAccessibleDescription("Up to 1 day");
+    await reason.selectOption("law");
+    await expect(event).toHaveValue("");
+    await expect(event.locator("option")).toHaveText(["Choose an event", "Maternity", "Miscarriage", "Menstrual leave", "Religious duty"]);
+    await event.selectOption("maternity");
+    await askDates(page, "2027-02-08");
+    await expect(askField(page, "To")).toHaveAccessibleDescription("These dates have no working days.");
+    await askDates(page, "2028-02-21");
+    await event.selectOption("religiousDuty");
+    await expect(askSheet(page).getByText("Holidays for 2028 aren’t in the list yet, so this count may change.")).toBeVisible();
+    await shot(page, "ask-law-holiday-warning");
+    await reason.selectOption("unpaid");
+    await expect(event).toHaveCount(0);
+    await askDates(page, "2027-02-15");
+    await shot(page, "ask-unpaid");
+    await reason.selectOption("else");
+    const note = askField(page, "Note");
+    await note.fill("   ");
+    await send(page).click();
+    await expect(note).toBeFocused();
+    await expect(note).toHaveAccessibleDescription("Add a note about this absence.");
+    await shot(page, "ask-refused-blank-note");
+    await note.fill("x".repeat(501));
+    await expect(note).toHaveAccessibleDescription("Use 500 characters or fewer.");
+    await note.fill("An appointment");
+    await expect(note).not.toHaveAttribute("aria-invalid");
+    await expect(preview(page)).toHaveText("1 working day · Available after: 6.5 days");
+    await shot(page, "ask-something-else");
+    await askDates(page, "2027-02-12");
+    await send(page).click();
+    await expect(askField(page, "From")).toBeFocused();
+    await expect(askField(page, "From")).toHaveAccessibleDescription("You already have leave on Fri 12 Feb.");
+    await shot(page, "ask-refused-overlap");
+    expect(await readAll("tasks", "leaveRequests")).toHaveLength(1);
+
+    if (!isMobile) return;
+    await askSheet(page).getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(askSheet(page)).toBeHidden();
+    await page.setViewportSize({ width: 320, height: 780 });
+    await askLink(page).click();
+    await askSheet(page).getByRole("button", { name: "Other absence" }).click();
+    await reason.selectOption("special");
+    await event.selectOption("closeFamilyDeath");
+    await askDates(page, "2027-02-15", "2027-02-16");
+    await expect(event).toHaveAccessibleDescription("Up to 2 days");
+    await expect(askSheet(page).locator('span[aria-hidden="true"]').filter({ hasText: /Death of a spouse/ })).toBeInViewport();
+    await expect(askSheet(page).getByLabel(/^Note/)).toBeInViewport({ ratio: 1 });
+    await expect(preview(page)).toBeInViewport();
+    await expect(send(page)).toBeInViewport();
+    await shot(page, "ask-longest-event");
+  });
+
+  test("takes one date for hours, refuses reversed or out-of-range times, and saves the hours", async ({ page }) => {
+    await askProfile();
+    await signIn(page, "/leave?ask=1");
+    await askSheet(page).getByRole("button", { name: "Other absence" }).click();
+    await askField(page, "Reason").selectOption("hours");
+    await askField(page, "Date").fill("2027-02-13");
+    await expect(askField(page, "Date")).toHaveAccessibleDescription("These dates have no working days.");
+    await askField(page, "Date").fill("2027-02-11");
+    await askField(page, "From time").fill("06:59");
+    await expect(askField(page, "From time")).toHaveAccessibleDescription("Enter a start time between 07:00 and 20:00.");
+    await askField(page, "From time").fill("08:00");
+    await askField(page, "To time").fill("07:30");
+    await expect(askField(page, "To time")).toHaveAccessibleDescription("The end time must be after the start time.");
+    await askField(page, "To time").fill("10:30");
+    await expect(preview(page)).toHaveText("1 working day · Available after: 8 days");
+    await shot(page, "ask-hours");
+    await send(page).click();
+    await requests(page).getByRole("link", { name: /Other absence.*Waiting/ }).click();
+    await expect(sheet(page, "Other absence").getByText("08:00 to 10:30")).toBeVisible();
+    expect(await readAll("tasks", "leaveRequests")).toEqual([expect.objectContaining({
+      type: "other", reason: "hours", start: "2027-02-11", end: "2027-02-11", half: null, event: null,
+      hours: { from: "08:00", to: "10:30" },
+    })]);
+  });
+
+  test("keeps the draft offline or after a lost reply and retries with the same key without undoing a newer status", async ({ page, context }) => {
+    await askProfile();
+    await signIn(page, "/leave?ask=1");
+    await askDates(page, "2027-02-12");
+    const note = askSheet(page).getByLabel(/^Note/);
+    await note.fill("Family plans");
+    await context.setOffline(true);
+    await send(page).click();
+    await expect(askSheet(page).getByRole("alert")).toHaveText(failedSend);
+    await expect(note).toHaveValue("Family plans");
+    await context.setOffline(false);
+    await expect(page.getByText("Back online. Everything is up to date.", { exact: true })).toBeAttached();
+    const failureNotice = askSheet(page).getByRole("alert");
+    expect(await failureNotice.evaluate((notice) => {
+      const text = notice.querySelector("p")!.getBoundingClientRect();
+      return notice.contains(document.elementFromPoint(text.x + text.width / 2, text.y + text.height / 2));
+    })).toBe(true);
+
+    const release = Promise.withResolvers<void>();
+    const began = Promise.withResolvers<void>();
+    const keys: string[] = [];
+    await page.route(askUrl, async (route) => {
+      keys.push(route.request().headers()["idempotency-key"]);
+      if (keys.length === 1) {
+        began.resolve();
+        await release.promise;
+      } else if (keys.length === 2) {
+        expect((await route.fetch()).ok()).toBe(true);
+        const [saved] = await readAll("tasks", "leaveRequests");
+        await seed("tasks", "leaveRequests", [{ ...saved, id: String(saved.id), status: "cancelled", cancelledBy: staff, cancelledAt: at }]);
+        await page.route(myLeave, (read) => read.abort("failed"), { times: 1 });
+      } else {
+        const response = await route.fetch();
+        expect(response.status()).toBe(409);
+        await route.fulfill({ response });
+        return;
+      }
+      await route.abort("failed");
+    });
+    await send(page).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+    await began.promise;
+    const sending = askSheet(page).getByRole("button", { name: "Sending…" });
+    await expect(sending).toHaveAttribute("aria-busy", "true");
+    await expect(note).toBeDisabled();
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toHaveCount(0);
+    await shot(page, "ask-sending");
+    release.resolve();
+    await expect(askSheet(page).getByRole("alert")).toHaveText(failedSend);
+    await expect(note).toHaveValue("Family plans");
+    await expect(askField(page, "From")).toHaveValue("2027-02-12");
+    expect(await readAll("tasks", "leaveRequests")).toHaveLength(0);
+    await shot(page, "ask-failed-send");
+
+    await send(page).click();
+    await expect(askSheet(page).getByRole("alert")).toHaveText(failedSend);
+    await send(page).click();
+    await expect(page.getByText("Request received", { exact: true })).toBeVisible();
+    await expect(requests(page).getByRole("link", { name: /Cancelled/ })).toBeVisible();
+    expect(keys).toEqual([keys[0], keys[0], keys[0]]);
+    expect(keys[0]).toMatch(/^[\da-f-]{36}$/);
+    expect(await readAll("tasks", "leaveRequests")).toEqual([expect.objectContaining({ status: "cancelled", note: "Family plans" })]);
+  });
+
+  test("places a late server refusal on its date while keeping the rest of the draft", async ({ page }) => {
+    await askProfile();
+    await signIn(page, "/leave?ask=1");
+    await askDates(page, "2027-02-12");
+    const note = askSheet(page).getByLabel(/^Note/);
+    await note.fill("Keep this note");
+    await seed("tasks", "leaveRequests", [request("another-device")]);
+    await expect(preview(page)).toHaveText("1 working day · Available after: 7 days");
+    await send(page).click();
+    await expect(askField(page, "From")).toBeFocused();
+    await expect(askField(page, "From")).toHaveAccessibleDescription("You already have leave on Fri 12 Feb.");
+    await expect(note).toHaveValue("Keep this note");
+    await expect(askSheet(page).getByRole("alert")).toHaveCount(0);
+    await askDates(page, "2027-02-15");
+    await send(page).click();
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toBeVisible();
+    expect(await readAll("tasks", "leaveRequests")).toHaveLength(2);
+  });
+
+  test("a reply after browser Back refreshes the list and leaves a newer draft open", async ({ page }) => {
+    await askProfile();
+    await signIn(page, "/leave");
+    const committed = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<void>();
+    await page.route(askUrl, async (route) => {
+      const response = await route.fetch();
+      expect(response.ok()).toBe(true);
+      committed.resolve();
+      await reply.promise;
+      await route.fulfill({ response });
+    }, { times: 1 });
+    await askLink(page).click();
+    await askDates(page, "2027-02-12");
+    await send(page).click();
+    await committed.promise;
+    await page.goBack();
+    await expect(askSheet(page)).toBeHidden();
+    await askLink(page).click();
+    await askDates(page, "2027-02-15");
+    reply.resolve();
+    await expect(preview(page)).toHaveText("1 working day · Available after: 6 days");
+    await expect(askField(page, "From")).toHaveValue("2027-02-15");
+    await expect(page.getByText("Sent to Gregory", { exact: true })).toHaveCount(0);
+    await askSheet(page).getByRole("button", { name: "Close", exact: true }).click();
+    await expect(page).toHaveURL("/leave");
+    await expect(requests(page).getByRole("link", { name: /Waiting/ })).toHaveCount(1);
+    await page.reload();
+    await expect(requests(page).getByRole("link", { name: /Fri 12 Feb.*Waiting/ })).toBeVisible();
+  });
+
+  test("an admin chooses pay for their own other absence and sees the confirmed approval", async ({ page }) => {
+    await askProfile({ email: admin, name: "Gregory" });
+    await signIn(page, "/leave?ask=1", admin);
+    await askSheet(page).getByRole("button", { name: "Other absence" }).click();
+    await askField(page, "Reason").selectOption("else");
+    await askDates(page, "2027-02-12");
+    await askField(page, "Note").fill("An appointment");
+    await send(page).click();
+    const pay = askField(page, "Pay");
+    await expect(pay).toBeFocused();
+    await expect(pay).toHaveAccessibleDescription("Choose how this absence is paid.");
+    await pay.selectOption("deduct");
+    await expect(preview(page)).toHaveText("1 working day · Available after: 7 days");
+    await pay.selectOption("paid");
+    await expect(preview(page)).toHaveText("1 working day · Available after: 8 days");
+    await shot(page, "ask-admin-pay");
+    await send(page).click();
+    await expect(page.getByText("Added", { exact: true })).toBeVisible();
+    await expect(requests(page).getByRole("link", { name: /Other absence.*Approved/ })).toBeVisible();
+    expect(await readAll("tasks", "leaveRequests")).toEqual([expect.objectContaining({ email: admin, pay: "paid", status: "approved" })]);
   });
 });

@@ -58,6 +58,7 @@ describe("leave client", () => {
     vi.stubGlobal("fetch", fetch);
     auth.currentUser = { uid: "other@deushcs.com", getIdToken: async () => "other-token" };
     await expect(getLeaveBadge(session)).rejects.toMatchObject({ status: 401 });
+    await expect(askLeave(input, key, session)).rejects.toMatchObject({ status: 401 });
 
     const token = Promise.withResolvers<string>();
     const reading = Promise.withResolvers<void>();

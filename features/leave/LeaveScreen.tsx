@@ -19,6 +19,8 @@ import Notice from "@/ui/Notice";
 import Segmented from "@/ui/Segmented";
 import { LoadingLine, Skeleton } from "@/ui/Skeleton";
 import { useToast } from "@/ui/Toaster";
+import { dismissSignInNotice } from "@/features/sign-in/signInNotice";
+import AskLeaveSheet from "./AskLeaveSheet";
 import { useLeaveData } from "./LeaveData";
 import { leaveDay } from "./leaveDay";
 import RequestSheet, { RequestStatus } from "./RequestSheet";
@@ -61,7 +63,10 @@ export default function LeaveScreen() {
   const { online, data, error, refresh } = useLeaveData();
   const toast = useToast();
   const openedHere = useRef<string | null>(null);
+  const openedAskHere = useRef(false);
+  const sentToast = useRef<number | null>(null);
   const warned = useRef<string | null>(null);
+  const asking = search.get("ask") === "1";
   const requestId = search.get("request");
   const selected = data?.requests.find(({ id }) => id === requestId);
   const view = search.get("view") === "history" ? "history" : "requests";
@@ -70,19 +75,33 @@ export default function LeaveScreen() {
     if (requestId === null) {
       openedHere.current = null;
       warned.current = null;
-    } else if (data?.profile && !selected && warned.current !== requestId && search.get("view") !== "team") {
+    } else if (!asking && data?.profile && !selected && warned.current !== requestId && search.get("view") !== "team") {
       warned.current = requestId;
       toast("This leave request couldn't be found.");
       router.replace(without(leavePath, search, ["request"]), { scroll: false });
     }
-  }, [data, requestId, router, search, selected, toast]);
+  }, [asking, data, requestId, router, search, selected, toast]);
+
+  useEffect(() => {
+    if (!asking) openedAskHere.current = false;
+    if (asking) dismissSignInNotice();
+    if ((asking || requestId) && sentToast.current !== null) {
+      toast.dismiss(sentToast.current);
+      sentToast.current = null;
+    }
+  }, [asking, requestId, toast]);
 
   function closeRequest() {
     if (openedHere.current === requestId) router.back();
     else router.replace(without(leavePath, search, ["request"]), { scroll: false });
   }
 
-  if (!online) return <Notice tone="warning" icon="wifi" title="Leave needs a connection.">Connect to the internet to see your leave.</Notice>;
+  function closeAsk(sent = false) {
+    if (openedAskHere.current && !(sent && view === "history")) router.back();
+    else router.replace(without(leavePath, search, sent ? ["ask", "request", "view"] : ["ask"]), { scroll: false });
+  }
+
+  if (!online && !(asking && data?.summary)) return <Notice tone="warning" icon="wifi" title="Leave needs a connection.">Connect to the internet to see your leave.</Notice>;
   if (!ready) return <LeaveLoading />;
   if (sessionError) return <Notice tone="error" title="Couldn’t read this device’s sign-in." action={<Button small onClick={retrySignInSession}>Try again</Button>} />;
   if (!person || (error instanceof LeaveApiError && error.status === 401)) {
@@ -98,7 +117,8 @@ export default function LeaveScreen() {
 
   return (
     <div className={styles.stack}>
-      <Balance summary={data.summary} today={data.today} />
+      <Balance summary={data.summary} today={data.today} askHref={over(leavePath, search, "ask=1", ["request"])}
+        onAsk={() => { openedAskHere.current = true; }} />
       <section className={styles.records} aria-label={view === "history" ? "History" : "Requests"}>
         <Segmented<View> label="Leave records" options={[...views]} value={view} onChange={(value) => {
           const href = value === "history" ? over(leavePath, search, "view=history") : without(leavePath, search, ["view"]);
@@ -124,7 +144,12 @@ export default function LeaveScreen() {
           </ul>
         )}
       </section>
-      {selected && <RequestSheet key={`${person.email}:${selected.id}`} data={data} request={selected} email={person.email} onClose={closeRequest} />}
+      {asking ? (
+        <AskLeaveSheet key={person.email} data={data} email={person.email} onClose={() => closeAsk()} onSent={(message) => {
+          sentToast.current = toast(message);
+          closeAsk(true);
+        }} />
+      ) : selected && <RequestSheet key={`${person.email}:${selected.id}`} data={data} request={selected} email={person.email} onClose={closeRequest} />}
     </div>
   );
 }
@@ -165,7 +190,7 @@ function orderRequests(rows: RequestRow[], today: string) {
   return [...rows].sort((a, b) => group(a) - group(b) || (group(a) < 2 ? a.start.localeCompare(b.start) : b.start.localeCompare(a.start)));
 }
 
-function Balance({ summary, today }: { summary: LeaveSummary; today: string }) {
+function Balance({ summary, today, askHref, onAsk }: { summary: LeaveSummary; today: string; askHref: string; onAsk: () => void }) {
   const heading = useId();
   const year = Number(today.slice(0, 4));
   return (
@@ -176,8 +201,9 @@ function Balance({ summary, today }: { summary: LeaveSummary; today: string }) {
           <p className={styles.figure}>{days(summary.balance)}</p>
           {summary.nextPlusOne && <p className={styles.next}>Next +1 on {weekdayDate(summary.nextPlusOne, today)}</p>}
         </div>
-        {/* The request form next uses this spot on the balance card. */}
-        <Button variant="main" disabled><Icon name="plus" size={16} />Ask for leave</Button>
+        <Link className={`${buttonStyles.button} ${buttonStyles.main}`} href={askHref} scroll={false} onNavigate={onAsk}>
+          <Icon name="plus" size={16} />Ask for leave
+        </Link>
       </div>
       <dl className={styles.totals}>
         <div><dt>Coming up</dt><dd>{days(summary.upcoming)}</dd></div>

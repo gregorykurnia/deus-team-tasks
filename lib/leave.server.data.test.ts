@@ -246,7 +246,7 @@ describe("leave privacy", () => {
 });
 
 describe("reading leave", () => {
-  it("recounts history from all holidays and adjustments and returns only the 400-day holiday window", async () => {
+  it("recounts history and supplies dates outside the 400-day holiday window for request checks", async () => {
     const through = addDays(TODAY, 400);
     await Promise.all([
       seedRequest("history", AUDREY, { start: "2027-02-08", end: "2027-02-09" }),
@@ -257,9 +257,10 @@ describe("reading leave", () => {
       ...["2027-02-08", TODAY, through, addDays(through, 1)].map(setHoliday),
     ]);
     const body = await withStatus(await me(audrey), 200);
-    expect(body).toMatchObject({ today: TODAY, profile: { email: AUDREY }, summary: { balance: 4.5, waiting: 0.5, available: 4 }, waitingForMe: 0 });
+    expect(body).toMatchObject({ today: TODAY, profile: { email: AUDREY }, summary: { balance: 4.5, waiting: 0.5, available: 4 }, waitingForMe: 0, setupContact: "Gregory" });
     expect(body.requests.map(({ id, days }: { id: string; days: number }) => [id, days])).toEqual([["waiting", 0.5], ["history", 1]]);
     expect(body.holidays.map(({ date }: { date: string }) => date)).toEqual([TODAY, through]);
+    expect(body.requestHolidays).toEqual(["2027-02-08", TODAY, through, addDays(through, 1)].map((date) => ({ date })));
     expect(body.ledger.map(({ kind }: { kind: string }) => kind)).toEqual(["opening", "adjustment", "request"]);
 
     await setHoliday("2027-02-09");

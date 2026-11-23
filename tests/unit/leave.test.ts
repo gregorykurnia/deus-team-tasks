@@ -63,6 +63,15 @@ describe("request checks", () => {
     ]);
   });
 
+  it("refuses the end date after the person's last day, including for an admin", () => {
+    const lastDay = "2027-01-13";
+    const profileOptions = { ...options, lastDay, isAdmin: true };
+    expect(checkRequest({ ...annual, end: lastDay }, profileOptions).request?.end).toBe(lastDay);
+    expect(checkRequest({ ...annual, end: "2027-01-14" }, profileOptions).errors).toEqual([
+      { field: "end", message: "Choose an end date on or before the last day (Wed 13 Jan)." },
+    ]);
+  });
+
   it("accepts exactly 186 days and a start exactly 400 days away, for admins too", () => {
     const isAdmin = true;
     expect(checkRequest({ ...annual, end: "2027-07-16" }, { ...options, isAdmin }).errors).toEqual([]);

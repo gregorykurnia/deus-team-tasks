@@ -183,6 +183,82 @@
   margin: 0 0 8px;
 }
 
+.askFields {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.askPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.askPair p[id$="-error"] {
+  text-wrap: balance;
+}
+
+.eventSelect {
+  position: relative;
+}
+
+.eventSelect > span {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 10px 40px 10px 14px;
+  color: var(--ink);
+  font-weight: var(--w-medium);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.eventSelect:has(select:disabled) > span {
+  opacity: 0.55;
+}
+
+.eventSelect .eventInput {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  color: transparent;
+}
+
+.eventInput option {
+  color: var(--ink);
+}
+
+.askFooter {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.askTotal {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--r-m);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: var(--t-small);
+  font-variant-numeric: var(--num);
+  text-wrap: balance;
+}
+
+.askTotal b { white-space: nowrap; }
+
+.askActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 640px) {
   .balance { padding: 16px; }
   .records > [role="group"] { justify-self: stretch; }
@@ -192,4 +268,6 @@
 
 @media (max-width: 360px) {
   .balanceTop { flex-wrap: wrap; }
+  .askFields { gap: 10px; }
+  .askPair { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
