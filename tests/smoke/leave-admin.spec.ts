@@ -72,9 +72,9 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${gallery}/${page.viewportSize()!.width}-${name}.png`, animations: "disabled" });
 }
 
-async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkDialogScrim = false) {
+async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkDecisionOpening = false) {
   if (capture) await readyForPicture(page);
-  if (capture || checkDialogScrim) {
+  if (capture || checkDecisionOpening) {
     await page.evaluate((title) => {
       const opening = new MutationObserver(() => {
         const layer = Array.from(document.querySelectorAll('[aria-modal="true"]'))
@@ -91,20 +91,31 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
   await open();
   const overlay = dialog(page, title);
   await expect(overlay).toBeVisible();
-  if (!capture && !checkDialogScrim) return;
-  const duration = await overlay.evaluate((layer) => Number(layer.getAnimations()[0]?.effect?.getTiming().duration ?? 0));
+  if (!capture && !checkDecisionOpening) return;
+  const duration = await overlay.evaluate((layer) => Math.max(
+    ...[layer, layer.previousElementSibling].flatMap((element) =>
+      (element?.getAnimations() ?? []).map(({ effect }) => Number(effect?.getTiming().duration ?? 0))),
+  ));
   expect(duration).toBeGreaterThan(0);
-  if (checkDialogScrim) {
-    const backdrop = await overlay.evaluate((layer) => {
+  if (checkDecisionOpening) {
+    const frames = await overlay.evaluate((layer) => {
       const scrim = layer.previousElementSibling!;
-      const animation = scrim.getAnimations()[0];
-      if (!animation?.effect) throw new Error("Dialog backdrop animation did not start");
-      animation.currentTime = Number(animation.effect.getTiming().duration) / 2;
-      const { opacity, backdropFilter } = getComputedStyle(scrim);
-      return { opacity, backdropFilter };
+      const panelMotion = layer.getAnimations()[0];
+      const scrimMotion = scrim.getAnimations()[0];
+      if (!panelMotion?.effect || !scrimMotion?.effect) throw new Error("Decision opening animations did not start");
+      const panelTime = Number(panelMotion.effect.getTiming().duration);
+      const scrimTime = Number(scrimMotion.effect.getTiming().duration);
+      return [0, 0.5].map((progress) => {
+        panelMotion.currentTime = panelTime * progress;
+        scrimMotion.currentTime = scrimTime * progress;
+        const backdrop = getComputedStyle(scrim);
+        return { panel: getComputedStyle(layer).opacity, scrim: backdrop.opacity, blur: backdrop.backdropFilter };
+      });
     });
-    expect(backdrop.opacity, "The backdrop should stay blurred throughout the tint fade").toBe("1");
-    expect(backdrop.backdropFilter).toBe("blur(8px)");
+    for (const frame of frames) {
+      expect(frame, "The decision stays readable while its shadow and the scrim tint fade in")
+        .toEqual({ panel: "1", scrim: "1", blur: "blur(8px)" });
+    }
   }
   for (let frameIndex = 0; capture && frameIndex <= Math.ceil(duration * 30 / 1000); frameIndex++) {
     const time = Math.min(frameIndex * 1000 / 30, duration);
@@ -136,6 +147,17 @@ async function navCount(page: Page, isMobile: boolean, count: number) {
 }
 
 test.describe("Leave Team", { tag: "@phone" }, () => {
+  test.beforeAll(async ({ request }) => {
+    // Compile the dev routes before the browser starts its deadlines. Neither call writes.
+    const [auth, team] = await Promise.all([
+      request.post("/api/auth/code", { data: { email: "invalid" } }),
+      request.get("/api/leave/team"),
+    ]);
+    expect(auth.ok()).toBe(true);
+    expect(await auth.json()).toEqual({ status: "wrongDomain" });
+    expect(team.status()).toBe(401);
+  });
+
   test("opens waiting cards from links and saves decisions visible to the employee", async ({ page, isMobile, browser, baseURL }) => {
     test.setTimeout(capture ? 180_000 : 90_000);
     if (capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
@@ -197,7 +219,9 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(second).toHaveCount(0);
     await expect.poll(() => readDoc("tasks", "leaveRequests/second")).toMatchObject({ status: "rejected", rejectReason: "Coverage is needed that day." });
 
-    await card(page, "Tue 16 Feb").getByRole("button", { name: "Approve", exact: true }).click();
+    const approval = card(page, "Tue 16 Feb");
+    await expect(approval.getByText("Available leave after requests: 7 days", { exact: true })).toBeVisible();
+    await approval.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(waiting(page).getByRole("article")).toHaveCount(1);
     await expect.poll(() => readDoc("tasks", "leaveRequests/first")).toMatchObject({ status: "approved", pay: "deduct" });
     await navCount(page, isMobile, 1);
@@ -209,6 +233,16 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
 
     await openOverlay(page, "Choose pay", "pay", () => card(page, "Tue 23 Feb").getByRole("button", { name: "Approve", exact: true }).click(), true);
     const pay = dialog(page, "Choose pay");
+    const titleGap = await pay.getByRole("heading", { name: "Choose pay" }).evaluate(async (heading) => {
+      await document.fonts.ready;
+      const text = heading.firstChild!;
+      const space = (text.textContent ?? "").indexOf(" ");
+      const range = document.createRange();
+      range.setStart(text, space);
+      range.setEnd(text, space + 1);
+      return range.getBoundingClientRect().width;
+    });
+    expect(titleGap).toBeGreaterThanOrEqual(3.5);
     const approveButton = pay.getByRole("button", { name: "Approve request", exact: true });
     await expect(pay.getByRole("radio")).toHaveCount(3);
     await approveButton.click();
@@ -410,7 +444,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await shot(page, "stress-waiting");
     await openOverlay(page, name, "stress-request", () => long.getByRole("link").click());
     await expect(dialog(page, name).getByText(note, { exact: true })).toBeVisible();
-    await expect(dialog(page, name).getByText("Available after −100.5 days")).toBeInViewport();
+    await expect(dialog(page, name).getByText("Available leave after requests: −100.5 days")).toBeInViewport();
     await expect(dialog(page, name).getByRole("button", { name: "Approve", exact: true })).toBeInViewport();
     await shot(page, "stress-request");
     const payOpener = dialog(page, name).getByRole("button", { name: "Approve", exact: true });

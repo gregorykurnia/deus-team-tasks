@@ -160,7 +160,7 @@ export default function WaitingLeaveCard({ request, today, email, distinguishNam
   }
 
   const errorNotice = error && <Notice tone="error">{error}</Notice>;
-  const availability = <p className={styles.availability}>Available after <b>{available}</b></p>;
+  const availability = <p className={styles.availability}>Available leave after requests: <b>{available}</b></p>;
   const awayLine = away && <p className={styles.away}><b>Also away:</b> {away}</p>;
   const description = requestReason(request);
 

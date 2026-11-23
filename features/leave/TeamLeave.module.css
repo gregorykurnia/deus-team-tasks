@@ -120,6 +120,15 @@
 
 .sheetActions { width: 100%; }
 
+:global([role="dialog"]):has(.decisionForm) {
+  animation-name: fadeDecisionShadow;
+  word-spacing: .12em;
+}
+
+@keyframes fadeDecisionShadow {
+  from { box-shadow: none; }
+}
+
 .decisionName {
   margin: 4px 0;
   padding: 8px 12px;

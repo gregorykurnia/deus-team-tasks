@@ -74,3 +74,10 @@ During the Reject and Pay openings, the previous screen’s text and action labe
 - Team smoke passed four desktop and five phone cases across the reruns. Six affected Mine cancellation cases passed on desktop and phone. The motion checks verify the backdrop halfway through Reject and Pay and check that cancelling the nested dialog returns focus to Approve.
 - Early sign-in attempts exceeded the browser deadline. The Leave test helper now requires fake-mail delivery before retrying through the UI. The capture sampler now pauses both animations when the dialog mounts. The first desktop retake then exceeded the 90-second test limit and passed with a longer capture-only limit.
 - TypeScript, ESLint, and 1,795 unit tests passed. The feature-disabled production build compiled, checked types, and generated all 25 static pages. A full disk prevented the shell from recording its exit code.
+
+### Decision dialog follow-up
+
+- Reject and Choose pay keep their text and controls legible from the first frame. The shadow and scrim tint fade in, and the pay title has a wider word gap. Cards and request sheets say “Available leave after requests” for the projected balance.
+- The opening assertion failed on the old first frame with `panel: "0"`. The Team smoke spec passed four desktop and five phone cases on the emulators, with the 320 px test skipped on desktop. The test warms cold auth and Team routes after initial timeouts. A detached run finished the cases left by an interrupted terminal session (`SIGTERM`).
+- TypeScript, scoped ESLint, 1,795 unit tests, and the production build passed. The key-generation unit test passed on an isolated retry after `spawnSync … EPERM`. The build ran with Leave and sign-in disabled and an empty Firebase Admin key.
+- The gallery includes 1280, 390, and 320 px captures, before-and-after opening frames, and 100% crops. The title stayed in the same position across the seven sampled frames of each decision opening. N40 tracks the missing frame 7 reference.
