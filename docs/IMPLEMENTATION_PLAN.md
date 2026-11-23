@@ -34,7 +34,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| L1 | Leave rules (pure): working days, request checks, the ledger with monthly +1s and the 1 March lapse, the summary, the words. [L1](implementation/leave.md#l1--leave-rules) [no look] | Sol Max | |
+| L1 | Leave rules (pure): working days, request checks, the ledger with monthly +1s and the 1 March lapse, the summary, the words. [L1](implementation/leave.md#l1--leave-rules) [no look] | Sol Max | 2026-11-23 — leave rules checked |
 | L2 | Server for everyone: collections closed to the device, flag and admin list, `/api/leave/me`, ask and cancel in transactions, `LEAVE_TEST_DATE`. [L2](implementation/leave.md#l2--server-reading-and-asking) [no look] | Sol Max | |
 | L3 | Server for the admin: team and person data, decide, ask for someone, adjust, leave details with audit, holidays, `leave:setup` script and holiday seed. [L3](implementation/leave.md#l3--server-the-admin-side) [no look] | Sol Max | |
 | L4 | Pushes for request, decision, cancellation and added-for-you, and the waiting line in the admins' 09:00 summary. [L4](implementation/leave.md#l4--pushes-and-the-morning-line) [no look] | Sol Max | |
