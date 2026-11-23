@@ -43,6 +43,11 @@ export type LeaveReason = keyof typeof LEAVE_REASON_LABELS;
 export type LeaveStatus = keyof typeof LEAVE_STATUS_LABELS;
 export type LeaveEvent = keyof typeof SPECIAL_LEAVE_EVENTS | keyof typeof LAW_LEAVE_EVENTS;
 export type LeavePay = "deduct" | "paid" | "unpaid";
+export const LEAVE_PAY_OPTIONS = [
+  { value: "paid", label: "Paid" },
+  { value: "deduct", label: "From annual leave" },
+  { value: "unpaid", label: "Unpaid" },
+] as const;
 export type LeaveHalf = "morning" | "afternoon";
 export interface LeaveHours { from: string; to: string }
 

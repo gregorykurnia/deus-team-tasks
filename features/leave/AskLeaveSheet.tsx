@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
-  checkRequest, days, defaultLeavePay, LAW_LEAVE_EVENTS, LEAVE_REASON_LABELS, LEAVE_TYPE_LABELS,
+  checkRequest, days, defaultLeavePay, LAW_LEAVE_EVENTS, LEAVE_PAY_OPTIONS, LEAVE_REASON_LABELS, LEAVE_TYPE_LABELS,
   leaveOperationId, SPECIAL_LEAVE_EVENTS, type LeaveEvent, type LeaveInput, type LeaveIssue,
   type LeavePay, type LeaveReason, type LeaveRequest, type LeaveType,
 } from "@/lib/leave";
@@ -25,9 +25,6 @@ const initial: Draft = {
 const types = Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => ({ value: value as LeaveType, label }));
 const durations = [
   { value: "full", label: "Full day" }, { value: "morning", label: "Morning" }, { value: "afternoon", label: "Afternoon" },
-] as const;
-const payment = [
-  { value: "paid", label: "Paid" }, { value: "deduct", label: "From annual leave" }, { value: "unpaid", label: "Unpaid" },
 ] as const;
 const connectionError = "Not sent. Check your connection and try again.";
 const specialEvents = Object.entries(SPECIAL_LEAVE_EVENTS).map(([value, { label }]) => [value, label] as const);
@@ -246,7 +243,7 @@ export default function AskLeaveSheet({ data, email, onClose, onSent }: {
             <SelectInput {...control} required value={draft.pay ?? ""}
               onChange={(event) => change({ pay: (event.target.value || null) as LeavePay | null })}>
               <option value="">Choose how this absence is paid</option>
-              {payment.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+              {LEAVE_PAY_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </SelectInput>
           )}</Field>}
           <Field label="Note" optional={draft.reason !== "else"} error={errorFor("note")}>{(control) => (

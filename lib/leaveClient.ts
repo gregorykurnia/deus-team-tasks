@@ -35,12 +35,12 @@ export function getLeaveBadge(session: LeaveSession): Promise<{ waitingForMe: nu
   return fetchLeave("/me?view=badge", {}, session);
 }
 
-export function getLeaveTeam(): Promise<TeamLeave> {
-  return fetchLeave("/team");
+export function getLeaveTeam(session?: LeaveSession): Promise<TeamLeave> {
+  return fetchLeave("/team", {}, session);
 }
 
-export function getPersonLeave(email: string): Promise<PersonLeave> {
-  return fetchLeave(`/people/${encodeURIComponent(email)}`);
+export function getPersonLeave(email: string, session?: LeaveSession): Promise<PersonLeave> {
+  return fetchLeave(`/people/${encodeURIComponent(email)}`, {}, session);
 }
 
 function writeLeave<T>(path: string, method: "POST" | "PUT", input: object, headers: Record<string, string> = {}, session?: LeaveSession) {
@@ -56,8 +56,8 @@ export function cancelLeave(id: string, session?: LeaveSession): Promise<{ reque
   return fetchLeave(`/requests/${encodeURIComponent(id)}/cancel`, { method: "POST" }, session);
 }
 
-export function decideLeave(id: string, input: LeaveDecision) {
-  return writeLeave<{ request: LeaveRequest }>(`/requests/${encodeURIComponent(id)}/decide`, "POST", input);
+export function decideLeave(id: string, input: LeaveDecision, session?: LeaveSession) {
+  return writeLeave<{ request: LeaveRequest }>(`/requests/${encodeURIComponent(id)}/decide`, "POST", input, {}, session);
 }
 
 // Reuse this key when retrying the same adjustment.

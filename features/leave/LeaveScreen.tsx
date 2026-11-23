@@ -24,11 +24,13 @@ import AskLeaveSheet from "./AskLeaveSheet";
 import { useLeaveData } from "./LeaveData";
 import { leaveDay } from "./leaveDay";
 import RequestSheet, { RequestStatus } from "./RequestSheet";
+import TeamLeaveScreen from "./TeamLeaveScreen";
 import styles from "./Leave.module.css";
 
 const leavePath = "/leave";
 const views = [{ value: "requests", label: "Requests" }, { value: "history", label: "History" }] as const;
 type View = typeof views[number]["value"];
+const audiences = [{ value: "mine", label: "Mine" }, { value: "team", label: "Team" }] as const;
 type RequestRow = MyLeave["requests"][number];
 
 export function LeaveLoading() {
@@ -66,21 +68,29 @@ export default function LeaveScreen() {
   const openedAskHere = useRef(false);
   const sentToast = useRef<number | null>(null);
   const warned = useRef<string | null>(null);
-  const asking = search.get("ask") === "1";
+  const wantsTeam = search.get("view") === "team";
+  const showTeam = !!data?.isAdmin && wantsTeam;
+  const asking = !wantsTeam && search.get("ask") === "1";
   const requestId = search.get("request");
-  const selected = data?.requests.find(({ id }) => id === requestId);
+  const selected = !wantsTeam ? data?.requests.find(({ id }) => id === requestId) : undefined;
   const view = search.get("view") === "history" ? "history" : "requests";
 
   useEffect(() => {
     if (requestId === null) {
       openedHere.current = null;
       warned.current = null;
-    } else if (!asking && data?.profile && !selected && warned.current !== requestId && search.get("view") !== "team") {
+    } else if (!asking && data?.profile && !selected && warned.current !== requestId && !wantsTeam) {
       warned.current = requestId;
       toast("This leave request couldn't be found.");
       router.replace(without(leavePath, search, ["request"]), { scroll: false });
     }
-  }, [asking, data, requestId, router, search, selected, toast]);
+  }, [asking, data, requestId, router, search, selected, toast, wantsTeam]);
+
+  useEffect(() => {
+    if (data && !data.isAdmin && wantsTeam) {
+      router.replace(without(leavePath, search, ["view", "request", "person", "ask"]), { scroll: false });
+    }
+  }, [data, router, search, wantsTeam]);
 
   useEffect(() => {
     if (!asking) openedAskHere.current = false;
@@ -113,10 +123,28 @@ export default function LeaveScreen() {
     return <Notice tone="error" title={title} action={<Button small onClick={() => void refresh()}>Try again</Button>} />;
   }
   if (!data) return <LeaveLoading />;
-  if (!data.summary) return <Notice title="Your leave isn’t set up yet.">Ask {data.setupContact ?? "a Leave admin"}.</Notice>;
+  const switcher = data.isAdmin && (
+    <div className={styles.audience}>
+      <Segmented label="Whose leave" options={[...audiences]} value={showTeam ? "team" : "mine"} onChange={(value) => {
+        if ((value === "team") === showTeam) return;
+        const overlays = ["request", "person", "ask"];
+        const href = value === "team" ? over(leavePath, search, "view=team", overlays) : without(leavePath, search, ["view", ...overlays]);
+        router.replace(href, { scroll: false });
+      }} />
+    </div>
+  );
+  if (showTeam || !data.summary) {
+    return <div className={styles.stack}>
+      {switcher}
+      {showTeam ? <TeamLeaveScreen key={person.email} email={person.email} /> : (
+        <Notice title="Your leave isn’t set up yet.">Ask {data.setupContact ?? "a Leave admin"}.</Notice>
+      )}
+    </div>;
+  }
 
   return (
     <div className={styles.stack}>
+      {switcher}
       <Balance summary={data.summary} today={data.today} askHref={over(leavePath, search, "ask=1", ["request"])}
         onAsk={() => { openedAskHere.current = true; }} />
       <section className={styles.records} aria-label={view === "history" ? "History" : "Requests"}>

@@ -3,6 +3,7 @@ import { test, expect } from "./fixtures";
 import { readAll, readDoc, seed } from "../support/emulator";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
 import type { LeaveAudit, LeaveProfile, LeaveRequest } from "@/lib/leave";
+import { enterLeaveCode, signInLeave } from "./leaveSession";
 
 const staff = "audrey.leave@deushcs.com";
 const admin = "gregory.leave@deushcs.com";
@@ -47,24 +48,7 @@ function request(id: string, changes: Partial<LeaveRequest> = {}) {
   return row;
 }
 
-async function signIn(page: Page, next: string, email = staff) {
-  await page.goto(`/sign-in?next=${encodeURIComponent(next)}`);
-  await enterCode(page, email);
-}
-
-async function enterCode(page: Page, email: string) {
-  await page.getByRole("textbox", { name: "Work email" }).fill(email);
-  await page.getByRole("button", { name: "Send code", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Enter the code" })).toBeVisible();
-  const code = (await readAll("tasks", "_fakeMail")).find((row) => row.to === email)?.code;
-  expect(code).toMatch(/^\d{6}$/);
-  await page.getByRole("textbox", { name: "Digit 1", exact: true }).pressSequentially(String(code));
-  await expect(page).not.toHaveURL(/\/sign-in/);
-  const notifications = page.getByRole("dialog", { name: "Notifications", exact: true });
-  if (new URL(page.url()).searchParams.has("notifications")) {
-    await notifications.getByRole("button", { name: "Close", exact: true }).click();
-  }
-}
+const signIn = (page: Page, next: string, email = staff) => signInLeave(page, next, email);
 
 async function shot(page: Page, frame: string) {
   const capture = frame.startsWith("ask-") ? captureAsk : process.env.LEAVE_SHOTS === "1";
@@ -197,7 +181,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
     const signInLink = main(page).getByRole("link", { name: "Sign in", exact: true });
     await expect(signInLink).toHaveAttribute("href", `/sign-in?next=${encodeURIComponent(path)}`);
     await signInLink.click();
-    await enterCode(page, staff);
+    await enterLeaveCode(page, staff);
     await expect(page).toHaveURL(path);
     await expect(sheet(page).getByText("Requested by Audrey on Tue 9 Feb")).toBeVisible();
     await expect(sheet(page).getByText("Family visit")).toBeVisible();

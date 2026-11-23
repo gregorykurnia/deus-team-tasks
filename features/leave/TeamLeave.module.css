@@ -1,0 +1,243 @@
+.loading {
+  display: grid;
+  gap: 8px;
+  padding: 0 6px 6px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 8px;
+  padding: 0 6px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+
+.cardLink,
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink > svg,
+.personArrow {
+  flex: none;
+  color: var(--muted);
+}
+
+.cardName,
+.person > span:not([aria-hidden]) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardName > span,
+.cardName > small,
+.person small,
+.people thead small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-label);
+}
+
+.cardBody {
+  display: grid;
+  gap: 4px;
+  font-size: var(--t-small);
+  overflow-wrap: anywhere;
+}
+
+.cardBody p,
+.sheetDetails p {
+  margin: 0;
+}
+
+.availability {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 5px;
+  color: var(--blue-ink);
+  font-variant-numeric: var(--num);
+}
+
+.cardNote,
+.cardBody .away {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cardNote {
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.age {
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.sheetDetails,
+.sheetActions,
+.decisionForm {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sheetActions { width: 100%; }
+
+.decisionName {
+  margin: 4px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-field);
+  background: var(--fill);
+  color: var(--ink);
+  font-weight: var(--w-bold);
+}
+
+.payment {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.payment label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: var(--r-m);
+  background: var(--fill);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.payment input { accent-color: var(--blue); }
+
+.people {
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  table-layout: fixed;
+}
+
+.people tbody tr {
+  position: relative;
+  background: var(--surface);
+}
+
+.people th,
+.people td {
+  padding: 8px 10px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.people thead th {
+  padding-block: 2px;
+  color: var(--ink-2);
+  font-size: var(--t-label);
+  vertical-align: bottom;
+}
+
+.people th:first-child {
+  width: 30%;
+  border-radius: var(--r-m) 0 0 var(--r-m);
+  text-align: left;
+}
+
+.people td:last-child { border-radius: 0 var(--r-m) var(--r-m) 0; }
+
+.people td {
+  font-size: var(--t-small);
+  font-variant-numeric: var(--num);
+}
+
+.people .left { color: var(--muted); }
+
+.person::after {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-m);
+  content: "";
+}
+
+.moreRows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+@media (hover: hover) {
+  .cardLink:hover b { text-decoration: underline; }
+  .person:hover::after { box-shadow: var(--ring-selected); }
+}
+
+@media (min-width: 901px) {
+  .card:only-child .cardFoot { justify-content: flex-start; gap: 12px; }
+  .card:only-child .actions { margin-left: 0; }
+  .card:only-child .cardName { flex: 0 1 auto; }
+}
+
+@media (max-width: 900px) {
+  .people .year { display: none; }
+  .people th:first-child { width: 46%; }
+  .people td:nth-child(3) { border-radius: 0 var(--r-m) var(--r-m) 0; }
+}
+
+@media (max-width: 640px) {
+  .cards { grid-template-columns: minmax(0, 1fr); gap: 6px; padding-inline: 4px; }
+  .card { gap: 4px; padding-block: 9px; }
+  .cardBody { gap: 2px; }
+  .people { width: calc(100% - 8px); margin-inline: 4px; }
+  .people th,
+  .people td { padding-inline: 6px; }
+  .personArrow { display: none; }
+}
+
+@media (max-width: 360px) {
+  .person > [aria-hidden] { display: none; }
+  button.dialogButton { padding-inline: 12px; }
+}

@@ -27,6 +27,26 @@ export function RequestStatus({ status }: { status: LeaveStatus }) {
   return <Pill tone={tones[status]}>{LEAVE_STATUS_LABELS[status]}</Pill>;
 }
 
+export function requestReason(request: RequestRow) {
+  return request.reason && [LEAVE_REASON_LABELS[request.reason], request.event && events[request.event]].filter(Boolean).join(" · ");
+}
+
+export function RequestDetails({ request, today }: { request: RequestRow; today: string }) {
+  const days = [requestDaysLabel(request.days), request.half === "morning" ? "Morning" : request.half === "afternoon" ? "Afternoon" : null]
+    .filter(Boolean).join(" · ");
+  const reason = requestReason(request);
+  return (
+    <dl>
+      <div><dt>Dates</dt><dd>{dateRange(request.start, request.end, today)}</dd></div>
+      <div><dt>Days</dt><dd>{days}</dd></div>
+      {reason && <div><dt>Reason</dt><dd>{reason}</dd></div>}
+      {request.hours && <div><dt>Hours</dt><dd>{request.hours.from} to {request.hours.to}</dd></div>}
+      {request.note?.trim() && <div><dt>Note</dt><dd className={styles.note}>{request.note}</dd></div>}
+      {request.status === "rejected" && request.rejectReason && <div><dt>Reason for the decision</dt><dd className={styles.note}>{request.rejectReason}</dd></div>}
+    </dl>
+  );
+}
+
 function statusDetails(request: RequestRow) {
   switch (request.status) {
     case "waiting": return { verb: "Requested", by: request.createdBy, at: request.createdAt };
@@ -106,23 +126,12 @@ export default function RequestSheet({ data, request, email, onClose }: { data: 
     }
   }
 
-  const days = [requestDaysLabel(request.days), request.half === "morning" ? "Morning" : request.half === "afternoon" ? "Afternoon" : null]
-    .filter(Boolean).join(" · ");
-  const reason = request.reason && [LEAVE_REASON_LABELS[request.reason], request.event && events[request.event]].filter(Boolean).join(" · ");
-
   return (
     <>
       <Sheet open onClose={onClose} short={!large} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
         footer={canCancel && <Button variant="quietRed" onClick={() => { setError(""); setConfirm(true); }}>Cancel request</Button>}>
         <div className={styles.details} ref={details}>
-          <dl>
-            <div><dt>Dates</dt><dd>{dateRange(request.start, request.end, data.today)}</dd></div>
-            <div><dt>Days</dt><dd>{days}</dd></div>
-            {reason && <div><dt>Reason</dt><dd>{reason}</dd></div>}
-            {request.hours && <div><dt>Hours</dt><dd>{request.hours.from} to {request.hours.to}</dd></div>}
-            {request.note?.trim() && <div><dt>Note</dt><dd className={styles.note}>{request.note}</dd></div>}
-            {request.status === "rejected" && request.rejectReason && <div><dt>Reason for the decision</dt><dd className={styles.note}>{request.rejectReason}</dd></div>}
-          </dl>
+          <RequestDetails request={request} today={data.today} />
           <p className={styles.statusDetails}>{status.verb}{actor && ` by ${actor}`}{typeof status.at === "number" && ` on ${weekdayDate(leaveDay(status.at), data.today)}`}</p>
         </div>
       </Sheet>

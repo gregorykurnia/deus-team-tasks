@@ -3,6 +3,10 @@
   gap: 16px;
 }
 
+.audience {
+  justify-self: start;
+}
+
 .balance {
   display: grid;
   gap: 14px;
@@ -260,6 +264,7 @@
 }
 
 @media (max-width: 640px) {
+  .audience { justify-self: stretch; }
   .balance { padding: 16px; }
   .records > [role="group"] { justify-self: stretch; }
   .row { gap: 8px; }
