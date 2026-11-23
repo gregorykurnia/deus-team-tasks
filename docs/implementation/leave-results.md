@@ -125,3 +125,33 @@ The Team badge went from four waiting to zero. The fake transport recorded exact
 - TypeScript and scoped ESLint passed. The unit run passed 1,804 of 1,806 tests. The two failures (`spawnSync /opt/node-v26.10.0-linux-arm64/bin/node EPERM` and `Test timed out in 5000ms`) both passed on the focused rerun.
 - `npm run test:data` passed all 416 tests across 19 files. The emulator clock test covers an advanced date, blank and invalid dates, and fallback after file removal.
 - The Next.js build passed with Leave and sign-in disabled and an empty Firebase Admin key. `git diff --check` passed.
+
+## R1a — Full check run
+
+### Smoke
+
+`npm run test:smoke` exited 1 after 2.3 hours. **490 passed, 17 skipped, 7 failed** across desktop, phone and Jakarta. The run used local Firestore and Auth emulators, fake mail, push and calendar, and the configured Leave clock.
+
+| Project | Spec and test | What failed |
+|---|---|---|
+| desktop | `tests/smoke/leave-admin.spec.ts:167` — opens waiting cards from links and saves decisions visible to the employee | After the admin entered the code for `/leave?view=team&request=first`, the browser stayed on `/sign-in` for 30 seconds (`tests/smoke/leaveSession.ts:26`). It never reached the decision steps. |
+| desktop | `tests/smoke/leave-ledger.spec.ts:93` — replays the three worked balances through February, March lapse and approved cancellation | After pinning March 1, the Leave response gave `today: 2027-02-10` instead of `2027-03-01` (`tests/smoke/leave-ledger.spec.ts:79`, called at line 173). The March lapse and cancellation checks did not run. |
+| desktop | `tests/smoke/notifications.spec.ts:101` — turn on, test, resave a lost device, and sign out remove this device | The sheet never showed “Notifications are on for this…” within 10 seconds after Turn on notifications (`:122`). |
+| desktop | `tests/smoke/notifications.spec.ts:195` — a failed registration retries the existing subscription; test errors never claim sent; 403 signs out | After the forced 503 was removed, Send a test never showed “Test sent.” within 10 seconds (`:222`). |
+| phone | `tests/smoke/chat-task-edits.spec.ts:104` — R1b.F2: capture 065 with all stress tasks and their companies | The 120-second test deadline expired before the stress capture. |
+| phone | `tests/smoke/chat-task-edits.spec.ts:141` — R1b.F2: layout audit rejects missing and offscreen sheets | The 60-second deadline expired in the `cleanData` fixture before the layout assertions (`tests/smoke/fixtures.ts:24`). |
+| phone | `tests/smoke/sign-in.spec.ts:355` — fresh-eyes: shared account entries fit three other screens at every size | In More on `/companies?more=1` at 320 × 740, the bottom of “Live, everyone's up to date” was at y=760 (`:74`). |
+
+### Accessibility
+
+`npm run a11y` completed 284 distinct desktop and phone state runs with zero axe rule violations. It exited 1 because one state setup recorded an error.
+
+- `173-fields-and-options-remove-an-option-desktop`, `/companies?fields=active`. The audit opened Options and found the Remove First meeting button, but the click timed out after 4 seconds (`scripts/compare/recipes.mjs:128`). The intended removal state went unaudited. The phone setup succeeded.
+
+### Scoped comparison
+
+`npm run compare -- --only '^(001-today-normal|276-moving-around-on-phones-more-sheet)$' --force` exited 0. It regenerated four comparisons at 1440 × 900 and 390 × 844 with Leave and sign-in enabled. All four reported zero capture, runtime or layout errors. The app showed Leave in Today’s desktop sidebar and in the phone More sheet. The More URL on desktop showed Today without the sheet, as the shell spec expects. The text diff includes Leave and the existing Sign in entry, which the prototype omits.
+
+### Light checks
+
+`npx tsc --noEmit`, `npm run test:unit` (1,806 passed across 74 files) and `git diff --check` passed. ESLint has no matching configuration for the two Markdown files. R1b owns the seven smoke failures and the audit setup timeout listed above.
