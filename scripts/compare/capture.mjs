@@ -17,6 +17,30 @@ export async function openCapturePage(page, url) {
   }
 }
 
+/**
+ * @param {import("@playwright/test").Page} page
+ * @param {{ path: string, style?: string, fullPage?: boolean }} options
+ */
+export async function takePageShot(page, { fullPage = false, ...options }) {
+  const viewport = page.viewportSize();
+  if (!fullPage || !viewport) return page.screenshot({ ...options, animations: "disabled" });
+
+  const contentHeight = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight));
+  const height = Math.min(Math.max(contentHeight, viewport.height), 1800);
+  // Chromium only paints fixed layers inside the viewport, even in a full-page screenshot.
+  if (height !== viewport.height) await page.setViewportSize({ width: viewport.width, height });
+  try {
+    return await page.screenshot({
+      ...options,
+      animations: "disabled",
+      fullPage: true,
+      clip: { x: 0, y: 0, width: viewport.width, height },
+    });
+  } finally {
+    if (height !== viewport.height) await page.setViewportSize(viewport);
+  }
+}
+
 export function captureFailed(state) {
   return Boolean(state.failed || state.errors?.length);
 }

@@ -18,11 +18,12 @@ interface SegmentedProps<T extends string> {
   allowClear?: boolean;
   full?: boolean; // fills the width, as on phones
   large?: boolean; // 13.5px words, as for About in task details
+  className?: string;
 }
 
-export default function Segmented<T extends string>({ label, options, value, onChange, allowClear = false, full = false, large = false }: SegmentedProps<T>) {
+export default function Segmented<T extends string>({ label, options, value, onChange, allowClear = false, full = false, large = false, className }: SegmentedProps<T>) {
   return (
-    <div className={[styles.track, full && styles.full, large && styles.large].filter(Boolean).join(" ")} role="group" aria-label={label}>
+    <div className={[styles.track, full && styles.full, large && styles.large, className].filter(Boolean).join(" ")} role="group" aria-label={label}>
       {options.map((o) => (
         <button
           key={o.value}

@@ -35,6 +35,7 @@ export default function PlanBar({ state, onState }: PlanBarProps) {
         <Segmented<PlanShow>
           label="Show"
           full={phone}
+          className={styles.showSwitch}
           value={state.show}
           onChange={(show) => show && onState({ ...state, show })}
           options={[

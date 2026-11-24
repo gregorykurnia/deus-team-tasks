@@ -3,6 +3,7 @@
 // marking a task done from the Day view or a person's page writes data.
 import type { Page } from "@playwright/test";
 import type { AwayDay, LeaveRequest } from "@/lib/leave";
+import { takePageShot } from "../../scripts/compare/capture.mjs";
 import { seed } from "../support/emulator";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedTasks, storedById, task } from "./data";
@@ -39,7 +40,7 @@ function leaveAway(index: number, fields: Partial<LeaveRequest> = {}) {
   };
 }
 
-async function planShot(page: Page, name: string, gallery = "test-results/leave-look/P1") {
+async function planShot(page: Page, name: string, { gallery = "test-results/leave-look/P1", fullPage = false } = {}) {
   const { width } = page.viewportSize()!;
   await expect(page.getByText(/^Signed (in as |out$)/)).toHaveCount(0);
   if (name.endsWith("-before")) await expect(page.getByText("Loading tasks", { exact: true })).toHaveCount(0);
@@ -62,8 +63,8 @@ async function planShot(page: Page, name: string, gallery = "test-results/leave-
     return faults;
   }, width);
   expect(issues).toEqual([]);
-  await page.screenshot({
-    path: `${gallery}/${width}-${name}.png`, animations: "disabled", style: "nextjs-portal { display: none !important; }",
+  await takePageShot(page, {
+    path: `${gallery}/${width}-${name}.png`, fullPage, style: "nextjs-portal { display: none !important; }",
   });
 }
 
@@ -449,7 +450,21 @@ test("D5: a link with a date and no view opens the Day view on that day", async 
 const month = (page: Page) => page.getByRole("region", { name: /^[A-Z][a-z]+ \d{4}$/ });
 const dayRegion = (page: Page, name: string) => page.getByRole("region", { name });
 
+async function expectShowLabelPadding(page: Page) {
+  const all = page.getByRole("group", { name: "Show" }).getByRole("button", { name: "Tasks and events" });
+  const padding = await all.evaluate((option) => {
+    const text = document.createRange();
+    text.selectNodeContents(option);
+    const label = text.getBoundingClientRect();
+    const pill = option.getBoundingClientRect();
+    return Math.min(label.left - pill.left, pill.right - label.right);
+  });
+  expect(padding).toBeGreaterThanOrEqual(10);
+}
+
 test.describe("Month (D5, D7)", () => {
+  const gallery = "test-results/e2b-look";
+
   test("shows the day's deadlines and events, and a day opens the Day view", { tag: "@phone" }, async ({ page, calendar, isMobile }, testInfo) => {
     const captureMonth = process.env.PLAN_MONTH_SHOTS === "1" && testInfo.project.name !== "jakarta";
     if (captureMonth && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
@@ -465,15 +480,18 @@ test.describe("Month (D5, D7)", () => {
       await expect(grid.getByRole("link", { name: "Write the proposal" })).toHaveCount(0);
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Write the proposal" })).toBeVisible();
       await expect(dayRegion(page, "Team calendar").getByText("09:30 to 10:00")).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await expectShowLabelPadding(page);
+      if (captureMonth) await planShot(page, "month-targets", { gallery });
+      const viewport = page.viewportSize()!;
+      await page.setViewportSize({ width: 320, height: 740 });
+      await expectShowLabelPadding(page);
       if (captureMonth) {
-        await planShot(page, "month-targets", "test-results/e2b-look");
-        const viewport = page.viewportSize()!;
-        await page.setViewportSize({ width: 320, height: 740 });
-        await planShot(page, "month-targets", "test-results/e2b-look");
+        await planShot(page, "month-targets", { gallery });
         await dayRegion(page, "Tasks").scrollIntoViewIfNeeded();
-        await planShot(page, "month-agenda", "test-results/e2b-look");
-        await page.setViewportSize(viewport);
+        await planShot(page, "month-agenda", { gallery });
       }
+      await page.setViewportSize(viewport);
       await grid.getByRole("button", { name: /: 1 deadline$/ }).click();
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Chase the invoice" })).toBeVisible();
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Write the proposal" })).toHaveCount(0);
@@ -482,7 +500,7 @@ test.describe("Month (D5, D7)", () => {
       await expect(deadline).toBeVisible();
       expect((await deadline.boundingBox())?.height).toBeGreaterThanOrEqual(24);
       await expect(grid.getByText("09:30 Weekly sync")).toBeVisible();
-      if (captureMonth) await planShot(page, "month-targets", "test-results/e2b-look");
+      if (captureMonth) await planShot(page, "month-targets", { gallery, fullPage: true });
       await deadline.click();
       await expect(page).toHaveURL(/\?view=month&task=a$/);
       const taskSheet = page.getByRole("dialog", { name: "Task", exact: true });
@@ -521,10 +539,7 @@ test.describe("Month (D5, D7)", () => {
     await expect(moreItems).toBeVisible();
     expect((await moreItems.boundingBox())?.height).toBeGreaterThanOrEqual(24);
     await expect(grid.getByText("3 more")).toBeVisible();
-    if (captureMonth) {
-      await moreItems.scrollIntoViewIfNeeded();
-      await planShot(page, "month-busy", "test-results/e2b-look");
-    }
+    if (captureMonth) await planShot(page, "month-busy", { gallery, fullPage: true });
     await moreItems.click();
     await expect(page).toHaveURL(`/plan?view=day&date=${isoDay(0)}`);
   });

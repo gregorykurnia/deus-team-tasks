@@ -47,7 +47,7 @@ export default function MoreSheet() {
   };
 
   return (
-    <Sheet open={open} onClose={close} title="More" short phoneOnly initialFocus="a">
+    <Sheet open={open} onClose={close} title="More" short phoneOnly>
       <ul className={styles.list}>
         {MORE_AREAS.map((a) => (
           <li key={a.id}>

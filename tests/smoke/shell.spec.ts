@@ -1,6 +1,6 @@
 // The app shell (task 2.3, guide 3 and 5.8): every area one step away on large
 // screens and two on phones, the current place marked, and no connection shown.
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { seedGroups, seedTasks, task } from "./data";
 
@@ -19,11 +19,20 @@ const title = (page: Page) => page.getByRole("heading", { level: 1 });
 // A link's name also carries its count, as in "All tasks 12".
 const named = (label: string) => new RegExp(`^${label}(\\s+\\d+)?$`);
 
-async function shotMore(page: Page, frame: string) {
+async function shotMore(page: Page, frame: string, firstRow?: Locator) {
   await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
-  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  if (firstRow) await expect(firstRow).toBeInViewport({ ratio: 1 });
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: `test-results/e2b-look/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
+  const { width, height } = page.viewportSize()!;
+  const row = await firstRow?.boundingBox();
+  if (firstRow) expect(row).not.toBeNull();
+  const top = row ? Math.max(0, Math.floor(row.y) - 8) : 0;
+  await page.screenshot({
+    path: `test-results/e2b-look/${width}-${frame}.png`,
+    animations: "disabled",
+    style: "nextjs-portal { display: none !important; }",
+    clip: row ? { x: 0, y: top, width, height: height - top } : undefined,
+  });
 }
 
 test.describe("large screens", () => {
@@ -99,7 +108,13 @@ test.describe("phones", { tag: "@phone" }, () => {
     const sheet = page.getByRole("dialog", { name: "More" });
 
     await more.click();
-    await expect(sheet.getByRole("link", { name: /^Plan/ })).toBeFocused();
+    const close = sheet.getByRole("button", { name: "Close" });
+    const plan = sheet.getByRole("link", { name: /^Plan/ });
+    await expect(close).toBeFocused();
+    await expect(plan).not.toHaveAttribute("aria-current", "page");
+    if (process.env.MORE_SHOTS === "1") await shotMore(page, "more-today");
+    await page.keyboard.press("Tab");
+    await expect(plan).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden();
     await expect(page).toHaveURL("/");
@@ -112,7 +127,7 @@ test.describe("phones", { tag: "@phone" }, () => {
     await expect(page).toHaveURL("/");
 
     await more.click();
-    await sheet.getByRole("button", { name: "Close" }).click();
+    await close.click();
     await expect(sheet).toBeHidden();
     await expect(page).toHaveURL("/");
   });
@@ -132,27 +147,36 @@ test.describe("phones", { tag: "@phone" }, () => {
     await page.goto("/plan?view=day");
     const more = mainNav(page).getByRole("button", { name: "More" });
     const sheet = page.getByRole("dialog", { name: "More" });
+    const close = sheet.getByRole("button", { name: "Close" });
     await more.click();
     await expect(page).toHaveURL("/plan?view=day&more=1");
     const plan = sheet.getByRole("link", { name: /^Plan/ });
-    await expect(plan).toBeFocused();
+    await expect(close).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL("/plan?view=day");
     await expect(sheet).toBeHidden();
     await expect(more).toBeFocused();
 
     await page.goto("/plan?view=day&more=1"); // opened by its address: closing replaces it
-    await expect(plan).toBeFocused();
-    if (capture) await shotMore(page, "more-deep-link");
+    await expect(close).toBeFocused();
+    await expect(plan).toHaveAttribute("aria-current", "page");
+    const signIn = sheet.getByRole("link", { name: /^Sign in/ });
+    if (capture) {
+      await shotMore(page, "more-base", signIn);
+      await shotMore(page, "more-deep-link");
+    }
     await page.setViewportSize({ width: 320, height: 740 });
-    if (capture) await shotMore(page, "more-resized");
-    await sheet.getByRole("button", { name: "Close" }).click();
+    if (capture) {
+      await shotMore(page, "more-resized");
+      await shotMore(page, "more-base", signIn);
+    }
+    await close.click();
     await expect(page).toHaveURL("/plan?view=day");
     await expect(sheet).toBeHidden();
 
     if (capture) {
       await page.goto("/plan?view=day&more=1");
-      await expect(plan).toBeFocused();
+      await expect(close).toBeFocused();
       await page.setViewportSize({ width: 1280, height: 900 });
       await expect(page).toHaveURL("/plan?view=day");
       await expect(sheet).toBeHidden();

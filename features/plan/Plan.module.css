@@ -19,6 +19,12 @@
   margin-top: 20px;
 }
 
+@media (max-width: 760px) {
+  .tbar .showSwitch > button {
+    padding-inline: 12px;
+  }
+}
+
 /* ---------- The panel: filters first, then the timeline ---------- */
 .panel {
   min-width: 0;

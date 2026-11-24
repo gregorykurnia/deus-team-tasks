@@ -2,7 +2,7 @@
 // side by side, into redesign/compare/ (git-ignored). It also writes what the two screens say (their visible words) into
 // redesign/compare/report.json, so differences in copy and structure show without opening every picture.
 //
-//   node scripts/compare/run.mjs [--only <regex on the state id>] [--size desktop|phone] [--force] [--servers]
+//   node scripts/compare/run.mjs [--only <regex on the state id>] [--size desktop,laptop,phone,narrow] [--force] [--servers]
 //
 // With --servers it starts the Firestore emulator, `next dev` and a static server for the prototype, and stops them after.
 // Without it, they must be running already (emulator 8180, app 3100, prototype 4100).
@@ -15,7 +15,7 @@ import { convert, protoData, seedAll } from "./seed.mjs";
 import { parseMap, plan } from "./states.mjs";
 import { dataFor, recipe, colleagueChange } from "./recipes.mjs";
 import { auditLayout } from "./layout.mjs";
-import { captureFailed, captureUserAgent, openCapturePage } from "./capture.mjs";
+import { captureFailed, captureUserAgent, openCapturePage, takePageShot } from "./capture.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "redesign/compare");
@@ -23,8 +23,14 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : null);
 const only = opt("only") ? new RegExp(opt("only")) : null;
-const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
-const sizes = opt("size") ? [opt("size")] : ["desktop", "phone"];
+const SIZES = {
+  desktop: { width: 1440, height: 900 },
+  laptop: { width: 1280, height: 900 },
+  phone: { width: 390, height: 844 },
+  narrow: { width: 320, height: 740 },
+};
+const sizes = opt("size")?.split(",") ?? ["desktop", "phone"];
+if (sizes.some((size) => !Object.hasOwn(SIZES, size))) throw new Error(`Unknown comparison size: ${opt("size")}`);
 const APP = "http://localhost:3100";
 const PROTO = "http://localhost:4100";
 const TODAY = new Date("2026-10-20T09:00:00+07:00");
@@ -48,13 +54,6 @@ const textOf = (page) => page.evaluate(() => document.body.innerText.split("\n")
 async function settle(page) {
   await page.evaluate(() => document.fonts.ready);
   await sleep(500);
-}
-
-// A menu or sheet is shot at the window's size: a full-page shot resizes the window, which closes menus.
-async function shoot(page, file, size, overlay) {
-  if (overlay) return page.screenshot({ path: file, animations: "disabled" });
-  const height = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight));
-  await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: size.width, height: Math.min(Math.max(height, size.height), 1800) } });
 }
 
 async function sideBySide(browser, a, b, file, title, size) {
@@ -90,7 +89,8 @@ async function runOne(browser, entry, sizeName, report, cached) {
   if (!flag("force") && cached && !captureFailed(cached) && fs.existsSync(files.both)) return;
   await ensureData(p);
   const events = current.converted.events;
-  const opts = { viewport: size, timezoneId: "Asia/Jakarta", reducedMotion: "reduce", deviceScaleFactor: 1, ...(sizeName === "phone" ? { isMobile: true, hasTouch: true } : {}) };
+  const phone = sizeName === "phone" || sizeName === "narrow";
+  const opts = { viewport: size, timezoneId: "Asia/Jakarta", reducedMotion: "reduce", deviceScaleFactor: 1, ...(phone ? { isMobile: true, hasTouch: true } : {}) };
 
   // The prototype.
   const pctx = await browser.newContext(opts);
@@ -99,11 +99,11 @@ async function runOne(browser, entry, sizeName, report, cached) {
   await settle(pp);
   if (p.state === "live" || p.state === "back-online") await sleep(1800);
   const protoText = await textOf(pp);
-  await shoot(pp, files.proto, size, !!p.open);
+  await takePageShot(pp, { path: files.proto, fullPage: !p.open });
   await pctx.close();
 
   // The new app.
-  const r = recipe(p, { db: current.db, coNum: current.converted.coNum, phone: sizeName === "phone" });
+  const r = recipe(p, { db: current.db, coNum: current.converted.coNum, phone });
   const ctx = await browser.newContext({ ...opts, userAgent: captureUserAgent(r.iphone) });
   if (r.standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
   await ctx.clock.install({ time: TODAY }); // time keeps flowing from this day: a frozen clock would stop the app's own timeouts
@@ -165,12 +165,13 @@ async function runOne(browser, entry, sizeName, report, cached) {
     await page.getByRole("textbox", { name: "Description", exact: true }).waitFor({ state: "visible", timeout: 90000 }).catch(() => errors.push("task editor still unavailable after 90s"));
   }
   for (const step of r.steps) {
-    try { await step(page, { sleep, phone: sizeName === "phone" }); } catch (e) { errors.push("step: " + String(e.message).slice(0, 700)); }
+    try { await step(page, { sleep, phone }); } catch (e) { errors.push("step: " + String(e.message).slice(0, 700)); }
   }
   if (p.net === "live") { await colleagueChange(p, seed, current.converted); seeded = null; await sleep(900); }
   await sleep(300);
   const newText = await textOf(page);
-  await shoot(page, files.now, size, !!p.open);
+  // A menu or sheet stays at the viewport size so resizing cannot dismiss it.
+  await takePageShot(page, { path: files.now, fullPage: !p.open });
   const layout = await auditLayout(page, { requireTaskSheet: entry.id === "065-task-details-stress" });
   errors.push(...layout.errors);
   if (entry.id === "065-task-details-stress") {

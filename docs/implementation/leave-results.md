@@ -301,6 +301,15 @@ Of the blocked runs, 254 also reported `never went live`. Additional setup messa
 
 The visual evidence is in `test-results/e2b-look/`, `test-results/leave-look/L8/review/` and `redesign/compare/`. The before and after images show the More capture loading the app, Month links gaining vertical space, and the Mine drawer ending below the rejection reason. Native-size crops cover the sheet edges, the More footer, and the Month links. A second 320 px Month frame shows the full legend and agenda after scrolling past the fixed tab bar.
 
+### Fresh-eyes recheck
+
+- More starts on Close. Tab reaches Plan, and Escape returns focus to the More button. A direct link to Plan Day still marks Plan as the current page. The refreshed Today capture shows the real More sheet, and the 390 px and 320 px footer crops start above the complete Sign in row.
+- Full-page captures temporarily use a taller viewport so the fixed backdrop fills the frame. At the left edge of the 1440 px Month capture, the largest colour channel change across row 900 fell from 9 to 1. The normal and busy 1280 px Month frames show the whole grid and legend, including the `3 more` link in the busy frame.
+- Plan's phone Show switch gives each option 12 px of side padding. The smoke check measures at least 10 px between the longest label and either pill edge at both 390 px and 320 px. The desktop Month grid and Day strip use the gutter in the approved prototype.
+- TypeScript, ESLint, 1,836 unit tests, seven targeted smoke cases, 24 scoped comparisons and the flags-off build passed. The unit suite first reported `spawnSync … EPERM` for `notifyKeys.test.ts`. That test passed on its own outside the sandbox.
+
+The refreshed frames are in `test-results/e2b-look/` and `redesign/compare/new/`. Today, Tasks, Plan Timeline and Plan Day were also inspected at 320, 390, 1280 and 1440 px. At 320 px, some of Today's two-digit chart dates wrap and its last filter count extends past the track. At 1280 px, the Tasks table continues past the visible right edge.
+
 ### R2 items
 
 - E2's original audit included four of the replayed states, Today and More at both sizes. Its other 278 blocked state runs still need fresh axe results at the next full audit. The audit's `--distinct` groups the normal Plan views, so the replay names Month, Day and People individually to check their different layouts.
