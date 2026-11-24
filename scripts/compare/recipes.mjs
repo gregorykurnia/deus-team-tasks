@@ -73,6 +73,25 @@ export function recipe(p, ctx = {}) {
   if (p.company) { P("company", String(num(p.company))); }
   if (p.page === "notes" && p.company) { r.params.delete("company"); P("company", String(num(p.company))); }
 
+  if (p.taskGroupId) {
+    const group = ctx.db?.groups.find(({ id }) => id === p.taskGroupId);
+    if (!group) throw new Error(`No seeded task group with ID "${p.taskGroupId}"`);
+    const options = `Options for ${group.name}`;
+    S((page) => page.getByRole("heading", { name: group.name, level: 1, exact: true }).waitFor({ timeout: 10_000 }));
+    if (open === "group-rename" || open === "group-delete") {
+      const rename = open === "group-rename";
+      S(
+        (page) => page.getByRole("button", { name: options, exact: true }).click({ timeout: 10_000 }),
+        (page) => page.getByRole("menu", { name: options, exact: true })
+          .getByRole("menuitem", { name: rename ? "Rename group" : "Delete group", exact: true }).click({ timeout: 10_000 }),
+        (page) => page.getByRole(rename ? "dialog" : "alertdialog", {
+          name: rename ? "Rename task group" : `Delete “${group.name}”?`,
+          exact: true,
+        }).waitFor({ timeout: 10_000 }),
+      );
+    }
+  }
+
   switch (p.page + ":" + open) {
     case "index:install": P("install"); r.offer = true; break;
     case "index:install-ios": P("install"); r.iphone = true; break;
@@ -91,8 +110,6 @@ export function recipe(p, ctx = {}) {
     case "tasks:group-empty": P("newGroup"); S(click(/Create group/, { role: "button" })); break;
     case "tasks:group-dup": P("newGroup"); S(type(/Group name|Name/, "Hiring"), click(/Create group/, { role: "button" })); break;
     case "tasks:group-fail": P("newGroup"); S(type(/Group name|Name/, "Partner events"), goOffline, click(/Create group/, { role: "button" }), wait(1200)); break;
-    case "tasks:group-rename": S(click(/^Options for/), click(/Rename group/)); break;
-    case "tasks:group-delete": S(click(/^Options for/), click(/Delete group/)); break;
     case "tasks:task-new": P("task", "new"); break;
     case "tasks:task-new-full": P("task", "new"); S(click(/Add details/)); break;
     case "tasks:task-required": P("task", "new"); S(click(/Add details/), click(/^Add task$/, { role: "button", within: '[role="dialog"]' })); break;

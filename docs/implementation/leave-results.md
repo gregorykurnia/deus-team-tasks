@@ -447,3 +447,23 @@ March 2031 passed at 1440 × 900 and 390 × 844, with zero axe violations and ze
 The desktop month-stepper smoke test verified the level-two heading and the return to a populated month.
 TypeScript, scoped ESLint, `git diff --check` and the build with Leave and sign-in disabled passed.
 The unit suite passed 1,836 tests in the sandbox. The one test blocked by `spawnSync … EPERM` passed on its isolated rerun.
+
+## R2.F3 — Task-group accessibility
+
+Started a local webpack dev server and Firestore emulator with the R2.F1 flags, fake calendar and
+`LEAVE_TEST_DATE=2027-02-10`. Ran `node scripts/a11y/axe.mjs --only '^(049-task-groups-q4-planning|056-task-groups-rename|057-task-groups-delete)$'`.
+The baseline replay returned HTTP 200 for both seeded routes. The original HTTP 404s did not recur on this setup.
+
+The audit and comparison recipes now require the seeded group's heading and, for Rename and Delete,
+open the named group's options and wait for the corresponding named dialog. The replay with these checks
+had six HTTP 200 responses, zero setup errors and zero axe violations.
+
+| State | Seeded route | Desktop (1440 × 900) | Phone (390 × 844) |
+|---|---|---|---|
+| `049-task-groups-q4-planning` | `/tasks/groups/q4` | Q4 planning passed | Q4 planning passed |
+| `056-task-groups-rename` | `/tasks/groups/office` | Rename task group passed | Rename task group passed |
+| `057-task-groups-delete` | `/tasks/groups/office` | Delete “Office move”? passed | Delete “Office move”? passed |
+
+TypeScript, `git diff --check` and all 1,841 unit tests passed. Scoped ESLint reported three existing warnings.
+The default build stopped at Turbopack's port bind with `Operation not permitted (os error 1)`.
+`npm run build -- --webpack` passed with Leave and sign-in disabled.

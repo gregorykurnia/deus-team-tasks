@@ -62,8 +62,9 @@ export function plan(entry) {
       if (get("kind")) p.steps.push({ chip: KIND[get("kind")] });
       break;
     case "tasks":
-      p.path = get("group") ? `/tasks/groups/${get("group")}` : "/tasks";
-      if (!get("group")) set("kind", KIND[get("kind")]);
+      p.taskGroupId = get("group");
+      p.path = p.taskGroupId ? `/tasks/groups/${encodeURIComponent(p.taskGroupId)}` : "/tasks";
+      if (!p.taskGroupId) set("kind", KIND[get("kind")]);
       for (const k of ["idle", "due", "view", "range", "q", "type", "sort", "dir"]) set(k, get(k));
       break;
     case "plan":
