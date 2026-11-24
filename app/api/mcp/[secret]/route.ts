@@ -8,6 +8,7 @@ import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupDa
 import { isTaskPlanTool, registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { isTaskEditTool, registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
 import { isTaskGroupTool, registerTaskGroupTools, taskGroupToolInputs } from "@/lib/taskGroupTools";
+import { isQuotaError, logToolFailure, QUOTA_REFUSED } from "@/lib/firestoreQuota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -40,7 +41,9 @@ async function runTool(work: () => Promise<object>, failure: string): Promise<Ca
   try {
     return result(await work());
   } catch (error) {
-    return { isError: true, content: [{ type: "text", text: error instanceof FollowupPlanError ? error.message : failure }] };
+    if (error instanceof FollowupPlanError) return { isError: true, content: [{ type: "text", text: error.message }] };
+    logToolFailure(failure, error);
+    return { isError: true, content: [{ type: "text", text: isQuotaError(error) ? QUOTA_REFUSED : failure }] };
   }
 }
 

@@ -7,6 +7,7 @@ import {
 import type { PipelineEntry } from "./clientTypes";
 import { calendarWritesEnabled, readTaskCalendarState, syncTaskCalendar } from "./calendarSync";
 import { db } from "./firebase";
+import { refuseOnQuota } from "./firestoreQuota";
 import { clientsDb } from "./firebaseClients";
 import { wibToday } from "./followupServer";
 import { readFlowRoles } from "./taskEditServer";
@@ -206,7 +207,9 @@ export async function addTaskPlan(
     return calendarResults(plan, saved, options.origin ?? "");
   }
 
-  const written = await runTransaction(db, async (transaction) => {
+  const notSaved = (message: string) => new TaskPlanError(message);
+  // Quota refusals stop at once: the SDK would otherwise retry them, re-reading the collection each time.
+  const written = await refuseOnQuota(() => runTransaction(db, (transaction) => refuseOnQuota(async () => {
     const operation = await readOperation(transaction, plan, ids);
     if (operation.saved) return operation.saved; // A simultaneous request may have finished after the fast path.
 
@@ -235,7 +238,7 @@ export async function addTaskPlan(
     preview.subtasks.forEach((task, i) => transaction.set(doc(db, "tasks", ids.subtaskIds[i]),
       taskDocument(task, ids, i)));
     return writeResult(ids, preview.destination!, false);
-  });
+  }, notSaved)), notSaved);
   await notifyAssignments([...(plan.newParent ? [written.parentId] : []), ...written.subtaskIds]);
   return calendarResults(plan, written, options.origin ?? "");
 }

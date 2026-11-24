@@ -7,6 +7,7 @@ import { addTaskPlan, findTaskPlanDestinations, previewTaskPlan, TaskPlanError }
 import { TaskPlanTokenError } from "./taskPlanToken";
 import { MAX_FREE_TIME_DAYS, WORK_END, WORK_START } from "./freeTimes";
 import { findFreeTimes } from "./freeTimeServer";
+import { isQuotaError, logToolFailure, QUOTA_REFUSED } from "./firestoreQuota";
 
 // Repeat this in each description: clients may omit the server's initialize instructions.
 export const TASK_PLAN_CHAT_GUIDANCE = `Save dated actions from an ordinary chat without a separate skill. Follow category → company → main task → individual steps → preview → save.
@@ -92,8 +93,11 @@ async function runTool(work: () => Promise<object>, failure: string): Promise<Ca
   try {
     return result(await work());
   } catch (error) {
-    const safe = error instanceof TaskPlanError || error instanceof TaskPlanTokenError;
-    return { isError: true, content: [{ type: "text", text: safe ? error.message : failure }] };
+    if (error instanceof TaskPlanError || error instanceof TaskPlanTokenError) {
+      return { isError: true, content: [{ type: "text", text: error.message }] };
+    }
+    logToolFailure(failure, error);
+    return { isError: true, content: [{ type: "text", text: isQuotaError(error) ? QUOTA_REFUSED : failure }] };
   }
 }
 

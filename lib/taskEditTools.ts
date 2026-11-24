@@ -5,6 +5,7 @@ import { z } from "zod";
 import { MAX_TASK_CHANGES, TASK_EDIT_SEEN, validateTaskChanges } from "./taskEdit";
 import { applyTaskChanges, findTasks, previewTaskChanges, TaskEditError } from "./taskEditServer";
 import { isTaskGroupName, TaskGroupError } from "./taskGroupModel";
+import { isQuotaError, logToolFailure, QUOTA_REFUSED } from "./firestoreQuota";
 
 export const taskEditsEnabled = () => process.env.MCP_TASK_EDITS_ENABLED === "1";
 
@@ -72,7 +73,9 @@ export async function runTaskEditTool(
     const value = await work();
     return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: { ...value } };
   } catch (error) {
-    return { isError: true, content: [{ type: "text", text: isPublicError(error) ? error.message : failure }] };
+    if (isPublicError(error)) return { isError: true, content: [{ type: "text", text: error.message }] };
+    logToolFailure(failure, error);
+    return { isError: true, content: [{ type: "text", text: isQuotaError(error) ? QUOTA_REFUSED : failure }] };
   }
 }
 

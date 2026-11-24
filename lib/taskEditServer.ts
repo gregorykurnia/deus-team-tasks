@@ -7,12 +7,13 @@ import type { PipelineEntry } from "./clientTypes";
 import { calendarWritesEnabled, syncTaskCalendar, type CalendarSyncResult } from "./calendarSync";
 import { companyPatchFrom } from "./companyDates";
 import { db } from "./firebase";
+import { refuseOnQuota } from "./firestoreQuota";
 import { clientsDb } from "./firebaseClients";
 import { rolesIn } from "./flows";
 import { wibToday } from "./followupServer";
 import { isParked } from "./parking";
 import { namesInUse } from "./people";
-import { buildTaskChanges, editsResponsibleMembership, editsTaskGroup, TASK_EDIT_SEEN, taskSeen, validateTaskChanges,
+import { buildTaskChanges, editsResponsibleMembership, editsTaskGroup, TASK_EDIT_SEEN, taskEditGuardIds, taskSeen, validateTaskChanges,
   type TaskChange, type TaskChangePreview, type TaskEditContext } from "./taskEdit";
 import { groupNamesInUse, isTaskGroupName, requireTaskGroupName, TASK_GROUPS } from "./taskGroupModel";
 import { taskStatus } from "./taskStatus";
@@ -273,12 +274,19 @@ export async function applyTaskChanges(
   ])).digest("hex") : null;
   const receiptRef = operation ? doc(db, "settings", `task-edit-${operation}`) : null;
   const replacementIds = changes.filter((change) => change.set?.responsible !== undefined).map((change) => change.taskId);
-  const written = await runTransaction(db, async (transaction) => {
-    // Re-enumerate on each transaction retry, then guard every context record with transaction.get.
+  const notSaved = (message: string) => new TaskEditError(message);
+  // Quota refusals stop at once: the SDK would otherwise retry them, re-reading the collection each time.
+  const written = await refuseOnQuota(() => runTransaction(db, (transaction) => refuseOnQuota(async () => {
+    // Re-enumerate from the server on each transaction retry, then guard with transaction.get the records the checks
+    // depend on. Group and Responsible edits compare across all tasks, and deletes and moves change the task tree, so a
+    // task moved under one of them meanwhile must abort the commit: those guard every task. Plain field edits guard the
+    // listed tasks, their main tasks and their subtasks (taskEditGuardIds).
     // Include missing listed/destination IDs as reads too; a cache must never decide what can be saved.
     const data = await readTaskEditData();
-    const ids = [...new Set([...data.tasks.map((task) => task.id), ...Object.keys(stamps),
-      ...changes.flatMap((change) => change.move?.toParentId ? [change.move.toParentId] : [])])];
+    const ids = recordedEdit || changes.some((change) => change.delete || change.move)
+      ? [...new Set([...data.tasks.map((task) => task.id), ...Object.keys(stamps),
+        ...changes.flatMap((change) => change.move?.toParentId ? [change.move.toParentId] : [])])]
+      : taskEditGuardIds(changes, Object.keys(stamps), data.tasks);
     const [snapshots, groups] = await Promise.all([Promise.all(ids.map((id) => transaction.get(doc(db, "tasks", id)))),
       groupEdit ? readTaskGroupRecords(transaction) : []]);
     // An identical save can commit while these optimistic reads are in flight.
@@ -290,7 +298,12 @@ export async function applyTaskChanges(
       }
       if (saved) return { alreadySaved: true, rows: [], companyTasks: [], saved };
     }
-    const tasks = snapshots.filter((entry) => entry.exists()).map((entry) => ({ ...entry.data() as NewTask, id: entry.id }));
+    // Guarded records replace their server copies (or drop out if deleted); unguarded tasks keep the fresh server copy.
+    const guarded = new Map(snapshots.map((entry) => [entry.id, entry.exists() ? { ...entry.data() as NewTask, id: entry.id } : null]));
+    const tasks = [
+      ...data.tasks.flatMap((task) => guarded.has(task.id) ? guarded.get(task.id) ?? [] : [task]),
+      ...[...guarded.values()].filter((task): task is Task => task !== null && !data.tasks.some((entry) => entry.id === task.id)),
+    ];
     const groupNames = groupEdit ? taskGroupNames(groups, tasks) : [];
     const now = Date.now();
     const context = { ...data, tasks, groupNames, now, today: wibToday(new Date(now)), calendarOn: calendarWritesEnabled() };
@@ -343,7 +356,7 @@ export async function applyTaskChanges(
     if (receiptRef && saved.ids.length) transaction.set(receiptRef, saved);
     const sourceGroups = groupEdit && companyTasks.length ? groupSourcesForRestore(preview.tasks, groups, tasks) : [];
     return { alreadySaved: false, rows: preview.tasks, companyTasks, saved, sourceGroups };
-  });
+  }, notSaved)), notSaved);
   if (!written.alreadySaved) {
     try { await followCompanies(written.companyTasks); }
     catch {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTaskChanges, taskSeen, validateTaskChanges, type TaskEditContext, type TaskEditFields } from "@/lib/taskEdit";
+import { buildTaskChanges, taskEditGuardIds, taskSeen, validateTaskChanges, type TaskEditContext, type TaskEditFields } from "@/lib/taskEdit";
 import type { Task } from "@/lib/types";
 
 const TODAY = "2026-11-11";
@@ -609,5 +609,22 @@ describe("seen stamps", () => {
   it("preserves array order, and hashes stored fields rather than the injected document ID", () => {
     expect(taskSeen(task("a", { responsible: ["Greg", "David"] }))).not.toBe(taskSeen(task("a", { responsible: ["David", "Greg"] })));
     expect(taskSeen({ ...task(), id: "other" })).toBe(taskSeen(task()));
+  });
+});
+
+describe("taskEditGuardIds", () => {
+  const task = (id: string, parentId?: string) => ({ id, task: id, ...(parentId && { parentId }) }) as Task;
+  const tasks = [task("main"), task("listed", "main"), task("sibling", "main"), task("other-main"), task("child", "other-main"),
+    task("destination"), task("dest-child", "destination"), task("unrelated")];
+
+  it("guards listed tasks, their main tasks, their subtasks and move destinations, not unrelated tasks", () => {
+    expect(taskEditGuardIds([{ taskId: "listed", set: { endDate: "2027-01-31" } }], ["listed"], tasks)).toEqual(["listed", "main"]);
+    expect(taskEditGuardIds([{ taskId: "main", set: { endDate: "2027-01-31" } }], ["main"], tasks)).toEqual(["listed", "main", "sibling"]);
+    expect(taskEditGuardIds([{ taskId: "other-main", move: { toParentId: "destination" } }], ["other-main"], tasks))
+      .toEqual(["child", "dest-child", "destination", "other-main"]);
+  });
+
+  it("keeps stamped and missing IDs, such as freed subtasks and a task deleted since the preview", () => {
+    expect(taskEditGuardIds([{ taskId: "gone", delete: true }], ["gone", "child"], tasks)).toEqual(["child", "gone", "other-main"]);
   });
 });

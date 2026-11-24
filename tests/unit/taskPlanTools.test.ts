@@ -303,6 +303,28 @@ describe("T03–T05 task edit tools", () => {
     expect(error.body).toContain("Existing groups: “Ops”.");
   });
 
+  it("names a database quota refusal and logs the hidden error behind a generic failure", async () => {
+    vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const changes = [{ taskId: "fictional-task", set: { endDate: "2027-01-31" } }];
+    const seen = { "fictional-task": "a".repeat(64) };
+    io.editApply
+      .mockRejectedValueOnce(Object.assign(new Error("8 RESOURCE_EXHAUSTED: Quota exceeded."), { name: "FirebaseError", code: "resource-exhausted" }))
+      .mockRejectedValueOnce(Object.assign(new Error("Private backend message"), { code: "unavailable" }));
+    const quota = await call("apply_task_changes", { changes, seen, acknowledgedWarnings: [] });
+    expect(quota.reply.result?.isError).toBe(true);
+    expect(quota.body).toContain("usage limit was reached");
+    expect(logged).toHaveBeenLastCalledWith(expect.stringMatching(/MCP tool failed .*FirebaseError \[resource-exhausted\]: 8 RESOURCE_EXHAUSTED/));
+    const other = await call("apply_task_changes", { changes, seen, acknowledgedWarnings: [] });
+    expect(other.body).toContain("Could not confirm whether the task changes were saved.");
+    expect(other.body).not.toContain("Private backend message");
+    expect(logged).toHaveBeenLastCalledWith(expect.stringMatching(/Error \[unavailable\]$/));
+    io.add.mockRejectedValueOnce(Object.assign(new Error("Quota exceeded."), { code: 8 }));
+    const plan = await call("add_task_plan", { plan: TASK_PLAN_INTERNAL_NEW, previewToken: "token", acknowledgedWarnings: [] });
+    expect(plan.body).toContain("usage limit was reached");
+    logged.mockRestore();
+  });
+
   it("refuses retained callbacks after the edit flag is switched off", async () => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     const server = new McpServer({ name: "edit-unit", version: "1" });

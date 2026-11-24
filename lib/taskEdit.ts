@@ -50,6 +50,22 @@ export const editsResponsibleMembership = ({ set }: TaskChange) =>
   set?.addResponsible !== undefined || set?.removeResponsible !== undefined;
 export const editsTaskGroup = ({ set }: TaskChange) => set?.taskGroup !== undefined;
 
+// The task records a plain edit's checks depend on: the listed (stamped) tasks, move destinations, their main tasks
+// and their subtasks. A save guards these with transaction reads; the rest only supply names, read fresh from the
+// server. Guarding every task made each save read the whole collection twice (2026-11-24 quota outage).
+export function taskEditGuardIds(changes: readonly TaskChange[], stampedIds: readonly string[], tasks: readonly Task[]): string[] {
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  const focus = new Set([...stampedIds, ...changes.map((change) => change.taskId),
+    ...changes.flatMap((change) => change.move?.toParentId ? [change.move.toParentId] : [])]);
+  const ids = new Set(focus);
+  for (const id of focus) {
+    const parentId = byId.get(id)?.parentId;
+    if (parentId) ids.add(parentId);
+  }
+  for (const task of tasks) if (task.parentId && focus.has(task.parentId)) ids.add(task.id);
+  return [...ids].sort();
+}
+
 export function createTaskPersonMatcher(names: Iterable<string>) {
   const byKey = new Map<string, string>();
   for (const name of names) {
