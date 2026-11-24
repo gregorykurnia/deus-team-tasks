@@ -57,6 +57,7 @@ export default function WaitingLeaveCard({ request, today, email, distinguishNam
   const mounted = useRef(false);
   const toast = useToast();
   const formId = useId();
+  const datesId = useId();
   if (!detailOpen && dialog?.fromSheet) setDialog(undefined);
   const activeDialog = dialog && (!dialog.fromSheet || detailOpen) ? dialog.action : undefined;
   const type = LEAVE_TYPE_LABELS[request.type];
@@ -167,8 +168,7 @@ export default function WaitingLeaveCard({ request, today, email, distinguishNam
   return (
     <>
       {href && <article className={styles.card} aria-label={`${request.name} · ${type}`}>
-        <Link className={styles.cardLink} href={href} onNavigate={onOpen} scroll={false}
-          aria-label={`Open ${type.toLowerCase()} request from ${request.name}${distinguishName ? ` (${request.email})` : ""}`}>
+        <Link className={styles.cardLink} href={href} onNavigate={onOpen} scroll={false} aria-describedby={datesId}>
           <Avatar name={request.name} />
           <span className={styles.cardName}>
             <b>{request.name}</b>
@@ -178,7 +178,7 @@ export default function WaitingLeaveCard({ request, today, email, distinguishNam
           <Icon name="right" size={16} />
         </Link>
         <div className={styles.cardBody}>
-          <p>{dateRange(request.start, request.end, today)} · {requestDaysLabel(request.days)}
+          <p id={datesId}>{dateRange(request.start, request.end, today)} · {requestDaysLabel(request.days)}
             {request.half && ` · ${request.half === "morning" ? "Morning" : "Afternoon"}`}</p>
           {availability}
           {awayLine}
@@ -190,7 +190,7 @@ export default function WaitingLeaveCard({ request, today, email, distinguishNam
       {detailOpen && <Sheet open short onClose={onClose} title={request.name} lead={<Avatar name={request.name} size="plan" />}
         meta={<>{type}{distinguishName && <span>{request.email}</span>}</>}
         footer={<div className={styles.sheetActions}>{!activeDialog && errorNotice}{actions(true)}</div>}>
-        <div className={`${leaveStyles.details} ${styles.sheetDetails}`}>
+        <div className={`${leaveStyles.details} ${styles.sheetDetails}`} role="region" aria-label="Request details" tabIndex={0}>
           {availability}{awayLine}<p className={styles.age}>{age}</p>
           <RequestDetails request={request} today={today} />
         </div>

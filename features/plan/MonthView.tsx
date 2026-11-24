@@ -26,6 +26,7 @@ import styles from "./Plan.module.css";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DOTS = 5; // a phone cell's dots before "+"
+const AWAY_MARKER = "Away";
 
 interface MonthViewProps {
   state: PlanState;
@@ -153,9 +154,10 @@ export default function MonthView(props: MonthViewProps) {
               };
               if (phone) {
                 const showSelected = selectedAway && i % 7 === 6 && cell.iso >= selected && model.cells[i - 6].iso <= selected;
+                const label = onDay ? `${cell.day} ${AWAY_MARKER}. ${summary}` : summary;
                 return (
                   <Fragment key={cell.iso}>
-                    <button type="button" className={styles.monthCell} {...flags} aria-pressed={cell.iso === selected} aria-label={summary} onClick={() => choose(cell.iso)}>
+                    <button type="button" className={styles.monthCell} {...flags} aria-pressed={cell.iso === selected} aria-label={label} onClick={() => choose(cell.iso)}>
                       <span className={styles.dayNumber} aria-hidden="true">
                         {cell.day}
                       </span>
@@ -169,7 +171,12 @@ export default function MonthView(props: MonthViewProps) {
                         )}
                         {cell.items.length > DOTS && <b>+</b>}
                       </span>
-                      {onDay && <span className={styles.awayMarker} aria-hidden="true" data-waiting={onDay.every((day) => day.waiting) || undefined}>Away</span>}
+                      {onDay && <>
+                        {" "}
+                        <span className={styles.awayMarker} aria-hidden="true" data-waiting={onDay.every((day) => day.waiting) || undefined}>
+                          {AWAY_MARKER}
+                        </span>
+                      </>}
                     </button>
                     {showSelected && (
                       <div ref={phoneAwayCell} className={`${styles.monthCell} ${styles.monthPhoneAway}`}>

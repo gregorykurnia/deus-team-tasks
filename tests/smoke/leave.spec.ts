@@ -4,6 +4,7 @@ import { readAll, readDoc, seed } from "../support/emulator";
 import { auditLayout } from "../../scripts/compare/layout.mjs";
 import type { LeaveAudit, LeaveProfile, LeaveRequest } from "@/lib/leave";
 import { enterLeaveCode, signInLeave } from "./leaveSession";
+import { auditState, auditsState } from "./axeState";
 
 const staff = "audrey.leave@deushcs.com";
 const admin = "gregory.leave@deushcs.com";
@@ -83,6 +84,7 @@ async function shot(page: Page, frame: string) {
     }).map((el) => el.textContent?.slice(0, 65));
   });
   expect(clipped, frame).toEqual([]);
+  await auditState(page, `mine/${frame}`);
   if (capture) {
     const folder = reviewFrame ? "leave-look/L8/review" : frame.startsWith("ask-") ? "leave-look/L6" : "leave-look";
     await page.screenshot({ path: `test-results/${folder}/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
@@ -155,6 +157,11 @@ async function askDates(page: Page, from: string, to = from) {
 }
 
 async function mineReviewShot(page: Page, frame: string, row?: Locator) {
+  if (!captureReview && auditsState(`mine/${frame}`)) {
+    await row?.scrollIntoViewIfNeeded();
+    await auditState(page, `mine/${frame}`);
+    return;
+  }
   if (!captureReview || !reviewFrames.test(frame)) return;
   await row?.evaluate((element) => element.scrollIntoView({ block: "center" }));
   await shot(page, frame);
@@ -745,6 +752,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
     await expect(askField(page, "From")).toHaveAccessibleDescription("You already have leave on Fri 12 Feb.");
     await expect(note).toHaveValue("Keep this note");
     await expect(askSheet(page).getByRole("alert")).toHaveCount(0);
+    await auditState(page, "mine/ask-late-refusal");
     await askDates(page, "2027-02-15");
     await send(page).click();
     await expect(page.getByText("Sent to Gregory", { exact: true })).toBeVisible();

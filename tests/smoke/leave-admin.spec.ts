@@ -4,6 +4,7 @@ import { auditLayout } from "../../scripts/compare/layout.mjs";
 import { readAll, readDoc, seed } from "../support/emulator";
 import { test, expect } from "./fixtures";
 import { signInLeave } from "./leaveSession";
+import { auditState, auditsState } from "./axeState";
 
 const admin = "gregory.leave@deushcs.com";
 const staff = "audrey.leave@deushcs.com";
@@ -13,12 +14,13 @@ const createdAt = Date.parse("2027-02-09T10:00:00Z");
 const teamUrl = "/leave?view=team";
 const teamApi = "**/api/leave/team";
 const capture = process.env.LEAVE_SHOTS === "team";
-const teamLook = { capture, gallery: "test-results/leave-look/L7" };
+const teamLook = { capture, gallery: "test-results/leave-look/L7", scope: "team" };
 const review = process.env.LEAVE_SHOTS === "l8-review";
 const reviewFrames = new RegExp(process.env.LEAVE_REVIEW_FRAMES ?? ".");
 const personLook = {
   capture: review || process.env.LEAVE_SHOTS === "person",
   gallery: review ? "test-results/leave-look/L8/review" : "test-results/leave-look/L8",
+  scope: "admin",
 };
 const waiting = (page: Page) => page.getByRole("region", { name: "Waiting for you" });
 const people = (page: Page) => page.getByRole("region", { name: "People" });
@@ -66,7 +68,8 @@ async function readyForPicture(page: Page) {
   });
 }
 
-async function shot(page: Page, name: string, { capture, gallery } = teamLook) {
+async function shot(page: Page, name: string, { capture, gallery, scope } = teamLook) {
+  await auditState(page, `${scope}/${name}`);
   if (!capture) return;
   await readyForPicture(page);
   await page.mouse.move(1, 1);
@@ -79,7 +82,7 @@ async function shot(page: Page, name: string, { capture, gallery } = teamLook) {
 }
 
 async function openOverlay(page: Page, title: string, frame: string, open: () => Promise<void>, checkReadableOpening = false,
-  { capture, gallery } = teamLook, role: "dialog" | "alertdialog" = "dialog") {
+  { capture, gallery, scope } = teamLook, role: "dialog" | "alertdialog" = "dialog") {
   if (capture) await readyForPicture(page);
   if (capture || checkReadableOpening) {
     await page.evaluate((title) => {
@@ -98,7 +101,10 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
   await open();
   const overlay = page.getByRole(role, { name: title, exact: true });
   await expect(overlay).toBeVisible();
-  if (!capture && !checkReadableOpening) return;
+  if (!capture && !checkReadableOpening) {
+    await auditState(page, `${scope}/${frame}-open`);
+    return;
+  }
   const duration = await overlay.evaluate((layer) => Math.max(
     ...[layer, layer.previousElementSibling].flatMap((element) =>
       (element?.getAnimations() ?? []).map(({ effect }) => Number(effect?.getTiming().duration ?? 0))),
@@ -141,6 +147,7 @@ async function openOverlay(page: Page, title: string, frame: string, open: () =>
       if (element instanceof HTMLElement) element.style.removeProperty("animation-play-state");
     }
   });
+  await auditState(page, `${scope}/${frame}-open`);
 }
 
 async function navCount(page: Page, isMobile: boolean, count: number) {
@@ -190,6 +197,11 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(page.getByRole("button", { name: "Team", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(waiting(page).getByRole("article")).toHaveCount(3);
     await expect(card(page, "Thu 18 Feb").getByText("Waiting 1 day")).toBeVisible();
+    for (const date of ["Tue 16 Feb", "Thu 18 Feb"]) {
+      const link = card(page, date).getByRole("link");
+      await expect(link).toHaveAccessibleName("Audrey Annual leave");
+      await expect(link).toHaveAccessibleDescription(new RegExp(`^${date} · `));
+    }
     await expect(people(page).getByRole("row").last()).toContainText("Left Fri 29 Jan");
     const audrey = people(page).getByRole("row", { name: /^Audrey/ });
     await expect(audrey.getByRole("cell")).toHaveText(isMobile ? ["8.5 days", "7 days"] : ["8.5 days", "7 days", "0.5 day", "1 day", "1"]);
@@ -202,6 +214,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await shot(page, "three-waiting");
 
     const last = card(page, "Tue 23 Feb").getByRole("link");
+    await expect(last).toHaveAccessibleName("Sovie Other absence · Something else");
     await openOverlay(page, "Sovie", "last-request", () => last.click());
     await expect(dialog(page, "Sovie").getByText("Something else", { exact: true })).toBeVisible();
     await shot(page, "last-request");
@@ -330,6 +343,7 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(people(page)).toBeVisible();
     await page.goto(`${teamUrl}&request=missing`);
     await expect(page.getByText("This request is no longer waiting.")).toBeVisible();
+    await auditState(page, "team/request-no-longer-waiting");
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await expect(page).toHaveURL(teamUrl);
   });
@@ -454,11 +468,18 @@ test.describe("Leave Team", { tag: "@phone" }, () => {
     await expect(long.getByRole("button", { name: "Reject", exact: true })).toBeInViewport();
     await expect(long.getByRole("button", { name: "Approve", exact: true })).toBeInViewport();
     await shot(page, "stress-waiting");
-    await openOverlay(page, name, "stress-request", () => long.getByRole("link").click());
+    const requestLink = long.getByRole("link");
+    await expect(requestLink).toHaveAccessibleName(`${name} ${staff} Other absence · Something else`);
+    await openOverlay(page, name, "stress-request", () => requestLink.click());
     await expect(dialog(page, name).getByText(note, { exact: true })).toBeVisible();
     await expect(dialog(page, name).getByText("Available leave after requests: −100.5 days")).toBeInViewport();
     await expect(dialog(page, name).getByRole("button", { name: "Approve", exact: true })).toBeInViewport();
     await shot(page, "stress-request");
+    await page.keyboard.press("Tab");
+    const details = dialog(page, name).getByRole("region", { name: "Request details" });
+    await expect(details).toBeFocused();
+    await page.keyboard.press("PageDown");
+    await expect.poll(() => details.evaluate((region) => region.parentElement!.scrollTop)).toBeGreaterThan(0);
     const payOpener = dialog(page, name).getByRole("button", { name: "Approve", exact: true });
     await openOverlay(page, "Choose pay", "stress-pay", () => payOpener.click(), true);
     const pay = dialog(page, "Choose pay");
@@ -479,7 +500,7 @@ const exactButton = (name: string) => ({ name, exact: true });
 
 async function personShot(page: Page, name: string, row?: Locator) {
   if (review && !reviewFrames.test(name)) return;
-  if (personLook.capture) await row?.scrollIntoViewIfNeeded();
+  if (personLook.capture || auditsState(`admin/${name}`)) await row?.scrollIntoViewIfNeeded();
   await shot(page, name, personLook);
   const viewport = page.viewportSize()!;
   if (review && viewport.width === 390) {

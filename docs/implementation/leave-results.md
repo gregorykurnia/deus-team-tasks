@@ -345,3 +345,37 @@ deploys (work goes to `staging`).
 Checks: `npx tsc --noEmit`, ESLint on the changed files, `npm run test:unit` (1,837 passed), and
 `tests/smoke/plan.spec.ts` "shows Away in Month, Day, People" on desktop, phone and Jakarta (3 passed). Owner steps:
 O1–O8, nothing new from Phase 2.
+
+## R2.F1 — Accessibility rerun
+
+Ran `npm run a11y` once with the local Firestore emulator, Leave and sign-in enabled, the fake calendar and
+`LEAVE_TEST_DATE=2027-02-10`. The prototype map has no Leave entries and the full command groups several Plan views
+together. The focused checks use the Leave and Away smoke flows against the local Auth and Firestore emulators.
+Axe runs after the smoke test confirms the intended screen or dialog.
+
+The full audit attempted **284 states** (142 desktop, 142 phone). **278 passed** with zero axe violations and zero
+state setup errors, including all 26 Plan runs (13 per width). Six runs stopped at HTTP 404 and the command exited 1.
+
+The focused pass used `LEAVE_PLAN_AXE='.*'` with `leave.spec.ts`, `leave-admin.spec.ts` and the P1 cases in
+`plan.spec.ts` on desktop and phone. It ran 221 axe checkpoints and found violations at 80. Team request links
+omitted visible words from their accessible names. A long Team request needed a keyboard stop in its 320 px
+scrolling sheet. Plan's mobile Month buttons with an Away marker needed the visible day and marker in their names.
+
+The latest result for all **221 checkpoints** is clean (185 Leave, 36 Plan Away). The Leave replay verified the
+visible link names, dates that distinguish repeated requests, and Page Down scrolling after Tab at 320 px. The final
+phone Plan replay passed all five affected Month checkpoints at 390 and 320 px after the day number and Away marker
+were separated in the markup. An earlier replay stopped at HTTP 404 for Leave and Auth. A fresh Next.js development
+cache and explicit feature flags restored those test routes.
+
+TypeScript, scoped ESLint, `git diff --check`, the 1,837 unit tests and the production build with Leave and sign-in
+disabled passed.
+
+R2.F1b covers the 41 additional Plan map entries omitted by the full run's `--distinct` and default stress filter.
+Use `node scripts/a11y/axe.mjs --servers --stress --only '^(070|071|072|073|074|075|076|077|078|079|080|089|093|094|095|096|097|098|099|100|101|102|103|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)-'`
+with the same settings. This opens the separate Timeline, Month, Day and People variants at both widths.
+
+### Follow-up outside Leave and Plan
+
+| Fix row | States | Failure |
+|---|---|---|
+| R2.F3 | `049-task-groups-q4-planning`, `056-task-groups-rename`, `057-task-groups-delete` on desktop and phone | `/tasks/groups/q4` and `/tasks/groups/office` returned HTTP 404, so the three intended states could not be scanned at either width. |
