@@ -108,6 +108,7 @@ export default function MonthView(props: MonthViewProps) {
           <div className={styles.monthEmpty}>
             <EmptyState
               size="small"
+              headingLevel={2}
               icon="cal"
               title={`Nothing in ${name}`}
               actions={

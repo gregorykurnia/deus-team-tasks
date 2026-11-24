@@ -533,7 +533,7 @@ test.describe("Month (D5, D7)", () => {
     await bar.getByRole("button", { name: "Next month" }).click();
     await expect(page).toHaveURL(/month=\d{4}-\d{2}/);
     await expect(bar.getByRole("button", { name: "Today" })).toBeEnabled();
-    await expect(page.getByRole("heading", { name: /^Nothing in / })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Nothing in /, level: 2 })).toBeVisible();
     await page.getByRole("button", { name: "Back to this month" }).click();
     await expect(page).toHaveURL("/plan?view=month");
     await expect(page.getByRole("heading", { name: /^Nothing in / })).toHaveCount(0);

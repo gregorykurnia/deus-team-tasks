@@ -437,3 +437,13 @@ Axe flagged the `h3` “Nothing in March 2031” on both widths. R2.F1c tracks t
 | `120-plan-people-prospects` | Pass | Pass |
 | `121-plan-people-loading` | Pass | Pass |
 | `122-plan-people-nothing-yet` | Pass | Pass |
+
+## R2.F1c — Empty month heading
+
+Plan's empty month now uses an `h2` under the Plan `h1`. With the R2.F1b test settings and webpack, ran
+`node scripts/a11y/axe.mjs --servers --stress --only '^097-plan-month-open$'`.
+March 2031 passed at 1440 × 900 and 390 × 844, with zero axe violations and zero setup errors.
+
+The desktop month-stepper smoke test verified the level-two heading and the return to a populated month.
+TypeScript, scoped ESLint, `git diff --check` and the build with Leave and sign-in disabled passed.
+The unit suite passed 1,836 tests in the sandbox. The one test blocked by `spawnSync … EPERM` passed on its isolated rerun.
