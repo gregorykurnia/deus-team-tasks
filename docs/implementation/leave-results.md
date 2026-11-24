@@ -290,3 +290,18 @@ Of the blocked runs, 254 also reported `never went live`. Additional setup messa
 ### Light checks
 
 `npx tsc --noEmit` and `npm run test:unit -- --maxWorkers=2` passed. Unit tests passed 1,830 cases across 77 files.
+
+## E2b — Fix recorded failures
+
+- Both Leave cases passed on desktop and phone. Mine, Team and the employee view show the rejection reason and keep the request `Not approved`. Waiting and approved requests still offer Cancel. The admin case reads back the rejected record and its reason. After the look check, the desktop Mine drawer fits the rejected request's content. The Mine replay passed again on both widths, including a direct link and a 499-character reason.
+- The More case passed all five targeted repeats. It waits for the Plan link to take focus before Escape, checks focus return, and closes a direct link at 320 px while keeping `view=day`. The first repeat also captures the sheet at 390 px and after widening to 1280 px. The baseline passed all five attempts.
+- Both capture tools now use the smoke browser's identity for their local app contexts and keep the iPhone install recipe's Safari identity. HTTP failures stop the affected scan or capture, and comparison reports exit nonzero on errors and retry failed entries on the next run. All ten E2 comparison captures passed with Leave and sign-in enabled and `LEAVE_TEST_DATE=2027-02-10`. A preliminary flags-off run recorded a 400 in desktop Today. The E2-settings replay passed that state.
+- The restored axe scan found eleven desktop Month links around 21 px high. Plan's deadline and overflow links now measure at least 24 px, and the two focused Month scenarios passed their five desktop, phone and Jakarta runs. The final combined audit includes ten clean desktop and phone scans of Today, More, and Plan Month, Day and People. The two refreshed Month comparisons brought the final comparison report to ten clean captures.
+- `npx tsc --noEmit`, ESLint, `npm run test:unit -- --maxWorkers=2 --testTimeout=15000` (1,836 passed), and `npm run build` with the feature flags off passed. ESLint has no CSS configuration. Two build attempts exited 143 during compilation or TypeScript. The build completed when the command waited directly for it.
+
+The visual evidence is in `test-results/e2b-look/`, `test-results/leave-look/L8/review/` and `redesign/compare/`. The before and after images show the More capture loading the app, Month links gaining vertical space, and the Mine drawer ending below the rejection reason. Native-size crops cover the sheet edges, the More footer, and the Month links. A second 320 px Month frame shows the full legend and agenda after scrolling past the fixed tab bar.
+
+### R2 items
+
+- E2's original audit included four of the replayed states, Today and More at both sizes. Its other 278 blocked state runs still need fresh axe results at the next full audit. The audit's `--distinct` groups the normal Plan views, so the replay names Month, Day and People individually to check their different layouts.
+- Exact comparison to the Leave screens page still needs the reference HTML in O8. The Mine and Team captures use the shipped sheet patterns described in N38 and N41.

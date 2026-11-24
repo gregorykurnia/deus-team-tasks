@@ -16,6 +16,7 @@ import { openClientTrackerRules, seed } from "../../tests/support/emulator.ts";
 import { convert, protoData, seedAll } from "../compare/seed.mjs";
 import { parseMap, plan } from "../compare/states.mjs";
 import { dataFor, recipe, tweakData, colleagueChange } from "../compare/recipes.mjs";
+import { captureUserAgent, openCapturePage } from "../compare/capture.mjs";
 import { auditFailed } from "./status.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
@@ -69,8 +70,7 @@ async function runOne(browser, entry, sizeName, report) {
   const events = current.converted.events;
   const opts = { viewport: size, timezoneId: "Asia/Jakarta", reducedMotion: "reduce", ...(sizeName === "phone" ? { isMobile: true, hasTouch: true } : {}) };
   const r = recipe(p, { db: current.db, coNum: current.converted.coNum, phone: sizeName === "phone" });
-  const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
-  const ctx = await browser.newContext(r.iphone ? { ...opts, userAgent: IPHONE } : opts);
+  const ctx = await browser.newContext({ ...opts, userAgent: captureUserAgent(r.iphone) });
   if (r.standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
   await ctx.clock.install({ time: TODAY });
   if (r.offer) await ctx.addInitScript(() => {
@@ -87,7 +87,7 @@ async function runOne(browser, entry, sizeName, report) {
   if (p.net === "hold") await page.route(/127\.0\.0\.1:8180/, () => {});
   if (p.net === "blocked") await page.route(/127\.0\.0\.1:8180/, (r) => r.abort());
   const url = APP + r.path + (r.params.toString() ? "?" + r.params : "");
-  await page.goto(url);
+  await openCapturePage(page, url);
   if (p.net === "hold") await sleep(1800);
   else if (p.net === "blocked") await page.getByText("No connection.").first().waitFor({ timeout: 25000 }).catch(() => {});
   else await page.getByText("Live, everyone's up to date").first().waitFor({ state: "attached", timeout: 30000 }).catch(() => errors.push("never went live"));

@@ -27,6 +27,7 @@ const preview = (page: Page) => askSheet(page).getByRole("status");
 const failedSend = "Not sent. Check your connection and try again.";
 const captureAsk = process.env.LEAVE_SHOTS === "1" || process.env.LEAVE_SHOTS === "ask";
 const captureReview = process.env.LEAVE_SHOTS === "l8-review";
+const reviewFrames = new RegExp(process.env.LEAVE_REVIEW_FRAMES ?? ".");
 
 async function people(name = "Audrey", adminName = "Gregory") {
   await seed("tasks", "people", [{ id: staff, email: staff, name, active: true }, { id: admin, email: admin, name: adminName, active: true }]);
@@ -154,7 +155,7 @@ async function askDates(page: Page, from: string, to = from) {
 }
 
 async function mineReviewShot(page: Page, frame: string, row?: Locator) {
-  if (!captureReview) return;
+  if (!captureReview || !reviewFrames.test(frame)) return;
   await row?.evaluate((element) => element.scrollIntoView({ block: "center" }));
   await shot(page, frame);
   const viewport = page.viewportSize()!;
@@ -183,6 +184,7 @@ test.describe("Leave", { tag: "@phone" }, () => {
 
   test("keeps the shared Leave forms, requests and audit rows readable in Mine", async ({ page }) => {
     test.setTimeout(captureReview ? 180_000 : 80_000);
+    const longRejection = "Coverage is needed. ".repeat(25).trim();
     await askProfile({ email: admin, name: "Gregory" });
     await seed("tasks", "leaveRequests", [
       request("mine-waiting", { email: admin, name: "Gregory", createdBy: admin }),
@@ -190,6 +192,8 @@ test.describe("Leave", { tag: "@phone" }, () => {
         pay: "deduct", decidedBy: admin, decidedAt: at }),
       request("mine-refused", { email: admin, name: "Gregory", start: "2027-02-04", end: "2027-02-04", status: "rejected",
         decidedBy: admin, decidedAt: at, rejectReason: "Coverage is needed." }),
+      request("mine-long-refusal", { email: admin, name: "Gregory", start: "2027-02-01", end: "2027-02-01", type: "sick", half: null,
+        status: "rejected", decidedBy: admin, decidedAt: at, rejectReason: longRejection }),
     ]);
     await signIn(page, "/leave", admin);
     await askLink(page).click();
@@ -215,10 +219,30 @@ test.describe("Leave", { tag: "@phone" }, () => {
       await requests(page).getByRole("link", { name: new RegExp(`Annual leave.*${label}$`) }).click();
       const record = sheet(page);
       await expect(record.getByText(label, { exact: true })).toBeVisible();
-      if (label === "Not approved") await expect(record.getByRole("button", { name: "Mark as cancelled" })).toBeVisible();
+      if (label === "Not approved") {
+        await expect(page).toHaveURL("/leave?request=mine-refused");
+        await page.reload();
+        await expect(record.getByText(label, { exact: true })).toBeVisible({ timeout: 25_000 });
+        await expect(record.getByText("Coverage is needed.", { exact: true })).toBeVisible();
+        await expect(record.getByRole("button", { name: /^(Cancel request|Mark as cancelled)$/ })).toHaveCount(0);
+        const decision = record.getByText("Not approved by Gregory on Tue 9 Feb", { exact: true });
+        await expect(decision).toBeVisible();
+        const bottomSpace = await decision.evaluate((line) =>
+          line.closest('[role="dialog"]')!.getBoundingClientRect().bottom - line.getBoundingClientRect().bottom);
+        expect(bottomSpace).toBeLessThan(40);
+      } else {
+        await expect(record.getByRole("button", { name: "Cancel request", exact: true })).toBeVisible();
+      }
       await mineReviewShot(page, frame);
       await record.getByRole("button", { name: "Close", exact: true }).click();
     }
+
+    await page.goto("/leave?request=mine-long-refusal");
+    const longRefusal = sheet(page, "Sick");
+    await expect(longRefusal.getByText(longRejection, { exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(longRefusal.getByRole("button", { name: "Close", exact: true })).toBeInViewport({ ratio: 1 });
+    await mineReviewShot(page, "mine-request-long-declined");
+    await longRefusal.getByRole("button", { name: "Close", exact: true }).click();
 
     const changes = [
       { field: "accrualStart", from: "2027-02-01", to: "2027-04-01", text: "Monthly +1 starts 1 Feb 2027 → 1 Apr 2027" },

@@ -897,6 +897,11 @@ a.dayNumber:hover {
   font-variant-numeric: var(--num);
 }
 
+.cellTask,
+.cellMore {
+  padding-block: 4px;
+}
+
 .cellTask {
   color: var(--ink);
   font-weight: var(--w-semibold);

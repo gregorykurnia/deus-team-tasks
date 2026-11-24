@@ -15,6 +15,7 @@ const teamApi = "**/api/leave/team";
 const capture = process.env.LEAVE_SHOTS === "team";
 const teamLook = { capture, gallery: "test-results/leave-look/L7" };
 const review = process.env.LEAVE_SHOTS === "l8-review";
+const reviewFrames = new RegExp(process.env.LEAVE_REVIEW_FRAMES ?? ".");
 const personLook = {
   capture: review || process.env.LEAVE_SHOTS === "person",
   gallery: review ? "test-results/leave-look/L8/review" : "test-results/leave-look/L8",
@@ -477,6 +478,7 @@ const personUrl = (email = staff) => `${teamUrl}&person=${encodeURIComponent(ema
 const exactButton = (name: string) => ({ name, exact: true });
 
 async function personShot(page: Page, name: string, row?: Locator) {
+  if (review && !reviewFrames.test(name)) return;
   if (personLook.capture) await row?.scrollIntoViewIfNeeded();
   await shot(page, name, personLook);
   const viewport = page.viewportSize()!;
@@ -608,19 +610,16 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
       const record = dialog(page, title);
       await expect(record.getByText(status, { exact: true })).toBeVisible();
       if (title === "Sick") await expect(record.getByText("Approved by Gregory on Tue 9 Feb", { exact: true })).toBeVisible();
-      await personShot(page, `request-${index + 1}-${status.toLowerCase().replaceAll(" ", "-")}`);
-      if (status === "Not approved") {
-        await record.getByRole("button", exactButton("Mark as cancelled")).click();
-        const mark = page.getByRole("alertdialog", { name: "Mark this request as cancelled?" });
-        await expect(mark.getByText("The request will appear as Cancelled in Requests.")).toBeVisible();
-        await personShot(page, "request-mark-cancelled");
-        await mark.getByRole("button", exactButton("Mark as cancelled")).click();
-        await expect(record.getByText("Cancelled", { exact: true })).toBeVisible();
-        await expect(mark).toBeHidden();
-        expect(await readDoc("tasks", "leaveRequests/last")).toMatchObject({ status: "cancelled", rejectReason: "Coverage is needed." });
+      if (status === "Waiting" || status === "Approved") {
+        await expect(record.getByRole("button", exactButton("Cancel request"))).toBeVisible();
+      } else {
+        await expect(record.getByRole("button", { name: /^(Cancel request|Mark as cancelled)$/ })).toHaveCount(0);
       }
+      if (status === "Not approved") await expect(record.getByText("Coverage is needed.", { exact: true })).toBeVisible();
+      await personShot(page, `request-${index + 1}-${status.toLowerCase().replaceAll(" ", "-")}`);
       await record.getByRole("button", exactButton("Close")).click();
     }
+    expect(await readDoc("tasks", "leaveRequests/last")).toMatchObject({ status: "rejected", rejectReason: "Coverage is needed." });
     await audrey.getByRole("button", exactButton("Close")).click();
     await expect(opener).toBeFocused();
     await expect(people(page).getByRole("row", { name: /^Audrey/ }).getByRole("cell").first()).toHaveText("9.5 days");
@@ -634,6 +633,11 @@ test.describe("L8 person and holidays", { tag: "@phone" }, () => {
       await expect(employee).toHaveURL("/leave");
       await expect(employee.getByText("9.5 days", { exact: true })).toBeVisible();
       await expect(employee.getByRole("link", { name: /Sick Fri 5 Feb/ })).toBeVisible();
+      await employee.getByRole("link", { name: /Annual leave Tue 2 Feb.*Not approved$/ }).click();
+      const decision = dialog(employee, "Annual leave");
+      await expect(decision.getByText("Coverage is needed.", { exact: true })).toBeVisible();
+      await expect(decision.getByRole("button", { name: /^(Cancel request|Mark as cancelled)$/ })).toHaveCount(0);
+      await decision.getByRole("button", exactButton("Close")).click();
       await employee.getByRole("button", exactButton("History")).click();
       await expect(employee.getByText("Opening balance correction")).toBeVisible();
       await expect(employee.getByRole("listitem").filter({ hasText: auditChange })).toContainText("Details changed by Gregory");

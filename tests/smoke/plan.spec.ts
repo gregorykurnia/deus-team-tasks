@@ -39,7 +39,7 @@ function leaveAway(index: number, fields: Partial<LeaveRequest> = {}) {
   };
 }
 
-async function planShot(page: Page, name: string) {
+async function planShot(page: Page, name: string, gallery = "test-results/leave-look/P1") {
   const { width } = page.viewportSize()!;
   await expect(page.getByText(/^Signed (in as |out$)/)).toHaveCount(0);
   if (name.endsWith("-before")) await expect(page.getByText("Loading tasks", { exact: true })).toHaveCount(0);
@@ -63,7 +63,7 @@ async function planShot(page: Page, name: string) {
   }, width);
   expect(issues).toEqual([]);
   await page.screenshot({
-    path: `test-results/leave-look/P1/${width}-${name}.png`, animations: "disabled", style: "nextjs-portal { display: none !important; }",
+    path: `${gallery}/${width}-${name}.png`, animations: "disabled", style: "nextjs-portal { display: none !important; }",
   });
 }
 
@@ -450,7 +450,9 @@ const month = (page: Page) => page.getByRole("region", { name: /^[A-Z][a-z]+ \d{
 const dayRegion = (page: Page, name: string) => page.getByRole("region", { name });
 
 test.describe("Month (D5, D7)", () => {
-  test("shows the day's deadlines and events, and a day opens the Day view", { tag: "@phone" }, async ({ page, calendar, isMobile }) => {
+  test("shows the day's deadlines and events, and a day opens the Day view", { tag: "@phone" }, async ({ page, calendar, isMobile }, testInfo) => {
+    const captureMonth = process.env.PLAN_MONTH_SHOTS === "1" && testInfo.project.name !== "jakarta";
+    if (captureMonth && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
     await calendar("ok", [{ id: "e1", title: "Weekly sync", start: isoDay(0), end: isoDay(0), allDay: false, startTime: "09:30", endTime: "10:00" }]);
     await seedTasks([task("a", { task: "Write the proposal", endDate: isoDay(0), responsible: [MAYA] }), task("late", { task: "Chase the invoice", endDate: isoDay(-1) })]);
     await page.goto("/plan?view=month");
@@ -463,15 +465,30 @@ test.describe("Month (D5, D7)", () => {
       await expect(grid.getByRole("link", { name: "Write the proposal" })).toHaveCount(0);
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Write the proposal" })).toBeVisible();
       await expect(dayRegion(page, "Team calendar").getByText("09:30 to 10:00")).toBeVisible();
+      if (captureMonth) {
+        await planShot(page, "month-targets", "test-results/e2b-look");
+        const viewport = page.viewportSize()!;
+        await page.setViewportSize({ width: 320, height: 740 });
+        await planShot(page, "month-targets", "test-results/e2b-look");
+        await dayRegion(page, "Tasks").scrollIntoViewIfNeeded();
+        await planShot(page, "month-agenda", "test-results/e2b-look");
+        await page.setViewportSize(viewport);
+      }
       await grid.getByRole("button", { name: /: 1 deadline$/ }).click();
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Chase the invoice" })).toBeVisible();
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Write the proposal" })).toHaveCount(0);
     } else {
-      await expect(grid.getByRole("link", { name: "Write the proposal" })).toBeVisible();
+      const deadline = grid.getByRole("link", { name: "Write the proposal" });
+      await expect(deadline).toBeVisible();
+      expect((await deadline.boundingBox())?.height).toBeGreaterThanOrEqual(24);
       await expect(grid.getByText("09:30 Weekly sync")).toBeVisible();
-      await grid.getByRole("link", { name: "Write the proposal" }).click();
+      if (captureMonth) await planShot(page, "month-targets", "test-results/e2b-look");
+      await deadline.click();
       await expect(page).toHaveURL(/\?view=month&task=a$/);
+      const taskSheet = page.getByRole("dialog", { name: "Task", exact: true });
+      await expect(taskSheet.getByRole("button", { name: "Close", exact: true })).toBeFocused();
       await page.keyboard.press("Escape");
+      await expect(taskSheet).toBeHidden();
       await todayCell.click();
       await expect(page).toHaveURL(`/plan?view=day&date=${isoDay(0)}`);
       await expect(dayRegion(page, "Tasks").getByRole("link", { name: "Write the proposal" })).toBeVisible();
@@ -492,14 +509,24 @@ test.describe("Month (D5, D7)", () => {
     await expect(page.getByRole("heading", { name: /^Nothing in / })).toHaveCount(0);
   });
 
-  test("a busy day has three deadlines, and a day with many items folds the rest into a count", async ({ page, isMobile }) => {
+  test("a busy day has three deadlines, and a day with many items folds the rest into a count", async ({ page, isMobile }, testInfo) => {
     test.skip(isMobile, "Phones show dots, not lines.");
+    const captureMonth = process.env.PLAN_MONTH_SHOTS === "1" && testInfo.project.name !== "jakarta";
+    if (captureMonth) await page.setViewportSize({ width: 1280, height: 900 });
     await seedTasks(Array.from({ length: 6 }, (_, i) => task(`t${i}`, { task: `Busy ${i}`, endDate: isoDay(0) })));
     await page.goto("/plan?view=month");
     const grid = month(page);
     await expect(grid.getByRole("link", { name: /^Busy \d$/ })).toHaveCount(3);
-    await expect(grid.getByRole("link", { name: /^3 more items on .*, open the day$/ })).toBeVisible();
+    const moreItems = grid.getByRole("link", { name: /^3 more items on .*, open the day$/ });
+    await expect(moreItems).toBeVisible();
+    expect((await moreItems.boundingBox())?.height).toBeGreaterThanOrEqual(24);
     await expect(grid.getByText("3 more")).toBeVisible();
+    if (captureMonth) {
+      await moreItems.scrollIntoViewIfNeeded();
+      await planShot(page, "month-busy", "test-results/e2b-look");
+    }
+    await moreItems.click();
+    await expect(page).toHaveURL(`/plan?view=day&date=${isoDay(0)}`);
   });
 
   test("calendar off: a notice in the month, and tasks carry on", { tag: "@phone" }, async ({ page, isMobile }) => {

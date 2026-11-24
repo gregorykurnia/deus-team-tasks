@@ -15,6 +15,7 @@ import { convert, protoData, seedAll } from "./seed.mjs";
 import { parseMap, plan } from "./states.mjs";
 import { dataFor, recipe, colleagueChange } from "./recipes.mjs";
 import { auditLayout } from "./layout.mjs";
+import { captureFailed, captureUserAgent, openCapturePage } from "./capture.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, "redesign/compare");
@@ -80,13 +81,13 @@ async function ensureData(p) {
   seeded = key;
 }
 
-async function runOne(browser, entry, sizeName, report) {
+async function runOne(browser, entry, sizeName, report, cached) {
   const p = plan(entry);
   const size = SIZES[sizeName];
   const base = `${entry.id}-${sizeName}`;
   const files = { proto: path.join(OUT, "proto", base + ".png"), now: path.join(OUT, "new", base + ".png"), both: path.join(OUT, "both", base + ".png") };
   if (p.skip) return report.push({ id: base, skipped: p.skip });
-  if (!flag("force") && fs.existsSync(files.both)) return;
+  if (!flag("force") && cached && !captureFailed(cached) && fs.existsSync(files.both)) return;
   await ensureData(p);
   const events = current.converted.events;
   const opts = { viewport: size, timezoneId: "Asia/Jakarta", reducedMotion: "reduce", deviceScaleFactor: 1, ...(sizeName === "phone" ? { isMobile: true, hasTouch: true } : {}) };
@@ -94,7 +95,7 @@ async function runOne(browser, entry, sizeName, report) {
   // The prototype.
   const pctx = await browser.newContext(opts);
   const pp = await pctx.newPage();
-  await pp.goto(`${PROTO}/${p.proto}`);
+  await openCapturePage(pp, `${PROTO}/${p.proto}`);
   await settle(pp);
   if (p.state === "live" || p.state === "back-online") await sleep(1800);
   const protoText = await textOf(pp);
@@ -103,8 +104,7 @@ async function runOne(browser, entry, sizeName, report) {
 
   // The new app.
   const r = recipe(p, { db: current.db, coNum: current.converted.coNum, phone: sizeName === "phone" });
-  const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
-  const ctx = await browser.newContext(r.iphone ? { ...opts, userAgent: IPHONE } : opts);
+  const ctx = await browser.newContext({ ...opts, userAgent: captureUserAgent(r.iphone) });
   if (r.standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
   await ctx.clock.install({ time: TODAY }); // time keeps flowing from this day: a frozen clock would stop the app's own timeouts
   if (r.offer) await ctx.addInitScript(() => { // a browser that offers its own install (headless Chromium never does)
@@ -127,7 +127,7 @@ async function runOne(browser, entry, sizeName, report) {
   if (p.net === "hold") await page.route(/127\.0\.0\.1:8180/, () => {});
   if (p.net === "blocked") await page.route(/127\.0\.0\.1:8180/, (r) => r.abort());
   const url = APP + r.path + (r.params.toString() ? "?" + r.params : "");
-  await page.goto(url);
+  await openCapturePage(page, url);
   const live = page.getByText("Live, everyone's up to date").first();
   if (p.net === "hold") await sleep(1800);
   else if (p.net === "blocked") await page.getByText("No connection.").first().waitFor({ timeout: 25000 }).catch(() => {});
@@ -199,6 +199,7 @@ async function main() {
   const browser = await chromium.launch();
   const reportFile = path.join(OUT, "report.json");
   const old = fs.existsSync(reportFile) ? JSON.parse(fs.readFileSync(reportFile, "utf8")) : [];
+  const previous = new Map(old.map((state) => [state.id, state]));
   const report = [];
   const saveReport = () => {
     const ids = new Set(report.map((r) => r.id));
@@ -213,7 +214,7 @@ async function main() {
   try {
     for (const entry of entries) for (const s of sizes) {
       const t0 = Date.now();
-      try { await runOne(browser, entry, s, report); }
+      try { await runOne(browser, entry, s, report, previous.get(`${entry.id}-${s}`)); }
       catch (e) { report.push({ id: `${entry.id}-${s}`, failed: String(e.message).split("\n")[0].slice(0, 200) }); console.log("FAILED", entry.id, s, String(e.message).split("\n")[0]); }
       console.log(entry.id, s, Math.round((Date.now() - t0) / 1000) + "s");
       saveReport();
@@ -223,5 +224,6 @@ async function main() {
     await browser.close();
     if (flag("servers")) stopServers();
   }
+  if (report.some(captureFailed)) process.exitCode = 1;
 }
 main();

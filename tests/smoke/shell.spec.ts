@@ -19,6 +19,13 @@ const title = (page: Page) => page.getByRole("heading", { level: 1 });
 // A link's name also carries its count, as in "All tasks 12".
 const named = (label: string) => new RegExp(`^${label}(\\s+\\d+)?$`);
 
+async function shotMore(page: Page, frame: string) {
+  await expect(page.getByText("Live, everyone's up to date").first()).toBeAttached();
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: `test-results/e2b-look/${page.viewportSize()!.width}-${frame}.png`, animations: "disabled" });
+}
+
 test.describe("large screens", () => {
   test.skip(({ isMobile }) => isMobile, "The side bar is for screens over 900px.");
 
@@ -116,21 +123,41 @@ test.describe("phones", { tag: "@phone" }, () => {
     await expect(page).toHaveURL("/companies?task=new");
   });
 
-  test("+ and More keep the screen's own address state, and closing More takes off only its own", async ({ page }) => {
+  test("+ and More keep the screen's own address state, and closing More takes off only its own", async ({ page }, testInfo) => {
+    const capture = process.env.MORE_SHOTS === "1" && testInfo.repeatEachIndex === 0;
     await page.goto("/plan?view=month");
     await mainNav(page).getByRole("link", { name: "New task" }).click();
     await expect(page).toHaveURL("/plan?view=month&task=new");
 
     await page.goto("/plan?view=day");
     const more = mainNav(page).getByRole("button", { name: "More" });
+    const sheet = page.getByRole("dialog", { name: "More" });
     await more.click();
     await expect(page).toHaveURL("/plan?view=day&more=1");
+    const plan = sheet.getByRole("link", { name: /^Plan/ });
+    await expect(plan).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL("/plan?view=day");
+    await expect(sheet).toBeHidden();
+    await expect(more).toBeFocused();
 
     await page.goto("/plan?view=day&more=1"); // opened by its address: closing replaces it
-    await page.getByRole("dialog", { name: "More" }).getByRole("button", { name: "Close" }).click();
+    await expect(plan).toBeFocused();
+    if (capture) await shotMore(page, "more-deep-link");
+    await page.setViewportSize({ width: 320, height: 740 });
+    if (capture) await shotMore(page, "more-resized");
+    await sheet.getByRole("button", { name: "Close" }).click();
     await expect(page).toHaveURL("/plan?view=day");
+    await expect(sheet).toBeHidden();
+
+    if (capture) {
+      await page.goto("/plan?view=day&more=1");
+      await expect(plan).toBeFocused();
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await expect(page).toHaveURL("/plan?view=day");
+      await expect(sheet).toBeHidden();
+      await shotMore(page, "more-after-widening");
+    }
   });
 
   test("after the back gesture closes More, the next close doesn't step back a page", async ({ page }) => {

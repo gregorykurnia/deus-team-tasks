@@ -137,7 +137,7 @@ export default function RequestSheet({ data, request, email, onClose, onRefresh,
 
   return (
     <>
-      <Sheet open onClose={onClose} short={compact || !large} visibleOnOpen={compact} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
+      <Sheet open onClose={onClose} short={compact || !large || rejected} visibleOnOpen={compact} title={LEAVE_TYPE_LABELS[request.type]} tag={<RequestStatus status={request.status} />}
         footer={canCancel && <Button variant="quietRed" onClick={() => { setError(""); setConfirm(rejected ? "mark" : "cancel"); }}>
           {rejected ? "Mark as cancelled" : "Cancel request"}
         </Button>}>
