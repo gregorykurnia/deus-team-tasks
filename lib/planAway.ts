@@ -1,4 +1,4 @@
-import { addDays, shortDate } from "./dates";
+import { addDays, isWeekend, shortDate } from "./dates";
 import { AWAY_WINDOW_DAYS, type AwayDay } from "./leave";
 import { personNameKey } from "./peopleInput";
 import { monthGridDays } from "./planCalendar";
@@ -47,16 +47,25 @@ export function awayForPeople(days: readonly AwayDay[], names: string[]): Map<st
   return byPerson;
 }
 
+// The next weekday after a date: full days off on a Friday and the Monday after are one period.
+function nextWeekday(iso: string): string {
+  let next = addDays(iso, 1);
+  while (isWeekend(next)) next = addDays(next, 1);
+  return next;
+}
+
 export function awayPeriods(days: readonly AwayDay[], today: string) {
-  const periods: { from: string; to: string; waiting?: true }[] = [];
+  const periods: { from: string; to: string; waiting?: true; part: string }[] = [];
   for (const day of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
     const previous = periods.at(-1);
-    if (previous && previous.waiting === day.waiting && day.date <= addDays(previous.to, 1)) previous.to = day.date;
-    else periods.push({ from: day.date, to: day.date, waiting: day.waiting });
+    // Only whole days join a period; half days and hours keep their own label with the part of the day.
+    const part = day.part === "hours" ? ` ${day.from}–${day.to}` : day.part === "day" ? "" : ` ½ ${day.part}`;
+    if (previous && !part && !previous.part && previous.waiting === day.waiting && day.date <= nextWeekday(previous.to)) previous.to = day.date;
+    else periods.push({ from: day.date, to: day.date, waiting: day.waiting, part });
   }
-  return periods.map(({ from, to, waiting }) => {
+  return periods.map(({ from, to, waiting, part }) => {
     const end = shortDate(to, today);
     const start = from.slice(0, 7) === to.slice(0, 7) ? Number(from.slice(8)) : shortDate(from, today);
-    return { label: `Away ${from === to ? end : `${start}–${end}`}${waiting ? " (Waiting)" : ""}`, waiting };
+    return { label: `Away ${from === to ? end : `${start}–${end}`}${part}${waiting ? " (Waiting)" : ""}`, waiting };
   });
 }

@@ -25,7 +25,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 - Read only your task's section in the brief, plus **Smallest design**, **Requirements** and **Checks** there.
   The defaults are settled: no brainstorming and no questions to the owner.
 - One task per session, on `staging` (this project's branch rule; nothing goes live until a release). Commit and push each task with its row ticked in
-  the same commit. Every push deploys, which is safe because everything stays off until O5.
+  the same commit. `staging` doesn't deploy; a release puts the work live, and it stays off until O5.
 - Tests use only the Firestore and Auth emulators with the fake push, and pin the day with `LEAVE_TEST_DATE`. Never
   call a push service or production.
 - Evidence goes in `docs/implementation/leave-results.md`, under each task's ID.
@@ -54,7 +54,9 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 | P1 | `/api/leave/away` (names and days only) and "Away" in Plan's Month, Day and People views; `plan.spec.ts` cases. [P1](implementation/leave.md#p1--whos-away-in-plan) [look] | Sol Max | 2026-11-24 — Away views and access checked |
 | E2 | Full suite, a11y and scoped compare once after Phase 2; list every failure, fix nothing. [E2](implementation/leave.md#e2--full-check-run) [no look] | Sol High | 2026-11-24 — checks run, failures logged |
 | E2b | Fix the failures E2 listed, rerunning only what each fix touched. [E2b](implementation/leave.md#e2b--fix-recorded-failures) [look] | Sol Max | 2026-11-24 — scoped fixes and look verified |
-| R2 | Phase review of Phase 2 and R1's open items, quick fixes, owner handoff. [R2](implementation/leave.md#r2--phase-review) [no look] | Opus 5.5 High | |
+| R2 | Phase review of Phase 2 and R1's open items, quick fixes, owner handoff. [R2](implementation/leave.md#r2--phase-review) [no look] | Opus 5.5 High | 2026-11-24 — 1 quick fix, 2 fix rows |
+| R2.F1 | Rerun the full `npm run a11y` once (E2's run met the crawler block and scanned only the 403 page in 278 states; E2b restored the browser identity). Fix what fails on Leave and Plan states, rerunning only those; list other failures in `leave-results.md` under R2.F1 as new fix rows here. Done when: the full audit's counts are recorded and every Leave and Plan state passes axe on desktop and phone. [no look] | Sol xHigh | |
+| R2.F2 | Layout faults E2b's look check saw outside Phase 2: Today at 320 px wraps two-digit chart dates and its last filter count runs past the track; Tasks at 1280 px runs its table past the visible right edge. Confirm each first (an intended scroll area is not a fault). Done when: a smoke check measures no wrapped date, no count past its track at 320 px and no clipped Tasks column at 1280 px, and the look check passes. [look] | Sol xHigh | |
 
 ## Owner steps after the run
 
@@ -78,7 +80,8 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 - [ ] O7 *owner*: live try: a teammate asks a half day of annual leave; you get the push, approve it, and their balance
   goes down by 0.5. Then they cancel it and it comes back.
 - [ ] O8 *owner*: the screens page source `docs/implementation/leave-screens.html` isn't in the repo. If you have it,
-  add it, so the Leave look comparisons waiting on it (N38, N40 in `redesign/ui-implementation-plan.md`) can run.
+  add it, so the Leave and Plan look comparisons waiting on it (N38 to N42 in `redesign/ui-implementation-plan.md`)
+  can run.
   Leave works without it.
 
 ## Model rationale

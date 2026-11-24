@@ -314,3 +314,34 @@ The refreshed frames are in `test-results/e2b-look/` and `redesign/compare/new/`
 
 - E2's original audit included four of the replayed states, Today and More at both sizes. Its other 278 blocked state runs still need fresh axe results at the next full audit. The audit's `--distinct` groups the normal Plan views, so the replay names Month, Day and People individually to check their different layouts.
 - Exact comparison to the Leave screens page still needs the reference HTML in O8. The Mine and Team captures use the shipped sheet patterns described in N38 and N41.
+
+## R2 — Phase review
+
+Read `readAway`, the Away route and guard, `useAway`, `lib/planAway.ts`, the Month, Day and People markers, the
+service worker and the Away data and smoke tests before the builders' notes. Hunted: what a non-admin learns about
+someone else's leave from Plan, the route and the HTML; signed out, removed and switched users; a stale or failed reply.
+
+- **Route:** 401 without a valid token, 403 for a removed person, 404 with the flag off, `no-store`, at most 62 dates.
+  It returns only `name`, `date`, `part`, `from`/`to` for hours and the caller's own `waiting`; never the type, reason,
+  note, a rejected or cancelled request, someone else's waiting request or a balance. The service worker skips
+  `/api/`. No fault found.
+- **What the part reveals:** a half day can only be Annual leave and hours only Other absence, as the brief's response
+  shape intends; a full day stays the same for every type, so Sick is never singled out. Kept.
+- **Page:** Plan renders no Away on the server; signed out, the hook never calls the route (smoke case), and a sign-out
+  or a different sign-in drops the previous answer before showing anything. No fault found.
+
+FINDING: P1 · minor · People rows joined whole days only on consecutive calendar dates, so a two-week leave read
+"Away 1–5" and "Away 8–12", and a half day or a few hours read as a whole day ("Away 10 Feb" for 13:00–15:00). Fixed:
+whole days join across a weekend; half days and hours keep their own label with the part (`lib/planAway.ts`), unit
+case added.
+FINDING: E2 · minor · the full a11y audit met the crawler block and scanned the 403 page in 278 states; E2b restored the
+browser identity and rescanned ten states. The rest is R2.F1.
+FINDING: - · minor · E2b's look check saw Today's 320 px chart dates wrap and filter count overflow, and the Tasks
+table run past 1280 px. Outside Phase 2: R2.F2.
+
+R1's open items: none were left as fix rows; O8 now names N38 to N42. The plan's run rules no longer say every push
+deploys (work goes to `staging`).
+
+Checks: `npx tsc --noEmit`, ESLint on the changed files, `npm run test:unit` (1,837 passed), and
+`tests/smoke/plan.spec.ts` "shows Away in Month, Day, People" on desktop, phone and Jakarta (3 passed). Owner steps:
+O1–O8, nothing new from Phase 2.

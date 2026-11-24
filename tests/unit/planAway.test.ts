@@ -37,6 +37,17 @@ describe("Away in Plan", () => {
     ]);
   });
 
+  it("joins whole days across a weekend and labels half days and hours", () => {
+    const half: AwayDay = { name: "Audrey", part: "morning", date: "2027-02-17" };
+    const hours: AwayDay = { name: "Audrey", part: "hours", from: "13:00", to: "15:00", date: "2027-02-18" };
+    expect(awayPeriods([day("2027-02-12"), day("2027-02-15"), day("2027-02-16"), half, hours, day("2027-02-19")], today)).toEqual([
+      { label: "Away 12–16 Feb", waiting: undefined },
+      { label: "Away 17 Feb ½ morning", waiting: undefined },
+      { label: "Away 18 Feb 13:00–15:00", waiting: undefined },
+      { label: "Away 19 Feb", waiting: undefined },
+    ]);
+  });
+
   it("finds an away-only day on the first visit to Day", () => {
     expect(landing([], null, today, [today])).toEqual({ date: today, landed: false });
     expect(landing([], null, today, ["2027-02-12", "2027-02-11"])).toEqual({ date: "2027-02-11", landed: true });
