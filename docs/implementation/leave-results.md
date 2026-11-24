@@ -222,3 +222,71 @@ The Away route serves up to 62 inclusive dates for active, signed-in people. It 
 - `npx playwright test tests/smoke/plan.spec.ts` covered 68 cases across desktop, phone and Jakarta. The main run passed 64. Three Jakarta task-loading timeouts passed on their targeted replay. The phone replay passed after it waited for Everyone to open and the 320 px layout was repaired. It verifies sign-out, waiting privacy, direct links and reloads, offline recovery, and a superseded month's reply.
 - The `test-results/leave-look/P1/` gallery has before-and-after frames and native-size crops at 1280, 390 and 320 px. At 320 px the date marker stays on one line, the first 40-character name fits inside the selected date with `+5 more`, and the Next due line sits below the Away dates in People. The Day view shows all six names. The original frame 10 is missing from the checkout. N42 records the comparison with that frame, and these captures use the shipped Plan design guide.
 - `npx tsc --noEmit`, ESLint on the changed TypeScript, and `npm run build` passed. The build ran with sign-in and Leave disabled and includes `/api/leave/away`.
+
+## E2 — Full check run
+
+### Smoke
+
+On staging `d514045`, the full `npm run test:smoke` matrix covered all 523 cases across desktop, phone, and Jakarta with local Firestore and Auth. The combined reports show **501 passed, 17 skipped, and 5 failed**. All 68 `plan.spec.ts` cases passed, including the new Away coverage.
+
+| Project | Spec and test | Failure |
+|---|---|---|
+| Desktop and phone | `tests/smoke/leave-admin.spec.ts:516` — deep-links into a person, adjusts their balance, audits details and adds sick leave | Both runs timed out at `:613` waiting to click `Mark as cancelled` on a rejected request. `476cda8` made rejected requests keep `Not approved`. |
+| Desktop and phone | `tests/smoke/leave.spec.ts:184` — keeps the shared Leave forms, requests and audit rows readable in Mine | Both runs expected the same button at `:218` and could not find it within 10 seconds. |
+| Phone | `tests/smoke/shell.spec.ts:119` — + and More keep the screen's own address state, and closing More takes off only its own | After Escape, the address still ended in `/plan?view=day&more=1` after 10 seconds. The assertion at `:129` expected `/plan?view=day`. |
+
+The initial launcher found port 8180 occupied by the earlier audit and started zero cases. After the audit freed the ports, the full launch began. Its 2 GB Firestore heap exhausted during phone stress seeding at 11:44:54 UTC (`java.lang.OutOfMemoryError: Java heap space`). A direct request to the local emulator timed out. The interrupted launch exited 130 and preserved 370 passes, 17 skips, and two failures from before the outage. A fresh 5 GB emulator continued the 134 affected or queued cases, retaining 131 passes and three failures. Every scheduled case has a final result.
+
+<details>
+<summary>Initial smoke failures during the emulator outage</summary>
+
+All cases below ran in the phone project. A `500` means the local Firestore emulator returned `UNKNOWN`.
+
+| Spec and test | First attempt |
+|---|---|
+| `chat-task-edits.spec.ts:104` — capture 065 with all stress tasks and their companies | 500 while seeding `tasks/tasks`. |
+| `chat-task-edits.spec.ts:173` — comparison reaches the missing-description state | 500 while clearing tasks. |
+| `chat-task-edits.spec.ts:183` — people suggestions remain above the pinned task actions | `cleanData` timed out. |
+| `companies-screen.spec.ts:96` — the sort menu and the column heads order the list | 500 while clearing tasks. |
+| `companies-settings.spec.ts:267` — drag a Status option by touch on a phone | Test timed out. |
+| `empty-headings.spec.ts:5` — empty flow headings online | `No flows yet` was missing. |
+| `empty-headings.spec.ts:5` — empty flow headings offline | 500 while clearing tasks. |
+| `flows-screen.spec.ts:56` — the list runs A to Z, and search covers steps, outcomes and people | 500 while seeding `tasks/flows`. |
+| `followup-server.spec.ts:51` — Node follow-up writes render on desktop and phone | `cleanData` timed out. |
+| `gallery-overlays.spec.ts:121` — on a phone a sheet is a bottom sheet, full width | `beforeEach` timed out. |
+| `gallery-overlays.spec.ts:197` — on a phone toasts sit above where the tab bar goes | `beforeEach` timed out. |
+| `gallery-overlays.spec.ts:224` — a menu too tall for either side opens on the roomier one and scrolls | `beforeEach` timed out. |
+| `gallery-overlays.spec.ts:239` — a menu stays with its button when the window changes size | `beforeEach` timed out. |
+| `gallery-rows.spec.ts:122` — on a phone a list row becomes a card and Today's card loses its badge | `beforeEach` timed out. |
+| `groups.spec.ts:15` — a starred task group comes first | `cleanData` timed out. |
+| `leave-admin.spec.ts:167` — opens waiting cards from links and saves decisions visible to the employee | `cleanData` timed out. |
+| `leave-admin.spec.ts:294` — distinguishes loading, failure, offline, and missing holidays | `cleanData` timed out. |
+| `leave-admin.spec.ts:336` — keeps actions independent, times out safely and verifies a committed retry once | `cleanData` timed out. |
+| `leave-admin.spec.ts:388` — keeps the winning decision and leaves no stale dialog when you switch views | `cleanData` timed out. |
+| `leave-admin.spec.ts:436` — fits long and missing data at 320px and keeps lookalike names distinct | `cleanData` timed out. |
+
+The interrupt stopped `leave-admin.spec.ts:516` (deep-links into a person, adjusts their balance, audits details and adds sick leave) and left 113 cases queued.
+
+</details>
+
+### Accessibility
+
+Used the `npm run a11y` audit already running on `d514045` against the local emulator. It finished all 284 state runs. In 282 runs Chromium received HTTP 403 and axe scanned `Not available to crawlers.`. Each of those runs reported `document-title`, `html-has-lang`, `landmark-one-main`, `page-has-heading-one`, and `region` on that response. The two `271-installing-and-opening-with-no-connection-iphone` runs reached the app and passed. Every other audited state, on both sizes, has this coverage failure.
+
+Of the blocked runs, 254 also reported `never went live`. Additional setup messages were 166 click timeouts at 4 seconds, 18 missing offline banners, 18 fill timeouts at 30 seconds, six wait timeouts at 25 seconds, two missing back-online toasts, and two click timeouts at 10 seconds. A direct request to the local server confirmed HTTP 403 with `HeadlessChrome` and HTTP 200 with a standard Chrome user agent.
+
+### Scoped comparison
+
+`npm run compare -- --only '^(001-today-normal|093-plan-month-normal|102-plan-one-day-normal|114-plan-people-normal|276-moving-around-on-phones-more-sheet)$' --force` recorded failures in all ten captures despite exiting 0. Every capture logged HTTP 403 and `never went live`, and the app side showed `Not available to crawlers.`. Each phone capture also flagged horizontal overflow on that response, with a 980 × 2121 window in a 390 × 844 capture.
+
+| State | Desktop | Phone |
+|---|---|---|
+| `001-today-normal` | HTTP 403 | HTTP 403 and viewport overflow |
+| `093-plan-month-normal` | HTTP 403 | HTTP 403 and viewport overflow |
+| `102-plan-one-day-normal` | HTTP 403 | HTTP 403 and viewport overflow |
+| `114-plan-people-normal` | HTTP 403 | HTTP 403 and viewport overflow |
+| `276-moving-around-on-phones-more-sheet` | HTTP 403 | HTTP 403 and viewport overflow |
+
+### Light checks
+
+`npx tsc --noEmit` and `npm run test:unit -- --maxWorkers=2` passed. Unit tests passed 1,830 cases across 77 files.
