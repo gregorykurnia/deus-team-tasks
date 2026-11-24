@@ -379,3 +379,61 @@ with the same settings. This opens the separate Timeline, Month, Day and People 
 | Fix row | States | Failure |
 |---|---|---|
 | R2.F3 | `049-task-groups-q4-planning`, `056-task-groups-rename`, `057-task-groups-delete` on desktop and phone | `/tasks/groups/q4` and `/tasks/groups/office` returned HTTP 404, so the three intended states could not be scanned at either width. |
+
+## R2.F1b — Remaining Plan map entries
+
+Used the R2.F1 filter with `--stress` and the same feature flags, fake calendar, and
+`LEAVE_TEST_DATE=2027-02-10`. The first attempt received HTTP 404 and
+`net::ERR_CONNECTION_REFUSED`. A fresh Turbopack server returned HTTP 500 with
+`Can't resolve '@vercel/turbopack-next/internal/font/google/font'`. Started
+`next dev --webpack` and the local Firestore emulator separately, verified that Plan returned
+HTTP 200, and ran the filtered audit against those servers.
+
+The replay reported all **82 runs**. Desktop (1440 × 900) and phone (390 × 844) each had
+**40 passes and one axe failure**. All runs reached the intended state and completed axe.
+The audit exited 1 for the two `heading-order` findings in the empty March 2031 view.
+Axe flagged the `h3` “Nothing in March 2031” on both widths. R2.F1c tracks the fix.
+
+| Map entry | Desktop | Phone |
+|---|---|---|
+| `070-plan-timeline-stress-30-people-rows-folded` | Pass | Pass |
+| `071-plan-timeline-open` | Pass | Pass |
+| `072-plan-timeline-maya-chen` | Pass | Pass |
+| `073-plan-timeline-stress` | Pass | Pass |
+| `074-plan-timeline-clients` | Pass | Pass |
+| `075-plan-timeline-internal` | Pass | Pass |
+| `076-plan-timeline-q4-planning-group` | Pass | Pass |
+| `077-plan-timeline-tasks` | Pass | Pass |
+| `078-plan-timeline-events` | Pass | Pass |
+| `079-plan-timeline-events-stress` | Pass | Pass |
+| `080-plan-timeline-no-tasks-in-range` | Pass | Pass |
+| `089-plan-timeline-failed-events-only` | Pass | Pass |
+| `093-plan-month-normal` | Pass | Pass |
+| `094-plan-month-stress` | Pass | Pass |
+| `095-plan-month-tasks` | Pass | Pass |
+| `096-plan-month-events` | Pass | Pass |
+| `097-plan-month-open` | `heading-order` | `heading-order` |
+| `098-plan-month-nothing-yet` | Pass | Pass |
+| `099-plan-month-loading` | Pass | Pass |
+| `100-plan-month-calendar-failed` | Pass | Pass |
+| `101-plan-month-offline` | Pass | Pass |
+| `102-plan-one-day-normal` | Pass | Pass |
+| `103-plan-one-day-stress-60-tasks-25-events` | Pass | Pass |
+| `105-plan-one-day-open` | Pass | Pass |
+| `106-plan-one-day-nothing-yet` | Pass | Pass |
+| `107-plan-one-day-sarah-lim` | Pass | Pass |
+| `108-plan-one-day-events-only` | Pass | Pass |
+| `109-plan-one-day-loading` | Pass | Pass |
+| `110-plan-one-day-not-set-up` | Pass | Pass |
+| `111-plan-one-day-failed` | Pass | Pass |
+| `112-plan-one-day-offline` | Pass | Pass |
+| `113-plan-one-day-open` | Pass | Pass |
+| `114-plan-people-normal` | Pass | Pass |
+| `115-plan-people-stress-30-people-search` | Pass | Pass |
+| `116-plan-people-kevin-tan` | Pass | Pass |
+| `117-plan-people-maya-chen` | Pass | Pass |
+| `118-plan-people-stress` | Pass | Pass |
+| `119-plan-people-open` | Pass | Pass |
+| `120-plan-people-prospects` | Pass | Pass |
+| `121-plan-people-loading` | Pass | Pass |
+| `122-plan-people-nothing-yet` | Pass | Pass |
