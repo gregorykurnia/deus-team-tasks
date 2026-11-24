@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  addLeaveHoliday, adjustLeave, askLeave, cancelLeave, decideLeave, getLeaveBadge, getLeaveTeam, getMyLeave, getPersonLeave,
-  removeLeaveHoliday, saveLeaveDetails,
+  addLeaveHoliday, adjustLeave, askLeave, cancelLeave, decideLeave, getAway, getLeaveBadge, getLeaveTeam, getMyLeave, getPersonLeave,
+  removeLeaveHoliday, saveLeaveDetails, withLeaveDeadline,
 } from "@/lib/leaveClient";
 import type { LeaveInput } from "@/lib/leave";
-import { withLeaveDeadline } from "@/features/leave/LeaveData";
 
 const auth = vi.hoisted(() => ({
   authStateReady: vi.fn(async () => {}),
@@ -17,9 +16,23 @@ const input: LeaveInput = {
 };
 const key = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 
-afterEach(() => { vi.unstubAllGlobals(); auth.currentUser = null; });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); auth.currentUser = null; });
 
 describe("leave client", () => {
+  it.each(["NEXT_PUBLIC_LEAVE_ENABLED", "NEXT_PUBLIC_SIGN_IN_ENABLED"])("never fetches Plan's Away with %s off", async (flag) => {
+    vi.stubEnv("NEXT_PUBLIC_SIGN_IN_ENABLED", "1");
+    vi.stubEnv("NEXT_PUBLIC_LEAVE_ENABLED", "1");
+    vi.stubEnv(flag, "0");
+    const email = "audrey@deushcs.com";
+    const getIdToken = vi.fn(async () => "signed-in-token");
+    auth.currentUser = { uid: email, getIdToken };
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await expect(getAway("2027-02-10", "2027-02-11", { email, signal: new AbortController().signal })).resolves.toEqual([]);
+    expect(getIdToken).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("waits for auth and uses the ID token for uncached reads and both writes", async () => {
     const user = { getIdToken: vi.fn(async () => "firebase-token") };
     auth.authStateReady.mockImplementationOnce(async () => { auth.currentUser = user; });

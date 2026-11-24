@@ -51,6 +51,11 @@ export const LEAVE_PAY_OPTIONS = [
 export type LeaveHalf = "morning" | "afternoon";
 export interface LeaveHours { from: string; to: string }
 
+export type AwayDay = { name: string; date: string; waiting?: true } & (
+  { part: "day" | LeaveHalf } | ({ part: "hours" } & LeaveHours)
+);
+export const AWAY_WINDOW_DAYS = 62;
+
 export interface LeaveInput {
   type: LeaveType;
   reason: LeaveReason | null;
@@ -225,7 +230,7 @@ function isKey<T extends object>(list: T, value: unknown): value is Extract<keyo
   return typeof value === "string" && Object.hasOwn(list, value);
 }
 
-function isLeaveTime(value: unknown): value is string {
+export function isLeaveTime(value: unknown): value is string {
   return typeof value === "string" && /^\d{2}:[0-5]\d$/.test(value) && value >= "07:00" && value <= "20:00";
 }
 

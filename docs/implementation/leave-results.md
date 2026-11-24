@@ -212,3 +212,13 @@ O8.
 Checks: `npx tsc --noEmit`, ESLint on the changed TypeScript, `npm run test:unit` (1,811 passed), and the data tests
 for `lib/leave.server.data.test.ts` and `lib/morningSummary.server.data.test.ts` on the emulators (57 passed).
 No browser spec was rerun (no flow changed). Open items: none left for a fix row; owner steps O1–O8.
+
+## P1 — Who’s away in Plan
+
+The Away route serves up to 62 inclusive dates for active, signed-in people. It shows approved working days and the caller’s own waiting days. Its response gives each person’s name, date, part of day, hours when applicable, and their own waiting marker. Month shows a preview with a link to the full day. People shows dates within its 14-day range.
+
+- `npm run test:unit -- --maxWorkers=2` passed 1,820 of 1,821. The unrelated notification-key test hit `spawnSync … EPERM` and passed on its focused rerun with subprocess access.
+- `JAVA_TOOL_OPTIONS=-Xmx2g npm run test:data` passed all 419 tests on the local Firestore and Auth emulators. The Away cases check the exact JSON fields, authorization, holidays, old names, duplicate days, date limits and a failed transaction followed by a fresh read.
+- `npx playwright test tests/smoke/plan.spec.ts` covered 68 cases across desktop, phone and Jakarta. The main run passed 64. Three Jakarta task-loading timeouts passed on their targeted replay. The phone replay passed after it waited for Everyone to open and the 320 px layout was repaired. It verifies sign-out, waiting privacy, direct links and reloads, offline recovery, and a superseded month's reply.
+- The `test-results/leave-look/P1/` gallery has before-and-after frames and native-size crops at 1280, 390 and 320 px. At 320 px the date marker stays on one line, the first 40-character name fits inside the selected date with `+5 more`, and the Next due line sits below the Away dates in People. The Day view shows all six names. The original frame 10 is missing from the checkout. N42 records the comparison with that frame, and these captures use the shipped Plan design guide.
+- `npx tsc --noEmit`, ESLint on the changed TypeScript, and `npm run build` passed. The build ran with sign-in and Leave disabled and includes `/api/leave/away`.

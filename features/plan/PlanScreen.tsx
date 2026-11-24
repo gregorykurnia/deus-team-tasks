@@ -11,6 +11,7 @@ import { useCompanies, useCompaniesById, useTaskGroups, useTasks } from "@/desk/
 import PageHeader from "@/desk/PageHeader";
 import { failureMessage, useConnection } from "@/lib/connection";
 import { groupNavItems } from "@/lib/deskNav";
+import { awayByDate, planAwayWindow } from "@/lib/planAway";
 import { eventsWindow, landing, monthWindow, somethingOn, windowHas } from "@/lib/planCalendar";
 import { loadPerPerson } from "@/lib/planMath";
 import { planTasks, withoutParents } from "@/lib/planTimeline";
@@ -34,8 +35,10 @@ import { setTasksDone } from "@/lib/taskWrites";
 import type { Task } from "@/lib/types";
 import { useCalendarEvents } from "@/lib/useCalendarEvents";
 import { useSignedIn } from "@/lib/useSignedIn";
+import Button from "@/ui/Button";
 import EmptyState from "@/ui/EmptyState";
 import Notice from "@/ui/Notice";
+import { LoadingLine } from "@/ui/Skeleton";
 import { useMediaQuery } from "@/ui/useMediaQuery";
 import { useToast } from "@/ui/Toaster";
 import { useToday } from "@/ui/useToday";
@@ -45,6 +48,7 @@ import PeopleView from "./PeopleView";
 import PlanBar, { SMALL_SCREEN } from "./PlanBar";
 import PlanTools from "./PlanTools";
 import Timeline from "./Timeline";
+import { useAway } from "./useAway";
 import styles from "./Plan.module.css";
 
 const LEAVE_MS = 900; // a task marked done stays in the Day list while it slides away (guide 2.7)
@@ -56,6 +60,7 @@ export default function PlanScreen() {
   const toast = useToast();
   const phone = useMediaQuery(SMALL_SCREEN);
   const { status } = useConnection();
+  const offline = status === "offline";
   const tasks = useTasks();
   const groups = useTaskGroups();
   const companies = useCompanies();
@@ -91,6 +96,10 @@ export default function PlanScreen() {
   // The events asked for follow the view: four weeks on the Timeline, the month's weeks for Month and Day (lib/planCalendar).
   const range = today && from ? eventsWindow(state, today, from, TIMELINE_DAYS) : null;
   const events = useCalendarEvents(range?.start ?? null, range?.days ?? TIMELINE_DAYS);
+  const awayWindow = today ? planAwayWindow(state, today) : null;
+  const away = useAway(awayWindow?.from, awayWindow?.to, person?.email, offline);
+  const byAwayDate = useMemo(() => awayByDate(away.days, state.person), [away.days, state.person]);
+  const awayDates = useMemo(() => [...byAwayDate.keys()], [byAwayDate]);
 
   const waiting = (s: { loading: boolean; fromCache: boolean; rows: unknown[] }) => s.loading || (s.fromCache && s.rows.length === 0 && status === "connecting");
   const tasksFailed = !!tasks.error && tasks.rows.length === 0;
@@ -148,17 +157,23 @@ export default function PlanScreen() {
   const eventList = state.show !== "tasks" && events.status === "ok" ? events.events : null;
   const dayTasks = useMemo(() => (showsTasks ? planned : []), [showsTasks, planned]);
   const landed = useMemo(
-    () => (today && ready && state.view === "day" && !state.date ? landing(dayTasks, eventList, today) : null),
-    [today, ready, state.view, state.date, dayTasks, eventList]
+    () => (today && ready && state.view === "day" && !state.date ? landing(dayTasks, eventList, today, awayDates) : null),
+    [today, ready, state.view, state.date, dayTasks, eventList, awayDates]
   );
-  // Waiting on the calendar to pick a day matters only when the tasks alone don't settle it.
-  const holding = !!today && state.view === "day" && !state.date && state.show !== "tasks" && events.status === "loading" && !somethingOn(dayTasks, null, today);
-  const shown: PlanState = state.view === "day" && today && !state.date ? { ...state, date: landed?.date ?? today } : state;
+  // Keep today while any source that could put something on it is still answering.
+  const holding = !!today && state.view === "day" && !state.date && (
+    (state.show !== "tasks" && events.status === "loading") || away.status === "loading"
+  ) && !somethingOn(dayTasks, eventList, today, awayDates);
+  const shown: PlanState = state.view === "day" && today && !state.date ? { ...state, date: holding ? today : landed?.date ?? today } : state;
   // A landed day past the events asked for (only tasks ahead of it) gets its own month's events, for the day's lists. The
   // landing itself stays on the first answer, so the day doesn't move again once they arrive.
-  const farWindow = landed?.landed && range && state.show !== "tasks" && !windowHas(range, landed.date) ? monthWindow(landed.date.slice(0, 7)) : null;
+  const farWindow = !holding && landed?.landed && range && state.show !== "tasks" && !windowHas(range, landed.date) ? monthWindow(landed.date.slice(0, 7)) : null;
   const farEvents = useCalendarEvents(farWindow?.start ?? null, farWindow?.days ?? TIMELINE_DAYS);
   const dayEvents = farWindow ? farEvents : events;
+  const farAwayWindow = state.view === "day" && awayWindow && today && shown.date && shown.date > awayWindow.to ? planAwayWindow(shown, today) : null;
+  const farAway = useAway(farAwayWindow?.from, farAwayWindow?.to, person?.email, offline);
+  const farByDate = useMemo(() => awayByDate(farAway.days, state.person), [farAway.days, state.person]);
+  const currentAway = farAwayWindow ? farAway : away;
   const people = useMemo(
     () => loadPerPerson(open, today ?? undefined).filter((p) => isPerson(p.name)).map((p) => ({ name: p.name, owned: p.owned })).sort((a, b) => a.name.localeCompare(b.name)),
     [open, today]
@@ -202,24 +217,31 @@ export default function PlanScreen() {
     );
   }
 
-  const offline = status === "offline";
   const filtersOn = planFiltersOn(state);
   const taskHref = (id: string) => over(pathname, search, `task=${id}`);
   const dayHref = (iso: string) => hrefFor({ ...state, view: "day", date: iso });
   const clearFilters = () => update((now) => clearedPlanFilters(now));
 
+  const awayNotice = currentAway.status === "loading" ? <LoadingLine>Loading who’s away</LoadingLine>
+    : currentAway.status === "failed" ? (
+      <Notice tone="error" title="Couldn’t load who’s away." action={<Button small onClick={currentAway.retry}>Try again</Button>} />
+    ) : currentAway.status === "offline" ? <Notice tone="inlineMuted">Who’s away is unavailable offline.</Notice> : null;
+
   const tools =
     today && from ? (
-      <PlanTools
-        state={state}
-        today={today}
-        groups={groupItems}
-        people={people}
-        day={shown.date}
-        onState={(next) => update(() => next)}
-        onStep={(dir) => update((now) => stepped({ ...now, date: now.date ?? shown.date }, dir, today))}
-        onToday={() => update((now) => atToday(now, today))}
-      />
+      <>
+        <PlanTools
+          state={state}
+          today={today}
+          groups={groupItems}
+          people={people}
+          day={shown.date}
+          onState={(next) => update(() => next)}
+          onStep={(dir) => update((now) => stepped({ ...now, date: now.date ?? shown.date }, dir, today))}
+          onToday={() => update((now) => atToday(now, today))}
+        />
+        {awayNotice && <div className={styles.awayNotice}>{awayNotice}</div>}
+      </>
     ) : null;
 
   return (
@@ -240,6 +262,7 @@ export default function PlanScreen() {
         </div>
       )}
       <PlanBar state={state} onState={(next) => update(() => next)} />
+      {state.view === "people" && state.person && awayNotice && <div className={styles.screenNote}>{awayNotice}</div>}
       {state.view === "timeline" && today && from ? (
         <Timeline
           state={state}
@@ -270,6 +293,8 @@ export default function PlanScreen() {
           all={taskById}
           loading={!ready}
           events={events}
+          away={byAwayDate}
+          awayUnanswered={away.status === "loading" || away.status === "failed" || away.status === "offline"}
           companies={byId}
           offline={offline}
           phone={phone}
@@ -293,6 +318,7 @@ export default function PlanScreen() {
           all={taskById}
           loading={!ready}
           events={dayEvents}
+          away={farAwayWindow ? farByDate : byAwayDate}
           companies={byId}
           offline={offline}
           tools={tools}
@@ -309,6 +335,7 @@ export default function PlanScreen() {
           today={today}
           names={names}
           tasks={peopleTasks}
+          away={away.days}
           loading={!ready}
           tools={tools}
           companies={byId}

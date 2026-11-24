@@ -6,6 +6,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { parseIso } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
+import type { AwayDay } from "@/lib/leave";
 import { dayHeading, dayListsOf, daySummary, dayWithSomething, isPickedDay, relativeDay, weekStrip } from "@/lib/planCalendar";
 import { whoWords, type PlanState } from "@/lib/planView";
 import type { Task } from "@/lib/types";
@@ -14,6 +15,7 @@ import Button from "@/ui/Button";
 import Icon from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import { NameTag } from "@/ui/Tag";
+import { DayAway } from "./Away";
 import DayLists, { DayLoading } from "./DayLists";
 import styles from "./Plan.module.css";
 
@@ -27,6 +29,7 @@ interface DayViewProps {
   all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent
   loading: boolean;
   events: EventsState;
+  away: ReadonlyMap<string, AwayDay[]>;
   companies: CompaniesById;
   offline: boolean;
   tools: ReactNode;
@@ -39,15 +42,17 @@ interface DayViewProps {
 }
 
 export default function DayView(props: DayViewProps) {
-  const { state, today, date: iso, tasks, loading, events, offline, holding } = props;
+  const { state, today, date: iso, tasks, loading, events, away, offline, holding } = props;
   const showTasks = state.show !== "events";
   const showEvents = state.show !== "tasks";
   const eventList = showEvents && events.status === "ok" ? events.events : null;
 
   const lists = useMemo(() => dayListsOf(tasks, eventList, iso), [tasks, eventList, iso]);
   const strip = useMemo(() => weekStrip(tasks, eventList, iso), [tasks, eventList, iso]);
-  const previous = useMemo(() => dayWithSomething(tasks, eventList, iso, -1), [tasks, eventList, iso]);
-  const next = useMemo(() => dayWithSomething(tasks, eventList, iso, 1), [tasks, eventList, iso]);
+  const awayDates = useMemo(() => [...away.keys()], [away]);
+  const previous = useMemo(() => dayWithSomething(tasks, eventList, iso, -1, awayDates), [tasks, eventList, iso, awayDates]);
+  const next = useMemo(() => dayWithSomething(tasks, eventList, iso, 1, awayDates), [tasks, eventList, iso, awayDates]);
+  const onDay = away.get(iso);
 
   const summary = loading ? "" : daySummary(lists);
   const who = whoWords(state);
@@ -85,6 +90,7 @@ export default function DayView(props: DayViewProps) {
             />
           </label>
         </div>
+        {onDay && <DayAway days={onDay} today={iso === today} />}
         <div className={styles.strip} role="group" aria-label="Days of this week">
           {strip.map((d) => (
             <button
@@ -130,6 +136,7 @@ export default function DayView(props: DayViewProps) {
           iso={iso}
           today={today}
           lists={lists}
+          hasAway={!!onDay}
           showTasks={showTasks}
           showEvents={showEvents}
           events={events}

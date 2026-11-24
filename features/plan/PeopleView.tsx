@@ -8,6 +8,9 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { plural } from "@/lib/dates";
 import type { CompaniesById } from "@/lib/kinds";
+import type { AwayDay } from "@/lib/leave";
+import { personNameKey } from "@/lib/peopleInput";
+import { awayForPeople } from "@/lib/planAway";
 import { byDeadline, nextDueLabel, personLine, personRows, rankLine, searchPeople, SEARCH_FROM, sparkHeight, widestLoad, workWords, type PersonRow } from "@/lib/planPeople";
 import type { PlanState } from "@/lib/planView";
 import { isOpen } from "@/lib/taskQueries";
@@ -20,6 +23,7 @@ import { SearchField } from "@/ui/Inputs";
 import Panel, { PanelRows } from "@/ui/Panel";
 import { LoadingLine, Skeleton } from "@/ui/Skeleton";
 import { TaskDayRow } from "@/ui/TaskRow";
+import { PersonAway } from "./Away";
 import styles from "./Plan.module.css";
 
 interface PeopleViewProps {
@@ -27,6 +31,7 @@ interface PeopleViewProps {
   today: string;
   names: string[]; // everyone named on any task, A to Z
   tasks: Task[]; // open tasks narrowed by Work (plus any just marked done, on their way out)
+  away: readonly AwayDay[];
   loading: boolean;
   tools: ReactNode;
   companies: CompaniesById;
@@ -40,16 +45,18 @@ interface PeopleViewProps {
 }
 
 export default function PeopleView(props: PeopleViewProps) {
-  const { state, today, names, tasks, loading } = props;
-  const rows = useMemo(() => personRows(names, tasks.filter((t) => isOpen(t, today) || props.leaving.has(t.id)), today), [names, tasks, props.leaving, today]);
+  const { state, today, names, tasks, away, loading } = props;
+  const byPerson = useMemo(() => awayForPeople(away, names), [away, names]);
+  const rows = useMemo(() => personRows([...new Set([...names, ...byPerson.keys()])], tasks.filter((t) => isOpen(t, today) || props.leaving.has(t.id)), today), [names, byPerson, tasks, props.leaving, today]);
   if (state.person) {
     const row = rows.find((r) => r.name === state.person) ?? personRows([state.person], [], today)[0];
-    return <PersonPage {...props} row={row} loading={loading} />;
+    const matched = [...byPerson.keys()].find((name) => personNameKey(name) === personNameKey(row.name));
+    return <PersonPage {...props} row={row} loading={loading} personAway={byPerson.get(row.name) ?? (matched ? byPerson.get(matched) : undefined)} />;
   }
-  return <Ranking {...props} rows={rows} />;
+  return <Ranking {...props} rows={rows} byPerson={byPerson} />;
 }
 
-function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, state, today }: PeopleViewProps & { rows: PersonRow[] }) {
+function Ranking({ rows, byPerson, loading, tools, personHref, filtersOn, onClearFilters, state, today }: PeopleViewProps & { rows: PersonRow[]; byPerson: ReadonlyMap<string, AwayDay[]> }) {
   const [query, setQuery] = useState("");
   const shown = searchPeople(rows, query);
   const widest = widestLoad(shown);
@@ -97,6 +104,7 @@ function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, 
         </div>
         {shown.map((row) => {
           const most = Math.max(2, ...row.perDay);
+          const onLeave = byPerson.get(row.name);
           return (
             <Link key={row.name} href={personHref(row.name)} className={styles.pRow} data-person={row.name}>
               <Avatar name={row.name} size="plan" />
@@ -106,6 +114,7 @@ function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, 
                   {rankLine(row)}
                   {row.overdue > 0 && <span className={styles.toneRed}>, {row.overdue.toLocaleString("en-US")} overdue</span>}
                 </small>
+                {onLeave && <PersonAway days={onLeave} today={today} />}
               </div>
               <span className={styles.pBar} role="img" aria-label={`Owns ${row.owned.length}, kept informed on ${row.informed.length}`}>
                 {row.owned.length > 0 && <i data-part="owned" style={{ width: `${(row.owned.length / widest) * 100}%` }} />}
@@ -120,7 +129,7 @@ function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, 
             </Link>
           );
         })}
-        <p className={styles.pHelp}>Owned is solid, kept informed is outlined. Names come from tasks; people aren&apos;t accounts.</p>
+        <p className={styles.pHelp}>Owned is solid, kept informed is outlined.{byPerson.size === 0 && " Names come from tasks; people aren’t accounts."}</p>
       </>
     );
   }
@@ -147,8 +156,8 @@ function Ranking({ rows, loading, tools, personHref, filtersOn, onClearFilters, 
   );
 }
 
-function PersonPage(props: PeopleViewProps & { row: PersonRow }) {
-  const { row, state, today, loading } = props;
+function PersonPage(props: PeopleViewProps & { row: PersonRow; personAway?: AwayDay[] }) {
+  const { row, state, today, loading, personAway } = props;
   const scope = workWords(state);
   const first = row.name.split(" ")[0];
   const none = !row.owned.length && !row.informed.length;
@@ -159,6 +168,7 @@ function PersonPage(props: PeopleViewProps & { row: PersonRow }) {
       <div className={styles.personMain}>
         <h2>{row.name}</h2>
         <p>{loading ? "Loading tasks" : personLine(row, scope)}</p>
+        {personAway && <PersonAway days={personAway} today={today} />}
         <div className={styles.personActs}>
           <Link href={props.viewHref("timeline", row.name)} className={buttonClass("secondary", true)}>
             <Icon name="cal" size={16} />

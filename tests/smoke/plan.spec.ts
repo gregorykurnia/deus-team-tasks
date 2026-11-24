@@ -2,14 +2,289 @@
 // team calendar's counts, the Work, Person and Rows filters and the stepper; then Month, Day and People (task 3.7). Only
 // marking a task done from the Day view or a person's page writes data.
 import type { Page } from "@playwright/test";
+import type { AwayDay, LeaveRequest } from "@/lib/leave";
+import { seed } from "../support/emulator";
 import { test, expect } from "./fixtures";
 import { company, isoDay, seedCompanies, seedTasks, storedById, task } from "./data";
+import { signInLeave } from "./leaveSession";
 
 const timeline = (page: Page) => page.getByRole("region", { name: "Timeline" });
 const stepper = (page: Page) => page.getByRole("toolbar", { name: "Narrow the plan" });
 
 const MAYA = "Maya Chen";
 const KEVIN = "Kevin Tan";
+
+const AWAY_DATE = "2027-02-10";
+const AWAY_MONTH = "/plan?view=month&month=2027-02";
+const AWAY_DAY = `/plan?view=day&date=${AWAY_DATE}`;
+const AWAY_PEOPLE = ["Audrey", "Calista", "Gregory", "Nadia", "Sovie", "Thania"];
+const awayEmail = (index: number) => `away${index}@deushcs.com`;
+const awayPreview = (page: Page) => page.locator("[data-away-preview]");
+const dayAway = (page: Page) => page.locator("[data-away-day]");
+const views = (page: Page) => page.getByRole("group", { name: "View" });
+
+async function seedAwayPeople(names = AWAY_PEOPLE) {
+  const directory = names.map((name, index) => ({ id: awayEmail(index), email: awayEmail(index), name, active: true }));
+  await seed("tasks", "people", directory);
+  await seed("tasks", "leaveProfiles", directory.map((person) => ({
+    id: person.id, email: person.email, name: person.name, joinDate: "2026-01-01", accrualStart: "2026-01-01",
+    openingDate: "2027-01-01", openingBalance: 12, updatedAt: 1, endDate: null,
+  })));
+}
+
+function leaveAway(index: number, fields: Partial<LeaveRequest> = {}) {
+  return {
+    id: `away-${index}`, email: awayEmail(index), name: AWAY_PEOPLE[index], start: AWAY_DATE, end: AWAY_DATE,
+    status: "approved", type: "annual", note: "A private note", createdAt: 1, ...fields,
+  };
+}
+
+async function planShot(page: Page, name: string) {
+  const { width } = page.viewportSize()!;
+  await expect(page.getByText(/^Signed (in as |out$)/)).toHaveCount(0);
+  if (name.endsWith("-before")) await expect(page.getByText("Loading tasks", { exact: true })).toHaveCount(0);
+  await page.evaluate(async () => { await document.fonts.ready; });
+  const issues = await page.evaluate((viewportWidth) => {
+    const faults: string[] = [];
+    if (document.documentElement.scrollWidth > viewportWidth + 1) faults.push("document overflows horizontally");
+    for (const element of document.querySelectorAll<HTMLElement>("[data-away-preview], [data-away-day]")) {
+      const bounds = element.getBoundingClientRect();
+      if (bounds.left < 0 || bounds.right > window.innerWidth + 1 || element.scrollWidth > element.clientWidth + 1) {
+        faults.push(`outside its box: ${element.textContent}`);
+      }
+      const more = element.parentElement?.querySelector<HTMLAnchorElement>("a[aria-label$='open the day']");
+      if (more) {
+        const box = more.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        if (box.bottom <= window.innerHeight && box.top >= 0 && !more.contains(hit)) faults.push("Away link is covered");
+      }
+    }
+    return faults;
+  }, width);
+  expect(issues).toEqual([]);
+  await page.screenshot({
+    path: `test-results/leave-look/P1/${width}-${name}.png`, animations: "disabled", style: "nextjs-portal { display: none !important; }",
+  });
+}
+
+test.describe("P1: who's away in Plan", () => {
+  test("signed out: Plan shows no Away and never requests it", { tag: "@phone" }, async ({ page, calendar }) => {
+    await calendar("ok", []);
+    await seedAwayPeople();
+    await seed("tasks", "leaveRequests", [leaveAway(0)]);
+    await seedTasks([task("a", { task: "Prepare the client update", responsible: ["Audrey"], endDate: AWAY_DATE })]);
+    const reads: string[] = [];
+    page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/leave/away") reads.push(request.url()); });
+    await page.goto(AWAY_MONTH);
+    await expect(month(page).getByRole("button", { name: "Today" })).toBeVisible();
+    await expect(awayPreview(page)).toHaveCount(0);
+    await page.goto(AWAY_DAY);
+    await expect(dayRegion(page, "Tasks").getByText("Prepare the client update")).toBeVisible();
+    await expect(dayAway(page)).toHaveCount(0);
+    await views(page).getByRole("button", { name: "People" }).click();
+    await expect(people(page).getByRole("link", { name: /Audrey/ })).toBeVisible();
+    await expect(people(page).getByText(/^Away /)).toHaveCount(0);
+    expect(reads).toEqual([]);
+  });
+
+  test.describe("signed in", () => {
+    test.skip(() => process.env.LEAVE_SMOKE_OFF === "1" || process.env.SIGN_IN_SMOKE_OFF === "1", "Away needs both flags.");
+
+    test("shows Away in Month, Day, People and direct links at every width", { tag: "@phone" }, async ({ page, calendar, isMobile }, info) => {
+      test.setTimeout(150_000);
+      const capture = process.env.PLAN_AWAY_SHOTS === "1" && info.project.name !== "jakarta";
+      if (capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.clock.setFixedTime(new Date("2027-02-10T12:00:00+07:00"));
+      await calendar("ok", []);
+      await seedAwayPeople();
+      await seedTasks([
+        task("a", { task: "Prepare the client update", responsible: ["Audrey"], endDate: "2027-02-11" }),
+        task("b", { task: "Send the agenda", responsible: [MAYA], endDate: "2027-02-12" }),
+      ]);
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      // Warm the lazy dev route before the browser's 12-second read deadline starts.
+      const unsigned = await page.request.get(`/api/leave/away?from=${AWAY_DATE}&to=${AWAY_DATE}`);
+      expect(unsigned.status()).toBe(401);
+      const loadedMonth = page.waitForResponse((response) => response.url().includes("/api/leave/away?") && response.ok(), { timeout: 30_000 });
+      await signInLeave(page, AWAY_MONTH, awayEmail(0));
+      await loadedMonth;
+      await expect(month(page)).toBeVisible();
+      if (capture) {
+        await expect(page.getByText("Loading who’s away")).toHaveCount(0);
+        await planShot(page, "month-before");
+        await page.goto(AWAY_DAY);
+        await expect(page.getByRole("heading", { name: /Nothing on Wednesday/ })).toBeVisible();
+        await expect(page.getByText("Loading who’s away")).toHaveCount(0);
+        await planShot(page, "day-before");
+        await page.goto("/plan?view=people");
+        await expect(people(page).getByRole("link", { name: /Audrey/ })).toBeVisible();
+        await expect(page.getByText("Loading who’s away")).toHaveCount(0);
+        await planShot(page, "people-before");
+      }
+      await seed("tasks", "leaveRequests", [leaveAway(0, { end: "2027-02-11" })]);
+      await page.goto(AWAY_MONTH);
+      await expect(month(page).getByText("Away: Audrey", { exact: true }).first()).toBeVisible();
+      if (capture) await planShot(page, "month-one");
+
+      await seed("tasks", "leaveRequests", [
+        ...AWAY_PEOPLE.slice(1).map((_, index) => leaveAway(index + 1,
+          index === 3 ? { half: "morning" } : index === 4 ? { type: "other", hours: { from: "13:00", to: "15:00" } } : {})),
+        leaveAway(0, { id: "own-waiting", start: "2027-02-12", end: "2027-02-12", status: "waiting" }),
+        leaveAway(2, { id: "other-waiting", start: "2027-02-12", end: "2027-02-12", status: "waiting" }),
+      ]);
+      await page.reload();
+      const selected = month(page).getByRole(isMobile ? "button" : "link", { name: /Wednesday, 10 February:.*6 away/ });
+      await expect(selected).toBeVisible();
+      const overflow = month(page).getByRole("link", { name: /more away on Wednesday, 10 February, open the day/ });
+      await expect(overflow).toBeVisible();
+      if (capture) await planShot(page, "month-six");
+      if (isMobile) {
+        await month(page).getByRole("button", { name: /Friday, 12 February:.*1 away/ }).click();
+        await expect(awayPreview(page)).toHaveText("Away: Audrey (Waiting)");
+        if (capture) await planShot(page, "month-waiting");
+        await selected.click();
+      }
+      await overflow.click();
+      await expect(page).toHaveURL(AWAY_DAY);
+      await expect(dayAway(page)).toHaveText("Away today: Audrey, Calista, Gregory, Nadia, Sovie ½ morning, Thania 13:00–15:00");
+      await expect(page.getByText("A private note")).toHaveCount(0);
+      if (capture) await planShot(page, "day-six");
+      await page.reload();
+      await expect(dayAway(page)).toContainText("Thania 13:00–15:00");
+      await page.getByLabel("Go to a date").fill("2027-02-12");
+      await expect(dayAway(page)).toHaveText("Away: Audrey (Waiting)");
+      await expect(dayAway(page).locator("[data-waiting]")).toBeVisible();
+      if (capture) await planShot(page, "day-waiting");
+
+      // A day with only leave should win over tomorrow's deadline on a link without a date.
+      await page.goto("/plan?view=day");
+      await expect(dayAway(page)).toContainText("Away today: Audrey");
+      await expect(page.getByText("Nothing is happening today.")).toHaveCount(0);
+      await views(page).getByRole("button", { name: "People" }).click();
+      const audrey = people(page).getByRole("link", { name: /^Audrey/ });
+      const thania = people(page).getByRole("link", { name: /^Thania/ });
+      await expect(audrey.getByText("Away 10–11 Feb")).toBeVisible();
+      await expect(audrey.getByText("Away 12 Feb (Waiting)")).toBeVisible();
+      await expect(thania).toContainText("Away 10 Feb");
+      if (capture) await planShot(page, "people");
+      if (capture && isMobile) {
+        await thania.evaluate((row) => row.scrollIntoView({ block: "center" }));
+        await planShot(page, "people-last");
+      }
+      await audrey.click();
+      await expect(page).toHaveURL("/plan?view=people&person=Audrey");
+      await page.reload();
+      await expect(page.getByRole("region", { name: "Audrey" }).getByText("Away 10–11 Feb")).toBeVisible();
+      if (capture) await planShot(page, "person-reload");
+
+      if (isMobile) {
+        // Turn back to a narrower phone while on People, then open Month from its normal link.
+        await page.setViewportSize({ width: 320, height: 720 });
+        await page.getByRole("link", { name: "Everyone", exact: true }).click();
+        await expect(page).toHaveURL("/plan?view=people");
+        await expect(people(page)).toBeVisible();
+        await views(page).getByRole("button", { name: "Month" }).click();
+        await expect(overflow).toBeVisible();
+        const markerLines = await selected.getByText("Away", { exact: true }).evaluate((marker) => {
+          const text = document.createRange();
+          text.selectNodeContents(marker);
+          return text.getClientRects().length;
+        });
+        expect(markerLines).toBe(1);
+        if (capture) await planShot(page, "month-six");
+        await page.goto(AWAY_DAY);
+        await expect(dayAway(page)).toContainText("Thania 13:00–15:00");
+        if (capture) await planShot(page, "day-six");
+        await views(page).getByRole("button", { name: "People" }).click();
+        await expect(audrey.getByText("Away 10–11 Feb")).toBeVisible();
+        const [awayDate, nextDue] = await Promise.all([
+          audrey.getByText("Away 12 Feb (Waiting)").boundingBox(), audrey.getByText(/^Next due/).boundingBox(),
+        ]);
+        expect(nextDue!.y).toBeGreaterThanOrEqual(awayDate!.y + awayDate!.height);
+        if (capture) await planShot(page, "people");
+
+        const longNames = AWAY_PEOPLE.map((_, index) => `${String.fromCharCode(65 + index)}${"W".repeat(39)}`);
+        await seedAwayPeople(longNames);
+        await page.goto(AWAY_MONTH);
+        const preview = awayPreview(page);
+        await expect(preview).toHaveText(`Away: ${longNames[0]}`);
+        await expect(overflow).toHaveText("+5 more");
+        if (capture) await planShot(page, "month-long-names");
+        await overflow.click();
+        await expect(dayAway(page)).toContainText(longNames[0]);
+        await expect(dayAway(page)).toContainText(longNames.at(-1)!);
+        if (capture) {
+          await dayAway(page).evaluate((line) => line.scrollIntoView({ block: "center" }));
+          await planShot(page, "day-long-names");
+        }
+      }
+      await page.goto(`${AWAY_MONTH}&account=1`);
+      await expect(awayPreview(page).first()).toBeVisible();
+      await page.getByRole("button", { name: "Sign out", exact: true }).click();
+      await expect(page).toHaveURL(AWAY_MONTH);
+      await expect(awayPreview(page)).toHaveCount(0);
+      if (capture) await planShot(page, "month-signed-out");
+      expect(errors).toEqual([]);
+    });
+
+    test("recovers after failure and reconnect and aborts the older month's reply", { tag: "@phone" }, async ({ page, calendar, isMobile }, info) => {
+      test.setTimeout(100_000);
+      const capture = process.env.PLAN_AWAY_SHOTS === "1" && info.project.name !== "jakarta";
+      if (capture && !isMobile) await page.setViewportSize({ width: 1280, height: 900 });
+      await page.clock.setFixedTime(new Date("2027-02-10T12:00:00+07:00"));
+      await calendar("ok", []);
+      await seedAwayPeople();
+      await seedTasks([task("a", { task: "Prepare the client update", endDate: "2027-03-01" })]);
+      const oldReply = Promise.withResolvers<void>();
+      let shouldFail = true;
+      let marchReads = 0;
+      const february = (url: string) => new URL(url).searchParams.get("from") === "2027-02-01";
+      await page.route("**/api/leave/away?**", async (route) => {
+        if (february(route.request().url())) {
+          await oldReply.promise;
+          const days: AwayDay[] = [{ name: "Audrey", part: "day", date: AWAY_DATE }];
+          await route.fulfill({ json: days }).catch(() => {});
+          return;
+        }
+        marchReads++;
+        if (shouldFail) await route.fulfill({ status: 503, json: { error: "Unavailable" } });
+        else {
+          const days: AwayDay[] = [{ name: "Thania", part: "day", date: "2027-03-01" }];
+          await route.fulfill({ json: days });
+        }
+      });
+      try {
+        await signInLeave(page, AWAY_MONTH, awayEmail(0));
+        await expect(page.getByText("Loading who’s away")).toBeVisible();
+        const aborted = page.waitForEvent("requestfailed", { predicate: (request) => request.url().includes("/api/leave/away?") && february(request.url()) });
+        if (capture) await planShot(page, "month-loading");
+        await expect(page.getByText("Loading who’s away")).toBeVisible();
+        await stepper(page).getByRole("button", { name: "Next month" }).click();
+        await aborted;
+        await expect(page.getByRole("alert").getByText("Couldn’t load who’s away.")).toBeVisible();
+        await expect(awayPreview(page)).toHaveCount(0);
+        if (capture) await planShot(page, "month-failed");
+        shouldFail = false;
+        await page.getByRole("alert").getByRole("button", { name: "Try again" }).click();
+        await expect(awayPreview(page)).toHaveText("Away: Thania");
+        oldReply.resolve();
+        await expect(page.getByText("Away: Audrey")).toHaveCount(0);
+
+        await page.context().setOffline(true);
+        await expect(page.getByText("Who’s away is unavailable offline.")).toBeVisible();
+        await expect(awayPreview(page)).toHaveCount(0);
+        if (capture) await planShot(page, "month-offline");
+        await page.context().setOffline(false);
+        await expect(awayPreview(page)).toHaveText("Away: Thania");
+        expect(marchReads).toBeGreaterThanOrEqual(3);
+      } finally {
+        oldReply.resolve();
+      }
+    });
+  });
+});
 
 test("D1: the timeline has a lane for each person, bars, diamonds and a bar that fades out", async ({ page }) => {
   await seedTasks([

@@ -5,9 +5,10 @@
 // amber, weekends paler, days outside the month fainter. Large screens open a day in the Day view; phones show dots, and
 // the chosen day is listed under the grid.
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { monthTitle, plural } from "@/lib/dates";
+import { Fragment, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { monthTitle, plural, weekdayDate } from "@/lib/dates";
 import { kindOf, linkedCompany, type CompaniesById } from "@/lib/kinds";
+import type { AwayDay } from "@/lib/leave";
 import { dayHeading, dayListsOf, dayWithSomething, cellShown, monthModelOf, nextMonthWithSomething, relativeDay } from "@/lib/planCalendar";
 import { whoWords, type PlanState } from "@/lib/planView";
 import { parentName } from "@/lib/subtasks";
@@ -18,6 +19,7 @@ import EmptyState from "@/ui/EmptyState";
 import { kindStyle } from "@/ui/kindStyle";
 import { LoadingLine } from "@/ui/Skeleton";
 import { NameTag } from "@/ui/Tag";
+import { MonthAway } from "./Away";
 import DayLists from "./DayLists";
 import { CalendarNotice } from "./Timeline";
 import styles from "./Plan.module.css";
@@ -33,6 +35,8 @@ interface MonthViewProps {
   all: ReadonlyMap<string, Task>; // every task by id, to name a subtask's parent
   loading: boolean;
   events: EventsState;
+  away: ReadonlyMap<string, AwayDay[]>;
+  awayUnanswered: boolean;
   companies: CompaniesById;
   offline: boolean;
   phone: boolean;
@@ -47,7 +51,7 @@ interface MonthViewProps {
 }
 
 export default function MonthView(props: MonthViewProps) {
-  const { state, today, month, tasks, loading, events, companies, offline, phone } = props;
+  const { state, today, month, tasks, loading, events, away, companies, offline, phone } = props;
   const showTasks = state.show !== "events";
   const showEvents = state.show !== "tasks";
   const shownTasks = useMemo(() => (showTasks && !loading ? tasks : []), [showTasks, loading, tasks]);
@@ -60,25 +64,29 @@ export default function MonthView(props: MonthViewProps) {
   const [chosen, setChosen] = useState<{ month: string; date: string } | null>(null);
   const selected =
     chosen && chosen.month === month ? chosen.date : today.slice(0, 7) === month ? today : `${month}-01`;
+  const selectedAway = away.get(selected);
+  const phoneAwayCell = useRef<HTMLDivElement>(null);
   const choose = (iso: string) => {
     if (iso.slice(0, 7) !== month) props.onMonth(iso.slice(0, 7));
     setChosen({ month: iso.slice(0, 7), date: iso });
     // The day's list is under the grid on a phone: bring it into view.
     requestAnimationFrame(() => {
       const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      document.querySelector("[data-agenda]")?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+      const cell = away.has(iso) && iso.slice(0, 7) === month ? phoneAwayCell.current : null;
+      (cell || document.querySelector("[data-agenda]"))?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: cell ? "nearest" : "start" });
     });
   };
 
   // Empty only once what's shown has answered: the tasks, and the team calendar when it's shown (Events only needs it).
-  const answered = !loading && !(showEvents && events.status === "loading") && (showTasks || events.status === "ok");
-  const empty = answered && model.total === 0;
+  const answered = !loading && !props.awayUnanswered && !(showEvents && events.status === "loading") && (showTasks || events.status === "ok");
+  const empty = answered && model.total === 0 && ![...away.keys()].some((date) => date.startsWith(month));
   const nextMonth = empty ? nextMonthWithSomething(shownTasks, eventList, month) : null;
   const who = whoWords(state);
 
   const agendaLists = useMemo(() => dayListsOf(shownTasks, eventList, selected), [shownTasks, eventList, selected]);
-  const previous = useMemo(() => (phone ? dayWithSomething(shownTasks, eventList, selected, -1) : null), [phone, shownTasks, eventList, selected]);
-  const next = useMemo(() => (phone ? dayWithSomething(shownTasks, eventList, selected, 1) : null), [phone, shownTasks, eventList, selected]);
+  const awayDates = useMemo(() => [...away.keys()], [away]);
+  const previous = useMemo(() => (phone ? dayWithSomething(shownTasks, eventList, selected, -1, awayDates) : null), [phone, shownTasks, eventList, selected, awayDates]);
+  const next = useMemo(() => (phone ? dayWithSomething(shownTasks, eventList, selected, 1, awayDates) : null), [phone, shownTasks, eventList, selected, awayDates]);
 
   const informed = (t: Task) => !!state.person && !t.responsible.includes(state.person);
 
@@ -132,8 +140,10 @@ export default function MonthView(props: MonthViewProps) {
             ))}
           </div>
           <div className={styles.monthGrid}>
-            {model.cells.map((cell) => {
-              const summary = `${dayHeading(cell.iso, today)}: ${cell.deadlines.length ? plural(cell.deadlines.length, "deadline") : "no deadlines"}${cell.events.length ? `, ${plural(cell.events.length, "event")}` : ""}`;
+            {model.cells.map((cell, i) => {
+              const onDay = away.get(cell.iso);
+              const dateLabel = dayHeading(cell.iso, today);
+              const summary = `${dateLabel}: ${cell.deadlines.length ? plural(cell.deadlines.length, "deadline") : "no deadlines"}${cell.events.length ? `, ${plural(cell.events.length, "event")}` : ""}${onDay ? `, ${onDay.length} away` : ""}`;
               const flags = {
                 "data-outside": cell.outside || undefined,
                 "data-today": cell.today || undefined,
@@ -142,22 +152,32 @@ export default function MonthView(props: MonthViewProps) {
                 "data-selected": (phone && cell.iso === selected) || undefined,
               };
               if (phone) {
+                const showSelected = selectedAway && i % 7 === 6 && cell.iso >= selected && model.cells[i - 6].iso <= selected;
                 return (
-                  <button key={cell.iso} type="button" className={styles.monthCell} {...flags} aria-pressed={cell.iso === selected} aria-label={summary} onClick={() => choose(cell.iso)}>
-                    <span className={styles.dayNumber} aria-hidden="true">
-                      {cell.day}
-                    </span>
-                    <span className={styles.dots} aria-hidden="true">
-                      {cell.items.slice(0, DOTS).map((item, i) =>
-                        item.kind === "event" ? (
-                          <i key={i} data-event="" />
-                        ) : (
-                          <i key={i} style={kindStyle(kindOf(item.task!, companies))} />
-                        )
-                      )}
-                      {cell.items.length > DOTS && <b>+</b>}
-                    </span>
-                  </button>
+                  <Fragment key={cell.iso}>
+                    <button type="button" className={styles.monthCell} {...flags} aria-pressed={cell.iso === selected} aria-label={summary} onClick={() => choose(cell.iso)}>
+                      <span className={styles.dayNumber} aria-hidden="true">
+                        {cell.day}
+                      </span>
+                      <span className={styles.dots} aria-hidden="true">
+                        {cell.items.slice(0, DOTS).map((item, i) =>
+                          item.kind === "event" ? (
+                            <i key={i} data-event="" />
+                          ) : (
+                            <i key={i} style={kindStyle(kindOf(item.task!, companies))} />
+                          )
+                        )}
+                        {cell.items.length > DOTS && <b>+</b>}
+                      </span>
+                      {onDay && <span className={styles.awayMarker} aria-hidden="true" data-waiting={onDay.every((day) => day.waiting) || undefined}>Away</span>}
+                    </button>
+                    {showSelected && (
+                      <div ref={phoneAwayCell} className={`${styles.monthCell} ${styles.monthPhoneAway}`}>
+                        <time dateTime={selected}>{weekdayDate(selected, today)}</time>
+                        <MonthAway days={selectedAway} dateLabel={dayHeading(selected, today)} href={props.dayHref(selected)} />
+                      </div>
+                    )}
+                  </Fragment>
                 );
               }
               const { shown, more } = cellShown(cell.items);
@@ -166,6 +186,7 @@ export default function MonthView(props: MonthViewProps) {
                   <Link href={props.dayHref(cell.iso)} className={styles.dayNumber} aria-label={summary} title={summary} aria-current={cell.today ? "date" : undefined}>
                     {cell.day}
                   </Link>
+                  {onDay && <MonthAway days={onDay} dateLabel={dateLabel} href={props.dayHref(cell.iso)} />}
                   <div className={styles.cellItems}>
                     {shown.map((item) =>
                       item.kind === "event" ? (
@@ -222,6 +243,7 @@ export default function MonthView(props: MonthViewProps) {
             iso={selected}
             today={today}
             lists={agendaLists}
+            hasAway={!!selectedAway}
             showTasks={showTasks}
             showEvents={showEvents}
             events={events}

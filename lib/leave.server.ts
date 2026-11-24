@@ -3,18 +3,18 @@ import { readFileSync } from "node:fs";
 import type { DocumentSnapshot, QueryDocumentSnapshot, Transaction } from "firebase-admin/firestore";
 import { after } from "next/server";
 import { adminDb } from "./admin";
-import { addDays, isIsoDay, weekdayDate } from "./dates";
+import { addDays, daysBetween, isIsoDay, weekdayDate } from "./dates";
 import { USE_EMULATOR } from "./emulator";
 import { wibToday } from "./followupServer";
 import {
-  canCancelLeave, checkRequest, defaultLeavePay, leaveOperationId, nextMissingHolidayYear, requestDays, workingDates,
-  type LeaveAdjustment, type LeaveAudit, type LeaveHoliday, type LeaveIssue, type LeaveProfile,
+  AWAY_WINDOW_DAYS, canCancelLeave, checkRequest, defaultLeavePay, isLeaveTime, leaveOperationId, nextMissingHolidayYear, requestDays, workingDates,
+  type AwayDay, type LeaveAdjustment, type LeaveAudit, type LeaveHoliday, type LeaveIssue, type LeaveProfile,
   type LeaveProfileDetails, type LeaveProfileField, type LeaveRequest,
 } from "./leave";
 import { buildLedger, type LeaveLedgerLine, type LeaveSummary } from "./leaveLedger";
 import { leaveAddedMessage, leaveAdjustedMessage, leaveCancelledMessage, leaveDecidedMessage, leaveRequestedMessage } from "./leaveMessages";
 import { readPerson, type Person } from "./people.server";
-import { personEmail } from "./peopleInput";
+import { personEmail, personName } from "./peopleInput";
 import { sendPushToPerson, type PushMessage } from "./push.server";
 
 interface LeaveHistory {
@@ -254,6 +254,65 @@ export function readMyLeave(email: string): Promise<MyLeave> {
       id, at, field, from, to, byName: names[by] ?? (by === setupActor ? setupActor : "a Leave admin"),
     }));
     return { ...common, ...history, actorNames, changes };
+  }, { readOnly: true });
+}
+
+type AwayRequest = Pick<LeaveRequest, "email" | "start" | "end" | "status" | "half" | "hours">;
+
+export function readAway(email: string, from: string | null, to: string | null): Promise<AwayDay[]> {
+  return adminDb.runTransaction(async (tx) => {
+    const caller = requireActivePerson(await tx.get(people().doc(email)));
+    if (!isIsoDay(from) || !isIsoDay(to) || from > to || daysBetween(from, to) >= AWAY_WINDOW_DAYS) {
+      throw new LeaveError(400, "Choose a date range of 62 days or fewer.");
+    }
+    const [requestRows, holidayRows] = await Promise.all([
+      tx.get(requests().where("end", ">=", from).select("email", "start", "end", "status", "half", "hours")),
+      tx.get(holidays().where("date", ">=", from).where("date", "<=", to).select("date")),
+    ]);
+    const visible = requestRows.docs.map((doc) => doc.data() as AwayRequest).filter((row) => {
+      if (row.status !== "approved" && !(row.status === "waiting" && row.email === email)) return false;
+      if (!isIsoDay(row.start) || !isIsoDay(row.end) || row.start > to || row.start > row.end) return false;
+      try { return personEmail(row.email) === row.email; } catch { return false; }
+    });
+    const addresses = [...new Set(visible.map((row) => row.email))];
+    if (!addresses.length) return [];
+
+    const profileRows = await tx.getAll(...addresses.map((address) => profiles().doc(address)), { fieldMask: ["name"] });
+    const withProfile = profileRows.filter((doc) => doc.exists);
+    if (!withProfile.length) return [];
+    const directoryRows = await tx.getAll(...withProfile.map((doc) => people().doc(doc.id)), { fieldMask: ["email", "name", "active"] });
+    const names = new Map(directoryRows.flatMap((doc) => {
+      const person = readPerson(doc);
+      return person ? [[doc.id, person.name] as const] : [];
+    }));
+    for (const doc of withProfile) {
+      if (doc.id === email) names.set(email, caller.name);
+      if (names.has(doc.id)) continue;
+      const name = doc.get("name");
+      if (typeof name !== "string") continue;
+      try { names.set(doc.id, personName(name)); } catch { /* A blank or invalid legacy name has no marker. */ }
+    }
+
+    const daysOff = holidayRows.docs.map((doc) => ({ date: doc.get("date") as string }));
+    const days = new Map<string, AwayDay>();
+    for (const row of visible) {
+      const name = names.get(row.email);
+      if (!name) continue;
+      const waiting = row.status === "waiting";
+      const start = row.start < from ? from : row.start;
+      const end = row.end > to ? to : row.end;
+      const hours = row.hours;
+      if (hours && (!isLeaveTime(hours.from) || !isLeaveTime(hours.to) || hours.from >= hours.to)) continue;
+      for (const date of workingDates(start, end, daysOff)) {
+        const key = `${row.email}/${date}`;
+        const previous = days.get(key);
+        if (previous && (waiting || !previous.waiting)) continue;
+        const base = { name, date, ...(waiting ? { waiting: true as const } : {}) };
+        if (hours) days.set(key, { ...base, part: "hours", from: hours.from, to: hours.to });
+        else days.set(key, { ...base, part: row.half === "morning" || row.half === "afternoon" ? row.half : "day" });
+      }
+    }
+    return [...days.values()].sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name));
   }, { readOnly: true });
 }
 

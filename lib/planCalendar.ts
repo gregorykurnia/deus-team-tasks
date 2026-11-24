@@ -76,15 +76,15 @@ export function daySummary(lists: DayLists): string {
 
 /* ---------- The day it lands on, and the days around it ---------- */
 
-export function somethingOn(tasks: Task[], events: CalendarEvent[] | null, iso: string): boolean {
-  return tasks.some((t) => activeOn(t, iso)) || !!events?.some((e) => eventOnDay(e, iso));
+export function somethingOn(tasks: Task[], events: CalendarEvent[] | null, iso: string, away: readonly string[] = []): boolean {
+  return away.includes(iso) || tasks.some((t) => activeOn(t, iso)) || !!events?.some((e) => eventOnDay(e, iso));
 }
 
 const SEARCH_DAYS = 400;
 
 // The next (or previous) day, from one on and within 400 days, that has a task running or an event. Each task and event
 // is a run of days (a task with no deadline runs on), so the nearest day of each run is worked out, not looked for day by day.
-export function dayWithSomething(tasks: Task[], events: CalendarEvent[] | null, from: string, dir: -1 | 1): string | null {
+export function dayWithSomething(tasks: Task[], events: CalendarEvent[] | null, from: string, dir: -1 | 1, away: readonly string[] = []): string | null {
   const first = addDays(from, dir);
   const limit = addDays(from, SEARCH_DAYS * dir);
   const runs: { start: string; end: string | null }[] = [];
@@ -93,6 +93,7 @@ export function dayWithSomething(tasks: Task[], events: CalendarEvent[] | null, 
     if (start ?? end) runs.push({ start: (start ?? end)!, end });
   }
   for (const e of events ?? []) runs.push({ start: e.start, end: e.end });
+  for (const date of away) runs.push({ start: date, end: date });
   let best: string | null = null;
   for (const { start, end } of runs) {
     let day: string | null;
@@ -110,9 +111,9 @@ export function isPickedDay(value: string): boolean {
 }
 
 // The first look at Day (D5): today if anything is happening, or else the next day that has something, with a note.
-export function landing(tasks: Task[], events: CalendarEvent[] | null, today: string): { date: string; landed: boolean } {
-  if (somethingOn(tasks, events, today)) return { date: today, landed: false };
-  const next = dayWithSomething(tasks, events, today, 1);
+export function landing(tasks: Task[], events: CalendarEvent[] | null, today: string, away: readonly string[] = []): { date: string; landed: boolean } {
+  if (somethingOn(tasks, events, today, away)) return { date: today, landed: false };
+  const next = dayWithSomething(tasks, events, today, 1, away);
   return next ? { date: next, landed: true } : { date: today, landed: false };
 }
 
@@ -181,16 +182,19 @@ export function isBusy(deadlines: number, events: number): boolean {
   return deadlines >= 3 || deadlines + events >= 5;
 }
 
-export function monthModelOf(tasks: Task[], events: CalendarEvent[] | null, month: string, today: string): MonthModel {
+export function monthGridDays(month: string): { from: string; to: string } {
   const [y, m] = month.split("-").map(Number);
   const first = isoOf(new Date(y, m - 1, 1));
   const last = isoOf(new Date(y, m, 0));
-  const start = weekStart(first);
-  const weeks = Math.ceil((daysBetween(start, last) + 1) / 7);
+  return { from: weekStart(first), to: addDays(weekStart(last), 6) };
+}
+
+export function monthModelOf(tasks: Task[], events: CalendarEvent[] | null, month: string, today: string): MonthModel {
+  const { from, to } = monthGridDays(month);
   const byName = (a: Task, b: Task) => a.task.localeCompare(b.task);
   let total = 0;
-  const cells: MonthCell[] = Array.from({ length: weeks * 7 }, (_, i) => {
-    const iso = addDays(start, i);
+  const cells: MonthCell[] = Array.from({ length: daysBetween(from, to) + 1 }, (_, i) => {
+    const iso = addDays(from, i);
     const outside = iso.slice(0, 7) !== month;
     const deadlines = tasks.filter((t) => datesOf(t).end === iso).sort(byName);
     const list = events ? eventsOnDay(events, iso) : [];

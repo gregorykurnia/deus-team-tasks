@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { leaveEnabled } from "@/lib/flags";
-import { getLeaveBadge, getMyLeave, LeaveApiError } from "@/lib/leaveClient";
+import { getLeaveBadge, getMyLeave, LeaveApiError, withLeaveDeadline } from "@/lib/leaveClient";
 import type { MyLeave } from "@/lib/leave.server";
 import { retrySignInSession, useSignInSession } from "@/lib/useSignedIn";
 
@@ -30,21 +30,7 @@ function subscribeOnline(listener: () => void) {
   };
 }
 
-export async function withLeaveDeadline<T>(read: (signal: AbortSignal) => Promise<T>, controller = new AbortController()): Promise<T> {
-  const { signal } = controller;
-  let abort: () => void;
-  const stopped = new Promise<never>((_, reject) => {
-    abort = () => reject(signal.reason);
-    signal.addEventListener("abort", abort, { once: true });
-  });
-  const timer = window.setTimeout(() => controller.abort(new Error("Leave request timed out.")), 12_000);
-  try {
-    return await Promise.race([stopped, read(signal)]);
-  } finally {
-    window.clearTimeout(timer);
-    signal.removeEventListener("abort", abort!);
-  }
-}
+export { withLeaveDeadline } from "@/lib/leaveClient";
 
 export function LeaveData({ children }: { children: ReactNode }) {
   return leaveEnabled() ? <EnabledLeaveData>{children}</EnabledLeaveData> : children;

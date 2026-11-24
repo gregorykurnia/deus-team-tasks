@@ -10,6 +10,7 @@ import { deleteApp } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/leave/me/route";
+import { GET as awayRoute } from "@/app/api/leave/away/route";
 import { POST as askRoute } from "@/app/api/leave/requests/route";
 import { POST as cancelRoute } from "@/app/api/leave/requests/[id]/cancel/route";
 import { GET as teamRoute } from "@/app/api/leave/team/route";
@@ -91,6 +92,12 @@ function apiRequest(path: string, token: string | undefined, method = "GET", bod
 
 function team(token?: string) {
   return teamRoute(apiRequest("/team", token));
+}
+
+const awaySearch = "?from=2027-02-10&to=2027-02-14";
+
+function away(token?: string, search = awaySearch) {
+  return awayRoute(apiRequest(`/away${search}`, token));
 }
 
 function person(token: string | undefined, email: string) {
@@ -199,13 +206,13 @@ describe("leave privacy", () => {
 
   it.each(["NEXT_PUBLIC_LEAVE_ENABLED", "NEXT_PUBLIC_SIGN_IN_ENABLED"])("returns 404 on every route with %s off", async (flag) => {
     vi.stubEnv(flag, "0");
-    for (const response of await Promise.all([me(gregory), ask(gregory), cancel(gregory, "private")])) {
+    for (const response of await Promise.all([me(gregory), ask(gregory), cancel(gregory, "private"), away(gregory)])) {
       expect(await withStatus(response, 404)).toEqual({ error: "Not found" });
     }
     expect((await requests().get()).size).toBe(0);
   });
 
-  it("requires a valid, unrevoked token on all three routes", async () => {
+  it("requires a valid, unrevoked token for personal leave and Away", async () => {
     const email = "leave.revoked@deushcs.com";
     await adminDb.doc(`people/${email}`).set({ email, name: "Revoked", active: true });
     const revoked = await tokenFor(email);
@@ -214,7 +221,7 @@ describe("leave privacy", () => {
     await adminAuth.revokeRefreshTokens(email);
     await expect(adminAuth.verifyIdToken(revoked, true)).rejects.toHaveProperty("code", "auth/id-token-revoked");
     for (const token of [undefined, "invalid-token", revoked]) {
-      for (const response of await Promise.all([me(token), ask(token), cancel(token, "private")])) {
+      for (const response of await Promise.all([me(token), ask(token), cancel(token, "private"), away(token)])) {
         expect(await withStatus(response, 401)).toEqual({ error: "Sign in again." });
       }
     }
@@ -223,7 +230,7 @@ describe("leave privacy", () => {
   it("requires an active person even for an email on the admin list", async () => {
     await adminDb.doc(`people/${GREGORY}`).update({ active: false });
     await expect(adminAuth.verifyIdToken(gregory, true)).resolves.toMatchObject({ uid: GREGORY });
-    for (const response of await Promise.all([me(gregory), ask(gregory), cancel(gregory, "private")])) {
+    for (const response of await Promise.all([me(gregory), ask(gregory), cancel(gregory, "private"), away(gregory)])) {
       await withStatus(response, 403);
     }
     await adminDb.doc(`people/${AUDREY}`).delete();
@@ -242,6 +249,66 @@ describe("leave privacy", () => {
     await withStatus(await ask(audrey, { ...ANNUAL, email: CALISTA }), 403);
     expect((await requests().doc("private").get()).get("status")).toBe("approved");
     expect((await requests().get()).size).toBe(1);
+  });
+});
+
+describe("who is away in Plan", () => {
+  it("returns exactly the approved day, morning and hours and the caller's waiting day", async () => {
+    await Promise.all([
+      seedRequest("day", AUDREY, { start: "2027-02-08", end: TODAY, type: "sick", note: "Private note" }),
+      seedRequest("morning", CALISTA, { start: TODAY, end: TODAY, half: "morning" }),
+      seedRequest("hours", GREGORY, { start: TODAY, end: TODAY, type: "other", reason: "hours", hours: { from: "13:00", to: "15:00" } }),
+      seedRequest("mine", AUDREY, { status: "waiting", start: "2027-02-11", end: "2027-02-11" }),
+      seedRequest("theirs", CALISTA, { status: "waiting" }),
+      seedRequest("cancelled", CALISTA, { status: "cancelled" }),
+      seedRequest("rejected", GREGORY, { status: "rejected", rejectReason: "Private decision" }),
+      seedRequest("closed", GREGORY, { start: "2027-02-12", end: "2027-02-14" }),
+      seedRequest("later", GREGORY, { start: "2027-02-15", end: "2027-02-15" }),
+      seedRequest("no-profile", "unprofiled@deushcs.com"),
+      setHoliday("2027-02-12"),
+    ]);
+    const approved = [
+      { name: "Audrey", date: TODAY, part: "day" },
+      { name: "Calista", date: TODAY, part: "morning" },
+      { name: "Gregory", date: TODAY, part: "hours", from: "13:00", to: "15:00" },
+    ];
+    expect(await withStatus(await away(audrey), 200)).toEqual([
+      ...approved, { name: "Audrey", date: "2027-02-11", part: "day", waiting: true },
+    ]);
+    // Even the admin's Plan gets the same public shape. Moving to Leave is how they see private records.
+    expect(await withStatus(await away(gregory), 200)).toEqual(approved);
+  });
+
+  it("uses current directory names and omits malformed rows and duplicate days", async () => {
+    const legacy = "legacy@deushcs.com";
+    const unnamed = "unnamed@deushcs.com";
+    await Promise.all([
+      adminDb.doc(`people/${CALISTA}`).update({ name: "Calista R" }),
+      adminDb.doc(`leaveProfiles/${legacy}`).set({ name: "Previous Teammate" }),
+      adminDb.doc(`leaveProfiles/${unnamed}`).set({ name: "   " }),
+      seedRequest("old-name", CALISTA, { name: "CALISTA" }),
+      seedRequest("duplicate", CALISTA, { name: "calista" }),
+      seedRequest("legacy", legacy, { half: "afternoon" }),
+      seedRequest("unnamed", unnamed),
+      seedRequest("missing-start", CALISTA, { start: "" }),
+      seedRequest("bad-times", GREGORY, { hours: { from: "private note", to: "15:00" } }),
+    ]);
+    expect(await withStatus(await away(audrey), 200)).toEqual([
+      { name: "Calista R", date: "2027-02-11", part: "day" },
+      { name: "Previous Teammate", date: "2027-02-11", part: "afternoon" },
+    ]);
+  });
+
+  it("takes up to 62 inclusive dates and can be read again after a failed transaction", async () => {
+    for (const search of ["", "?from=2027-02-10", "?from=2027-02-30&to=2027-03-03", "?from=2027-02-10&to=2027-02-09", "?from=2027-01-01&to=2027-03-04"]) {
+      await withStatus(await away(audrey, search), 400);
+    }
+    const range = "?from=2027-01-01&to=2027-03-03";
+    vi.spyOn(adminDb, "runTransaction").mockRejectedValueOnce(new Error("Emulator unavailable"));
+    expect(await withStatus(await away(audrey, range), 503)).toEqual({ error: "Leave needs a connection. Try again." });
+    await adminDb.doc(`leaveProfiles/${AUDREY}`).delete();
+    expect(await withStatus(await away(audrey, range), 200)).toEqual([]);
+    expect((await requests().get()).size).toBe(0);
   });
 });
 

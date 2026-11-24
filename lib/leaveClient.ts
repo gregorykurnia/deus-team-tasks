@@ -1,4 +1,5 @@
-import type { LeaveAdjustment, LeaveAdjustmentInput, LeaveDecision, LeaveHoliday, LeaveInput, LeaveIssue, LeavePay, LeaveProfile, LeaveProfileDetails, LeaveRequest } from "./leave";
+import { leaveEnabled } from "./flags";
+import type { AwayDay, LeaveAdjustment, LeaveAdjustmentInput, LeaveDecision, LeaveHoliday, LeaveInput, LeaveIssue, LeavePay, LeaveProfile, LeaveProfileDetails, LeaveRequest } from "./leave";
 import type { MyLeave, PersonLeave, TeamLeave } from "./leave.server";
 
 export class LeaveApiError extends Error {
@@ -8,6 +9,22 @@ export class LeaveApiError extends Error {
 }
 
 type LeaveSession = { email: string; signal: AbortSignal };
+
+export async function withLeaveDeadline<T>(read: (signal: AbortSignal) => Promise<T>, controller = new AbortController()): Promise<T> {
+  const { signal } = controller;
+  let abort: () => void;
+  const stopped = new Promise<never>((_, reject) => {
+    abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+  const timer = window.setTimeout(() => controller.abort(new Error("Leave request timed out.")), 12_000);
+  try {
+    return await Promise.race([stopped, read(signal)]);
+  } finally {
+    window.clearTimeout(timer);
+    signal.removeEventListener("abort", abort!);
+  }
+}
 
 async function fetchLeave<T>(path: string, init: RequestInit = {}, session?: LeaveSession): Promise<T> {
   const { clientAuth } = await import("./authClient");
@@ -29,6 +46,11 @@ async function fetchLeave<T>(path: string, init: RequestInit = {}, session?: Lea
 
 export function getMyLeave(session?: LeaveSession): Promise<MyLeave> {
   return fetchLeave("/me", {}, session);
+}
+
+export function getAway(from: string, to: string, session: LeaveSession): Promise<AwayDay[]> {
+  if (!leaveEnabled()) return Promise.resolve([]);
+  return fetchLeave(`/away?${new URLSearchParams({ from, to })}`, {}, session);
 }
 
 export function getLeaveBadge(session: LeaveSession): Promise<{ waitingForMe: number | null }> {

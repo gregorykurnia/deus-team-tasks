@@ -51,7 +51,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| P1 | `/api/leave/away` (names and days only) and "Away" in Plan's Month, Day and People views; `plan.spec.ts` cases. [P1](implementation/leave.md#p1--whos-away-in-plan) [look] | Sol Max | |
+| P1 | `/api/leave/away` (names and days only) and "Away" in Plan's Month, Day and People views; `plan.spec.ts` cases. [P1](implementation/leave.md#p1--whos-away-in-plan) [look] | Sol Max | 2026-11-24 — Away views and access checked |
 | E2 | Full suite, a11y and scoped compare once after Phase 2; list every failure, fix nothing. [E2](implementation/leave.md#e2--full-check-run) [no look] | Sol High | |
 | E2b | Fix the failures E2 listed, rerunning only what each fix touched. [E2b](implementation/leave.md#e2b--fix-recorded-failures) [look] | Sol Max | |
 | R2 | Phase review of Phase 2 and R1's open items, quick fixes, owner handoff. [R2](implementation/leave.md#r2--phase-review) [no look] | Opus 5.5 High | |

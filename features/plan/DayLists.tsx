@@ -25,6 +25,7 @@ interface DayListsProps {
   iso: string;
   today: string;
   lists: DayListsModel;
+  hasAway?: boolean;
   showTasks: boolean;
   showEvents: boolean;
   events: EventsState;
@@ -56,10 +57,10 @@ export default function DayLists(props: DayListsProps) {
     return (
       <section className={styles.dayEmpty}>
         <EmptyState
-          size={compact ? "small" : "large"}
+          size={compact || props.hasAway ? "small" : "large"}
           headingLevel={3}
           icon="cal"
-          title={`Nothing on ${dayHeading(iso, today)}`}
+          title={`${props.hasAway ? "Nothing else on" : "Nothing on"} ${dayHeading(iso, today)}`}
           actions={
             <>
               {props.previous && (
