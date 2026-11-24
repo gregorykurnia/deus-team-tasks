@@ -12,6 +12,7 @@ ROOT="$PWD"
 SBRANCH="design-studio"
 STUDIO="$(dirname "$ROOT")/$(basename "$ROOT")-studio"
 BASE="${BASE_BRANCH:-$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)}"
+if [ -z "${BASE_BRANCH:-}" ] && git show-ref --verify --quiet refs/heads/staging; then BASE=staging; fi
 BASE="${BASE:-main}"
 branch="$(git branch --show-current)"
 

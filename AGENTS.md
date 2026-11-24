@@ -10,4 +10,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Git workflow
 
-After making any code change, always commit and push it — do not wait to be asked. Write the commit message to describe what changed in terms of what will be visible or different in the deployment, not just a mechanical file or diff summary.
+After making any code change, always commit and push it to `staging` — do not wait to be asked. `main` is production and only moves in a release; CLAUDE.md has the branch and release rules. Write the commit message to describe what changed in terms of what will be visible or different in the deployment, not just a mechanical file or diff summary.

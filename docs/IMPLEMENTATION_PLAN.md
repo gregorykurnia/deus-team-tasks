@@ -24,7 +24,7 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 
 - Read only your task's section in the brief, plus **Smallest design**, **Requirements** and **Checks** there.
   The defaults are settled: no brainstorming and no questions to the owner.
-- One task per session, on `main` (this project's branch rule). Commit and push each task with its row ticked in
+- One task per session, on `staging` (this project's branch rule; nothing goes live until a release). Commit and push each task with its row ticked in
   the same commit. Every push deploys, which is safe because everything stays off until O5.
 - Tests use only the Firestore and Auth emulators with the fake push, and pin the day with `LEAVE_TEST_DATE`. Never
   call a push service or production.
