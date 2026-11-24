@@ -10,6 +10,7 @@
 // the column wider or narrower, takes the arrow keys, and goes back to its width on a double-click (N26).
 import {
   COLUMNS,
+  COMPACT_LIST_GAP,
   columnLabel,
   columnSort,
   listGrid,
@@ -36,6 +37,16 @@ import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerE
 import styles from "./Tasks.module.css";
 
 const num = (n: number) => n.toLocaleString("en-GB");
+
+function listGeometry(columns: ColumnId[], widths: ColumnWidths) {
+  return {
+    "--list-wide-cols": listGrid(columns, widths),
+    "--list-wide-min": `${listMinWidth(columns, widths)}px`,
+    "--list-compact-cols": listGrid(columns, widths, true),
+    "--list-compact-min": `${listMinWidth(columns, widths, true)}px`,
+    "--list-compact-gap": `${COMPACT_LIST_GAP}px`,
+  };
+}
 
 interface TaskListProps {
   tasks: Task[]; // what's shown, in order
@@ -76,11 +87,16 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, wid
     setSeen(Object.fromEntries(order.map((k, i) => [k, Math.round(tracks[i])])));
     return tracks;
   };
+  const applyGeometry = (next: ColumnWidths) => {
+    const { style } = tableRef.current!;
+    for (const [property, value] of Object.entries(listGeometry(columns, next))) {
+      style.setProperty(property, value);
+    }
+  };
   const drag = (key: WidthKey) => (e: PointerEvent<HTMLSpanElement>) => {
     if (e.button !== 0) return;
     e.preventDefault();
     const handle = e.currentTarget;
-    const table = tableRef.current!;
     const measured = measure();
     const start = measured[order.indexOf(key)];
     const x = e.clientX;
@@ -89,8 +105,7 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, wid
     const move = (ev: globalThis.PointerEvent) => {
       if (ev.clientX === x && next === widths) return;
       next = resizeColumn(widths, order, measured, key, start + ev.clientX - x);
-      table.style.setProperty("--list-cols", listGrid(columns, next));
-      table.style.setProperty("--minw", `${listMinWidth(columns, next)}px`);
+      applyGeometry(next);
     };
     const end = () => {
       handle.removeEventListener("pointermove", move);
@@ -128,8 +143,10 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, wid
       onFocus={measure}
       onDoubleClick={() => {
         if (widths[key] === undefined) return;
-        setSeen((now) => resetWidth(now, key));
-        onWidths(resetWidth(widths, key));
+        const next = resetWidth(widths, key);
+        applyGeometry(next);
+        measure();
+        onWidths(next);
       }}
     />
   );
@@ -151,7 +168,7 @@ export default function TaskList({ tasks, hidden, pageSize, columns: chosen, wid
   return (
     <>
       <div className={styles.listWrap}>
-        <div ref={tableRef} className={styles.listTable} style={{ "--minw": `${listMinWidth(columns, widths)}px`, "--list-cols": listGrid(columns, widths) } as CSSProperties}>
+        <div ref={tableRef} className={styles.listTable} style={listGeometry(columns, widths) as CSSProperties}>
           <div ref={headRef} className={styles.thead}>
             <span className={styles.pinLead}>{selecting && <SelectBox checked={selecting.head} label="Select every task shown" onClick={selecting.onHead} />}</span>
             <span className={styles.pinTitle}>

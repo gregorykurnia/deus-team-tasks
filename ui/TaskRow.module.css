@@ -252,7 +252,7 @@
   display: grid;
   grid-template-columns: var(--list-cols, var(--cols)); /* the list's, with any widths dragged (N26) */
   align-items: center;
-  gap: 14px;
+  gap: var(--list-gap, 14px);
   min-height: 60px;
   padding: 11px 14px;
 }
@@ -370,6 +370,8 @@
 
   .list .main {
     left: 40px;
+    margin-left: calc(-1 * var(--list-gap, 14px));
+    padding-left: var(--list-gap, 14px);
     flex-direction: column;
     justify-content: center;
   }

@@ -86,19 +86,31 @@
 
 /* ---------- The list: scrolls sideways when the details shown don't fit, with the title pinned ---------- */
 .listWrap {
+  container: task-list / inline-size;
   overflow-x: auto;
   scrollbar-width: thin;
 }
 
 .listTable {
-  min-width: var(--minw);
+  --list-cols: var(--list-wide-cols);
+  --list-gap: 14px;
+  min-width: var(--list-wide-min);
+}
+
+/* Use tighter tracks when the 1096px default grid cannot fit. Additional or resized columns can still scroll. */
+@container task-list (width < 1096px) {
+  .listTable {
+    --list-cols: var(--list-compact-cols);
+    --list-gap: var(--list-compact-gap);
+    min-width: var(--list-compact-min);
+  }
 }
 
 .thead {
   display: grid;
   grid-template-columns: var(--list-cols);
   align-items: center;
-  gap: 14px;
+  gap: var(--list-gap);
   margin: 0 6px;
   padding: 4px 14px 8px;
   color: var(--muted);
@@ -126,8 +138,8 @@
 
 .pinTitle {
   left: 40px;
-  margin-left: -14px;
-  padding-left: 14px;
+  margin-left: calc(-1 * var(--list-gap));
+  padding-left: var(--list-gap);
   background: linear-gradient(90deg, var(--surface-sheet) 85%, transparent);
 }
 
@@ -143,7 +155,7 @@
 .resize {
   position: absolute;
   top: -4px;
-  right: -13px;
+  right: calc((var(--list-gap) + 12px) / -2);
   bottom: -4px;
   z-index: 3;
   width: 12px;

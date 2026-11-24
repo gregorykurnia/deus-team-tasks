@@ -7,24 +7,25 @@ export type ColumnId = "company" | "group" | "status" | "type" | "touch" | "prio
 export interface Column {
   id: ColumnId;
   label: string;
-  width: string; // its track in the list's grid
-  min: number; // the track's narrowest, in px, so the list knows when to scroll sideways
+  min: number; // minimum track width on a wide panel, in px
+  compactMin?: number; // minimum on a narrower panel, and for a resized column
+  fraction?: number; // share of free space, if this track stretches
   sort?: TaskSortKey; // tapping its head sorts by it
 }
 
 export const COLUMNS: Column[] = [
-  { id: "company", label: "Company", width: "minmax(130px, 1fr)", min: 130, sort: "about" },
-  { id: "group", label: "Group", width: "minmax(120px, 0.9fr)", min: 120, sort: "group" },
-  { id: "status", label: "Status", width: "112px", min: 112, sort: "status" },
-  { id: "type", label: "Task type", width: "104px", min: 104, sort: "type" },
-  { id: "touch", label: "Touch point", width: "96px", min: 96 },
-  { id: "prio", label: "Priority", width: "86px", min: 86, sort: "prio" },
-  { id: "start", label: "Start", width: "76px", min: 76, sort: "start" },
-  { id: "end", label: "Deadline", width: "118px", min: 118, sort: "end" },
-  { id: "last", label: "Last action", width: "150px", min: 150, sort: "last" },
-  { id: "resp", label: "Responsible", width: "minmax(110px, 0.8fr)", min: 110 },
-  { id: "inf", label: "Informed", width: "minmax(110px, 0.8fr)", min: 110 },
-  { id: "key", label: "Key points", width: "minmax(150px, 1.2fr)", min: 150 },
+  { id: "company", label: "Company", min: 130, fraction: 1, sort: "about" },
+  { id: "group", label: "Group", min: 120, compactMin: 80, fraction: 0.9, sort: "group" },
+  { id: "status", label: "Status", min: 112, sort: "status" },
+  { id: "type", label: "Task type", min: 104, compactMin: 82, sort: "type" },
+  { id: "touch", label: "Touch point", min: 96 },
+  { id: "prio", label: "Priority", min: 86, sort: "prio" },
+  { id: "start", label: "Start", min: 76, sort: "start" },
+  { id: "end", label: "Deadline", min: 118, compactMin: 116, sort: "end" },
+  { id: "last", label: "Last action", min: 150, sort: "last" },
+  { id: "resp", label: "Responsible", min: 110, compactMin: 100, fraction: 0.8 },
+  { id: "inf", label: "Informed", min: 110, fraction: 0.8 },
+  { id: "key", label: "Key points", min: 150, fraction: 1.2 },
 ];
 
 export const DEFAULT_COLUMNS: ColumnId[] = ["company", "group", "type", "end", "last", "resp"];
@@ -72,13 +73,17 @@ export type WidthKey = ColumnId | "title";
 export type ColumnWidths = Partial<Record<WidthKey, number>>;
 
 export const WIDTHS_STORAGE_KEY = "desk.tasks.widths";
-export const TITLE_MIN = 200;
+const titleTrack = { min: 200, compactMin: 156, fraction: 2.2 };
 export const WIDTH_MAX = 640;
+export const COMPACT_LIST_GAP = 8;
 
 const BY_ID = new Map(COLUMNS.map((c) => [c.id, c]));
 
-export function widthMin(key: WidthKey): number {
-  return key === "title" ? TITLE_MIN : BY_ID.get(key)!.min;
+const columnTrack = (key: WidthKey) => key === "title" ? titleTrack : BY_ID.get(key)!;
+
+export function widthMin(key: WidthKey, compact = true): number {
+  const track = columnTrack(key);
+  return (compact ? track.compactMin : undefined) ?? track.min;
 }
 
 export function clampWidth(key: WidthKey, px: number): number {
@@ -101,15 +106,13 @@ export function parseWidths(raw: string | null): ColumnWidths {
   }
 }
 
-const flexible = (key: WidthKey) => key === "title" || BY_ID.get(key)!.width.includes("fr");
-
 // A column dragged to `px`. It and every stretching track before it keep the widths they have now (`measured`, in the
 // order of `order`), so the column's edge follows the pointer and only the tracks after it give or take the space.
 export function resizeColumn(widths: ColumnWidths, order: WidthKey[], measured: number[], key: WidthKey, px: number): ColumnWidths {
   const next = { ...widths };
   for (const [i, k] of order.entries()) {
     if (k === key) break;
-    if (next[k] === undefined && flexible(k) && measured[i]) next[k] = clampWidth(k, measured[i]);
+    if (next[k] === undefined && columnTrack(k).fraction && measured[i]) next[k] = clampWidth(k, measured[i]);
   }
   next[key] = clampWidth(key, px);
   return next;
@@ -122,17 +125,22 @@ export function resetWidth(widths: ColumnWidths, key: WidthKey): ColumnWidths {
 }
 
 // The list's grid, shared by the head and every row: the circle, the title, then the chosen columns.
-export function listGrid(shown: ColumnId[], widths: ColumnWidths = {}): string {
-  const track = (key: WidthKey, fallback: string) => (widths[key] ? `${widths[key]}px` : fallback);
-  const tracks = COLUMNS.filter((c) => shown.includes(c.id)).map((c) => track(c.id, c.width));
-  return ["26px", track("title", "minmax(200px, 2.2fr)"), ...tracks].join(" ");
+export function listGrid(shown: ColumnId[], widths: ColumnWidths = {}, compact = false): string {
+  const track = (key: WidthKey) => {
+    const fraction = columnTrack(key).fraction;
+    const width = `${widths[key] ?? widthMin(key, compact)}px`;
+    return !widths[key] && fraction ? `minmax(${width}, ${fraction}fr)` : width;
+  };
+  const tracks = COLUMNS.filter((c) => shown.includes(c.id)).map((c) => track(c.id));
+  return ["26px", track("title"), ...tracks].join(" ");
 }
 
 // The narrowest the list can be before its text would spill out: the circle, the title and each column at their least
-// (or the width they were given), the 14px gaps between them, the row's 14px sides and the list's 6px margins. Narrower
+// (or the width they were given), the gaps between them, the row's 14px sides and the list's 6px margins. Narrower
 // than that, it scrolls sideways.
-export function listMinWidth(shown: ColumnId[], widths: ColumnWidths = {}): number {
+export function listMinWidth(shown: ColumnId[], widths: ColumnWidths = {}, compact = false): number {
   const columns = COLUMNS.filter((c) => shown.includes(c.id));
-  const title = widths.title ?? TITLE_MIN;
-  return 26 + title + columns.reduce((n, c) => n + (widths[c.id] ?? c.min), 0) + 14 * (columns.length + 1) + 28 + 12;
+  const title = widths.title ?? widthMin("title", compact);
+  const gap = compact ? COMPACT_LIST_GAP : 14;
+  return 26 + title + columns.reduce((n, c) => n + (widths[c.id] ?? widthMin(c.id, compact)), 0) + gap * (columns.length + 1) + 28 + 12;
 }

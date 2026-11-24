@@ -161,6 +161,68 @@ test("D4: the two-week chart has a column for each day, and a day opens Plan", {
   const busy = columns.nth(2);
   await expect(busy).toHaveAttribute("aria-label", /: 3 deadlines$/);
   await expect(busy).toHaveAttribute("href", `/plan?view=day&date=${isoDay(2)}`);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const firstDate = hero(page).locator('[class*="todayWord"]');
+  const nextDate = hero(page).locator('[class*="dayNumbers"] > span').nth(1);
+  const nextDigitLeft = await nextDate.evaluate((date) => {
+    const range = document.createRange();
+    range.selectNodeContents(date);
+    return range.getBoundingClientRect().left;
+  });
+  const todayRight = await firstDate.evaluate((date) => date.getBoundingClientRect().right);
+  expect(nextDigitLeft - todayRight).toBeGreaterThanOrEqual(3);
+});
+
+test.describe("Today at 320 px", () => {
+  test.beforeEach(async ({ page, isMobile }) => {
+    test.skip(!isMobile, "Measures the phone layout");
+    await page.setViewportSize({ width: 320, height: 844 });
+  });
+
+  test("R2.F2: every two-digit chart date fits on one line", { tag: "@phone" }, async ({ page }) => {
+    await page.goto("/");
+    const dates = hero(page).locator('[class*="dayNumbers"] > span');
+    await expect(dates).toHaveCount(14);
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+    const measurements = await dates.evaluateAll((labels) => labels.map((label) => {
+      const visibleLabel = label.querySelector('[class*="todayNumber"]') ?? label;
+      const date = visibleLabel.textContent!.trim();
+      const range = document.createRange();
+      range.selectNodeContents(visibleLabel);
+      const lines = range.getClientRects();
+      const cell = label.getBoundingClientRect();
+      const fits = lines.length === 1 && lines[0].left >= cell.left - 1 && lines[0].right <= cell.right + 1;
+      return { date, lines: lines.length, fits };
+    }));
+    expect(measurements.some(({ date }) => /^\d{2}$/.test(date))).toBe(true);
+    expect(measurements.filter(({ fits }) => !fits)).toEqual([]);
+  });
+
+  test("R2.F2: all four filter labels and counts fit inside their track", { tag: "@phone" }, async ({ page }) => {
+    await seedTasks(Array.from({ length: 120 }, (_, i) => task(`late-${i}`, { endDate: isoDay(-1) })));
+    await page.goto("/");
+    const track = needs(page).getByRole("group", { name: "Kind of work" });
+    await expect(track.getByRole("button", { name: /^Internal\s*120$/ })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+    await expect(track.getByRole("button")).toHaveCount(4);
+    const overflow = await track.evaluate((group) => {
+      const edge = group.getBoundingClientRect();
+      return Array.from(group.querySelectorAll("button"), (button) => {
+        const range = document.createRange();
+        range.selectNodeContents(button);
+        const box = button.getBoundingClientRect();
+        const left = Math.max(edge.left, box.left);
+        const right = Math.min(edge.right, box.right);
+        const pixels = Math.max(...Array.from(range.getClientRects(), (text) => Math.max(left - text.left, text.right - right)));
+        return { option: button.textContent, pixels };
+      }).filter(({ pixels }) => pixels > 1);
+    });
+    expect(overflow).toEqual([]);
+  });
 });
 
 test.describe("the team calendar (D7, D9, D10)", () => {

@@ -141,6 +141,50 @@ test("W15: details shown are chosen from a menu and remembered on this device", 
   await expect(page.locator('[data-col="touch"]')).toHaveCount(0);
 });
 
+test("R2.F2: Tasks fits the default columns at 1280 px and scrolls when extra details need room", async ({ page }) => {
+  await seedMixed();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/tasks?due=overdue");
+  await expect(rows(page)).toHaveCount(1);
+  const first = rows(page).first();
+  const last = first.locator('[data-col="resp"]');
+  const table = page.locator('[class*="listWrap"]');
+  await expect(last).toBeVisible();
+
+  const layout = () => table.evaluate((scrollArea) => ({
+    viewport: document.documentElement.clientWidth,
+    pageWidth: document.documentElement.scrollWidth,
+    tableRight: scrollArea.getBoundingClientRect().right,
+    scrollRoom: scrollArea.scrollWidth - scrollArea.clientWidth,
+  }));
+  const initial = await layout();
+  const cell = (await last.boundingBox())!;
+  expect(initial.pageWidth).toBe(initial.viewport);
+  expect(initial.tableRight).toBeLessThanOrEqual(initial.viewport);
+  expect(cell.x + cell.width).toBeLessThanOrEqual(initial.tableRight);
+  expect(initial.scrollRoom).toBe(0);
+  const lastAction = first.locator('[data-col="last"]');
+  const warning = lastAction.getByText("No action for 20 days");
+  await expect(warning).toBeVisible();
+  expect(await lastAction.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+  const badge = first.locator('[data-col="end"] [class*="pillBox"]');
+  const badgeRight = await badge.evaluate((node) => node.getBoundingClientRect().right);
+  const warningLeft = await warning.evaluate((node) => node.getBoundingClientRect().left);
+  expect(warningLeft - badgeRight).toBeGreaterThanOrEqual(4);
+
+  await filter(page, "Details shown").click();
+  await page.getByRole("menuitemcheckbox", { name: "Key points" }).click();
+  await page.keyboard.press("Escape");
+  const key = first.locator('[data-col="key"]');
+  await expect(key).toBeAttached();
+  const expanded = await layout();
+  expect(expanded.pageWidth).toBe(expanded.viewport);
+  expect(expanded.scrollRoom).toBeGreaterThan(0);
+  await table.evaluate((scrollArea) => { scrollArea.scrollLeft = scrollArea.scrollWidth; });
+  await expect(key).toBeInViewport({ ratio: 1 });
+  await expect(first.getByRole("link", { name: "Chase the invoice" })).toBeInViewport();
+});
+
 test("D2: marking done in the list writes it, the row leaves, and Undo puts it back", async ({ page }) => {
   await seedMixed();
   await page.goto("/tasks");

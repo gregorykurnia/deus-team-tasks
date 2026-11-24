@@ -268,11 +268,13 @@
   font-weight: var(--w-bold);
   font-variant-numeric: var(--num);
   text-align: center;
+  white-space: nowrap;
 }
 
 .dayNumbers [data-today] {
+  display: flex;
+  justify-content: center;
   color: var(--pro-ink);
-  white-space: nowrap;
 }
 
 /* The word where it fits; on phones the columns are too narrow, so today shows its date, ringed above. */
@@ -653,5 +655,21 @@ a.who:hover {
 
   .hint {
     display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .chart,
+  .dayNumbers {
+    gap: 2px;
+  }
+
+  .column[data-today]::after {
+    inset-inline: -1px;
+  }
+
+  .kindSwitch > [role="group"] > button {
+    flex-direction: column;
+    gap: 2px;
   }
 }

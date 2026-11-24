@@ -275,7 +275,7 @@ describe("details shown", () => {
   });
 
   it("reads back the widths columns were dragged to, kept within each column's least and 640px (N26)", () => {
-    expect(parseWidths('{"end":150.4,"title":90,"key":2000,"nope":300,"type":"wide"}')).toEqual({ end: 150, title: 200, key: 640 });
+    expect(parseWidths('{"end":150.4,"title":90,"key":2000,"nope":300,"type":"wide"}')).toEqual({ end: 150, title: 156, key: 640 });
     expect(parseWidths("not json")).toEqual({});
     expect(parseWidths("[1]")).toEqual({});
     expect(parseWidths(null)).toEqual({});
@@ -284,6 +284,11 @@ describe("details shown", () => {
   it("puts a dragged width in the grid and in how wide the list must be", () => {
     expect(listGrid(["type", "end"], { title: 320, end: 160 })).toBe("26px 320px 104px 160px");
     expect(listMinWidth(["type", "end"], { title: 320, end: 160 })).toBe(26 + 320 + 104 + 160 + 14 * 3 + 28 + 12);
+    const compact = { title: 156, end: 160 };
+    expect(parseWidths(JSON.stringify(compact))).toEqual(compact);
+    expect(listGrid(["type", "end"], compact)).toBe("26px 156px 104px 160px");
+    expect(listGrid(["type", "end"], compact, true)).toBe("26px 156px 82px 160px");
+    expect(listMinWidth(["type", "end"], compact, true)).toBe(26 + 156 + 82 + 160 + 8 * 3 + 28 + 12);
   });
 
   it("keeps the stretching columns before a dragged one as they are, so only the ones after it move", () => {
