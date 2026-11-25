@@ -76,8 +76,8 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
   a balance adjustment can't be dated before it.
 - [ ] O3 *owner*: check with whoever handles HR/contracts the points marked *(verify)* in the brief: the special-leave
   days, that unused days lapse on 1 March without pay, and that a below-zero balance may be deducted from final pay.
-- [ ] O4 *owner*: in Vercel Production add `LEAVE_ADMINS=gregory.kurnia@deushcs.com`.
-- [ ] O5 *owner*: add `NEXT_PUBLIC_LEAVE_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
+- [x] O4 *owner* (2026-11-25): in Vercel Production add `LEAVE_ADMINS=gregory.kurnia@deushcs.com`.
+- [x] O5 *owner* (2026-11-25, redeployed): add `NEXT_PUBLIC_LEAVE_ENABLED=1` in Vercel Production and redeploy. To roll back, remove it and
   redeploy.
 - [ ] O6 *owner*: each teammate signs in (on iPhone, from the app on the Home Screen) and turns on notifications.
 - [ ] O7 *owner*: live try: a teammate asks a half day of annual leave; you get the push, approve it, and their balance
