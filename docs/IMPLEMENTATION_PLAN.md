@@ -63,11 +63,11 @@ one Vercel variable (O5); sign-in, which Leave also needs, has been on in Produc
 
 ## Owner steps after the run
 
-- [ ] O1 *owner*: give each teammate a sign-in, with the name they carry on tasks: `npm run people:add -- <email>
+- [x] O1 *owner* (2026-11-25; Sovia as "Bu Sovie", her name on tasks): give each teammate a sign-in, with the name they carry on tasks: `npm run people:add -- <email>
   "<name>"` (dry run), then again with `--apply`, for Calista (`<her email>`), `sovia.magdalena@deushcs.com`,
   `thania.ferdinanto@deushcs.com` and `william.ang@deushcs.com`. Needs `FIREBASE_ADMIN_KEY` in your shell; Claude can
   run it with you.
-- [ ] O2 *owner*: write `leave-setup.json` (kept out of git): for each of the six people `email`, `joinDate`,
+- [x] O2 *owner* (2026-11-25, go-live 25 Nov; balances and holidays applied): write `leave-setup.json` (kept out of git): for each of the six people `email`, `joinDate`,
   `accrualStart` (the 1st their +1s start; Calista `2027-02-01`), `openingBalance` (their balance on the go-live day,
   that day's +1 included) and `openingDate` (the go-live day). Run `npm run leave:setup -- leave-setup.json`, check the
   printed table, then add `--apply`. Then `npm run leave:setup -- --holidays`, then with `--apply`. If the go-live day
