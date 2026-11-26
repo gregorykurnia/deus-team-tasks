@@ -32,6 +32,25 @@ test("B10: a choice is changed from the list, saves itself, and Undo puts it bac
   await expect.poll(async () => (await storedById("clients", "pipeline", 1))?.status).toBe("To Follow Up");
 });
 
+test("the team's PIC is picked from the people on tasks, shows with their avatar, and clears", async ({ page }) => {
+  await seedAll();
+  await seedTasks([task("t2", { task: "Prepare the deck", responsible: ["Maya Chen"], informed: [{ name: "Budi Santoso", note: "" }] })]);
+  await page.goto("/companies");
+  await cell(page, "Borneo Retail", /^PIC: empty\. Change/).click();
+  const menu = page.getByRole("menu", { name: "PIC" });
+  await expect(menu.getByRole("menuitemradio")).toHaveText(["BSBudi Santoso", "MCMaya Chen"]);
+  await menu.getByRole("menuitemradio", { name: "Maya Chen" }).click();
+  await expect(toasts(page).getByText("PIC updated")).toBeVisible();
+  await expect.poll(async () => (await storedById("clients", "pipeline", 2))?.teamPic).toBe("Maya Chen");
+  await expect(cell(page, "Borneo Retail", /^PIC: Maya Chen\. Change/)).toContainText("MCMaya Chen");
+  expect((await storedById("clients", "pipeline", 2))?.pic).toBeUndefined(); // the contact person is a separate field
+
+  await cell(page, "Borneo Retail", /^PIC: Maya Chen/).click();
+  await page.getByRole("menu", { name: "PIC" }).getByRole("menuitem", { name: "Clear" }).click();
+  await expect(toasts(page).getByText("PIC cleared")).toBeVisible();
+  await expect.poll(async () => (await storedById("clients", "pipeline", 2))?.teamPic).toBeUndefined();
+});
+
 test("B10, B12: a quick date pick saves, and the company's open tasks keep their own dates", async ({ page }) => {
   await seedAll();
   await page.goto("/companies");

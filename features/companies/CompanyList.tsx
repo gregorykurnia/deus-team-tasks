@@ -16,6 +16,7 @@ import { cellOf, cellWords, COMES_BACK_LABEL, gridOf, subline, type Cell } from 
 import { parkedLabel } from "@/lib/parking";
 import { isTagged, useArrivals } from "@/lib/liveChanges";
 import { initials } from "@/lib/people";
+import Avatar from "@/ui/Avatar";
 import Button from "@/ui/Button";
 import Highlight from "@/ui/Highlight";
 import Icon from "@/ui/Icon";
@@ -93,6 +94,13 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
       );
     case "number":
       return <span className={styles.nv}>{cell.label}</span>;
+    case "person":
+      return (
+        <span className={styles.teamPic} title={cell.label}>
+          <Avatar name={cell.label} size="chip" />
+          <span>{cell.label}</span>
+        </span>
+      );
     case "text":
       return (
         <span className={styles.tx} title={cell.label}>

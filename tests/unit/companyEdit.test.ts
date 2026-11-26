@@ -73,9 +73,10 @@ describe("moving between groups (B5, 5.10)", () => {
   });
 
   it("carries over what's known and asks only for what the new group's list shows", () => {
-    const lead = co({ _raw: true, priority: "High", type: "Client", industry: "Logistics", reach: "2026-10-18" });
+    const lead = co({ _raw: true, teamPic: "Maya Chen", priority: "High", type: "Client", industry: "Logistics", reach: "2026-10-18" });
     const plan = movePlan(lead, "active", settings, 0, TODAY);
     expect(plan.carried.map((x) => [x.field.label, x.text])).toEqual([
+      ["PIC", "Maya Chen"], // the team's PIC stays with the company
       ["Priority", "High"],
       ["Type", "Client"],
       ["Industry", "Logistics"],
@@ -119,7 +120,7 @@ describe("the record (6.5)", () => {
     const fields = [...settings.fields.active, { key: "cx_1", label: "Budget", type: "number" as const, shown: true, own: true }];
     const sections = recordSections(fields);
     expect(sections.map((s) => s.title)).toEqual(["Where we stand", "What’s happening", "Who they are", "Added by the team"]);
-    expect(sections[0].fields.map((f) => f.key)).toEqual(["status", "priority", "product", "gbaTrials"]);
+    expect(sections[0].fields.map((f) => f.key)).toEqual(["teamPic", "status", "priority", "product", "gbaTrials"]);
     expect(sections[3].fields.map((f) => f.key)).toEqual(["cx_1"]);
     expect(recordSections(settings.fields.noOrNotNow).at(-1)?.fields).toEqual([]);
   });
@@ -171,7 +172,7 @@ describe("deleting (B14)", () => {
 
 describe("new company (B1, B3)", () => {
   it("asks for what the group's list shows, and the contact person", () => {
-    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "status", "priority", "date", "target", "product", "gbaTrials", "notes"]);
+    expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "teamPic", "status", "priority", "date", "target", "product", "gbaTrials", "notes"]);
     expect(newCompanyFields(settings, "noOrNotNow").map((f) => f.key)).toContain("pic");
   });
 });

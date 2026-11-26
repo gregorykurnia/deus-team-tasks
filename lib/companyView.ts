@@ -339,6 +339,7 @@ export type Cell =
   // the word goes under it (N31).
   | { kind: "date"; label: string; tone: CellTone; title: string; pill: boolean; date?: string; word?: string }
   | { kind: "number"; label: string }
+  | { kind: "person"; label: string } // a team member: their avatar and name
   | { kind: "text"; label: string };
 
 function fullDate(iso: string): string {
@@ -393,6 +394,8 @@ export function cellOf(c: PipelineEntry, field: CompanyField, group: CompanyGrou
       if (field.key === "date") return lastActionCell(text, group, today, isCompanyParked(c, today));
       if (field.key === "target" || field.key === "reach") return pillCell(text, field.key === "reach", today, isCompanyParked(c, today));
       return { kind: "date", label: fullDate(text), tone: "plain", title: fullDate(text), pill: false };
+    case "person":
+      return { kind: "person", label: text };
     case "number": {
       const n = parseFloat(text);
       return { kind: "number", label: isNaN(n) ? text : n.toLocaleString("en-GB") };
@@ -421,6 +424,7 @@ const COLUMN_WIDTH: Record<CompanyField["type"], { css: string; min: number }> =
   text: { css: "minmax(150px, 1fr)", min: 150 },
   long: { css: "minmax(220px, 1.6fr)", min: 220 },
   number: { css: "120px", min: 120 },
+  person: { css: "150px", min: 150 },
 };
 
 // The columns: the pinned name, then each shown field, then Comes back for parked companies, then the row menu's.

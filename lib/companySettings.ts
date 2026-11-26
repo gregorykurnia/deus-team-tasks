@@ -31,7 +31,8 @@ export interface ChoiceOption {
 }
 
 // "choices" picks several of a field's options, stored in option order as one comma-separated value (GBA trials, N22).
-export type FieldType = "text" | "long" | "number" | "date" | "choice" | "choices";
+// "person" picks one team member, stored by the name tasks use for them (the team's PIC).
+export type FieldType = "text" | "long" | "number" | "date" | "choice" | "choices" | "person";
 
 export interface CompanyField {
   key: string; // where companies store the value
@@ -90,8 +91,12 @@ export function lockReason(role: LockedRole): string {
 
 const field = (key: string, label: string, type: FieldType, shown: boolean): CompanyField => ({ key, label, type, shown, own: false });
 
+// The team member in charge of a company (PIC). Not the contact person, who works at the company.
+export const TEAM_PIC = "teamPic";
+
 const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
   toApproach: [
+    field(TEAM_PIC, "PIC", "person", true),
     field("reach", "Planned outreach", "date", true),
     field("priority", "Priority", "choice", true),
     field("type", "Type", "choice", true),
@@ -101,6 +106,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field(GBA_TRIALS, "GBA trials", "choices", false),
   ],
   active: [
+    field(TEAM_PIC, "PIC", "person", true),
     field("status", "Status", "choice", true),
     field("priority", "Priority", "choice", true),
     field("date", "Last action", "date", true),
@@ -115,6 +121,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("sourcing", "How we found it", "text", false),
   ],
   dealDone: [
+    field(TEAM_PIC, "PIC", "person", false),
     field("date", "Last action", "date", true),
     field("target", "Target date", "date", true),
     field("product", "Products", "text", true),
@@ -126,6 +133,7 @@ const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
     field("sourcing", "How we found it", "text", false),
   ],
   noOrNotNow: [
+    field(TEAM_PIC, "PIC", "person", true),
     field("answer", "Answer", "choice", true),
     field("reason", "Reason", "long", true),
     field("product", "Products", "text", true),
@@ -149,8 +157,8 @@ function isColour(v: unknown): v is OptionColour {
 }
 
 // Reads the stored record, falling back to the defaults for anything missing.
-// Built-in fields missing from a group come back (after the ones kept), and the
-// locked options always exist.
+// Built-in fields missing from a group come back where the defaults put them (after
+// the built-in field before them, or first), and the locked options always exist.
 export function readCompanySettings(data: unknown): CompanySettings {
   const stored = (data ?? {}) as Partial<CompanySettings>;
   const settings = clone(DEFAULT_COMPANY_SETTINGS);
@@ -173,8 +181,16 @@ export function readCompanySettings(data: unknown): CompanySettings {
       const list = stored.fields[g];
       if (!Array.isArray(list)) continue;
       const kept = list.filter((f) => f && typeof f.key === "string" && typeof f.label === "string");
-      const missing = DEFAULT_FIELDS[g].filter((d) => !kept.some((f) => f.key === d.key));
-      settings.fields[g] = [...kept.map((f) => ({ ...f, shown: f.shown !== false, own: !!f.own })), ...clone(missing)];
+      const merged = kept.map((f) => ({ ...f, shown: f.shown !== false, own: !!f.own }));
+      DEFAULT_FIELDS[g].forEach((d, i) => {
+        if (merged.some((f) => f.key === d.key)) return;
+        const before = DEFAULT_FIELDS[g].slice(0, i).reverse().find((p) => merged.some((f) => f.key === p.key));
+        const added = clone(d);
+        // The team may already call another field "PIC" (the old app's name for the contact person): two columns never share a name.
+        if (d.key === TEAM_PIC && merged.some((f) => f.label.trim().toLowerCase() === d.label.toLowerCase())) added.label = "Team PIC";
+        merged.splice(before ? merged.findIndex((f) => f.key === before.key) + 1 : 0, 0, added);
+      });
+      settings.fields[g] = merged;
     }
   }
   return settings;

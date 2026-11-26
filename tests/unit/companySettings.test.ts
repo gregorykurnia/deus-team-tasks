@@ -51,6 +51,7 @@ describe("reading (falls back to the defaults)", () => {
       [FOLLOW_UP_STATUS, "followUp"],
     ]);
     expect(s.fields.active.filter((f) => f.shown).map((f) => f.label)).toEqual([
+      "PIC",
       "Status",
       "Priority",
       "Last action",
@@ -72,9 +73,32 @@ describe("reading (falls back to the defaults)", () => {
       ["Meeting Soon", "teal", null],
       ["Odd", "slate", null],
     ]);
-    expect(s.fields.active[0]).toEqual({ key: "status", label: "Stage", type: "choice", shown: false, own: false });
+    expect(s.fields.active[1]).toEqual({ key: "status", label: "Stage", type: "choice", shown: false, own: false });
     expect(s.fields.active).toHaveLength(DEFAULT_COMPANY_SETTINGS.fields.active.length);
     expect(s.options.priority).toEqual(DEFAULT_COMPANY_SETTINGS.options.priority);
+  });
+
+  it("puts a built-in field missing from the stored record where the defaults have it", () => {
+    const own = { key: "own_1", label: "Budget", type: "number", shown: true, own: true };
+    const s = readCompanySettings({
+      fields: {
+        toApproach: [
+          { key: "priority", label: "Priority", type: "choice", shown: true, own: false },
+          own,
+          { key: "reach", label: "Planned outreach", type: "date", shown: true, own: false },
+        ],
+      },
+    });
+    // The PIC leads; Type goes after Priority, the field before it in the defaults; the team's own field keeps its place.
+    expect(s.fields.toApproach.slice(0, 5).map((f) => f.key)).toEqual(["teamPic", "priority", "type", "industry", "sourcing"]);
+    expect(s.fields.toApproach[0]).toEqual({ key: "teamPic", label: "PIC", type: "person", shown: true, own: false });
+    expect(s.fields.toApproach.map((f) => f.key)).toContain("own_1");
+    expect(s.fields.toApproach).toHaveLength(DEFAULT_COMPANY_SETTINGS.fields.toApproach.length + 1);
+  });
+
+  it("calls the team's PIC “Team PIC” where another field is already named PIC", () => {
+    const s = readCompanySettings({ fields: { active: [{ key: "pic", label: "PIC", type: "text", shown: true, own: false }] } });
+    expect(s.fields.active.map((f) => f.label).filter((l) => /pic/i.test(l))).toEqual(["Team PIC", "PIC"]); // the team's PIC still leads
   });
 });
 

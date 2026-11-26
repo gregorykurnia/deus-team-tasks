@@ -80,6 +80,7 @@ import { chosenIds, headState, NO_SELECTION, selectAll, selectAllOffer, selected
 import { hasAnyLayer } from "@/ui/overlayStack";
 import CompanySelectionBar from "./CompanySelectionBar";
 import { COMPANY_PARK_MENU, notesLink, useCompanyActions } from "./useCompanyActions";
+import { useTeamNames } from "./useTeamNames";
 import WhereToAct from "./WhereToAct";
 import styles from "./Companies.module.css";
 
@@ -98,6 +99,7 @@ export default function CompaniesScreen() {
   const companies = useCompanies();
   const byId = useCompaniesById();
   const tasks = useTasks();
+  const teamNames = useTeamNames();
   const notes = useNotes();
   const toast = useToast();
   const actions = useCompanyActions();
@@ -608,6 +610,8 @@ export default function CompaniesScreen() {
             field={field}
             value={c[field.key]}
             options={settings.options[field.key]}
+            people={field.type === "person" ? teamNames.names : undefined}
+            peopleLoading={field.type === "person" && teamNames.loading}
             optionNotes={optionNotes}
             required={field.key === "company" ? RENAME_MISSING : undefined}
             onEditOptions={field.type === "choice" ? () => setOptionsFor(field) : undefined}

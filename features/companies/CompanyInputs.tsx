@@ -69,10 +69,11 @@ interface DetailFieldProps {
   field: CompanyField;
   value: unknown;
   options: ChoiceOption[]; // a choice field's, without Deal done
+  people?: string[]; // a person field's: the team members to pick from
   onChange: (value: string) => void;
 }
 
-export function DetailField({ field, value, options, onChange }: DetailFieldProps) {
+export function DetailField({ field, value, options, people = [], onChange }: DetailFieldProps) {
   const v = inputValue(value);
   if (field.type === "choices") {
     const order = options.map((o) => o.name);
@@ -102,6 +103,18 @@ export function DetailField({ field, value, options, onChange }: DetailFieldProp
                 {options.map((o) => (
                   <option key={o.name} value={o.name}>
                     {o.name}
+                  </option>
+                ))}
+              </SelectInput>
+            );
+          case "person":
+            return (
+              <SelectInput {...control} value={v} onChange={(e) => onChange(e.target.value)}>
+                <option value="">None</option>
+                {v && !people.includes(v) && <option value={v}>{v}</option>}
+                {people.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
                   </option>
                 ))}
               </SelectInput>

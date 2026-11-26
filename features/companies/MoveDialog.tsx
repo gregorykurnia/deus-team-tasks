@@ -15,6 +15,7 @@ import Icon from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import { GroupTag } from "@/ui/Tag";
 import { DetailField, GroupOptions, storedValues } from "./CompanyInputs";
+import { useTeamNames } from "./useTeamNames";
 import styles from "./Companies.module.css";
 
 interface MoveDialogProps {
@@ -28,6 +29,7 @@ interface MoveDialogProps {
 }
 
 export default function MoveDialog({ company, to: initialTo, settings, openTasks, today, onClose, onMove }: MoveDialogProps) {
+  const people = useTeamNames().names;
   const from = companyGroup(company);
   const [to, setTo] = useState<CompanyGroup>(initialTo && initialTo !== from ? initialTo : defaultMoveTarget(from));
   // The plan as the dialog opened for each group, so carried values don't jump about as fields are filled in.
@@ -113,6 +115,7 @@ export default function MoveDialog({ company, to: initialTo, settings, openTasks
                 field={f}
                 value={values[f.key]}
                 options={moveChoices(settings, f.key)}
+                people={people}
                 onChange={(v) => setValues((now) => ({ ...now, [f.key]: v }))}
               />
             ))}

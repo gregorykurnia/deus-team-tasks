@@ -199,6 +199,12 @@ describe("cells (guide 4.9, 5.1)", () => {
     expect(cellOf(co(1, { cx_1: 12500 }), { key: "cx_1", label: "Budget", type: "number", shown: true, own: true }, "active", settings, TODAY)).toEqual({ kind: "number", label: "12,500" });
   });
 
+  it("shows the team's PIC as a person, and nothing when there's none", () => {
+    expect(cellOf(co(1, { teamPic: "Maya Chen" }), field("active", "teamPic"), "active", settings, TODAY)).toEqual({ kind: "person", label: "Maya Chen" });
+    expect(cellOf(co(1), field("toApproach", "teamPic"), "toApproach", settings, TODAY)).toEqual({ kind: "empty" });
+    expect(gridOf([field("active", "teamPic")]).columns).toBe("minmax(230px, 1.5fr) 150px 40px");
+  });
+
   it("puts the industry under a name in To approach and the contact person elsewhere", () => {
     expect(subline(co(1, { industry: "Retail", pic: "Rina" }), "toApproach")).toBe("Retail");
     expect(subline(co(1, { industry: "Retail", pic: "Rina" }), "active")).toBe("Rina");

@@ -535,6 +535,21 @@
   white-space: nowrap;
 }
 
+/* A team member (the PIC): the avatar, then the name, cut short when the column is narrow. */
+.teamPic {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.teamPic > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .long .tx {
   display: -webkit-box;
   line-height: 1.45;
@@ -842,6 +857,13 @@
 }
 
 .miChoice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.miPerson {
   display: flex;
   align-items: center;
   gap: 8px;

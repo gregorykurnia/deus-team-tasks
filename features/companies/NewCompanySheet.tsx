@@ -16,6 +16,7 @@ import { TextInput } from "@/ui/Inputs";
 import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
 import { DetailField, GroupOptions, storedValues } from "./CompanyInputs";
+import { useTeamNames } from "./useTeamNames";
 import styles from "./Companies.module.css";
 
 interface NewCompanySheetProps {
@@ -26,6 +27,7 @@ interface NewCompanySheetProps {
 }
 
 export default function NewCompanySheet({ group: initialGroup, settings, onClose, onAdded }: NewCompanySheetProps) {
+  const people = useTeamNames().names;
   const companies = useCompanies();
   const toast = useToast();
   const [name, setName] = useState("");
@@ -102,7 +104,7 @@ export default function NewCompanySheet({ group: initialGroup, settings, onClose
           <GroupOptions groups={COMPANY_GROUPS} value={group} onChange={setGroup} labelledBy={groupLabel} four />
         </div>
         {fields.map((f) => (
-          <DetailField key={f.key} field={f} value={values[f.key]} options={moveChoices(settings, f.key)} onChange={(v) => setValues((now) => ({ ...now, [f.key]: v }))} />
+          <DetailField key={f.key} field={f} value={values[f.key]} options={moveChoices(settings, f.key)} people={people} onChange={(v) => setValues((now) => ({ ...now, [f.key]: v }))} />
         ))}
         <p className={styles.help}>Everything except the name is optional, and more fields are in the record once it’s added.</p>
       </div>

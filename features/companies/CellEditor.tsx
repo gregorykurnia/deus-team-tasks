@@ -14,6 +14,7 @@ import { ChoiceChip } from "@/ui/ChipGroup";
 import Field from "@/ui/Field";
 import { DateInput, NumberInput, TextArea, TextInput } from "@/ui/Inputs";
 import Menu, { MenuCheck, MenuChoice, MenuFoot, MenuHeading, MenuItem, MenuSeparator } from "@/ui/Menu";
+import Avatar from "@/ui/Avatar";
 import OptionChip from "@/ui/OptionChip";
 import styles from "./Companies.module.css";
 
@@ -23,6 +24,8 @@ interface CellEditorProps {
   field: Pick<CompanyField, "key" | "label" | "type">;
   value: unknown; // what's stored now
   options?: ChoiceOption[]; // a choice field's
+  people?: string[]; // a person field's: the team members to pick from
+  peopleLoading?: boolean; // the team is still loading, so an empty list doesn't mean there's no one
   optionNotes?: Record<string, string>; // a note beside an option: "Moves it to Deal done"
   required?: string; // the company's name: what to say when it's emptied
   onEditOptions?: () => void; // a choice field: its options dialog
@@ -41,7 +44,7 @@ export default function CellEditor(props: CellEditorProps) {
       anchorRef={anchorRef}
       onClose={onClose}
       label={field.label}
-      form={field.type !== "choice" && field.type !== "choices"}
+      form={field.type !== "choice" && field.type !== "choices" && field.type !== "person"}
       initialFocus={text ? ["input", "textarea"] : field.type === "date" ? ["input"] : undefined}
     >
       <MenuHeading>{field.label}</MenuHeading>
@@ -49,6 +52,8 @@ export default function CellEditor(props: CellEditorProps) {
         <ChoiceEditor {...props} />
       ) : field.type === "choices" ? (
         <ChoicesEditor {...props} />
+      ) : field.type === "person" ? (
+        <PersonEditor {...props} />
       ) : field.type === "date" ? (
         <DateEditor {...props} />
       ) : (
@@ -91,6 +96,33 @@ function ChoiceEditor({ value, options = [], optionNotes = {}, noClear, onSave, 
           <MenuSeparator />
           <MenuItem icon="sliders" onSelect={onEditOptions}>
             Edit options
+          </MenuItem>
+        </>
+      )}
+    </>
+  );
+}
+
+// One team member, picked as a choice is. A name no longer on any task still shows, so it can be seen and cleared.
+function PersonEditor({ value, people = [], peopleLoading, onSave }: CellEditorProps) {
+  const current = typeof value === "string" ? value : "";
+  const names = current && !people.includes(current) ? [current, ...people] : people;
+  return (
+    <>
+      {names.map((name) => (
+        <MenuChoice key={name} checked={current === name} onSelect={() => current !== name && void onSave(name)}>
+          <span className={styles.miPerson}>
+            <Avatar name={name} size="chip" />
+            {name}
+          </span>
+        </MenuChoice>
+      ))}
+      {names.length === 0 && <MenuFoot>{peopleLoading ? "Loading the team…" : "No team members yet. Names appear here once they’re on a task."}</MenuFoot>}
+      {current && (
+        <>
+          <MenuSeparator />
+          <MenuItem icon="x" onSelect={() => void onSave(undefined)}>
+            Clear
           </MenuItem>
         </>
       )}
