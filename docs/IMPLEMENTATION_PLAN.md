@@ -28,7 +28,7 @@ if added there. It works on any group, clients included, and uses the connector 
 
 | ID | Task | Pick | Done |
 |---|---|---|---|
-| C1a | Pure checks and preview: new company docs as the app stores them, PIC as a team name, duplicate names, options, `seenPics` and limits. [C1a](implementation/prospects-from-chat.md#c1a--checking-and-previewing-pure) [no look] | Sol Max | |
+| C1a | Pure checks and preview: new company docs as the app stores them, PIC as a team name, duplicate names, options, `seenPics` and limits. [C1a](implementation/prospects-from-chat.md#c1a--checking-and-previewing-pure) [no look] | Sol Max | 2026-11-26 — checked |
 | C1b | Server save: new ids from the counter, one transaction for PIC changes with the `seenPics` check, Jakarta day, safe repeats, partial failures. [C1b](implementation/prospects-from-chat.md#c1b--saving-server) [no look] | Sol Max | |
 | C2 | Connector tools `list_companies`, `preview_company_changes`, `apply_company_changes`, their input checks and wording. [C2](implementation/prospects-from-chat.md#c2--the-three-connector-tools) [no look] | Sol xHigh | |
 | E1 | End to end through the connector on the emulators, ending on the Prospects page; `chat-companies.spec.ts`. [E1](implementation/prospects-from-chat.md#e1--end-to-end-on-the-emulators) [look] | Sol High | |

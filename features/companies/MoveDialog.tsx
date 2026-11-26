@@ -5,7 +5,7 @@
 // work. When the move fails the dialog stays, with what was typed.
 import { useId, useState } from "react";
 import type { PipelineEntry } from "@/lib/clientTypes";
-import { defaultMoveTarget, kindSwitchNote, moveChoices, movePatch, movePlan, moveTargets, type CompanyPatch } from "@/lib/companyEdit";
+import { defaultMoveTarget, kindSwitchNote, moveChoices, movePatch, movePlan, moveTargets, storedValues, type CompanyPatch } from "@/lib/companyEdit";
 import { COMPANY_GROUP_LABELS, companyGroup, type CompanyGroup } from "@/lib/companies";
 import type { CompanySettings } from "@/lib/companySettings";
 import { failureMessage } from "@/lib/connection";
@@ -14,7 +14,7 @@ import Dialog from "@/ui/Dialog";
 import Icon from "@/ui/Icon";
 import Notice from "@/ui/Notice";
 import { GroupTag } from "@/ui/Tag";
-import { DetailField, GroupOptions, storedValues } from "./CompanyInputs";
+import { DetailField, GroupOptions } from "./CompanyInputs";
 import { useTeamNames } from "./useTeamNames";
 import styles from "./Companies.module.css";
 

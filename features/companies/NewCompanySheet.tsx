@@ -5,8 +5,8 @@
 // fails the sheet stays, with what was typed.
 import { useId, useState } from "react";
 import { useCompanies } from "@/desk/DeskData";
-import { maxCompanyId, moveChoices, NAME_MISSING, newCompanyFields, type CompanyPatch } from "@/lib/companyEdit";
-import { COMPANY_GROUPS, DEAL_DONE_STATUS, groupFlags, type CompanyGroup } from "@/lib/companies";
+import { maxCompanyId, moveChoices, NAME_MISSING, newCompanyData, newCompanyFields, type CompanyPatch } from "@/lib/companyEdit";
+import { COMPANY_GROUPS, type CompanyGroup } from "@/lib/companies";
 import type { CompanySettings } from "@/lib/companySettings";
 import { addCompany } from "@/lib/companyWrites";
 import { failureMessage } from "@/lib/connection";
@@ -15,7 +15,7 @@ import Field from "@/ui/Field";
 import { TextInput } from "@/ui/Inputs";
 import Sheet, { SheetSpacer } from "@/ui/Sheet";
 import { useToast } from "@/ui/Toaster";
-import { DetailField, GroupOptions, storedValues } from "./CompanyInputs";
+import { DetailField, GroupOptions } from "./CompanyInputs";
 import { useTeamNames } from "./useTeamNames";
 import styles from "./Companies.module.css";
 
@@ -51,8 +51,7 @@ export default function NewCompanySheet({ group: initialGroup, settings, onClose
     }
     setBusy(true);
     try {
-      const data: CompanyPatch = { ...storedValues(fields, values), company: clean, ...groupFlags(group) };
-      if (group === "dealDone") data.status = DEAL_DONE_STATUS;
+      const data = newCompanyData(clean, group, fields, values);
       const id = await addCompany(data, maxCompanyId(companies.rows));
       onAdded(id, clean, group);
     } catch (err) {

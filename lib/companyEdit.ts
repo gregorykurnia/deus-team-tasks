@@ -2,8 +2,8 @@
 // carries over and asks for, what the record warns about, and what a deletion leaves behind. Pure; the writes are in
 // companyWrites.ts and the screen draws the rest.
 import type { PipelineEntry } from "./clientTypes";
-import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, isCompanyParked, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
-import type { ChoiceOption, CompanyField, CompanySettings } from "./companySettings";
+import { COMPANY_GROUP_LABELS, COMPANY_GROUPS, companyGroup, DEAL_DONE_STATUS, groupFlags, isCompanyParked, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
+import type { ChoiceOption, CompanyField, CompanySettings } from "./companySettingsModel";
 import { addDays, daysBetween, plural, shortDate, todayIso } from "./dates";
 import { GONE_COLD_DAYS } from "./urgency";
 
@@ -35,6 +35,16 @@ export function parseValue(field: Pick<CompanyField, "type">, raw: string): Fiel
     return Number.isFinite(n) ? n : clean;
   }
   return clean;
+}
+
+// A detail's value while it's being written, with empty fields represented by an empty string.
+export const inputValue = (value: unknown) => value === undefined || value === null ? "" : String(value);
+
+type CompanyDetailField = Pick<CompanyField, "key" | "type">;
+
+// Keep undefined for edited fields that the move dialog needs to clear.
+export function storedValues(fields: readonly CompanyDetailField[], values: CompanyPatch): CompanyPatch {
+  return Object.fromEntries(fields.filter((f) => f.key in values).map((f) => [f.key, parseValue(f, inputValue(values[f.key]))]));
 }
 
 export function sameValue(a: unknown, b: unknown): boolean {
@@ -89,7 +99,7 @@ export function moveChoices(settings: CompanySettings, key: string): ChoiceOptio
   return (settings.options[key] ?? []).filter((o) => o.role !== "dealDone");
 }
 
-const MEETING_SOON = "Meeting Soon";
+export const MEETING_SOON = "Meeting Soon";
 
 // What the move dialog fills in before anyone types: an Active company needs a status (the first contact was made, so
 // coming from To approach the last action is today), and No or not now starts on "Not now".
@@ -256,6 +266,13 @@ export function deleteBlocked(tasks: SourceState, notes: SourceState, online: bo
 export function newCompanyFields(settings: CompanySettings, group: CompanyGroup): CompanyField[] {
   const shown = settings.fields[group].filter((f) => f.shown || f.key === "pic");
   return [...shown.filter((f) => f.key === "pic"), ...shown.filter((f) => f.key !== "pic")]; // the contact comes first, as in the prototype
+}
+
+export type NewCompanyData = CompanyPatch & Pick<PipelineEntry, "company"> & ReturnType<typeof groupFlags>;
+
+export function newCompanyData(company: string, group: CompanyGroup, fields: readonly CompanyDetailField[], values: CompanyPatch): NewCompanyData {
+  const details = Object.fromEntries(Object.entries(storedValues(fields, values)).filter(([, value]) => value !== undefined));
+  return { ...details, company: company.trim(), ...groupFlags(group), ...(group === "dealDone" && { status: DEAL_DONE_STATUS }) };
 }
 
 export const NAME_MISSING = "Add the company’s name. It’s the only thing needed.";

@@ -3,7 +3,7 @@
 // What the move dialog and the new company sheet share (guide 5.10, 6.5): the groups as options to choose from, and one
 // field per detail the group asks for, each marked optional (5.5).
 import type { KeyboardEvent } from "react";
-import { parseValue, type CompanyPatch } from "@/lib/companyEdit";
+import { inputValue } from "@/lib/companyEdit";
 import { choicesOf, toggleChoice, type CompanyGroup } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import { lookOf } from "@/lib/companyView";
@@ -61,9 +61,6 @@ export function GroupOptions({ groups, value, onChange, label, labelledBy, four 
     </div>
   );
 }
-
-// A detail's value while it's being written: text as typed, a date or choice as stored, "" for nothing.
-export const inputValue = (v: unknown) => (v === undefined || v === null ? "" : String(v));
 
 interface DetailFieldProps {
   field: CompanyField;
@@ -131,9 +128,4 @@ export function DetailField({ field, value, options, people = [], onChange }: De
       }}
     </Field>
   );
-}
-
-// What the fields hold, ready to store: trimmed, numbers as numbers, nothing for an empty field.
-export function storedValues(fields: CompanyField[], values: CompanyPatch): CompanyPatch {
-  return Object.fromEntries(fields.filter((f) => f.key in values).map((f) => [f.key, parseValue(f, inputValue(values[f.key]))]));
 }

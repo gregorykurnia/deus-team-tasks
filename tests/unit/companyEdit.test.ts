@@ -13,15 +13,17 @@ import {
   movePatch,
   movePlan,
   movesToDealDone,
+  newCompanyData,
   newCompanyFields,
   parseValue,
   quickPicks,
   recordAlerts,
   recordSections,
   sameValue,
+  storedValues,
 } from "@/lib/companyEdit";
-import { DEAL_DONE_STATUS } from "@/lib/companies";
-import { DEFAULT_COMPANY_SETTINGS, type CompanySettings } from "@/lib/companySettings";
+import { companyGroup, DEAL_DONE_STATUS } from "@/lib/companies";
+import { DEFAULT_COMPANY_SETTINGS, type CompanySettings } from "@/lib/companySettingsModel";
 import type { PipelineEntry } from "@/lib/clientTypes";
 
 const TODAY = "2026-10-20";
@@ -174,5 +176,14 @@ describe("new company (B1, B3)", () => {
   it("asks for what the group's list shows, and the contact person", () => {
     expect(newCompanyFields(settings, "active").map((f) => f.key)).toEqual(["pic", "teamPic", "status", "priority", "date", "target", "product", "gbaTrials", "notes"]);
     expect(newCompanyFields(settings, "noOrNotNow").map((f) => f.key)).toContain("pic");
+  });
+
+  it("omits blank details when creating a client and keeps blank edits available for clearing on a move", () => {
+    const fields = newCompanyFields(settings, "dealDone");
+    const values = { pic: "  ", product: " Trial " };
+    const created = newCompanyData(" Spruce ", "dealDone", fields, values);
+    expect(created).toStrictEqual({ company: "Spruce", status: DEAL_DONE_STATUS, _raw: false, _hold: false, product: "Trial" });
+    expect(companyGroup(created)).toBe("dealDone");
+    expect(movePatch(co({ pic: "Old contact" }), storedValues(fields, values))).toStrictEqual({ pic: undefined, product: "Trial" });
   });
 });
