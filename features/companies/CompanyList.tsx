@@ -98,7 +98,7 @@ export function CellValue({ cell, query, searched, coldIcon }: { cell: Cell; que
       return (
         <span className={styles.teamPic} title={cell.label}>
           <Avatar name={cell.label} size="chip" />
-          <span>{cell.label}</span>
+          <span>{searched ? <Highlight text={cell.label} query={query} /> : cell.label}</span>
         </span>
       );
     case "text":

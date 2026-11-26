@@ -9,6 +9,7 @@ import {
   followUpTaskFor,
   groupSizes,
   matchesCompanySearch,
+  picOptions,
   productOptions,
   productsOf,
   sortCompanies,
@@ -43,6 +44,8 @@ describe("search and filters (B8, D-012)", () => {
     expect(matchesCompanySearch(co(1, { _hold: true, reason: "Budget frozen" }), "budget")).toBe(true);
     // Fields aren't run together: "Company 1" + "Dewi" doesn't match "1Dewi".
     expect(matchesCompanySearch(co(1, { pic: "Dewi" }), "1dewi")).toBe(false);
+    expect(matchesCompanySearch(co(1, { teamPic: "Maya Chen" }), "maya")).toBe(true); // the team's PIC, in every group
+    expect(matchesCompanySearch(co(1, { _raw: true, teamPic: "Maya Chen" }), "chen")).toBe(true);
   });
   it("splits products on commas and merges spellings, most used first", () => {
     expect(productsOf(co(1, { product: "Fleet tracking,  Analytics , " }))).toEqual(["Fleet tracking", "Analytics"]);
@@ -132,5 +135,21 @@ describe("GBA trials: several options in one value (N22)", () => {
     expect(filterCompanies(companies, { trial: "Cognitive" }, TODAY).map((c) => c.id)).toEqual([1, 2]);
     expect(filterCompanies(companies, { trial: "Personality" }, TODAY).map((c) => c.id)).toEqual([1]);
     expect(filterCompanies(companies, { trial: "-" }, TODAY).map((c) => c.id)).toEqual([3]);
+  });
+});
+
+describe("the team's PIC", () => {
+  const companies = [co(1, { teamPic: "Maya Chen" }), co(2, { teamPic: "Budi" }), co(3, { teamPic: "Maya Chen" }), co(4), co(5, { teamPic: "" })];
+
+  it("filters by one team member, or by no PIC yet", () => {
+    expect(filterCompanies(companies, { pic: "Maya Chen" }, TODAY).map((c) => c.id)).toEqual([1, 3]);
+    expect(filterCompanies(companies, { pic: "-" }, TODAY).map((c) => c.id)).toEqual([4, 5]);
+  });
+
+  it("offers each PIC in use, A to Z, with how many companies", () => {
+    expect(picOptions(companies)).toEqual([
+      { name: "Budi", count: 1 },
+      { name: "Maya Chen", count: 2 },
+    ]);
   });
 });

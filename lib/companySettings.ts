@@ -8,7 +8,7 @@ import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { assertOnline, forgetSource, reportSnapshot, watchSource } from "./connection";
 import { db } from "./firebase";
-import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, GBA_TRIALS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, type CompanyGroup } from "./companies";
+import { DEAL_DONE_STATUS, FOLLOW_UP_STATUS, GBA_TRIALS, HIGH_PRIORITY, NO_ANSWER, NOT_NOW_ANSWER, TEAM_PIC, type CompanyGroup } from "./companies";
 import { replaceFieldValue } from "./companyWrites";
 import type { PipelineEntry } from "./clientTypes";
 import { TASK_TYPES } from "./types";
@@ -90,9 +90,6 @@ export function lockReason(role: LockedRole): string {
 }
 
 const field = (key: string, label: string, type: FieldType, shown: boolean): CompanyField => ({ key, label, type, shown, own: false });
-
-// The team member in charge of a company (PIC). Not the contact person, who works at the company.
-export const TEAM_PIC = "teamPic";
 
 const DEFAULT_FIELDS: Record<CompanyGroup, CompanyField[]> = {
   toApproach: [

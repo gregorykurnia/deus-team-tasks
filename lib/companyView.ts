@@ -11,6 +11,7 @@ import {
   filterCompanies,
   GBA_TRIALS,
   isCompanyParked,
+  TEAM_PIC,
   matchesCompanySearch,
   NO_VALUE,
   sortCompanies,
@@ -33,6 +34,7 @@ export interface CompanyViewState {
   priority: string | null; // the same
   product: string | null; // a product's merged key
   trial: string | null; // a GBA module (N22), or "-" for none
+  pic: string | null; // the team's PIC, or "-" for none
   act: WhereToAct | null; // Active only
   parked: boolean; // Active only: the parked companies rather than those in play (N20)
   sort: string | null; // "company" or a field's key; null is the group's default
@@ -40,7 +42,7 @@ export interface CompanyViewState {
 }
 
 export const DEFAULT_GROUP: CompanyGroup = "active";
-export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "trial", "act", "view", "sort", "dir"] as const;
+export const VIEW_PARAMS = ["group", "q", "status", "priority", "product", "trial", "pic", "act", "view", "sort", "dir"] as const;
 
 const GROUP_SLUGS: Record<CompanyGroup, string> = {
   toApproach: "to-approach",
@@ -68,6 +70,7 @@ export function parseCompanyView(params: URLSearchParams): CompanyViewState {
     priority: params.get("priority") || null,
     product: params.get("product") || null,
     trial: params.get("trial") || null,
+    pic: params.get("pic") || null,
     act: group === "active" ? fromSlug(ACT_SLUGS, params.get("act")) : null,
     parked: group === "active" && params.get("view") === "parked",
     sort,
@@ -86,6 +89,7 @@ export function viewParams(state: CompanyViewState, current: URLSearchParams = n
   put("priority", state.priority);
   put("product", state.product);
   put("trial", state.trial);
+  put("pic", state.pic);
   if (state.group === "active" && state.act) put("act", ACT_SLUGS[state.act]);
   if (state.group === "active" && state.parked) put("view", "parked");
   if (state.sort) {
@@ -111,12 +115,14 @@ const hasField = (fields: CompanyField[], key: string) => fields.some((f) => f.k
 
 // Status and Priority filters exist where the group has the field; Product too (guide 6.5). GBA trials, where the list
 // shows it (N22): every group has the field, and most keep it hidden.
-export function availableFilters(fields: CompanyField[]): { status: boolean; priority: boolean; product: boolean; trial: boolean } {
+// PIC, where the list shows it.
+export function availableFilters(fields: CompanyField[]): { status: boolean; priority: boolean; product: boolean; trial: boolean; pic: boolean } {
   return {
     status: hasField(fields, "status"),
     priority: hasField(fields, "priority"),
     product: hasField(fields, "product"),
     trial: fields.some((f) => f.key === GBA_TRIALS && f.shown),
+    pic: fields.some((f) => f.key === TEAM_PIC && f.shown),
   };
 }
 
@@ -131,24 +137,25 @@ export function appliedFilters(state: CompanyViewState, fields: CompanyField[]) 
     priority: has.priority ? state.priority : null,
     productKey: has.product ? state.product : null,
     trial: has.trial ? state.trial : null,
+    pic: has.pic ? state.pic : null,
     whereToAct: state.group === "active" ? state.act : null,
   };
 }
 
 export function filtersOn(state: CompanyViewState, fields: CompanyField[]): boolean {
   const f = appliedFilters(state, fields);
-  return !!(f.search || f.status || f.priority || f.productKey || f.trial || f.whereToAct);
+  return !!(f.search || f.status || f.priority || f.productKey || f.trial || f.pic || f.whereToAct);
 }
 
 // Clear filters keeps the group and the sort, and drops the rest.
 export function clearedFilters(state: CompanyViewState): CompanyViewState {
-  return { ...state, q: "", status: null, priority: null, product: null, trial: null, act: null };
+  return { ...state, q: "", status: null, priority: null, product: null, trial: null, pic: null, act: null };
 }
 
 // Filters that aren't the search: "Clear filters" rather than "Clear search" (guide 6.5).
 export function narrowedBeyondSearch(state: CompanyViewState, fields: CompanyField[]): boolean {
   const f = appliedFilters(state, fields);
-  return !!(f.status || f.priority || f.productKey || f.trial || f.whereToAct);
+  return !!(f.status || f.priority || f.productKey || f.trial || f.pic || f.whereToAct);
 }
 
 // "-" is a company with no value, and its filter says "None".

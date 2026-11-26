@@ -1,11 +1,11 @@
 "use client";
 
-// The filters and sort above the list (guide 6.5, 4.3, 5.6): Status, Priority and Product where the group has them, GBA
-// trials where its list shows them (N22), then
+// The filters and sort above the list (guide 6.5, 4.3, 5.6): PIC where the list shows it, Status, Priority and Product
+// where the group has them, GBA trials where its list shows them (N22), then
 // Sort, Select (Active only, to park several, N20), Fields and Export. A filter that's on shows its value and a round ×
 // that clears it.
 import { useRef, useState, type Ref } from "react";
-import { GBA_TRIALS, NO_VALUE, type ProductOption } from "@/lib/companies";
+import { GBA_TRIALS, NO_VALUE, type PicOption, type ProductOption } from "@/lib/companies";
 import type { ChoiceOption, CompanyField } from "@/lib/companySettings";
 import {
   availableFilters,
@@ -17,18 +17,20 @@ import {
   sortSummary,
   type CompanyViewState,
 } from "@/lib/companyView";
+import Avatar from "@/ui/Avatar";
 import FilterButton, { FilterAction, FilterToggle } from "@/ui/FilterButton";
 import Menu, { MenuChoice, MenuFoot, MenuHeading, MenuSeparator } from "@/ui/Menu";
 import OptionChip from "@/ui/OptionChip";
 import styles from "./Companies.module.css";
 
-type Which = "product" | "sort";
+type Which = "pic" | "product" | "sort";
 
 interface CompanyFiltersProps {
   state: CompanyViewState;
   fields: CompanyField[]; // every field the group has
   options: Record<string, ChoiceOption[]>;
   products: ProductOption[]; // written in the group, spellings merged
+  pics: PicOption[]; // the team members who are PIC of a company in the group
   onState: (next: CompanyViewState) => void;
   onFields: () => void;
   onExport: () => void;
@@ -37,8 +39,9 @@ interface CompanyFiltersProps {
   selectRef?: Ref<HTMLButtonElement>; // gets focus back when selecting stops
 }
 
-export default function CompanyFilters({ state, fields, options, products, onState, onFields, onExport, selecting, onSelecting, selectRef }: CompanyFiltersProps) {
+export default function CompanyFilters({ state, fields, options, products, pics, onState, onFields, onExport, selecting, onSelecting, selectRef }: CompanyFiltersProps) {
   const [open, setOpen] = useState<Which | null>(null);
+  const picRef = useRef<HTMLButtonElement>(null);
   const productRef = useRef<HTMLButtonElement>(null);
   const sortRef = useRef<HTMLButtonElement>(null);
   const toggle = (which: Which) => setOpen((now) => (now === which ? null : which));
@@ -49,6 +52,36 @@ export default function CompanyFilters({ state, fields, options, products, onSta
 
   return (
     <div className={styles.filters} role="toolbar" aria-label="Filter, sort and export">
+      {has.pic && (
+        <>
+          <FilterButton
+            ref={picRef}
+            icon="people"
+            label="PIC"
+            value={state.pic ? filterValueLabel(state.pic) : null}
+            expanded={open === "pic"}
+            onClick={() => toggle("pic")}
+            onClear={() => onState({ ...state, pic: null })}
+          />
+          <Menu open={open === "pic"} anchorRef={picRef} onClose={close} label="PIC">
+            <MenuHeading>PIC</MenuHeading>
+            <MenuChoice checked={!state.pic} onSelect={() => onState({ ...state, pic: null })}>
+              Anyone or no one
+            </MenuChoice>
+            {pics.map((p) => (
+              <MenuChoice key={p.name} checked={state.pic === p.name} onSelect={() => onState({ ...state, pic: p.name })}>
+                <span className={styles.miPerson}>
+                  <Avatar name={p.name} size="chip" />
+                  {`${p.name} (${p.count.toLocaleString("en-GB")})`}
+                </span>
+              </MenuChoice>
+            ))}
+            <MenuChoice checked={state.pic === NO_VALUE} onSelect={() => onState({ ...state, pic: NO_VALUE })}>
+              No PIC yet
+            </MenuChoice>
+          </Menu>
+        </>
+      )}
       {has.status && <ChoiceFilter name="status" label="Status" any="Any status" state={state} options={options.status ?? []} onState={onState} />}
       {has.priority && <ChoiceFilter name="priority" label="Priority" any="Any priority" state={state} options={options.priority ?? []} onState={onState} />}
       {has.product && (

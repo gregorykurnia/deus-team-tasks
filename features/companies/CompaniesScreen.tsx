@@ -24,6 +24,7 @@ import {
   companyGroup,
   groupSizes,
   isCompanyParked,
+  picOptions,
   productOptions,
   whereToActCounts,
   type CompanyGroup,
@@ -296,6 +297,7 @@ export default function CompaniesScreen() {
   const parkedCount = active.length - inPlay.length;
   const sort = effectiveSort(state, fields);
   const products = useMemo(() => (listing ? productOptions(listing.scoped) : []), [listing]);
+  const pics = useMemo(() => (listing ? picOptions(listing.scoped) : []), [listing]);
   const shownRows = listing ? listing.sorted.slice(0, limit) : [];
   const hidden = listing ? listing.sorted.length - shownRows.length : 0;
   const listIds = useMemo(() => (listing ? listing.sorted.map((c) => String(c.id)) : []), [listing]);
@@ -525,6 +527,7 @@ export default function CompaniesScreen() {
             fields={fields}
             options={settings.options}
             products={products}
+            pics={pics}
             onState={(next) => update(() => next)}
             onFields={() => actions.openOver(`fields=${state.group}`)}
             onExport={() => setExporting(true)}

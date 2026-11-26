@@ -73,6 +73,40 @@ test("B8: a company is found by its contact person", async ({ page }) => {
   await expect(row(page, "Arunika Labs")).toBeVisible();
 });
 
+test("the PIC filter narrows to one team member's companies or those without one, and search finds a PIC", async ({ page }) => {
+  await seedCompanies([
+    company(1, { company: "Pelita Foods", teamPic: "Maya Chen" }),
+    company(2, { company: "Arunika Labs", teamPic: "Budi" }),
+    company(3, { company: "Borneo Retail" }),
+    company(4, { company: "Kasih Pharmacy", _raw: true, teamPic: "Maya Chen" }),
+  ]);
+  await page.goto("/companies");
+  await expect(page.getByRole("article")).toHaveCount(3);
+  const toolbar = page.getByRole("toolbar", { name: "Filter, sort and export" });
+  await toolbar.getByRole("button", { name: "PIC" }).click();
+  await page.getByRole("menuitemradio", { name: "Maya Chen (1)" }).click();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(row(page, "Pelita Foods")).toBeVisible();
+  await expect(page).toHaveURL("/companies?pic=Maya+Chen");
+
+  // The filter carries to another group, as Maya's companies there.
+  await page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: /^To approach/ }).click();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(row(page, "Kasih Pharmacy")).toBeVisible();
+
+  await page.getByRole("group", { name: "Groups of companies" }).getByRole("button", { name: /^Active\s*\d/ }).click();
+  await toolbar.getByRole("button", { name: /^PIC/ }).first().click();
+  await page.getByRole("menuitemradio", { name: "No PIC yet" }).click();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(row(page, "Borneo Retail")).toBeVisible();
+  await toolbar.getByRole("button", { name: "Clear the pic filter" }).click();
+  await expect(page.getByRole("article")).toHaveCount(3);
+
+  await page.getByRole("searchbox", { name: "Search companies" }).fill("budi");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(row(page, "Arunika Labs")).toBeVisible();
+});
+
 test("B10, C1: a change in the record keeps the values of the company's own fields", async ({ page }) => {
   await seedCompanies([company(1, { company: "Pelita Foods", cx_region: "North" })]);
   await page.goto("/companies?company=1");

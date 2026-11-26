@@ -28,6 +28,9 @@ export const HIGH_PRIORITY = "High";
 // The Discover GBA modules a prospect has trialled (N22): a field that picks several of its options.
 export const GBA_TRIALS = "gbaTrials";
 
+// The team member in charge of a company (PIC). Not the contact person, who works at the company.
+export const TEAM_PIC = "teamPic";
+
 // "No or not now" tells on hold from rejected (D-011).
 export const NOT_NOW_ANSWER = "Not now";
 export const NO_ANSWER = "No";
@@ -108,6 +111,21 @@ export function productOptions(companies: PipelineEntry[]): ProductOption[] {
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
+export interface PicOption {
+  name: string;
+  count: number; // companies here with this PIC
+}
+
+// The PIC filter's choices: each team member who is PIC of a company here, A to Z, with how many.
+export function picOptions(companies: PipelineEntry[]): PicOption[] {
+  const counts = new Map<string, number>();
+  for (const c of companies) {
+    const name = typeof c[TEAM_PIC] === "string" ? c[TEAM_PIC].trim() : "";
+    if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function hasProduct(c: Pick<PipelineEntry, "product">, productKey: string): boolean {
   return productsOf(c).some((p) => normalizeKey(p) === productKey);
 }
@@ -130,10 +148,10 @@ export function toggleChoice(value: unknown, name: string, order: string[]): str
 /* ---------- Find and narrow (B8) ---------- */
 
 const SEARCHED: Record<CompanyGroup, (keyof PipelineEntry)[]> = {
-  toApproach: ["company", "pic", "sourcing", "product", "industry", "notes"],
-  active: ["company", "pic", "sourcing", "product"],
-  dealDone: ["company", "pic", "sourcing", "product"],
-  noOrNotNow: ["company", "pic", "sourcing", "product", "reason"],
+  toApproach: ["company", TEAM_PIC, "pic", "sourcing", "product", "industry", "notes"],
+  active: ["company", TEAM_PIC, "pic", "sourcing", "product"],
+  dealDone: ["company", TEAM_PIC, "pic", "sourcing", "product"],
+  noOrNotNow: ["company", TEAM_PIC, "pic", "sourcing", "product", "reason"],
 };
 
 // The fields Search looks at in a group, for the highlight on the words that matched.
@@ -141,7 +159,7 @@ export function searchedFields(group: CompanyGroup): string[] {
   return SEARCHED[group] as string[];
 }
 
-// Search covers the name, contact person, source and products, plus industry
+// Search covers the name, the team's PIC, contact person, source and products, plus industry
 // and notes in To approach, and the reason in No or not now.
 export function matchesCompanySearch(c: PipelineEntry, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -158,6 +176,7 @@ export interface CompanyFilter {
   priority?: string | null; // the same
   productKey?: string | null;
   trial?: string | null; // a GBA module, or "-" for companies that have trialled none
+  pic?: string | null; // the team's PIC, or "-" for companies without one
   whereToAct?: WhereToAct | null;
 }
 
@@ -175,6 +194,7 @@ export function filterCompanies(companies: PipelineEntry[], f: CompanyFilter, to
     if (f.priority && !choiceMatches(c.priority, f.priority)) return false;
     if (f.productKey && !hasProduct(c, f.productKey)) return false;
     if (f.trial && !(f.trial === NO_VALUE ? !choicesOf(c[GBA_TRIALS]).length : choicesOf(c[GBA_TRIALS]).includes(f.trial))) return false;
+    if (f.pic && !choiceMatches(c[TEAM_PIC], f.pic)) return false;
     if (f.whereToAct && !isWhereToAct(c, f.whereToAct, today)) return false;
     return true;
   });

@@ -28,7 +28,7 @@ const state = (query: string) => parseCompanyView(new URLSearchParams(query));
 
 describe("the view in the address (guide 6.5)", () => {
   it("opens on Active with nothing narrowed", () => {
-    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, trial: null, act: null, parked: false, sort: null, dir: null });
+    expect(state("")).toEqual({ group: "active", q: "", status: null, priority: null, product: null, trial: null, pic: null, act: null, parked: false, sort: null, dir: null });
     expect(viewParams(state("")).toString()).toBe("");
   });
 
@@ -66,6 +66,15 @@ describe("filters", () => {
     expect(appliedFilters(state("trial=Cognitive"), fieldsOf("active"))).toMatchObject({ trial: "Cognitive" });
     expect(viewParams(state("trial=Cognitive")).get("trial")).toBe("Cognitive");
     expect(appliedFilters(state("group=deal-done&trial=Cognitive"), fieldsOf("dealDone"))).toMatchObject({ trial: null }); // kept hidden there
+  });
+
+  it("offers PIC where the list shows it, keeps it in the address, and clears it with the rest", () => {
+    expect(appliedFilters(state("pic=Maya Chen"), fieldsOf("active"))).toMatchObject({ pic: "Maya Chen" });
+    expect(appliedFilters(state("group=to-approach&pic=-"), fieldsOf("toApproach"))).toMatchObject({ pic: "-" });
+    expect(viewParams(state("pic=Maya Chen")).get("pic")).toBe("Maya Chen");
+    expect(filtersOn(state("pic=Maya Chen"), fieldsOf("active"))).toBe(true);
+    expect(appliedFilters(state("group=deal-done&pic=Maya Chen"), fieldsOf("dealDone"))).toMatchObject({ pic: null }); // kept hidden there
+    expect(clearedFilters(state("pic=Maya Chen")).pic).toBeNull();
   });
 });
 
