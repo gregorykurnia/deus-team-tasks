@@ -1,7 +1,7 @@
-// Every company write goes through here. Updates merge only the fields that
+// Company writes from the app. Updates merge only the fields that
 // change (so a company's own fields are never lost), a field set to undefined
 // is cleared, and new ids are never reused.
-import { deleteDoc, deleteField, doc, runTransaction, updateDoc, type UpdateData } from "firebase/firestore";
+import { deleteDoc, deleteField, doc, updateDoc, type UpdateData } from "firebase/firestore";
 import { commitEach, commitInChunks, PartlyCommitted, type BatchOp } from "./batches";
 import { requestAssignNotify } from "./assignNotifyRequests";
 import { requestCalendarContextSync } from "./calendarContextRequests";
@@ -11,7 +11,9 @@ import { expectOwnWrite } from "./liveChanges";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { companyGroup, DEAL_DONE_STATUS, groupFlags, type CompanyGroup } from "./companies";
+import { companyRef, createCompany, retireCompanyId } from "./companyCreate";
 import { companyPatchFrom } from "./companyDates";
+import type { CompanyPatch } from "./companyEdit";
 import { NOTES } from "./noteWrites";
 import { isParked } from "./parking";
 import { addTask, PartlyChanged, TASKS, toTaskUpdate, withCompletedAt, type Undo } from "./taskWrites";
@@ -20,18 +22,8 @@ import type { PipelineEntry } from "./clientTypes";
 import type { ProspectJournalEntry } from "./prospectJournalTypes";
 import type { NewTask, Task } from "./types";
 
+export { allocateCompanyId, PIPELINE } from "./companyCreate";
 export { companyPatchFrom } from "./companyDates";
-
-export const PIPELINE = "pipeline";
-
-// The next company id lives in the tasks project (its rules are in this repo, Q6).
-const ID_COUNTER = () => doc(db, "settings", "companyIds");
-
-type CompanyPatch = Partial<Omit<PipelineEntry, "id">>;
-
-function companyRef(id: number) {
-  return doc(clientsDb, PIPELINE, String(id));
-}
 
 export function toCompanyUpdate(patch: CompanyPatch & { id?: unknown }): UpdateData<PipelineEntry> {
   const { id: _id, ...rest } = patch;
@@ -46,46 +38,9 @@ function previousValues(current: PipelineEntry, patch: CompanyPatch): CompanyPat
 
 /* ---------- New companies ---------- */
 
-// Hands out the next id from a counter, never below `knownMaxId + 1`. The
-// counter only goes up, so a deleted company's id never comes back.
-export async function allocateCompanyId(knownMaxId: number): Promise<number> {
-  return runTransaction(db, async (tx) => {
-    const snap = await tx.get(ID_COUNTER());
-    const next = Math.max(Number(snap.data()?.next ?? 1), knownMaxId + 1);
-    tx.set(ID_COUNTER(), { next: next + 1 }, { merge: true });
-    return next;
-  });
-}
-
-// Raises the counter above a company's id, so the id can't be handed out again
-// once the company is deleted, even if the counter never gave it out.
-async function retireCompanyId(id: number): Promise<void> {
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ID_COUNTER());
-    const next = Number(snap.data()?.next ?? 1);
-    if (next <= id) tx.set(ID_COUNTER(), { next: id + 1 }, { merge: true });
-  });
-}
-
-// Adds a company with a fresh id. If that id is somehow taken (the old app on
-// main still counts from the highest id), it takes the next one.
 export async function addCompany(fields: CompanyPatch, knownMaxId: number): Promise<number> {
   assertOnline("No connection. The company wasn't added.");
-  let floor = knownMaxId;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const id = await allocateCompanyId(floor);
-    expectOwnWrite("companies", String(id));
-    const created = await runTransaction(clientsDb, async (tx) => {
-      const ref = companyRef(id);
-      if ((await tx.get(ref)).exists()) return false;
-      const data = Object.fromEntries(Object.entries({ ...fields, id }).filter(([, v]) => v !== undefined));
-      tx.set(ref, data);
-      return true;
-    });
-    if (created) return id;
-    floor = id;
-  }
-  throw new Error("Couldn't find a free id for the new company.");
+  return createCompany(fields, knownMaxId, (id) => expectOwnWrite("companies", String(id)));
 }
 
 /* ---------- Changing a company ---------- */
