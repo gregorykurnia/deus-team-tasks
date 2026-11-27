@@ -341,7 +341,7 @@ export default function CompaniesScreen() {
   const total = companies.rows.length;
   const filtered = filtersOn(state, fields);
 
-  const searchField = <SearchField label="Search companies" value={typed} onChange={onSearch} placeholder="Search name, contact, source, product" />;
+  const searchField = <SearchField label="Search companies" value={typed} onChange={onSearch} placeholder="Name, contact, source, product" />;
 
   const newCompanyLink = (variant: "main" | "secondary") => (
     <Link href={over(pathname, search, "newCompany=1")} scroll={false} className={buttonClass(variant)}>

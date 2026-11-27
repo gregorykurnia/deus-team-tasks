@@ -20,3 +20,10 @@
 - The protocol smoke read 250 seeded companies in pages of 100, 100 and 50. It checked totals, group names, combined filters, PIC name matching, companies without a PIC, and a legacy ID inherited from its document. The full protocol suite passed 205 database-preservation comparisons.
 - Route tests verify the preview and apply payloads, preserve partial and unconfirmed results, and surface a stale PIC without exposing private backend errors. Emulator data tests cover partial writes, lost replies and concurrent changes during the PIC transaction.
 - TypeScript, ESLint on changed code, all 1,894 unit tests, and all 434 emulator data tests passed.
+
+## E1 — End to end on the emulators
+
+- The real MCP HTTP endpoint listed all four groups, previewed without writing, added three prospects and assigned one PIC across four existing companies in three groups, including a client. The Prospects PIC filters and MCP list agreed on the exact matching companies.
+- All three raw Firestore documents matched the fields saved by the New company sheet, allowing for each record's ID and name. Resending the adds returned three `alreadyExists` results and left the pipeline intact. An app PIC edit invalidated a two-company preview, and reloading confirmed both current values.
+- Playwright captured all three prospect groups at 1440, 1280, 390 and 320 px under `test-results/chat-companies-*`. The layout check caught page overflow from a sorted table header, and the visual check caught a clipped search hint. The table scrolls in its panel, the shorter hint fits, and the scrolled phone captures show the cards above the fixed tab bar.
+- Eight smoke tests passed across `chat-companies.spec.ts` and `companies.spec.ts`. Both connector tests passed again after the final search hint and capture changes. All 1,894 unit tests, TypeScript, ESLint, and the local build passed.
