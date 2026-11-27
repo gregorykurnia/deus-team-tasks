@@ -110,7 +110,7 @@ describe("previewing new companies from chat", () => {
     ]);
     const missingStatus = buildCompanyChanges({ add: [{ company: "Spruce", group: "Active" }] }, useCustom);
     expect(missingStatus.preview).toBeNull();
-    expect(missingStatus.errors[0]).toContain("To Follow Up, In talks");
+    expect(missingStatus.errors[0]).toBe('add[0].status is needed for an Active company because "Meeting Soon" isn\'t a status option. Choose from To Follow Up, In talks.');
     const valid = buildCompanyChanges({ add: [{ company: "Spruce", group: "Active", type: "Reseller", priority: "Urgent", status: "In talks" }] }, useCustom);
     expect(valid.preview?.add[0].data).toMatchObject({ type: "Reseller", priority: "Urgent", status: "In talks" });
   });
@@ -130,6 +130,10 @@ describe("previewing new companies from chat", () => {
     const allowed = buildCompanyChanges({ add: [{ ...row, allowDuplicate: true }] }, context);
     expect(allowed.errors).toEqual([]);
     expect(allowed.preview?.add[0].data).toStrictEqual({ company: row.company, _raw: true, _hold: false });
+    expect(allowed.preview?.warnings).toEqual([{ company: row.company, matches: [
+      { id: 3, company: "P.T. Lake-View, Tbk", group: "Active clients and partners" },
+      { id: 4, company: "Lakeview Services", group: "No or not now" },
+    ] }]);
   });
 
   it("warns about close matches, refuses repeat names in one call, and reports exact matches on apply", () => {

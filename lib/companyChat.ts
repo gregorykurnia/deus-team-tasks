@@ -107,7 +107,8 @@ function additionValues(raw: Record<string, unknown>, group: CompanyGroup, path:
 
 function additionData(company: string, group: CompanyGroup, values: CompanyPatch, context: CompanyChangesContext,
   names: ReadonlyMap<string, string>, path: string, errors: string[]): NewCompanyData {
-  if (group === "active" && values.status === undefined) {
+  const defaultStatus = group === "active" && values.status === undefined;
+  if (defaultStatus) {
     values.status = MEETING_SOON;
     values.date = context.today;
   }
@@ -120,7 +121,10 @@ function additionData(company: string, group: CompanyGroup, values: CompanyPatch
       (name) => key !== "status" || name !== DEAL_DONE_STATUS,
     );
     if (!options.includes(value)) {
-      errors.push(`${path}.${key} "${value}" is unknown. ${options.length ? `Choose from ${options.join(", ")}.` : "There are no available options."}`);
+      const choose = options.length ? `Choose from ${options.join(", ")}.` : "There are no available options.";
+      errors.push(key === "status" && defaultStatus
+        ? `${path}.status is needed for an Active company because "${MEETING_SOON}" isn't a status option. ${choose}`
+        : `${path}.${key} "${value}" is unknown. ${choose}`);
     }
   }
   const pic = values[TEAM_PIC];
@@ -202,7 +206,8 @@ export function buildCompanyChanges(input: unknown, context: CompanyChangesConte
       else errors.push(`"${company}" matches "${existing.company}" in ${existing.group} (company ${existing.id}). Use allowDuplicate only after the owner confirms.`);
       continue;
     }
-    const close = matches.filter((match) => companyNameKey(match.company) !== nameKey).map(describeCompany);
+    // An allowed duplicate still lists the company it copies, so the preview shows it.
+    const close = matches.map(describeCompany);
     if (close.length) preview.warnings.push({ company, matches: close });
     preview.add.push({ group: COMPANY_GROUP_LABELS[group], data: additionData(company, group, values, context, names, path, errors) });
   }

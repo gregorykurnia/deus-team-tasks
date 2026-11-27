@@ -4,7 +4,7 @@ import * as firestore from "firebase/firestore";
 import { clearAll, EMULATOR_HOST, readAll, readFields, seed } from "../tests/support/emulator";
 import type { PipelineEntry } from "./clientTypes";
 import { companyGroup, DEAL_DONE_STATUS, filterCompanies, groupFlags, NO_VALUE, TEAM_PIC } from "./companies";
-import { applyCompanyChanges, CompanyChangesError, previewCompanyChanges } from "./companyChatServer";
+import { applyCompanyChanges, CompanyChangesError, listCompanies, previewCompanyChanges } from "./companyChatServer";
 import { companyRef } from "./companyCreate";
 import { addCompany } from "./companyWrites";
 import { USE_EMULATOR } from "./emulator";
@@ -164,6 +164,16 @@ describe("saving companies from chat", () => {
     transactions.mockImplementation(real.runTransaction);
     expect(await applyCompanyChanges(input)).toMatchObject({ added: [{ id: 4, company: "Iris" }], notAdded: [], alreadyExists: [{ id: 1 }, { id: 3 }] });
     expect(await pipeline()).toHaveLength(3);
+  });
+});
+
+describe("listing companies for chat", () => {
+  it("finds a name despite punctuation, spacing and PT or Tbk, as the duplicate check matches it", async () => {
+    await seedCompanies([prospect, active, { ...client, company: "P.T. Lake-View, Tbk" }]);
+    for (const query of ["Lakeview", "lake view", "PT Lake-View", "Lake-View"]) {
+      expect((await listCompanies({ query, offset: 0 })).companies.map(({ id }) => id)).toEqual([client.id]);
+    }
+    expect((await listCompanies({ query: "prospect", offset: 0 })).total).toBe(2);
   });
 });
 

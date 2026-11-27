@@ -50,7 +50,9 @@ async function runTool(work: () => Promise<object>, failure: string): Promise<Ca
 
 function registerTools(server: McpServer, origin: string) {
   server.registerTool("find_company", {
-    description: "Find up to 5 pipeline companies by name. Returns ID, stored name, group (Active / Raw / On hold / Deal done), PIC, and any open '<Company> Follow Up' tasks with their subtasks. If no company matches, ask the owner to add it under Prospects first; nothing is written.",
+    description: `Find up to 5 pipeline companies by name. Returns ID, stored name, group (Active / Raw / On hold / Deal done), pic (the contact person at the company, not the team PIC), and any open '<Company> Follow Up' tasks with their subtasks. ${taskEditsEnabled()
+      ? "If no company matches and the owner wants it added, use preview_company_changes and apply_company_changes"
+      : "If no company matches, ask the owner to add it under Prospects first"}; nothing is written.`,
     inputSchema: inputs.find_company.shape,
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, ({ query }) => runTool(async () => {

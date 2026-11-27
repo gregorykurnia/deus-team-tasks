@@ -5,6 +5,7 @@ import type { PipelineEntry } from "./clientTypes";
 import { TEAM_PIC } from "./companies";
 import { buildCompanyChanges, checkSeenPics, companyPic, describeCompany, type CompanyChangesPreview, type CompanyPicChange } from "./companyChat";
 import { companyRef, createCompany } from "./companyCreate";
+import { companyNameKey } from "./companySearch";
 import { maxCompanyId } from "./companyEdit";
 import { readCompanySettings } from "./companySettingsModel";
 import { db } from "./firebase";
@@ -25,6 +26,9 @@ export async function listCompanies({ group, pic, query, industry, offset }: {
 }) {
   const picKey = typeof pic === "string" ? personNameKey(pic) : pic;
   const nameText = query?.toLowerCase();
+  const nameKey = query === undefined ? "" : companyNameKey(query);
+  // "Lakeview" finds "P.T. Lake-View, Tbk", as the duplicate check would match them.
+  const nameMatches = (name: string) => name.toLowerCase().includes(nameText!) || (!!nameKey && companyNameKey(name).includes(nameKey));
   const industryText = industry?.toLowerCase();
   const matches = (await readCompanies()).map((company) => ({
     ...describeCompany(company),
@@ -35,7 +39,7 @@ export async function listCompanies({ group, pic, query, industry, offset }: {
   })).filter((company) => (
     (!group || group === "all" || company.group === group)
     && (picKey === undefined || (company.pic === null ? null : personNameKey(company.pic)) === picKey)
-    && (nameText === undefined || company.company.toLowerCase().includes(nameText))
+    && (nameText === undefined || nameMatches(company.company))
     && (industryText === undefined || company.industry?.toLowerCase().includes(industryText))
   )).sort((a, b) => a.company.localeCompare(b.company, "en", { sensitivity: "base" }) || a.id - b.id);
   const end = offset + COMPANY_LIST_PAGE_SIZE;

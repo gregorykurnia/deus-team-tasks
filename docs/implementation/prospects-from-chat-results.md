@@ -27,3 +27,10 @@
 - All three raw Firestore documents matched the fields saved by the New company sheet, allowing for each record's ID and name. Resending the adds returned three `alreadyExists` results and left the pipeline intact. An app PIC edit invalidated a two-company preview, and reloading confirmed both current values.
 - Playwright captured all three prospect groups at 1440, 1280, 390 and 320 px under `test-results/chat-companies-*`. The layout check caught page overflow from a sorted table header, and the visual check caught a clipped search hint. The table scrolls in its panel, the shorter hint fits, and the scrolled phone captures show the cards above the fixed tab bar.
 - Eight smoke tests passed across `chat-companies.spec.ts` and `companies.spec.ts`. Both connector tests passed again after the final search hint and capture changes. All 1,894 unit tests, TypeScript, ESLint, and the local build passed.
+
+## R1 — Phase review
+
+- Saved data: ids come from the shared counter and each create refuses a taken id. Group flags match the New company sheet. PICs are stored in the team spelling. The duplicate check uses normalized names, and `seenPics` is checked before any add and again inside the PIC transaction. The only write outside `pipeline` is the id counter `settings/companyIds`, which is the app's own rule.
+- Fixed: `list_companies` name search now finds "P.T. Lake-View, Tbk" from "Lakeview", as the duplicate check does. An allowed duplicate's preview now names the company it copies. A new Active company with no "Meeting Soon" option now gets a clear "needs a status" error. `find_company` calls its `pic` the contact person and points to the new tools when the edit flag is on.
+- Dropped (accepted in the brief): a repeat apply with `allowDuplicate` adds another copy (the tool description says so), and choice values are matched case-sensitively (the error lists the options). The search hint that E1 shortened is design gap N43.
+- Unit 1,894 passed, company data tests 14 passed, `mcp:smoke --only=protocol` passed. TypeScript and ESLint are clean.
