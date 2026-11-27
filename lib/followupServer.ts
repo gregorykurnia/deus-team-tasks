@@ -10,16 +10,21 @@ import type { NewTask, Task } from "./types";
 type FollowupData = Pick<FollowupPlanContext, "companies" | "tasks">;
 
 // Server reads must fail when unreachable, rather than plan a write from cached data.
+export async function readCompanies(): Promise<PipelineEntry[]> {
+  const companies = await getDocsFromServer(collection(clientsDb, "pipeline"));
+  return companies.docs.map((snapshot) => {
+    const data = snapshot.data() as PipelineEntry;
+    return typeof data.id === "number" ? data : { ...data, id: Number(snapshot.id) };
+  });
+}
+
 export async function readFollowupData(): Promise<FollowupData> {
   const [companies, tasks] = await Promise.all([
-    getDocsFromServer(collection(clientsDb, "pipeline")),
+    readCompanies(),
     getDocsFromServer(collection(db, "tasks")),
   ]);
   return {
-    companies: companies.docs.map((snapshot) => {
-      const data = snapshot.data() as PipelineEntry;
-      return typeof data.id === "number" ? data : { ...data, id: Number(snapshot.id) };
-    }),
+    companies,
     tasks: tasks.docs.map((snapshot) => ({ ...(snapshot.data() as NewTask), id: snapshot.id })),
   };
 }

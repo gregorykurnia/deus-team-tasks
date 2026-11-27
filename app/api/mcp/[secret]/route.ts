@@ -5,9 +5,10 @@ import { createMcpHandler, getPublicOrigin } from "mcp-handler";
 import { z } from "zod";
 import { findCompanies } from "@/lib/followupPlan";
 import { addFollowupPlan, FollowupPlanError, previewFollowupPlan, readFollowupData } from "@/lib/followupServer";
-import { isTaskPlanTool, registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
+import { isTaskPlanTool, registerTaskPlanTools, taskPlanChatGuidance, taskPlansEnabled, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { isTaskEditTool, registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditsEnabled, taskEditToolInputs } from "@/lib/taskEditTools";
 import { isTaskGroupTool, registerTaskGroupTools, taskGroupToolInputs } from "@/lib/taskGroupTools";
+import { companyChatToolInputs, isCompanyChatTool, registerCompanyChatTools } from "@/lib/companyChatTools";
 import { isQuotaError, logToolFailure, QUOTA_REFUSED } from "@/lib/firestoreQuota";
 
 export const runtime = "nodejs";
@@ -102,7 +103,8 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
   const rpc = parsed.data;
   if ("method" in rpc && rpc.method === "tools/call" && rpc.params) {
     const name = rpc.params.name;
-    const editInput = isTaskEditTool(name) ? taskEditToolInputs[name] : isTaskGroupTool(name) ? taskGroupToolInputs[name] : undefined;
+    const editInput = isTaskEditTool(name) ? taskEditToolInputs[name] : isTaskGroupTool(name) ? taskGroupToolInputs[name]
+      : isCompanyChatTool(name) ? companyChatToolInputs[name] : undefined;
     if (editInput) {
       if (!taskEditsEnabled()) return rpcError(-32602, "Tool not found.", "id" in rpc ? rpc.id : null);
       const checked = editInput.safeParse(rpc.params.arguments);
@@ -131,7 +133,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
   // Use the handler's basePath convention without exposing the secret to its routing or logs.
   const url = new URL(request.url);
   url.pathname = "/api/mcp";
-  const instructions = [taskPlansEnabled() && TASK_PLAN_CHAT_GUIDANCE, taskEditsEnabled() && TASK_EDIT_CHAT_GUIDANCE]
+  const instructions = [taskPlansEnabled() && taskPlanChatGuidance(), taskEditsEnabled() && TASK_EDIT_CHAT_GUIDANCE]
     .filter(Boolean).join("\n\n");
   const handler = createMcpHandler((server) => {
     const origin = getPublicOrigin(request);
@@ -139,6 +141,7 @@ async function handle(request: Request, context: { params: Promise<{ secret: str
     registerTaskPlanTools(server, origin);
     registerTaskEditTools(server, origin);
     registerTaskGroupTools(server);
+    registerCompanyChatTools(server);
   }, {
     serverInfo: { name: "Deus Team Tasks follow-up", version: "1.0.0" },
     ...(instructions && { instructions }),

@@ -5,10 +5,11 @@ import { POST, GET, DELETE, HEAD, OPTIONS, PUT, PATCH } from "@/app/api/mcp/[sec
 import { MAX_TASK_PLAN_INPUT_BYTES } from "@/lib/taskPlan";
 import { TaskPlanError } from "@/lib/taskPlanServer";
 import { TaskPlanTokenError } from "@/lib/taskPlanToken";
-import { registerTaskPlanTools, TASK_PLAN_CHAT_GUIDANCE, taskPlanToolInputs } from "@/lib/taskPlanTools";
+import { registerTaskPlanTools, taskPlanChatGuidance, taskPlanToolInputs } from "@/lib/taskPlanTools";
 import { registerTaskEditTools, TASK_EDIT_CHAT_GUIDANCE, taskEditToolInputs } from "@/lib/taskEditTools";
 import { TaskEditError } from "@/lib/taskEditServer";
 import { taskGroupToolInputs } from "@/lib/taskGroupTools";
+import { CompanyChangesError } from "@/lib/companyChatServer";
 import { TaskGroupError } from "@/lib/taskGroupServer";
 import { requireTaskGroupName } from "@/lib/taskGroupModel";
 import { TASK_PLAN_INTERNAL_NEW, TASK_PLAN_PROSPECT_NEW, TASK_PLAN_CLIENT_NEW } from "../fixtures/taskPlan";
@@ -20,6 +21,12 @@ const io = vi.hoisted(() => ({
   legacyRead: vi.fn(), legacyPreview: vi.fn(), legacyAdd: vi.fn(),
   editFind: vi.fn(), editPreview: vi.fn(), editApply: vi.fn(), free: vi.fn(),
   groupList: vi.fn(), groupChange: vi.fn(),
+  companyList: vi.fn(), companyPreview: vi.fn(), companyApply: vi.fn(),
+}));
+vi.mock("@/lib/companyChatServer", () => ({
+  COMPANY_LIST_PAGE_SIZE: 100,
+  listCompanies: io.companyList, previewCompanyChanges: io.companyPreview, applyCompanyChanges: io.companyApply,
+  CompanyChangesError: class extends Error {},
 }));
 vi.mock("@/lib/freeTimeServer", () => ({ findFreeTimes: io.free }));
 vi.mock("@/lib/taskEditServer", () => ({ findTasks: io.editFind, previewTaskChanges: io.editPreview, applyTaskChanges: io.editApply,
@@ -41,6 +48,7 @@ const SECRET = "g06-fake-secret-only";
 const ORIGIN = "https://tasks.example.test";
 const NEW_TOOLS = Object.keys(taskPlanToolInputs);
 const OLD_TOOLS = ["find_company", "preview_followup_plan", "add_followup_plan"];
+const COMPANY_TOOLS = ["list_companies", "preview_company_changes", "apply_company_changes"];
 const plan = TASK_PLAN_INTERNAL_NEW;
 const FREE_RANGE = { startDate: "2026-11-16", endDate: "2026-11-20" };
 const saved = {
@@ -108,9 +116,9 @@ describe("G06 activation and registration", () => {
     const listed = await rpc("tools/list");
     const tools = listed.reply.result?.tools ?? [];
     expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...NEW_TOOLS]);
-    expect((await initialize()).reply.result?.instructions).toBe(TASK_PLAN_CHAT_GUIDANCE);
+    expect((await initialize()).reply.result?.instructions).toBe(taskPlanChatGuidance());
     for (const tool of tools.filter((tool) => NEW_TOOLS.includes(tool.name))) {
-      expect(tool.description).toContain(TASK_PLAN_CHAT_GUIDANCE);
+      expect(tool.description).toContain(taskPlanChatGuidance());
       expect(tool.inputSchema.type).toBe("object");
       expect(tool.inputSchema.additionalProperties).toBe(false);
       expect(tool.annotations).toEqual({
@@ -167,8 +175,10 @@ describe("T03–T05 task edit tools", () => {
       vi.stubEnv("MCP_TASK_PLANS_ENABLED", enabled ? "1" : "0");
       expect((await rpc("tools/list")).reply.result?.tools?.map((tool) => tool.name))
         .toEqual([...OLD_TOOLS, ...(enabled ? NEW_TOOLS : [])]);
-      expect((await initialize()).reply.result?.instructions).toBe(enabled ? TASK_PLAN_CHAT_GUIDANCE : undefined);
-      for (const name of [...editTools, ...groupTools]) expect((await call(name, {})).reply.error)
+      const instructions = (await initialize()).reply.result?.instructions;
+      expect(instructions).toBe(enabled ? taskPlanChatGuidance() : undefined);
+      if (enabled) expect(instructions).toContain("Never move or create a company.");
+      for (const name of [...editTools, ...groupTools, ...COMPANY_TOOLS]) expect((await call(name, {})).reply.error)
         .toEqual({ code: -32602, message: "Tool not found." });
     }
     expect(io.editFind).not.toHaveBeenCalled();
@@ -176,15 +186,18 @@ describe("T03–T05 task edit tools", () => {
     expect(io.editApply).not.toHaveBeenCalled();
     expect(io.groupList).not.toHaveBeenCalled();
     expect(io.groupChange).not.toHaveBeenCalled();
+    expect(io.companyList).not.toHaveBeenCalled();
+    expect(io.companyPreview).not.toHaveBeenCalled();
+    expect(io.companyApply).not.toHaveBeenCalled();
   });
 
   it.each(["0", "1"])("registers edit schemas independently of the plan flag %s", async (planFlag) => {
     vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1");
     vi.stubEnv("MCP_TASK_PLANS_ENABLED", planFlag);
     const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
-    expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools, ...groupTools]);
+    expect(tools.map((tool) => tool.name)).toEqual([...OLD_TOOLS, ...(planFlag === "1" ? NEW_TOOLS : []), ...editTools, ...groupTools, ...COMPANY_TOOLS]);
     expect((await initialize()).reply.result?.instructions)
-      .toBe(planFlag === "1" ? `${TASK_PLAN_CHAT_GUIDANCE}\n\n${TASK_EDIT_CHAT_GUIDANCE}` : TASK_EDIT_CHAT_GUIDANCE);
+      .toBe(planFlag === "1" ? `${taskPlanChatGuidance()}\n\n${TASK_EDIT_CHAT_GUIDANCE}` : TASK_EDIT_CHAT_GUIDANCE);
     for (const tool of tools.filter((tool) => editTools.includes(tool.name))) {
       expect(tool.description).toContain(TASK_EDIT_CHAT_GUIDANCE);
       expect(tool.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
@@ -373,6 +386,85 @@ describe("T03–T05 task edit tools", () => {
     const result = await call("apply_task_changes", { changes, seen: { "fictional-task": "a".repeat(64) }, acknowledgedWarnings: [] });
     expect(result.reply.result?.isError).toBe(true);
     expect(result.body).toContain("Tasks changed since the preview: fictional-task");
+  });
+});
+
+describe("C2 company chat tools", () => {
+  beforeEach(() => vi.stubEnv("MCP_TASK_EDITS_ENABLED", "1"));
+
+  it("advertises explicit consent and changes company guidance when the tools are available", async () => {
+    const tools = (await rpc("tools/list")).reply.result?.tools ?? [];
+    const companyTools = tools.filter(({ name }) => COMPANY_TOOLS.includes(name));
+    expect(companyTools.map(({ name }) => name)).toEqual(COMPANY_TOOLS);
+    expect(companyTools.map(({ annotations }) => [annotations?.readOnlyHint, annotations?.destructiveHint]))
+      .toEqual([[true, false], [true, false], [false, true]]);
+    for (const { description } of companyTools) {
+      expect(description).toMatch(/owner's explicit yes.*more than 10 PIC changes.*count.*table/);
+      expect(description).toContain("A PIC must be an existing team name.");
+      expect(description).toContain("To approach, Active, Active clients and partners, No or not now");
+    }
+    for (const guidance of [(await initialize()).reply.result?.instructions,
+      ...tools.filter(({ name }) => NEW_TOOLS.includes(name)).map(({ description }) => description)]) {
+      expect(guidance).toContain("Create companies only with preview_company_changes and apply_company_changes. Never move one.");
+      expect(guidance).not.toContain("Never move or create a company.");
+    }
+  });
+
+  it.each([
+    ["list_companies", { offset: -1 }, "offset"],
+    ["list_companies", { pic: " \t " }, "pic"],
+    ["list_companies", { group: "noOrNotNow" }, "group"],
+    ["preview_company_changes", { unknown: true }, "unknown"],
+    ["preview_company_changes", { add: [{ company: "   " }] }, "company"],
+    ["preview_company_changes", { add: [{ company: "Fictional", _raw: true }] }, "_raw"],
+    ["preview_company_changes", { add: [{ company: "Fictional", reach: "2026-02-29" }] }, "yyyy-mm-dd"],
+    ["preview_company_changes", { add: [{ company: "Fictional", status: "Meeting Soon" }] }, "status"],
+    ["preview_company_changes", { setPic: [{ pic: null, companyIds: [] }] }, "companyIds"],
+    ["preview_company_changes", { setPic: [{ pic: null, companyIds: [1] }, { pic: "Maya Chen", companyIds: [1] }] }, "only once"],
+    ["apply_company_changes", { setPic: [{ pic: null, companyIds: [1] }], seenPics: {} }, "seenPics"],
+    ...["preview_company_changes", "apply_company_changes"].map((name) => [name, { setPic: [
+      { pic: null, companyIds: Array.from({ length: 200 }, (_, i) => i) }, { pic: "Maya Chen", companyIds: [200] },
+    ] }, "split it"]),
+  ] as [string, object, string][])("rejects %s input before the handler (%j)", async (name, input, reason) => {
+    const { reply } = await call(name, input);
+    expect(reply.error).toMatchObject({ code: -32602, message: expect.stringContaining("Check the tool inputs.") });
+    expect(reply.error?.message).toContain(reason);
+    expect(io.companyList).not.toHaveBeenCalled();
+    expect(io.companyPreview).not.toHaveBeenCalled();
+    expect(io.companyApply).not.toHaveBeenCalled();
+  });
+
+  it("passes the proposed changes and exact seen PICs through and reports a partial save as returned", async () => {
+    io.companyList.mockResolvedValue({ companies: [], total: 0, hasMore: false });
+    await call("list_companies", undefined);
+    expect(io.companyList).toHaveBeenCalledWith({ offset: 0 });
+
+    const input = { add: [{ company: "New prospect", notes: "Detail ".repeat(800) }], setPic: [{ pic: null, companyIds: [1, 2] }] };
+    const preview = { preview: { seenPics: { 1: "Maya  Chen", 2: null } }, errors: [] };
+    io.companyPreview.mockResolvedValue(preview);
+    expect((await call("preview_company_changes", input)).reply.result?.structuredContent).toEqual(preview);
+    expect(io.companyPreview).toHaveBeenCalledWith(input);
+
+    const partialSave = { added: [{ id: 3, company: "New prospect", group: "To approach" }], alreadyExists: [], notAdded: [],
+      pics: { status: "unconfirmed", errors: ["Preview again before saving."] } };
+    io.companyApply.mockResolvedValue(partialSave);
+    const args = { ...input, seenPics: preview.preview.seenPics };
+    expect((await call("apply_company_changes", args)).reply.result?.structuredContent).toEqual(partialSave);
+    expect(io.companyApply).toHaveBeenCalledExactlyOnceWith(args);
+  });
+
+  it("reports stale PICs and keeps unexpected backend error details private", async () => {
+    const args = { setPic: [{ pic: null, companyIds: [1] }], seenPics: { 1: "Maya Chen" } };
+    io.companyApply.mockRejectedValueOnce(new CompanyChangesError("PIC changed since the preview. Preview again."));
+    const stale = await call("apply_company_changes", args);
+    expect(stale.reply.result?.isError).toBe(true);
+    expect(stale.body).toContain("PIC changed since the preview. Preview again.");
+    io.companyApply.mockRejectedValueOnce(new Error(`private ${SECRET} at stack.ts:1`));
+    const failure = await call("apply_company_changes", args);
+    expect(failure.reply.result?.isError).toBe(true);
+    expect(failure.body).toContain("List and preview the companies before trying again.");
+    expect(failure.body).not.toContain(SECRET);
+    expect(io.companyApply).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -616,6 +708,6 @@ describe("G06 safe failures and chat guidance", () => {
       "Before suggesting a time, call find_free_times", "say the time is unchecked",
       "Never guess times into a save: save only the calendar choice and times the owner confirmed",
       "all day or exact start and end times", "not a separate calendar connector",
-    ]) expect(TASK_PLAN_CHAT_GUIDANCE).toContain(text);
+    ]) expect(taskPlanChatGuidance()).toContain(text);
   });
 });

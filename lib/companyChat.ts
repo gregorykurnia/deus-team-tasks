@@ -62,7 +62,7 @@ function readList(value: unknown, path: string, errors: string[]): unknown[] {
   return [];
 }
 
-function describeCompany(company: PipelineEntry): CompanyMatch {
+export function describeCompany(company: PipelineEntry): CompanyMatch {
   return { id: company.id, company: company.company, group: COMPANY_GROUP_LABELS[companyGroup(company)] };
 }
 

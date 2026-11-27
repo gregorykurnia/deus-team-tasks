@@ -3,15 +3,44 @@ import { FirebaseError } from "firebase/app";
 import { collection, deleteField, doc, getDocFromServer, getDocsFromServer, runTransaction } from "firebase/firestore";
 import type { PipelineEntry } from "./clientTypes";
 import { TEAM_PIC } from "./companies";
-import { buildCompanyChanges, checkSeenPics, companyPic, type CompanyChangesPreview, type CompanyPicChange } from "./companyChat";
+import { buildCompanyChanges, checkSeenPics, companyPic, describeCompany, type CompanyChangesPreview, type CompanyPicChange } from "./companyChat";
 import { companyRef, createCompany } from "./companyCreate";
 import { maxCompanyId } from "./companyEdit";
 import { readCompanySettings } from "./companySettingsModel";
 import { db } from "./firebase";
 import { clientsDb } from "./firebaseClients";
 import { isQuotaError, logToolFailure, QUOTA_NOT_SAVED } from "./firestoreQuota";
-import { readFollowupData, wibToday } from "./followupServer";
+import { readCompanies, readFollowupData, wibToday } from "./followupServer";
+import { personNameKey } from "./peopleInput";
 import type { Flow } from "./types";
+
+export const COMPANY_LIST_PAGE_SIZE = 100;
+
+export async function listCompanies({ group, pic, query, industry, offset }: {
+  group?: string;
+  pic?: string | null;
+  query?: string;
+  industry?: string;
+  offset: number;
+}) {
+  const picKey = typeof pic === "string" ? personNameKey(pic) : pic;
+  const nameText = query?.toLowerCase();
+  const industryText = industry?.toLowerCase();
+  const matches = (await readCompanies()).map((company) => ({
+    ...describeCompany(company),
+    pic: companyPic(company),
+    contactPerson: company.pic ?? null,
+    status: company.status ?? null,
+    industry: company.industry ?? null,
+  })).filter((company) => (
+    (!group || group === "all" || company.group === group)
+    && (picKey === undefined || (company.pic === null ? null : personNameKey(company.pic)) === picKey)
+    && (nameText === undefined || company.company.toLowerCase().includes(nameText))
+    && (industryText === undefined || company.industry?.toLowerCase().includes(industryText))
+  )).sort((a, b) => a.company.localeCompare(b.company, "en", { sensitivity: "base" }) || a.id - b.id);
+  const end = offset + COMPANY_LIST_PAGE_SIZE;
+  return { companies: matches.slice(offset, end), total: matches.length, hasMore: end < matches.length };
+}
 
 async function readCompanyChangesContext() {
   const [data, flows, settings] = await Promise.all([

@@ -13,7 +13,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { createJiti } from "jiti";
 import { checkLegacyProtocol } from "./legacy-smoke.mjs";
 import { checkGeneralProtocol, checkDisabledTools } from "./protocol-smoke.mjs";
-import { checkDisabledTaskEdits, checkTaskEditProtocol } from "./task-edit-smoke.mjs";
+import { checkCompanyChatProtocol, checkDisabledTaskEdits, checkTaskEditProtocol } from "./task-edit-smoke.mjs";
 
 const selection = process.argv[2] ?? "--only=all";
 assert.ok(process.argv.length <= 3 && /^--only=(all|protocol|browser|task-plan-browser|task-plan-visual|task-plan-reachability|task-plan-calendar)$/.test(selection),
@@ -257,6 +257,7 @@ try {
     const editClient = await connect();
     await checkTaskEditProtocol({ client: editClient, jiti, readAll, seed, unchanged, safe,
       origin: ORIGIN, emulatorHost: EMULATOR_HOST });
+    await checkCompanyChatProtocol({ client: editClient, seed, unchanged, safe });
   }
   console.log(`MCP smoke passed (${selection.slice(7)}); ${snapshots} database-preservation comparisons; owned servers only.`);
 } catch (error) {

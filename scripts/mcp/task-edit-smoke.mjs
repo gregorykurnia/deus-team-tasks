@@ -4,6 +4,7 @@ import { toolsFor } from "./protocol-smoke.mjs";
 
 const EDITS = ["find_tasks", "preview_task_changes", "apply_task_changes"];
 const GROUPS = ["list_task_groups", "change_task_group"];
+const COMPANIES = ["list_companies", "preview_company_changes", "apply_company_changes"];
 
 const editSaveArgs = (changes, shown) => ({
   changes, seen: shown.seen ?? Object.fromEntries(shown.tasks.map((row) => [row.taskId, row.seen])),
@@ -12,8 +13,8 @@ const editSaveArgs = (changes, shown) => ({
 
 export async function checkDisabledTaskEdits(context) {
   const { tools } = await context.client.listTools();
-  const disabled = [...EDITS, ...GROUPS];
-  assert.ok(tools.every((tool) => !disabled.includes(tool.name)), "Unset edit flag must hide the edit and group tools.");
+  const disabled = [...EDITS, ...GROUPS, ...COMPANIES];
+  assert.ok(tools.every((tool) => !disabled.includes(tool.name)), "Unset edit flag must hide the edit, group and company tools.");
   assert.doesNotMatch(context.client.getInstructions() ?? "", new RegExp(disabled.join("|")));
   const { refuse } = toolsFor(context);
   for (const name of disabled) await refuse(`edit flag unset/${name}`, name, {}, /Tool not found/);
@@ -26,7 +27,7 @@ export async function checkTaskEditProtocol(context) {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
     "find_company", "preview_followup_plan", "add_followup_plan",
-    "find_free_times", "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS, ...GROUPS,
+    "find_free_times", "find_task_destinations", "preview_task_plan", "add_task_plan", ...EDITS, ...GROUPS, ...COMPANIES,
   ].sort());
   assert.match(client.getInstructions(), /category → company → main task → individual steps → preview → save/);
   for (const guidance of [client.getInstructions(), ...tools.filter((tool) => EDITS.includes(tool.name)).map((tool) => tool.description)]) {
@@ -101,6 +102,58 @@ export async function checkTaskEditProtocol(context) {
   console.log("Task edits MCP: find/current fields, read-only previews, warning confirmation, whole-list stale refusal, exact save and no-write retry passed.");
   await checkCompanyResponsible(context, base);
   await checkCompanyGroups(context, base);
+}
+
+export async function checkCompanyChatProtocol(context) {
+  const { client, seed } = context;
+  const { read, refuse } = toolsFor(context);
+  const { tools } = await client.listTools();
+  const apply = tools.find((tool) => tool.name === "apply_company_changes");
+  assert.equal(apply.annotations.readOnlyHint, false);
+  assert.equal(apply.annotations.destructiveHint, true);
+  assert.match(apply.description, /owner's explicit yes/);
+  assert.match(client.getInstructions(), /Create companies only with preview_company_changes and apply_company_changes/);
+  await refuse("company tools reject unknown keys", "preview_company_changes", { unknown: true }, /Check the tool inputs.*unknown/);
+  await refuse("company tools reject 201 PIC changes", "apply_company_changes", { setPic: [
+    { pic: null, companyIds: Array.from({ length: 200 }, (_, i) => i) }, { pic: null, companyIds: [200] },
+  ] }, /Check the tool inputs.*split it/);
+
+  const docs = Array.from({ length: 250 }, (_, i) => ({
+    id: 5000 + i,
+    company: `Fictional C2 ${String(i).padStart(3, "0")}${i < 3 ? " Alpha" : ""}`,
+    ...(i === 0 ? { _hold: true, industry: "Solar Power", pic: "Company Contact", teamPic: "Maya Chen" } : {}),
+    ...(i === 1 ? { _hold: true, industry: "Banking", teamPic: "Maya  Chen" } : {}),
+    ...(i === 2 ? { _raw: true, industry: "Solar Power", teamPic: "  " } : {}),
+    ...(i === 3 ? { _hold: true, industry: "Solar Power" } : {}),
+    ...(i === 4 ? { status: "Client / Partner Done Deal" } : {}),
+  }));
+  const [legacy, ...current] = docs;
+  await seed("clients", "pipeline", [legacy]);
+  await seed("clients", "pipeline", current, { keepIdField: true });
+
+  const query = "fictional c2";
+  for (const offset of [0, 100, 200, 300]) {
+    const page = await read("list_companies", { query, offset });
+    assert.equal(page.total, 250);
+    assert.equal(page.hasMore, offset < 200);
+    assert.deepEqual(page.companies.map(({ id }) => id), docs.slice(offset, offset + 100).map(({ id }) => id));
+  }
+  const unset = await read("list_companies", { query, pic: null, offset: 200 });
+  assert.equal(unset.total, 248);
+  assert.equal(unset.companies.length, 48);
+  assert.ok(unset.companies.every(({ pic }) => pic === null));
+  const blank = await read("list_companies", { query: "002 Alpha", pic: null });
+  assert.deepEqual(blank.companies.map(({ id }) => id), [5002]);
+  const maya = await read("list_companies", { query, pic: "maya  CHEN" });
+  assert.deepEqual(maya.companies.map(({ id }) => id), [5000, 5001]);
+  const filtered = await read("list_companies", { query: "ALPHA", industry: "solar", group: "No or not now" });
+  assert.deepEqual(filtered, { total: 1, hasMore: false, companies: [{
+    id: 5000, company: docs[0].company, group: "No or not now", pic: "Maya Chen",
+    contactPerson: "Company Contact", status: null, industry: "Solar Power",
+  }] });
+  const clients = await read("list_companies", { query, group: "Active clients and partners" });
+  assert.deepEqual(clients.companies.map(({ id, group }) => [id, group]), [[5004, "Active clients and partners"]]);
+  console.log("Company MCP: flag, input errors, 250 results in 100-row pages, combined filters, legacy ID and app group names checked.");
 }
 
 async function checkCompanyGroups(context, base) {
